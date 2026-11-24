@@ -108,13 +108,7 @@ class ExperimentAcquisitionSQL(PregameFixture):
         self.assertEqual(len(requests),1)
         self.assertEqual(worker.ledger.status(worker.window_id)['charged'],1)
 
-    async def test_simultaneous_late_tasks_exclude_ordinary_discovery_and_keep_stage_clocks(self):
-        import asyncio
-
-        from app.collection.activity_collector import ActivityBudgetDelayed
-        from app.collection.sportsgameodds_worker import SportsGameOddsWorker
-        from app.research.capture_forecast import late_capture_forecast
-
+    def late_pair(self):
         at = datetime.now(timezone.utc)
         start = at + timedelta(minutes=10) - timedelta(seconds=2)
         first = source_data(start)
@@ -132,42 +126,209 @@ class ExperimentAcquisitionSQL(PregameFixture):
             for claim in experiment.due(db, at=known_early, limit=2):
                 experiment.fail_checkpoint(db, claim['game_id'], 'early', 'fixture_early_unavailable',
                                            token=claim['token'], at=known_early)
+        return at, bodies
+
+    async def test_simultaneous_late_tasks_exclude_ordinary_discovery_and_keep_stage_clocks(self):
+        import asyncio
+
+        from app.collection.activity_collector import ActivityBudgetDelayed
+        from app.collection.original_receipts import read
+        from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+        from app.research.capture_forecast import late_capture_forecast
+
+        at, bodies = self.late_pair()
+        with self.connect() as db:
             before = late_capture_forecast(db, at=at, headroom_bytes=100_000_000)
             self.assertEqual(len(before['windows']), 1)
-            self.assertEqual(before['windows'][0]['maximum_event_requests'], 2)
+            self.assertEqual(before['windows'][0]['planned_event_requests'], 1)
+            self.assertEqual(before['windows'][0]['planned_batch_sizes'], [2])
 
-        service, worker, _ = self.worker(first)
+        service, worker, _ = self.worker(next(iter(bodies.values())))
         service.activity_mode_enabled = True
         calls = []
+        fetching = asyncio.Event()
 
         async def fetch(params, _credential):
-            calls.append(params['eventIDs'])
+            members = params['eventIDs'].split(',')
+            calls.append(members)
+            self.assertEqual(params['limit'], len(members))
+            fetching.set()
             await asyncio.sleep(0.03)
-            return PageResponse(200, json.dumps(bodies[params['eventIDs']]).encode(),
-                                worker.now().isoformat(), None)
+            result = dict(success=True, data=[bodies[eid]['data'][0] for eid in members])
+            return PageResponse(200, json.dumps(result).encode(), worker.now().isoformat(), None)
 
         worker.transport.fetch = fetch
         scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
         with patch.object(acquisition, 'connect', self.connect):
-            self.assertTrue(await scheduler.tick())
-            # Ordinary eligibility must be checked anew after the group, even
-            # during the gap between its two individually serialized requests.
+            running = asyncio.create_task(scheduler.tick())
+            await asyncio.wait_for(fetching.wait(), timeout=5)
             with self.assertRaisesRegex(ActivityBudgetDelayed, 'protected_tminus10_capture_due'):
                 await SportsGameOddsWorker._fetch(worker, {'leagueID': 'NCAAB'})
-            self.assertTrue(await scheduler.tick())
+            self.assertTrue(await running)
+            self.assertFalse(await scheduler.tick())
 
-        self.assertCountEqual(calls, bodies)
+        self.assertEqual(len(calls), 1)
+        self.assertCountEqual(calls[0], bodies)
         self.assertEqual(worker.ledger.status(worker.window_id)['charged'], 2)
         with self.connect() as db:
-            timings = [row['details']['timings'] for row in db.execute(
-                "SELECT details FROM market_pull WHERE state='complete' AND details ? 'timings'")]
-        self.assertEqual(len(timings), 2)
-        for clocks in timings:
+            pulls = list(db.execute("""SELECT p.request_scope,p.details,r.attempt_id,r.receipt_sha256,r.membership
+                FROM market_pull p JOIN market_pull_receipt r USING (pull_id)
+                WHERE p.state='complete' AND p.details ? 'timings'"""))
+            states = list(db.execute("SELECT state,attempts FROM ev_experiment_task WHERE checkpoint='late'"))
+        self.assertEqual(states, [dict(state='captured', attempts=1)] * 2)
+        self.assertEqual(len(pulls), 2)
+        self.assertEqual(len({row['attempt_id'] for row in pulls}), 1)
+        self.assertEqual(len({row['receipt_sha256'] for row in pulls}), 1)
+        self.assertEqual(len({row['details']['original_response']['id'] for row in pulls}), 1)
+        original, raw = read(pulls[0]['details']['original_response']['id'], root=worker.original_response_root)
+        self.assertEqual(original['receipt_sha256'], pulls[0]['receipt_sha256'])
+        self.assertCountEqual([event['eventID'] for event in json.loads(raw)['data']], bodies)
+        for row in pulls:
+            self.assertEqual(row['membership']['event_ids'], [row['request_scope']['eventIDs']])
+            self.assertCountEqual(row['membership']['physical_event_ids'], bodies)
+            clocks = row['details']['timings']
             ordered = [datetime.fromisoformat(clocks[key]) for key in (
                 'claimed_at', 'lane_entered_at', 'manifest_ready_at', 'usage_requested_at',
                 'response_received_at', 'original_retention_finished_at', 'parse_finished_at',
                 'calculation_finished_at', 'projection_ready_at', 'checkpoint_recorded_at')]
             self.assertEqual(ordered, sorted(ordered))
+
+        with self.connect() as db:
+            before = list(db.execute('SELECT late_id,comparison_id FROM ev_experiment_game ORDER BY id'))
+        self.assertTrue(all(row['late_id'] and row['comparison_id'] is None for row in before))
+        restarted = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        self.assertIsNone(restarted._compare_pending(worker))
+        # Model the end of the protected period without changing either saved
+        # checkpoint clock. A new scheduler drains the durable derived work.
+        worker.experiment_late_windows = ()
+        self.assertIsNotNone(restarted._compare_pending(worker))
+        self.assertIsNotNone(restarted._compare_pending(worker))
+        self.assertIsNone(restarted._compare_pending(worker))
+        self.assertEqual(len(calls), 1)
+        with self.connect() as db:
+            after = list(db.execute('SELECT late_id,comparison_id FROM ev_experiment_game ORDER BY id'))
+        self.assertEqual([row['late_id'] for row in before], [row['late_id'] for row in after])
+        self.assertTrue(all(row['comparison_id'] for row in after))
+
+    async def test_partial_batch_saves_exact_member_without_paid_retry_after_restart(self):
+        _, bodies = self.late_pair()
+        returned, missing = bodies
+        partial = dict(bodies[returned], nextCursor='fixture-opaque-cursor')
+        service, worker, requests = self.worker(partial)
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        with patch.object(acquisition, 'connect', self.connect):
+            self.assertTrue(await scheduler.tick())
+            resumed = acquisition.ExperimentAcquisition(service, connector=self.connect)
+            self.assertFalse(await resumed.tick())
+        self.assertEqual(len(requests), 1)
+        self.assertCountEqual(requests[0]['eventIDs'].split(','), bodies)
+        self.assertEqual(worker.ledger.status(worker.window_id)['charged'], 1)
+        with self.connect() as db:
+            rows = {row['source_event_id']:row for row in db.execute("""
+                SELECT g.source_event_id,t.state,t.last_reason,t.attempts
+                FROM ev_experiment_task t JOIN ev_experiment_game g ON g.id=t.game_id
+                WHERE t.checkpoint='late'""")}
+        self.assertEqual(rows[returned]['state'], 'captured')
+        self.assertEqual(rows[missing]['state'], 'missed')
+        self.assertEqual(rows[missing]['last_reason'], 'experiment_event_not_returned')
+        self.assertEqual([row['attempts'] for row in rows.values()], [1, 1])
+
+    async def test_batch_retains_uncertain_objects_and_does_not_redispatch_after_restart(self):
+        from app.collection.sportsgameodds_transport import TransportFailure
+
+        _, bodies = self.late_pair()
+        service, worker, _ = self.worker(next(iter(bodies.values())))
+        calls = []
+
+        async def fail_after_dispatch(params, _key):
+            calls.append(params['eventIDs'].split(','))
+            raise TransportFailure('provider request outcome uncertain')
+
+        worker.transport.fetch = fail_after_dispatch
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        with patch.object(acquisition, 'connect', self.connect):
+            self.assertTrue(await scheduler.tick())
+            resumed = acquisition.ExperimentAcquisition(service, connector=self.connect)
+            self.assertFalse(await resumed.tick())
+        self.assertEqual(len(calls), 1)
+        self.assertCountEqual(calls[0], bodies)
+        status = worker.ledger.status(worker.window_id)
+        self.assertEqual((status['charged'], status['interrupted']), (0, 2))
+        with self.connect() as db:
+            states = list(db.execute("SELECT state,attempts,last_reason FROM ev_experiment_task WHERE checkpoint='late'"))
+        self.assertEqual(states, [dict(state='missed', attempts=1, last_reason='provider request outcome uncertain')] * 2)
+
+    async def test_rescheduled_member_cannot_publish_against_the_previous_deadline(self):
+        _, bodies = self.late_pair()
+        stable, revised = bodies
+        moved = deepcopy(bodies[revised]['data'][0])
+        old_start = datetime.fromisoformat(moved['status']['startsAt'])
+        new_start = old_start + timedelta(minutes=15)
+        moved['status']['startsAt'] = new_start.isoformat()
+        data = dict(success=True, data=[bodies[stable]['data'][0], moved])
+        service, worker, requests = self.worker(data)
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        with patch.object(acquisition, 'connect', self.connect):
+            self.assertTrue(await scheduler.tick())
+            self.assertFalse(await scheduler.tick())
+        self.assertEqual(len(requests), 1)
+        self.assertCountEqual(requests[0]['eventIDs'].split(','), bodies)
+        with self.connect() as db:
+            rows = {row['source_event_id']:row for row in db.execute("""
+                SELECT g.source_event_id,g.late_id,t.state,t.target_at
+                FROM ev_experiment_task t JOIN ev_experiment_game g ON g.id=t.game_id
+                WHERE t.checkpoint='late'""")}
+        self.assertEqual(rows[stable]['state'], 'captured')
+        self.assertEqual(rows[revised]['state'], 'pending')
+        self.assertIsNone(rows[revised]['late_id'])
+        self.assertEqual(rows[revised]['target_at'], new_start - timedelta(minutes=10))
+
+    async def test_batch_rechecks_stop_after_account_read_and_spends_nothing(self):
+        _, bodies = self.late_pair()
+        service, worker, requests = self.worker(next(iter(bodies.values())))
+        stopped = False
+        original_usage = worker.collector.account_usage
+
+        async def stop_after_usage():
+            nonlocal stopped
+            usage = await original_usage()
+            stopped = True
+            return usage
+
+        worker.controls = lambda:dict(stopped=stopped, source_paused=False)
+        worker.collector.account_usage = stop_after_usage
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        with patch.object(acquisition, 'connect', self.connect):
+            self.assertTrue(await scheduler.tick())
+            self.assertTrue(stopped)
+            await scheduler.tick()
+        self.assertEqual(requests, [])
+        status = worker.ledger.status(worker.window_id)
+        self.assertEqual((status['charged'], status['held'], status['interrupted']), (0, 0, 0))
+        self.assertEqual(scheduler.progress['state'], 'source_stopped_or_paused')
+
+    async def test_storage_pressure_refuses_unreserved_member_without_starving_reserved_game(self):
+        from app.research import records
+
+        _, bodies = self.late_pair()
+        reserved, unreserved = bodies
+        with self.connect() as db:
+            db.execute('UPDATE ev_experiment_game SET late_reserved_bytes=1048576 WHERE source_event_id=%s',
+                       (reserved,))
+            usage = records.retention_usage(db)
+        cap = usage['total'] + usage['reserved'] + experiment.MIN_CHECKPOINT_RUNWAY - 1
+
+        service, worker, requests = self.worker(bodies[reserved])
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        with patch.object(acquisition, 'connect', self.connect), patch.object(records, 'TOTAL_BYTE_CAP', cap):
+            self.assertTrue(await scheduler.tick())
+        self.assertEqual([scope['eventIDs'] for scope in requests], [reserved])
+        self.assertEqual(worker.ledger.status(worker.window_id)['charged'], 1)
+        with self.connect() as db:
+            states = {row['source_event_id']:row['state'] for row in db.execute("""
+                SELECT g.source_event_id,t.state FROM ev_experiment_task t
+                JOIN ev_experiment_game g ON t.game_id=g.id WHERE t.checkpoint='late'""")}
+        self.assertEqual(states, {reserved:'captured', unreserved:'refused'})
 
     async def test_postgame_followup_runs_without_browser_and_final_stops_future_requests(self):
         now=datetime.now(timezone.utc)
@@ -248,6 +409,80 @@ class ExperimentAcquisitionSQL(PregameFixture):
             again=recover(db,ledger_path=self.directory/'ledger.sqlite3',receipt_root=self.directory/'originals')
             self.assertEqual(again['linked'],0)
         self.assertEqual(len(requests),1)
+
+    async def test_retained_shared_attempt_recovers_each_missing_member_independently(self):
+        from app.collection.original_receipts import checkpoint_page, read
+        from app.storage import acquisition_snapshot
+        from app.storage.market_snapshot_recovery import recover
+
+        at = datetime.now(timezone.utc)
+        begins = at + timedelta(minutes=10, seconds=-2)
+        full = source_data(begins)
+        first = full['data'][0]
+        for suffix in ('-2', '-3'):
+            other = deepcopy(first)
+            other['eventID'] += suffix
+            full['data'].append(other)
+        parsed = self.frame(full)
+        known_early = at - timedelta(minutes=12)
+        with self.connect() as db:
+            db.execute('TRUNCATE public.market_pull CASCADE')
+            experiment.discover(db, [acquisition.event_metadata(event, parsed.receipt_sha256)
+                                     for event in parsed.events], at=known_early)
+            for claim in experiment.due(db, at=known_early, limit=3):
+                experiment.fail_checkpoint(db, claim['game_id'], 'early', 'fixture_early_unavailable',
+                                           token=claim['token'], at=known_early)
+
+        service, worker, requests = self.worker(full)
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        with patch.object(acquisition, 'connect', self.connect):
+            self.assertTrue(await scheduler.tick())
+        self.assertEqual(len(requests), 1)
+
+        with self.connect() as db:
+            immutable = db.execute("""SELECT id,payload FROM public.ev_experiment_record
+                WHERE kind='checkpoint' AND checkpoint='late' ORDER BY id""").fetchall()
+            self.assertEqual(len(immutable), 3)
+            captures = [experiment._value(record, experiment._closure(db, [record['id']]))['snapshot']
+                        for record in immutable]
+            db.execute('TRUNCATE public.market_pull CASCADE')
+            for position, capture in enumerate(captures[:2]):
+                provenance = capture['acquisition']
+                params = capture['request_scope']
+                manifest_order = 500 + position
+                acquisition_snapshot.start(db, params, at=at, pull_id=provenance['pull_id'],
+                                           started_order=manifest_order)
+                if position == 0:
+                    raw, body = read(provenance['original_response']['id'], root=self.directory/'originals')
+                    page = checkpoint_page(body, raw, params, provenance['batch'], params['eventIDs'],
+                        pull_id=provenance['pull_id'], attempt_id=provenance['attempt_id'],
+                        venues=set(params['bookmakerID'].split(',')))
+                    acquisition_snapshot.publish(db, page, capture)
+
+            result = recover(db, ledger_path=self.directory/'ledger.sqlite3', receipt_root=self.directory/'originals')
+            self.assertEqual(result, dict(linked=2, skipped=dict(already_linked=1), provider_requests=0))
+            for position, capture in enumerate(captures):
+                provenance = capture['acquisition']
+                event = capture['source_event']['event_id']
+                pull = db.execute("""SELECT p.started_order,r.attempt_id,r.membership,r.receipt_sha256
+                    FROM public.market_pull p JOIN public.market_pull_receipt r USING(pull_id)
+                    WHERE p.pull_id=%s""", (provenance['pull_id'],)).fetchone()
+                if position < 2:
+                    self.assertEqual(pull['started_order'], 500 + position)
+                else:
+                    self.assertLess(pull['started_order'], 0)
+                self.assertEqual(pull['attempt_id'], provenance['attempt_id'])
+                self.assertEqual(pull['receipt_sha256'], provenance['receipt_sha256'])
+                self.assertEqual(pull['membership']['event_ids'], [event])
+                self.assertCountEqual(pull['membership']['physical_event_ids'],
+                                      [source['eventID'] for source in full['data']])
+                retained = acquisition_snapshot.read_snapshot(db, provenance['pull_id'])
+                self.assertEqual(retained['source_event']['event_id'], event)
+            self.assertEqual(db.execute("""SELECT id,payload FROM public.ev_experiment_record
+                WHERE kind='checkpoint' AND checkpoint='late' ORDER BY id""").fetchall(), immutable)
+            again = recover(db, ledger_path=self.directory/'ledger.sqlite3', receipt_root=self.directory/'originals')
+            self.assertEqual(again, dict(linked=0, skipped=dict(already_linked=3), provider_requests=0))
+            self.assertEqual(len(requests), 1)
 
     async def test_restart_keeps_durable_last_receipt_separate_from_runtime_availability(self):
         from psycopg.types.json import Jsonb

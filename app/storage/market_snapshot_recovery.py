@@ -5,7 +5,6 @@ record. A missing original response or ambiguous ledger witness remains legacy.
 """
 from collections import Counter
 from copy import deepcopy
-from dataclasses import replace
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -13,8 +12,8 @@ import sqlite3
 
 from app.comparison import current_pregame as math
 from app.comparison.acquisition import calculation, provenance
-from app.collection.sportsgameodds_adapter import parse_page
-from app.collection.original_receipts import read as original
+from app.collection.sportsgameodds_adapter import MAX_EVENTS
+from app.collection.original_receipts import checkpoint_page, checkpoint_request_scope, read as original
 from app.research import experiment
 from . import acquisition_snapshot as owner
 from .store import ROOT, encoded, hashed, stamp
@@ -93,6 +92,53 @@ def bind(snapshot, page, checkpoint_id):
     return result
 
 
+def _publish_member(db, page, snapshot, checkpoint_id, checkpoint, attempt, metadata, batch):
+    params = page.request_scope
+    with db.transaction():
+        experiment._lock(db)
+        existing = db.execute('SELECT state,request_scope FROM public.market_pull WHERE pull_id=%s',
+                              (page.pull_id,)).fetchone()
+        if batch:
+            if existing and existing['request_scope'] != params:
+                raise ValueError('retained_manifest_scope_differs')
+            accepted = db.execute("""SELECT receipt_sha256,received_at,membership
+                FROM public.market_pull_receipt WHERE pull_id=%s AND attempt_id=%s""",
+                (page.pull_id, page.attempt_id)).fetchone()
+            if accepted:
+                if (accepted['receipt_sha256'] != page.receipt_sha256
+                        or accepted['received_at'] != stamp(page.received_at)
+                        or accepted['membership'] != owner._membership(page)):
+                    raise ValueError('retained_manifest_receipt_differs')
+                if existing['state'] in ('complete', 'partial'):
+                    return False
+            if existing and existing['state'] != 'in_progress':
+                raise ValueError('retained_manifest_already_terminal')
+            ids = batch['request_scope']['eventIDs'].split(',')
+            # The relative order of requests with the same physical attempt is
+            # a tie. Keep unique slots within a separate legacy range.
+            order = -8_000_000_000_000_000_000 + attempt['reservation_order'] * MAX_EVENTS + ids.index(params['eventIDs'])
+            source = 'original_sgo_reservation_rowid_and_batch_member'
+        else:
+            # Legacy requests had exactly one event per attempt, sometimes
+            # published under an independent positive-order manifest.
+            if existing or db.execute('SELECT 1 FROM public.market_pull_receipt WHERE attempt_id=%s',
+                                      (page.attempt_id,)).fetchone():
+                return False
+            order = -9_000_000_000_000_000_000 + attempt['reservation_order']
+            source = 'original_sgo_reservation_rowid'
+        frozen = bind(snapshot, page, checkpoint_id)
+        if not existing:
+            owner.start(db, params, pull_id=page.pull_id, started_order=order,
+                at=datetime.fromtimestamp(attempt['created_at'], timezone.utc), event=checkpoint.get('event'))
+        details = dict(linked_checkpoint_id=checkpoint_id,
+            legacy_order_source=source if not existing else 'original_manifest',
+            original_response=metadata)
+        if batch:
+            details.update(batch=batch, attempt_id=page.attempt_id)
+        owner.publish(db, page, frozen, details=details)
+    return True
+
+
 def recover(db, *, ledger_path=None, receipt_root=None):
     """Use the original durable reservation identity/order, never rounded time IDs."""
     ledger_path = Path(ledger_path or ROOT/'.local/predict-odds/sportsgameodds-ledger.sqlite3')
@@ -111,37 +157,27 @@ def recover(db, *, ledger_path=None, receipt_root=None):
             try:
                 metadata, body = original(descriptor['id'],root=receipt_root)
                 params = snapshot['request_scope']
-                if metadata != descriptor or metadata['request_scope'] != params:
+                batch = acquisition.get('batch')
+                if metadata != descriptor:
                     raise ValueError('retained_original_descriptor_differs')
+                physical = checkpoint_request_scope(metadata, params, batch, snapshot['source_event']['event_id'])
                 candidates = list(ledger.execute('''SELECT r.id,r.rowid reservation_order,r.created_at,t.query
                     FROM sgo_object_reservation r JOIN sgo_request_trace t ON t.reservation_id=r.id
                     WHERE t.http_status=200 AND t.response_sha256=? AND t.response_at=? AND r.status='resolved' ''',
                     (metadata['receipt_sha256'],stamp(metadata['received_at']).timestamp())))
-                candidates = [item for item in candidates if json.loads(item['query']) == params]
+                candidates = [item for item in candidates if json.loads(item['query']) == physical]
                 if len(candidates) != 1:
                     raise ValueError('retained_ledger_membership_unproven')
                 attempt = candidates[0]
-                if (db.execute('SELECT 1 FROM public.market_pull WHERE pull_id=%s',(attempt['id'],)).fetchone()
-                        or db.execute('SELECT 1 FROM public.market_pull_receipt WHERE attempt_id=%s',
-                                      (attempt['id'],)).fetchone()):
+                if batch and (acquisition.get('attempt_id') != attempt['id'] or acquisition.get('request_scope') != params):
+                    raise ValueError('retained_batch_attempt_binding_differs')
+                pull_id = acquisition['pull_id'] if batch else attempt['id']
+                page = checkpoint_page(body, metadata, params, batch, params['eventIDs'],
+                    venues=set(params['bookmakerID'].split(',')), pull_id=pull_id, attempt_id=attempt['id'])
+                if _publish_member(db, page, snapshot, row['id'], checkpoint, attempt, metadata, batch):
+                    linked += 1
+                else:
                     skipped['already_linked'] += 1
-                    continue
-                parsed = parse_page(body,metadata['received_at'],venues=set(params['bookmakerID'].split(',')))
-                if len(parsed.events) != 1 or parsed.events[0]['event_id'] != params['eventIDs']:
-                    raise ValueError('retained_explicit_event_membership_unproven')
-                page = replace(parsed,pull_id=attempt['id'],attempt_id=attempt['id'],request_scope=params,
-                               received_at=metadata['received_at'])
-                frozen = bind(snapshot,page,row['id'])
-                # SQLite reservation rowid is durable request-start ordering in
-                # the existing single ledger. Negative legacy order keeps any
-                # actual new manifest ahead of all recovered older operations.
-                order = -9_000_000_000_000_000_000 + attempt['reservation_order']
-                with db.transaction():
-                    owner.start(db,params,pull_id=page.pull_id,started_order=order,
-                        at=datetime.fromtimestamp(attempt['created_at'],timezone.utc),event=checkpoint.get('event'))
-                    owner.publish(db,page,frozen,details=dict(linked_checkpoint_id=row['id'],
-                        legacy_order_source='original_sgo_reservation_rowid', original_response=metadata))
-                linked += 1
             except (KeyError,ValueError,OSError,sqlite3.Error) as exc:
                 skipped[str(exc)[:120] or type(exc).__name__] += 1
     return dict(linked=linked, skipped=dict(skipped), provider_requests=0)

@@ -3,7 +3,7 @@
 This module does not dispatch requests or write current rows. A complete cursor
 walk alone is not proof of absence: moving provider pages may omit events.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -132,6 +132,8 @@ class Page:
     attempt_id: str | None = None
     request_scope: dict | None = None
     received_at: str | None = None
+    event_stats: dict | None = None
+    physical_event_ids: tuple | None = None
 
 
 def clock_sample(page, *, admitted_at=None):
@@ -226,12 +228,13 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
     cursor = data.get('nextCursor')
     if cursor is not None:
         _identity(cursor)
-    events, quotes, seen = [], [], set()
+    events, quotes, seen, event_stats = [], [], set(), {}
     alternate_rows = duplicate_alternate_rows = conflicting_alternate_lines = ignored_bookmaker_groups = 0
     for event in data['data']:
         if not isinstance(event, dict):
             raise ValueError('event shape')
         event_id = _identity(event.get('eventID'))
+        prior_counts = (alternate_rows, duplicate_alternate_rows, conflicting_alternate_lines, ignored_bookmaker_groups)
         if event_id in seen:
             raise ValueError('duplicate event')
         seen.add(event_id)
@@ -369,8 +372,19 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                     book_quotes[line_key].update(available=False, unavailable_reason='conflicting observations at exact line')
                 conflicting_alternate_lines += len(conflicts)
                 quotes.extend(book_quotes.values())
+        counts = (alternate_rows, duplicate_alternate_rows, conflicting_alternate_lines, ignored_bookmaker_groups)
+        event_stats[event_id] = dict(zip(
+            ('alternate_rows', 'duplicate_alternate_rows', 'conflicting_alternate_lines', 'ignored_bookmaker_groups'),
+            (total - prior for total, prior in zip(counts, prior_counts, strict=True)), strict=True))
     return Page(tuple(events), tuple(quotes), cursor, sha256(body).hexdigest(), len(body),
-                alternate_rows, duplicate_alternate_rows, conflicting_alternate_lines, ignored_bookmaker_groups)
+                alternate_rows, duplicate_alternate_rows, conflicting_alternate_lines, ignored_bookmaker_groups,
+                event_stats=event_stats)
+
+
+def project_event(page, event, quotes, *, pull_id, request_scope):
+    """Keep this logical member's facts attached to the complete physical receipt."""
+    return replace(page, events=(event,), quotes=tuple(quotes), pull_id=pull_id,
+                   request_scope=request_scope, **page.event_stats[event['event_id']])
 
 
 class Traversal:

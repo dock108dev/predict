@@ -29,6 +29,7 @@ OUTCOME_WINDOW_SECONDS = 900
 CLAIM_TIMEOUT_SECONDS = 120
 MAX_EVENT_BYTES = 8192
 MIN_CHECKPOINT_RUNWAY = 64 * 1024
+LATE_BATCH_SIZE = 25
 RETENTION_VERSION = 'checkpoint-and-market-witness-2'
 
 
@@ -355,6 +356,18 @@ def task_authorized(db, token, *, at=None):
                 and row["target_at"] <= at <= row["deadline_at"])
 
 
+def authorized_late_tokens(db, tokens, *, at):
+    return {row["token"] for row in db.execute("""
+        SELECT t.token FROM public.ev_experiment_task t
+        JOIN public.ev_experiment_game g ON g.id=t.game_id
+        WHERE t.token=ANY(%s) AND t.state='claimed' AND t.checkpoint='late'
+          AND t.schedule_id=g.schedule_id AND t.target_at<=%s AND t.deadline_at >=%s
+          AND g.event#>'{status,cancelled}' IS DISTINCT FROM 'true'::jsonb
+          AND NOT EXISTS (SELECT 1 FROM public.ev_experiment_task early WHERE early.game_id=t.game_id
+                          AND early.checkpoint='early' AND early.state IN ('pending','claimed'))
+        """, (list(tokens), at, at))}
+
+
 def _advance_outcome(db, task, event, at, *, reason=None):
     index = task["slot_index"] + 1
     skipped = task["skipped_windows"]
@@ -373,7 +386,7 @@ def _advance_outcome(db, task, event, at, *, reason=None):
 
 def due(db, *, at=None, limit=1, late_only=False, recheck_clock=False):
     at = at or utc()
-    limit = max(1, min(8, int(limit)))
+    limit = max(1, min(LATE_BATCH_SIZE if late_only else 8, int(limit)))
     claimed = []
     # Idle polling must not queue behind, or acquire, the whole-database
     # research writer lock. If work becomes due later it is read next turn.
@@ -414,16 +427,23 @@ def due(db, *, at=None, limit=1, late_only=False, recheck_clock=False):
             ORDER BY CASE t.checkpoint WHEN 'late' THEN 0 WHEN 'early' THEN 1 ELSE 2 END,t.deadline_at,t.game_id
             LIMIT %s FOR UPDATE OF t SKIP LOCKED""", (at, at, late_only, limit))
         policies = {}
+        usage = records.retention_usage(db)
+        window = None
         for row in rows:
+            if late_only:
+                row_window = (row["target_at"], row["deadline_at"])
+                if window is not None and row_window != window:
+                    break
+                window = row_window
             if row["checkpoint"] == "outcome" and row["attempts"] >= len(OUTCOME_OFFSETS):
                 db.execute("UPDATE public.ev_experiment_task SET state='exhausted',last_reason='outcome_request_budget_exhausted',updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='outcome'", (row["game_id"],))
                 continue
-            usage = records.retention_usage(db)
             own_reservation = row["late_reserved_bytes"] if row["checkpoint"] == "late" else 0
             if usage["total"] + usage["reserved"] + MIN_CHECKPOINT_RUNWAY > records.TOTAL_BYTE_CAP + own_reservation:
                 db.execute("UPDATE public.ev_experiment_task SET state='refused',refusals=refusals+1,first_refused_at=COALESCE(first_refused_at,%s),last_refused_at=%s,last_reason='research_retention_capacity_before_dispatch' WHERE game_id=%s AND checkpoint=%s", (at,at,row["game_id"],row["checkpoint"]))
                 if row["checkpoint"] == "late":
                     db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=0 WHERE id=%s", (row["game_id"],))
+                    usage["reserved"] -= own_reservation
                 continue
             token = uuid4().hex
             db.execute("UPDATE public.ev_experiment_task SET state='claimed',token=%s,claimed_at=%s,attempts=attempts+1,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint=%s",
@@ -545,21 +565,48 @@ def _corrected_view(view, checkpoint, game, index):
     return result
 
 
-def _comparison(db, game):
+def _comparison_value(db, game):
     from .ev_movement import compare_checkpoints
     roots = [game[key] for key in ("early_id", "late_id", "baseline_correction_id") if game.get(key)]
     index = _closure(db, roots)
     early = _checkpoint_view(db, game, "early", index)
     late = _checkpoint_view(db, game, "late", index)
-    value = compare_checkpoints(early, late)
+    return compare_checkpoints(early, late)
+
+
+def _write_comparison(db, game_id, value):
     compact = dict(value)
     compact.pop("context", None)
     compact.pop("reference_context", None)
     compact.pop("main_line_links", None)
-    identity, size = _write(db, "comparison", compact, game_id=game["id"])
+    identity, size = _write(db, "comparison", compact, game_id=game_id)
     db.execute("UPDATE public.ev_experiment_game SET comparison_id=%s,retained_cases=%s,unique_payload_bytes=unique_payload_bytes+%s,updated_at=clock_timestamp() WHERE id=%s",
-               (identity, len(value["cases"]), size, game["id"]))
+               (identity, len(value["cases"]), size, game_id))
+
+
+def _comparison(db, game):
+    value = _comparison_value(db, game)
+    _write_comparison(db, game["id"], value)
     return value
+
+
+def finish_pending_comparison(db, *, can_start):
+    game = db.execute("""SELECT * FROM public.ev_experiment_game
+        WHERE late_id IS NOT NULL AND comparison_id IS NULL
+        ORDER BY updated_at,id LIMIT 1""").fetchone()
+    if not game or not can_start():
+        return None
+    value = _comparison_value(db, game)
+    with db.transaction():
+        _lock(db)
+        unchanged = db.execute("""SELECT 1 FROM public.ev_experiment_game
+            WHERE id=%s AND schedule_id=%s AND late_id=%s
+              AND early_id IS NOT DISTINCT FROM %s AND baseline_correction_id IS NOT DISTINCT FROM %s
+              AND comparison_id IS NULL FOR UPDATE""", (game["id"], game["schedule_id"],
+                game["late_id"], game["early_id"], game["baseline_correction_id"])).fetchone()
+        if unchanged:
+            _write_comparison(db, game["id"], value)
+    return game["id"]
 
 
 def correct_first_observation(db, game_id, *, reason, evidence_reference):
@@ -620,7 +667,8 @@ def correct_first_observation(db, game_id, *, reason, evidence_reference):
 
 
 def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
-            received_at=None, known_at=None, scope=None, market_publication_bytes=0):
+            received_at=None, known_at=None, scope=None, market_publication_bytes=0,
+            snapshot_bytes=None, defer_comparison=False):
     if checkpoint not in ("early", "late"):
         raise ValueError("experiment_checkpoint_kind")
     checked_at = None
@@ -649,7 +697,7 @@ def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
             source = snapshot.get("source_event") or {}
             if source and source.get("event_id") != game["source_event_id"]:
                 raise ValueError("experiment_checkpoint_event_identity")
-            frozen = deepcopy(snapshot)
+            frozen = dict(snapshot)
             frozen["schedule"] = dict(id=game["schedule_id"], starts_at=game["event"]["starts_at"],
                 target_at=clock(task["target_at"]), deadline_at=clock(task["deadline_at"]))
             value = dict(status="captured", checkpoint=checkpoint, schedule_id=game["schedule_id"],
@@ -686,16 +734,24 @@ def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
                 else:
                     db.execute("UPDATE public.ev_experiment_task SET state='missed',token=NULL,last_reason=CASE WHEN last_reason='late_discovery_no_pre_target_baseline' THEN last_reason ELSE 'early_baseline_after_target' END,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='late' AND state<>'captured'", (game_id,))
                 db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=%s WHERE id=%s", (reserve,game_id))
-            row = _get(db, identity)
+            row = db.execute("SELECT recorded_at FROM public.ev_experiment_record WHERE id=%s",
+                             (identity,)).fetchone()
             checked_at = _dbclock(db)
             if row["recorded_at"] > task["deadline_at"] or checked_at > task["deadline_at"]:
                 raise ValueError("experiment_checkpoint_persistence_after_deadline")
             db.execute("UPDATE public.ev_experiment_game SET " + checkpoint + "_id=%s,unique_payload_bytes=unique_payload_bytes+%s,raw_checkpoint_bytes=raw_checkpoint_bytes+%s,updated_at=clock_timestamp() WHERE id=%s",
-                       (identity, size, len(encoded(snapshot)), game_id))
+                       (identity, size, snapshot_bytes if snapshot_bytes is not None else len(encoded(snapshot)), game_id))
             db.execute("UPDATE public.ev_experiment_task SET state='captured',result_id=%s,token=NULL,last_reason=NULL,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint=%s",
                        (identity, game_id, checkpoint))
-            game = db.execute("SELECT * FROM public.ev_experiment_game WHERE id=%s", (game_id,)).fetchone()
-            _comparison(db, game)
+            if defer_comparison and checkpoint == "late":
+                # Checkpoint and market evidence are complete now. A null
+                # comparison pointer with a late capture lets the idle owner
+                # rebuild the derived comparison after a crash or restart.
+                db.execute("UPDATE public.ev_experiment_game SET comparison_id=NULL,retained_cases=0 WHERE id=%s",
+                           (game_id,))
+            else:
+                game = db.execute("SELECT * FROM public.ev_experiment_game WHERE id=%s", (game_id,)).fetchone()
+                _comparison(db, game)
             checked_at = _dbclock(db)
             if checked_at > task["deadline_at"]:
                 raise ValueError("experiment_checkpoint_persistence_after_deadline")

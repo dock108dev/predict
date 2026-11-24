@@ -529,10 +529,18 @@ def _with_result(game, source_rows, providers, at):
         game.update(result_state=state, result_reason=result.get('detail_reason') or 'source_result_not_final')
 
 
-def _source_state(db):
-    return db.execute("SELECT * FROM public.mens_d1_source_state WHERE source=%s", (SOURCE,)).fetchone() or dict(
-        state='disabled', reason='sports_reference_private_hosted_use_and_firecrawl_account_unverified',
-        checked_at=None, budget={})
+def _source_state(db, source_id=SOURCE):
+    reason = ('cbbd_api_credential_unavailable' if source_id == PUBLIC_SOURCE else
+              'sports_reference_private_hosted_use_and_firecrawl_account_unverified')
+    return db.execute("SELECT * FROM public.mens_d1_source_state WHERE source=%s", (source_id,)).fetchone() or dict(
+        source=source_id, state='disabled', reason=reason, checked_at=None, budget={})
+
+
+def _daily_source(db):
+    sports_reference, cbbd = (_source_state(db, identity) for identity in (SOURCE, PUBLIC_SOURCE))
+    primary = (cbbd if cbbd['checked_at'] and
+               (cbbd['state'] != 'disabled' or sports_reference['state'] == 'disabled') else sports_reference)
+    return primary, (cbbd, sports_reference)
 
 
 def _official_corroborations(db, slate, at):
@@ -549,8 +557,8 @@ def _official_corroborations(db, slate, at):
 def read_coverage(db, game_date, *, at=None):
     day, at = source_date(game_date), at or utc()
     slates = schedule_revisions(db, day, at=at, source=None)
-    source = _source_state(db)
-    slate_source = slates[0]['source'] if slates else SOURCE
+    source, _ = _daily_source(db)
+    slate_source = slates[0]['source'] if slates else source['source']
     providers = _providers(db, day, at, neighbors=bool(slates))
     _provider_results(db, providers, at=at)
     games = _bindings(slates[0], slates[1:], providers) if slates else []
@@ -592,7 +600,7 @@ def read_coverage(db, game_date, *, at=None):
         WHERE a.source=%s AND a.game_date=%s AND a.purpose LIKE 'schedule_%%' AND r.recorded_at<=%s
         ORDER BY r.recorded_at DESC LIMIT 1""", (slate_source, day, at)).fetchone()
     failed = attempt and attempt['metadata'].get('error')
-    state = ('observed' if slate_source == PUBLIC_SOURCE else 'verified' if slates else 'failed' if failed else
+    state = (('observed' if slate_source == PUBLIC_SOURCE else 'verified') if slates else 'failed' if failed else
              'disabled' if source['state'] in ('disabled', 'paused') else 'unverified')
     reason = failed or (None if slates else source['reason'] or 'valid_source_slate_not_retained')
     membership = Counter(row['scope_state'] for row in games)
@@ -606,9 +614,12 @@ def read_coverage(db, game_date, *, at=None):
             result_only.append(_result(revision, row))
             used_source_result_ids.add(identity)
     source_url = next((row['source_url'] for row in slates[0]['facts'] if row.get('source_url')), None) if slates else None
+    from app.collection.mens_d1_public_export import PARSER_VERSION as EXPORT_PARSER
+    source_mode = ('retrospective_public_export' if slates and slates[0]['parser_version'] == EXPORT_PARSER
+                   else 'daily_source')
     return dict(date=str(day), scope=SCOPE, timezone=EASTERN.key, as_of=clock(at.astimezone(EASTERN)),
         source=slate_source, source_state=state, source_state_reason=reason, population=population,
-        source_url=source_url, source_mode='retrospective_public_export' if slate_source == PUBLIC_SOURCE else 'daily_source',
+        source_url=source_url, source_mode=source_mode,
         expected_games=population['expected_games'] if population else None,
         population_revision=population['revision'] if population else None,
         membership_version=population['membership_version'] if population else None,
@@ -646,11 +657,11 @@ def read_status(db, *, at=None):
 
     at = at or utc()
     day = at.astimezone(EASTERN).date()
-    source = _source_state(db)
+    source, sources = _daily_source(db)
     jobs = list(db.execute("""SELECT source,game_date,purpose,kind,due_at,expires_at,next_attempt_at,state,
         attempts,last_attempt_at,last_success_at,last_reason FROM public.mens_d1_job
-        WHERE source=%s AND game_date BETWEEN %s AND %s ORDER BY due_at,purpose""",
-        (SOURCE, day - timedelta(days=2), day + timedelta(days=1))))
+        WHERE source=%s AND game_date BETWEEN %s AND %s AND purpose NOT LIKE '%%_public_export_%%'
+        ORDER BY due_at,purpose""", (source['source'], day - timedelta(days=2), day + timedelta(days=1))))
     usage = retention_usage(db)
     storage = dict(allocation_bytes=TOTAL_BYTE_CAP, retained_bytes=int(usage['total']),
         reserved_bytes=int(usage['reserved']), source_bytes=usage.get('daily_coverage_bytes', 0),
@@ -667,25 +678,32 @@ def read_status(db, *, at=None):
         FROM public.ev_experiment_task task JOIN public.ev_experiment_game game ON task.game_id=game.id
         WHERE task.checkpoint='late' AND task.state IN ('pending','claimed')
          AND task.deadline_at>=%s AND task.target_at<=%s""", (at, at + timedelta(days=1))).fetchone()
-    forecast = dict(next_24h_pending_jobs=planned, planned_basic_credits=planned * DOCUMENTED_BASIC_SCRAPE_CREDITS,
+    per_request = 1 if source['source'] == PUBLIC_SOURCE else DOCUMENTED_BASIC_SCRAPE_CREDITS
+    forecast = dict(next_24h_pending_jobs=planned, planned_basic_credits=planned * per_request,
                     maximum_response_bytes=planned * MAX_FIRECRAWL_RESPONSE_BYTES,
                     one_request_storage_reservation_bytes=MAX_STORAGE_RESERVATION,
                     next_24h_late_tasks=capture['all_sports'], next_24h_cbb_late_tasks=capture['college_basketball'],
                     late_capture=late_capture_forecast(db, at=at, headroom_bytes=storage['headroom_bytes']),
                     excludes_additional_retries_and_future_detail_jobs=True)
-    totals = db.execute("""SELECT count(*) FILTER(WHERE disposition='dispatched') AS requests,
+    totals = {row['source']: row for row in db.execute("""SELECT source,
+        count(*) FILTER(WHERE disposition='dispatched') AS requests,
         count(*) FILTER(WHERE disposition IN ('reserved','unknown')) AS unconfirmed_dispatches,
         COALESCE(sum(charged_credits),0) AS charged,
         COALESCE(sum(reserved_credits) FILTER(WHERE charged_credits IS NULL),0) AS held
-        FROM public.mens_d1_attempt WHERE source=%s""", (SOURCE,)).fetchone()
+        FROM public.mens_d1_attempt WHERE source=ANY(%s) GROUP BY source""", ([SOURCE, PUBLIC_SOURCE],))}
+
+    def source_status(value):
+        total = totals.get(value['source'], dict(requests=0, unconfirmed_dispatches=0, charged=0, held=0))
+        return dict(source=value['source'], state=value['state'], reason=value['reason'],
+            checked_at=clock(value['checked_at']), credits=dict(confirmed=total['charged'], held=total['held'],
+                requests=total['requests'], unconfirmed_dispatches=total['unconfirmed_dispatches'],
+                budget=value['budget'], cost_usd=0 if not (total['charged'] or total['held']) else None))
+
     next_run = min((due for due in pending if due > at), default=None)
     overdue = sum(due <= at for due in pending)
     last_success = max((row['last_success_at'] for row in jobs if row['last_success_at']), default=None)
-    return dict(source=SOURCE, state=source['state'], reason=source['reason'], checked_at=clock(source['checked_at']),
+    return dict(**source_status(source), sources=[source_status(value) for value in sources],
         next_run_at=clock(next_run), overdue_jobs=overdue, last_success_at=clock(last_success),
         jobs=[{k: str(v) if type(v) is date else clock(v) if isinstance(v, datetime) else v
                for k, v in job.items()} for job in jobs],
-        credits=dict(confirmed=totals['charged'], held=totals['held'], requests=totals['requests'],
-                     unconfirmed_dispatches=totals['unconfirmed_dispatches'], budget=source['budget'],
-                     cost_usd=0 if not (totals['charged'] or totals['held']) else None),
         storage=storage, forecast=forecast, provider_requests=0)

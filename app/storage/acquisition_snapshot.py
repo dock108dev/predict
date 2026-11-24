@@ -103,8 +103,11 @@ def begin(db, params, *, at):
 
 
 def _membership(page):
-    return dict(event_ids=sorted(event['event_id'] for event in page.events),
-                next_cursor_present=bool(page.next_cursor))
+    result = dict(event_ids=sorted(event['event_id'] for event in page.events),
+                  next_cursor_present=bool(page.next_cursor))
+    if (physical := getattr(page, 'physical_event_ids', None)) is not None:
+        result['physical_event_ids'] = sorted(physical)
+    return result
 
 
 def accept(db, page):
@@ -136,6 +139,12 @@ def finish(db, pull_id, state, *, details=None):
             WHERE pull_id=%s AND state='in_progress' ''', (state,Jsonb(details or {}),pull_id))
         db.execute('''UPDATE public.market_pull_scope SET state=%s WHERE pull_id=%s
             AND state='in_progress' ''', (state,pull_id))
+
+
+def record_timing(db, pull_id, stage):
+    db.execute('''UPDATE public.market_pull
+        SET details=jsonb_set(details, ARRAY['timings',%s], to_jsonb(clock_timestamp()))
+        WHERE pull_id=%s''', (stage, pull_id))
 
 
 def compact_snapshot(snapshot, pull_id, family=None):

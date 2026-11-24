@@ -1,4 +1,4 @@
-"""Server-owned, restart-safe Sports Reference schedule and result jobs."""
+"""Server-owned, restart-safe men's D1 schedule and result jobs."""
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -12,6 +12,7 @@ from app.diagnostics import failure
 from app.research import records
 from app.storage import mens_d1_coverage as coverage
 from app.storage.store import ROOT, connect, encoded, stamp
+from . import mens_d1_cbbd as cbbd
 from . import mens_d1_source as source
 from .bulk_checkpoint import owned_thread
 from .current_storage_policy import SQL_BYTE_CAP, require_disk_space, sql_usage
@@ -19,6 +20,7 @@ from .odds_http import BudgetStop
 from .service_secrets import read_file
 
 SOURCE = coverage.SOURCE
+CBBD = coverage.PUBLIC_SOURCE
 TICK_SECONDS = 60
 ATTEMPT_LEASE = timedelta(minutes=3)
 ATTEMPT_LIMIT = 3
@@ -78,7 +80,7 @@ def authority(at):
     return Authority(window, start, end, available, daily, key), None
 
 
-def _job(db, day, purpose, kind, due, expires, *, data=None):
+def _job(db, day, purpose, kind, due, expires, *, data=None, source_id=SOURCE):
     if expires <= due:
         return
     db.execute("""INSERT INTO public.mens_d1_job
@@ -88,17 +90,17 @@ def _job(db, day, purpose, kind, due, expires, *, data=None):
           due_at=EXCLUDED.due_at,expires_at=EXCLUDED.expires_at,next_attempt_at=EXCLUDED.next_attempt_at
         WHERE mens_d1_job.state='pending' AND mens_d1_job.attempts=0
           AND (mens_d1_job.due_at,mens_d1_job.expires_at) IS DISTINCT FROM (EXCLUDED.due_at,EXCLUDED.expires_at)""",
-        (SOURCE, day, purpose, kind, due, expires, due, Jsonb(data or {})))
+        (source_id, day, purpose, kind, due, expires, due, Jsonb(data or {})))
 
 
-def _schedule_jobs(db, day, at):
+def _schedule_jobs(db, day, at, source_id):
     local = coverage.eastern_time
     tomorrow = day + timedelta(days=1)
     evening = local(day - timedelta(days=1), 22, 45)
     morning = local(day, 4)
-    _job(db, day, 'schedule_preview', 'schedule', evening, morning)
-    _job(db, day, 'schedule_morning', 'schedule', morning, local(day, 11))
-    revisions = coverage.schedule_revisions(db, day, at=at)
+    _job(db, day, 'schedule_preview', 'schedule', evening, morning, source_id=source_id)
+    _job(db, day, 'schedule_morning', 'schedule', morning, local(day, 11), source_id=source_id)
+    revisions = coverage.schedule_revisions(db, day, at=at, source=source_id)
     first = min((stamp(game['scheduled_start']) for game in revisions[0]['facts']
                  if game.get('scheduled_start') and game.get('membership_status') != 'excluded'
                  and game['status'] not in ('postponed', 'cancelled')), default=None) if revisions else None
@@ -106,22 +108,23 @@ def _schedule_jobs(db, day, at):
         pre_due, pre_expiry = local(day, 10), local(day, 12)
     else:
         pre_due, pre_expiry = max(first - timedelta(minutes=45), evening), first
-    _job(db, day, 'schedule_before_first_tip', 'schedule', pre_due, pre_expiry)
-    _job(db, day, 'schedule_afternoon', 'schedule', local(day, 13, 30), local(day, 17, 30))
-    _job(db, day, 'schedule_evening', 'schedule', local(day, 18, 30), local(tomorrow))
+    _job(db, day, 'schedule_before_first_tip', 'schedule', pre_due, pre_expiry, source_id=source_id)
+    _job(db, day, 'schedule_afternoon', 'schedule', local(day, 13, 30), local(day, 17, 30), source_id=source_id)
+    _job(db, day, 'schedule_evening', 'schedule', local(day, 18, 30), local(tomorrow), source_id=source_id)
 
 
-def _result_jobs(db, day):
+def _result_jobs(db, day, source_id):
     local = coverage.eastern_time
     next_day, following = day + timedelta(days=1), day + timedelta(days=2)
-    _job(db, day, 'results_morning', 'results', local(next_day, 5, 30), local(next_day, 12, 30))
-    _job(db, day, 'results_corrections', 'results', local(next_day, 12, 30), local(next_day, 21))
-    _job(db, day, 'results_unresolved_followup', 'results', local(following, 5, 30), local(following, 12, 30))
+    _job(db, day, 'results_morning', 'results', local(next_day, 5, 30), local(next_day, 12, 30), source_id=source_id)
+    _job(db, day, 'results_corrections', 'results', local(next_day, 12, 30), local(next_day, 21), source_id=source_id)
+    _job(db, day, 'results_unresolved_followup', 'results', local(following, 5, 30), local(following, 12, 30),
+         source_id=source_id)
 
 
-def _unresolved_result(db, day, at):
-    slates = coverage.schedule_revisions(db, day, at=at)
-    rows = coverage._result_rows(db, day, at)
+def _unresolved_result(db, day, at, source_id):
+    slates = coverage.schedule_revisions(db, day, at=at, source=source_id)
+    rows = coverage._result_rows(db, day, at, source=source_id)
     if not slates:
         return not rows or any(row['status'] not in ('final', 'cancelled', 'postponed') for _, row in rows)
     decided = {coverage._pair(row['teams'], 'source_team_id') for _, row in rows
@@ -130,28 +133,36 @@ def _unresolved_result(db, day, at):
                for row in slates[0]['facts'] if row['membership_status'] == 'eligible')
 
 
-def plan(db, at, approved, blocked_reason):
-    local_day = at.astimezone(coverage.EASTERN).date()
+def _source_state(db, source_id, at, state, blocked_reason, budget=None, *, initialize=False):
+    args = (source_id, state, blocked_reason, at, Jsonb(budget or {}))
     db.execute("""INSERT INTO public.mens_d1_source_state(source,state,reason,checked_at,budget)
         VALUES (%s,%s,%s,%s,%s) ON CONFLICT (source) DO UPDATE SET state=EXCLUDED.state,
-        reason=EXCLUDED.reason,checked_at=EXCLUDED.checked_at,budget=EXCLUDED.budget""",
-        (SOURCE, 'active' if approved and not blocked_reason else 'paused' if approved else 'disabled',
-         blocked_reason, at, Jsonb(approved.budget() if approved else {})))
+        reason=EXCLUDED.reason,checked_at=EXCLUDED.checked_at,budget=EXCLUDED.budget
+        WHERE NOT %s OR mens_d1_source_state.reason IN (%s,%s)""",
+        (*args, initialize, cbbd.KEY_UNAVAILABLE, 'collection_stopped_or_paused'))
+
+
+def plan(db, at, approved, blocked_reason, *, source_id=SOURCE, configured=False):
+    local_day = at.astimezone(coverage.EASTERN).date()
+    state = ('paused' if (configured or approved) and blocked_reason else 'active' if approved else
+             'configured' if configured else 'disabled')
+    _source_state(db, source_id, at, state, blocked_reason, approved.budget() if approved else None,
+                  initialize=state == 'configured')
     for day in (local_day, local_day + timedelta(days=1)):
-        _schedule_jobs(db, day, at)
+        _schedule_jobs(db, day, at, source_id)
     for offset in (-2, -1, 0, 1):
-        _result_jobs(db, local_day + timedelta(days=offset))
+        _result_jobs(db, local_day + timedelta(days=offset), source_id)
     db.execute("""UPDATE public.mens_d1_attempt SET settled_at=%s,reserved_storage_bytes=0,disposition='unknown',
         error='attempt_interrupted_credit_charge_unknown' WHERE source=%s
-        AND settled_at IS NULL AND admitted_at<%s""", (at, SOURCE, at - ATTEMPT_LEASE))
+        AND settled_at IS NULL AND admitted_at<%s""", (at, source_id, at - ATTEMPT_LEASE))
     db.execute("""UPDATE public.mens_d1_job SET state=CASE
             WHEN attempts<%s AND expires_at>%s THEN 'pending' ELSE 'failed' END,
         next_attempt_at=%s,last_reason='attempt_interrupted_credit_charge_unknown'
         WHERE source=%s AND state='running' AND last_attempt_at<%s""",
-        (ATTEMPT_LIMIT, at + RETRY_DELAY, at + RETRY_DELAY, SOURCE, at - ATTEMPT_LEASE))
+        (ATTEMPT_LIMIT, at + RETRY_DELAY, at + RETRY_DELAY, source_id, at - ATTEMPT_LEASE))
     db.execute("""UPDATE public.mens_d1_job SET state='expired',
         last_reason=COALESCE(last_reason,'job_window_elapsed')
-        WHERE source=%s AND state='pending' AND expires_at<=%s""", (SOURCE, at))
+        WHERE source=%s AND state='pending' AND expires_at<=%s""", (source_id, at))
 
 
 def _late_capture_due(db, at):
@@ -171,14 +182,21 @@ def _credit_spend(db, at, approved):
         (start, approved.window_id, approved.starts_at, SOURCE)).fetchone()
 
 
-def _admit(db, at, approved):
+def _admit(db, at, approved, source_id):
     if _late_capture_due(db, at):
         return 'protected_tminus10_capture_due'
-    cost = source.DOCUMENTED_BASIC_SCRAPE_CREDITS
-    spending = _credit_spend(db, at, approved)
-    if (spending['day'] + cost > approved.daily_credits
-            or spending['window'] + cost > approved.available_credits):
-        return 'firecrawl_credit_allowance_exhausted_or_held'
+    if source_id == CBBD:
+        held = db.execute("""SELECT COALESCE(sum(reserved_credits),0) AS calls FROM public.mens_d1_attempt
+            WHERE source=%s AND account_window=%s AND charged_credits IS NULL""",
+            (CBBD, approved.window_id)).fetchone()['calls']
+        if approved.remaining <= held:
+            return cbbd.ALLOWANCE_EXHAUSTED
+    else:
+        cost = source.DOCUMENTED_BASIC_SCRAPE_CREDITS
+        spending = _credit_spend(db, at, approved)
+        if (spending['day'] + cost > approved.daily_credits
+                or spending['window'] + cost > approved.available_credits):
+            return 'firecrawl_credit_allowance_exhausted_or_held'
     usage = records.retention_usage(db)
     if usage['total'] + usage['reserved'] + MAX_STORAGE_RESERVATION > records.TOTAL_BYTE_CAP:
         return 'research_retention_capacity'
@@ -191,38 +209,51 @@ def _admit(db, at, approved):
     return None
 
 
-def claim(db, at, approved):
+def _due_job(db, at, source_id):
+    return db.execute("""SELECT * FROM public.mens_d1_job WHERE source=%s AND state='pending'
+        AND next_attempt_at<=%s AND expires_at>%s AND NOT EXISTS
+          (SELECT 1 FROM public.mens_d1_job WHERE source=%s AND state='running')
+        ORDER BY due_at DESC,purpose LIMIT 1 FOR UPDATE""", (source_id, at, at, source_id)).fetchone()
+
+
+def _defer(db, job, at, reason, *, delay=RETRY_DELAY):
+    db.execute("""UPDATE public.mens_d1_job SET last_reason=%s,next_attempt_at=%s
+        WHERE (source,game_date,purpose)=(%s,%s,%s)""",
+        (reason, at + delay, job['source'], job['game_date'], job['purpose']))
+
+
+def claim(db, at, approved, *, source_id=SOURCE):
     with db.transaction():
         records._writer_lock(db)
-        job = db.execute("""SELECT * FROM public.mens_d1_job WHERE source=%s AND state='pending'
-            AND next_attempt_at<=%s AND expires_at>%s ORDER BY due_at DESC,purpose LIMIT 1 FOR UPDATE""",
-            (SOURCE, at, at)).fetchone()
+        job = _due_job(db, at, source_id)
         if not job:
             return None
-        key = (SOURCE, job['game_date'], job['purpose'])
-        if job['purpose'] == 'results_unresolved_followup' and not _unresolved_result(db, job['game_date'], at):
+        key = (source_id, job['game_date'], job['purpose'])
+        if job['purpose'] == 'results_unresolved_followup' and not _unresolved_result(db, job['game_date'], at, source_id):
             db.execute("""UPDATE public.mens_d1_job SET state='coalesced',last_reason='recent_results_resolved'
                 WHERE (source,game_date,purpose)=(%s,%s,%s)""", key)
             return None
-        reason = _admit(db, at, approved)
+        reason = _admit(db, at, approved, source_id)
         if reason:
-            db.execute("""UPDATE public.mens_d1_job SET last_reason=%s,next_attempt_at=%s
-                WHERE (source,game_date,purpose)=(%s,%s,%s)""", (reason, at + timedelta(minutes=1), *key))
+            delay = RETRY_DELAY if reason == cbbd.ALLOWANCE_EXHAUSTED else timedelta(minutes=1)
+            _defer(db, job, at, reason, delay=delay)
             return None
         if job['kind'] == 'detail':
             url, reason = job['input']['url'], job['input']['reason']
         else:
-            url, reason = source.source_url(job['game_date'], job['kind']), job['purpose']
+            url = (cbbd.source_url(job['game_date']) if source_id == CBBD else
+                   source.source_url(job['game_date'], job['kind']))
+            reason = job['purpose']
             db.execute("""UPDATE public.mens_d1_job SET state='coalesced',last_reason='superseded_overdue_job'
                 WHERE source=%s AND game_date=%s AND kind=%s AND purpose<>%s
                 AND state='pending' AND due_at<%s""",
-                (SOURCE, job['game_date'], job['kind'], job['purpose'], job['due_at']))
+                (source_id, job['game_date'], job['kind'], job['purpose'], job['due_at']))
         attempt = dict(id=uuid4().hex, admitted_at=at, request_url=url, request_reason=reason)
         db.execute("""INSERT INTO public.mens_d1_attempt
             (id,source,game_date,purpose,request_url,request_reason,account_window,admitted_at,
              reserved_credits,reserved_storage_bytes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (attempt['id'], *key, url, reason, approved.window_id, at,
-             source.DOCUMENTED_BASIC_SCRAPE_CREDITS, MAX_STORAGE_RESERVATION))
+             1 if source_id == CBBD else source.DOCUMENTED_BASIC_SCRAPE_CREDITS, MAX_STORAGE_RESERVATION))
         db.execute("""UPDATE public.mens_d1_job SET state='running',attempts=attempts+1,last_attempt_at=%s,
             last_reason=NULL WHERE (source,game_date,purpose)=(%s,%s,%s)""", (at, *key))
         return dict(job, attempts=job['attempts'] + 1), attempt
@@ -250,6 +281,7 @@ def _details(db, day, rows, at):
 
 def finish(db, job, attempt, at, *, receipt=None, rows=None, membership_version=None, error=None,
            no_dispatch=False):
+    source_id = job['source']
     with db.transaction():
         records._writer_lock(db)
         current = db.execute("""SELECT settled_at FROM public.mens_d1_attempt WHERE id=%s FOR UPDATE""",
@@ -262,7 +294,8 @@ def finish(db, job, attempt, at, *, receipt=None, rows=None, membership_version=
             if not error and (rows is None or len(rows) > coverage.MAX_ROWS
                               or len(encoded(rows)) > coverage.MAX_PARSED_BYTES):
                 error = 'parsed_source_page_exceeds_retention_reservation'
-            coverage.retain(db, job, attempt, receipt, rows=rows, parser_version=source.PARSER_VERSION,
+            parser = cbbd.PARSER_VERSION if source_id == CBBD else source.PARSER_VERSION
+            coverage.retain(db, job, attempt, receipt, rows=rows, parser_version=parser,
                             membership_version=membership_version, error=error)
         succeeded = not error and receipt is not None and not receipt.error
         delay = timedelta(minutes=1) if no_dispatch else RETRY_DELAY
@@ -275,19 +308,23 @@ def finish(db, job, attempt, at, *, receipt=None, rows=None, membership_version=
             last_success_at=CASE WHEN %s THEN %s ELSE last_success_at END,last_reason=%s
             WHERE (source,game_date,purpose)=(%s,%s,%s)""",
             (result, at + delay if result == 'pending' else at, int(no_dispatch), succeeded, at, error,
-             SOURCE, job['game_date'], job['purpose']))
-        if succeeded and job['kind'] == 'results':
+             source_id, job['game_date'], job['purpose']))
+        if succeeded and job['kind'] == 'results' and source_id == SOURCE:
             _details(db, job['game_date'], rows, at)
 
 
 class DailyCoverageJobs:
     """Run one bounded source operation off the odds event loop."""
     def __init__(self, runtime, *, connector=connect, authority_loader=authority,
-                 fetch=None, now=coverage.utc):
+                 fetch=None, now=coverage.utc, cbbd_credential=cbbd.credential,
+                 cbbd_account=cbbd.verify_account, cbbd_fetch=None):
         self.runtime = runtime
         self.connector = connector
         self.authority_loader = authority_loader
         self.fetch = fetch or source.fetch_firecrawl
+        self.cbbd_credential = cbbd_credential
+        self.cbbd_account = cbbd_account
+        self.cbbd_fetch = cbbd_fetch or cbbd.fetch_games
         self.now = now
         self.task = None
         self.closed = asyncio.Event()
@@ -297,10 +334,10 @@ class DailyCoverageJobs:
     def start(self):
         self.task = asyncio.create_task(self.run(), name='predict-mens-d1-daily-source')
 
-    def stopped(self):
+    def stopped(self, source_id=SOURCE):
         runtime = self.runtime
         return (self.closed.is_set() or runtime.stopping.is_set() or runtime.global_stopped
-                or SOURCE in runtime.paused_sources or not runtime.service.config.get('enabled', False)
+                or source_id in runtime.paused_sources or not runtime.service.config.get('enabled', False)
                 or not runtime.service.dispatch
                 or runtime.storage_interval_requested)
 
@@ -318,10 +355,41 @@ class DailyCoverageJobs:
                 return claim(db, at, approved)
         return None
 
+    def _prepare_cbbd(self, at, key):
+        reason = (cbbd.KEY_UNAVAILABLE if not key else 'collection_stopped_or_paused' if self.stopped(CBBD) else None)
+        with self.connector() as db:
+            with db.transaction():
+                records._writer_lock(db)
+                plan(db, at, None, reason, source_id=CBBD, configured=bool(key))
+                if reason or self.pressure() or _late_capture_due(db, at) or not _due_job(db, at, CBBD):
+                    return None
+                status = coverage._source_state(db, CBBD)
+                if (status['reason'] in (cbbd.ACCESS_DENIED, cbbd.RATE_LIMITED, cbbd.ALLOWANCE_EXHAUSTED)
+                        and at < status['checked_at'] + RETRY_DELAY):
+                    return None
+        if self.stopped(CBBD) or self.pressure():
+            return None
+        approved, reason = self.cbbd_account(key, now=self.now)
+        checked_at = self.now()
+        with self.connector() as db:
+            with db.transaction():
+                records._writer_lock(db)
+                reason = 'collection_stopped_or_paused' if self.stopped(CBBD) else reason
+                _source_state(db, CBBD, checked_at, 'paused' if not approved or reason else 'active',
+                              reason, approved.budget() if approved else None)
+                if reason and (job := _due_job(db, checked_at, CBBD)):
+                    _defer(db, job, checked_at, reason)
+            if approved and not reason and checked_at < approved.ends_at and not self.pressure():
+                if work := claim(db, checked_at, approved, source_id=CBBD):
+                    return *work, approved
+        return None
+
     def _collect(self, job, attempt, approved):
         at = self.now()
-        reason = ('collection_stopped_before_dispatch' if self.stopped() else
-                  'firecrawl_account_window_elapsed' if at >= approved.ends_at else
+        is_cbbd = job['source'] == CBBD
+        reason = ('collection_stopped_before_dispatch' if self.stopped(job['source']) else
+                  ('cbbd_api_account_window_elapsed' if is_cbbd else 'firecrawl_account_window_elapsed')
+                  if at >= approved.ends_at else
                   'protected_tminus10_capture_due' if self.pressure() else None)
         if reason:
             with self.connector() as db:
@@ -329,12 +397,15 @@ class DailyCoverageJobs:
             return
         receipt, rows, version, error = None, None, None, None
         try:
-            receipt = self.fetch(attempt['request_url'], api_key=approved.key)
+            receipt = (self.cbbd_fetch(attempt['request_url'], api_key=approved.key, now=self.now) if is_cbbd else
+                       self.fetch(attempt['request_url'], api_key=approved.key))
             error = receipt.error
             if not error:
                 membership = source.load_membership(job['game_date'])
                 version = membership.version
-                if job['kind'] == 'detail':
+                if is_cbbd:
+                    rows = cbbd.parse_games(receipt, day=job['game_date'], kind=job['kind'])
+                elif job['kind'] == 'detail':
                     rows = [source.parse_detail(receipt, day=job['game_date'], game=job['input']['game'],
                                                 membership=membership)]
                 else:
@@ -342,12 +413,16 @@ class DailyCoverageJobs:
         except source.SourcePageError as exc:
             error = str(exc)[:160]
         except Exception as exc:
-            error = 'firecrawl_source_request_or_parser_failed'
+            error = 'cbbd_api_request_or_parser_failed' if is_cbbd else 'firecrawl_source_request_or_parser_failed'
             failure(__name__, error, exc)
         with self.connector() as db:
-            finish(db, job, attempt, self.now(), receipt=receipt, rows=rows, membership_version=version, error=error)
+            at = self.now()
+            with db.transaction():
+                finish(db, job, attempt, at, receipt=receipt, rows=rows, membership_version=version, error=error)
+                if is_cbbd and error in (cbbd.ACCESS_DENIED, cbbd.RATE_LIMITED):
+                    _source_state(db, CBBD, at, 'paused', error, approved.budget())
 
-    def _refresh_bindings(self, at, approved):
+    def _refresh_bindings(self, at, approved, *, source_id=SOURCE):
         today = at.astimezone(coverage.EASTERN).date()
         with self.connector() as db:
             if not approved and not db.execute("""SELECT EXISTS (
@@ -356,7 +431,7 @@ class DailyCoverageJobs:
                 (coverage.PUBLIC_SOURCE, today - timedelta(days=1), today + timedelta(days=1))).fetchone()['present']:
                 return
             for day in (today - timedelta(days=1), today, today + timedelta(days=1)):
-                if self.stopped():
+                if self.stopped(source_id):
                     break
                 with db.transaction():
                     records._writer_lock(db)
@@ -369,6 +444,7 @@ class DailyCoverageJobs:
     async def tick(self):
         at = self.now()
         approved, reason = await owned_thread(self.authority_loader, at)
+        key = await owned_thread(self.cbbd_credential)
         if approved and self.stopped():
             reason = 'collection_stopped_or_paused'
         self.idle.clear()
@@ -377,8 +453,12 @@ class DailyCoverageJobs:
             work = await owned_thread(self._prepare, at, approved, reason, permitted)
             if work:
                 await owned_thread(self._collect, *work, approved)
-            if not self.stopped() and not self.pressure():
-                await owned_thread(self._refresh_bindings, self.now(), approved)
+            api_work = await owned_thread(self._prepare_cbbd, self.now(), key)
+            if api_work:
+                await owned_thread(self._collect, *api_work)
+            binding_source = CBBD if key else SOURCE
+            if not self.stopped(binding_source) and not self.pressure():
+                await owned_thread(self._refresh_bindings, self.now(), approved, source_id=binding_source)
         finally:
             self.idle.set()
 

@@ -1,11 +1,15 @@
 from datetime import date, timedelta
 from hashlib import sha256
 import json
+from types import SimpleNamespace
 from unittest import skipUnless
+from unittest.mock import Mock
 
+import httpx
 from psycopg.errors import RaiseException
 from psycopg.types.json import Jsonb
 
+from app.collection import mens_d1_cbbd as cbbd
 from app.collection import mens_d1_jobs as jobs
 from app.collection import mens_d1_public_export as public_export
 from app.collection.mens_d1_source import SourceReceipt, load_membership, source_url
@@ -13,6 +17,7 @@ from app.research import records
 from app.storage import mens_d1_coverage as coverage
 from app.storage.store import stamp
 from tests.latest_board_fixture import SOCKET, LatestBoardFixture
+from tests.test_mens_d1_daily_jobs import api_game
 
 
 DAY = date(2026, 11, 24)
@@ -66,6 +71,105 @@ class MensD1CoverageSQL(LatestBoardFixture):
         with self.connect() as db:
             db.execute('TRUNCATE public.mens_d1_source_state,public.mens_d1_job CASCADE')
             db.execute('TRUNCATE public.ev_experiment_record CASCADE')
+
+    async def test_configured_cbbd_scheduler_retains_revisions_finals_and_raw_receipts(self):
+        at = MORNING
+        credential = None
+        rows = [api_game(), api_game(121, homeTeamId=100, homeTeam='Duke', awayTeamId=617,
+                                     awayTeam='Fredonia State', awayConference=None)]
+        paths = []
+
+        def transport(request):
+            paths.append(request.url.path)
+            if request.url.path == '/info':
+                return httpx.Response(200, json=dict(remainingCalls=7, monthlyLimit=1000, tierName='Free',
+                    resetAt='2026-12-01T00:00:00Z', sharedPool=True, products=['cfb', 'cbb']))
+            return httpx.Response(200, json=rows)
+
+        worker = SimpleNamespace(experiment_late_waiting=False, experiment_reserved_requests=0)
+        runtime = SimpleNamespace(acquisition_pressure=Mock(return_value=False), global_stopped=False,
+            paused_sources=set(), storage_interval_requested=False, stopping=Mock(is_set=Mock(return_value=False)),
+            service=SimpleNamespace(config={'enabled': True}, dispatch=True, workers={'sportsgameodds': worker}))
+        with httpx.Client(transport=httpx.MockTransport(transport)) as client:
+            scheduler = jobs.DailyCoverageJobs(runtime, connector=self.connect,
+                authority_loader=lambda _: (None, jobs.BLOCKED_REASON), cbbd_credential=lambda: credential,
+                cbbd_account=lambda key, **kw: cbbd.verify_account(key, client=client, **kw),
+                cbbd_fetch=lambda url, **kw: cbbd.fetch_games(url, client=client, **kw), now=lambda: at)
+            await scheduler.tick()
+            with self.connect() as db:
+                state = coverage.read_status(db, at=at)
+                self.assertEqual((state['source'], state['state'], state['reason']),
+                                 (jobs.CBBD, 'disabled', cbbd.KEY_UNAVAILABLE))
+                self.assertEqual(state['credits']['requests'], 0)
+                self.assertIsNotNone(state['next_run_at'])
+            self.assertEqual(paths, [])
+            credential = 'fixture-cbbd-key'
+            runtime.paused_sources.add(jobs.CBBD)
+            await scheduler.tick()
+            self.assertEqual(paths, [])
+            runtime.paused_sources.clear()
+            await scheduler.tick()
+            with self.connect() as db:
+                before = coverage.read_coverage(db, DAY, at=max(coverage.utc(), at))
+                original = coverage.read_receipt(db, before['source_receipt_id'])
+                self.assertEqual(before['source_mode'], 'daily_source')
+                self.assertEqual(before['counts']['source_eligible'], 1)
+                self.assertEqual(before['counts']['expected'], None)
+                self.assertEqual(len(before['source_revisions']), 1)
+                self.assertEqual(original['requested_at'], at.isoformat())
+                self.assertNotIn('raw_body', original)
+                self.assertEqual(original['body_sha256'], db.execute(
+                    'SELECT body_sha256 FROM public.mens_d1_receipt WHERE id=%s', (original['id'],)).fetchone()['body_sha256'])
+
+            at = stamp('2026-11-24T18:30:01Z')
+            rows[0]['startDate'] = '2026-11-25T01:30:00Z'
+            rows[1]['status'] = 'cancelled'
+            rows.append(api_game(122, homeTeamId=100, homeTeam='Duke', awayTeamId=102, awayTeam='North Carolina'))
+            worker.experiment_late_waiting = True
+            await scheduler.tick()
+            self.assertEqual(paths, ['/info', '/games'])
+            worker.experiment_late_waiting = False
+            await scheduler.tick()
+
+            at = stamp('2026-11-25T10:45:00Z')
+            rows[0].update(status='final', homePoints=81, awayPoints=76)
+            await scheduler.tick()
+
+        self.assertEqual(paths, ['/info', '/games'] * 3)
+        with self.connect() as db:
+            as_of = max(coverage.utc(), at)
+            state = coverage.read_status(db, at=as_of)
+            self.assertEqual(state['source'], jobs.CBBD)
+            self.assertEqual(state['credits']['requests'], 3)
+            self.assertEqual(state['credits']['confirmed'], 3)
+            value = coverage.read_coverage(db, DAY, at=as_of)
+            games = {row['source_game_id']: row for row in value['games']}
+            self.assertEqual(value['counts']['expected'], None)
+            self.assertEqual(value['counts']['source_eligible'], 2)
+            self.assertEqual(len(value['source_revisions']), 2)
+            self.assertEqual(games['cbbd:120']['schedule']['starts_at'], '2026-11-25T01:30:00+00:00')
+            self.assertIn('rescheduled', {entry['change'] for entry in games['cbbd:120']['schedule_changes']})
+            self.assertEqual(games['cbbd:120']['result_state'], 'final')
+            self.assertEqual(games['cbbd:120']['match_state'], 'source_only')
+            self.assertEqual(games['cbbd:121']['schedule']['status'], 'cancelled')
+            self.assertIn('cbbd:122', games)
+            self.assertEqual(coverage.read_receipt(db, original['id']), original)
+
+    def test_cbbd_unknown_call_is_retained_and_blocks_remaining_single_call(self):
+        approved = cbbd.Account(stamp('2026-11-01T00:00:00Z'), stamp('2026-12-01T00:00:00Z'), 1000, 1,
+                                'Free', 'fixture-cbbd-key')
+        with self.connect() as db:
+            jobs.plan(db, MORNING, approved, None, source_id=jobs.CBBD)
+            _, attempt = jobs.claim(db, MORNING, approved, source_id=jobs.CBBD)
+        restart = MORNING + timedelta(minutes=20)
+        with self.connect() as db:
+            jobs.plan(db, restart, approved, None, source_id=jobs.CBBD)
+            self.assertIsNone(jobs.claim(db, restart + timedelta(minutes=20), approved, source_id=jobs.CBBD))
+            state = coverage.read_status(db, at=restart)
+            self.assertEqual(state['credits']['held'], 1)
+            self.assertEqual(state['credits']['unconfirmed_dispatches'], 1)
+            self.assertEqual(db.execute('SELECT disposition FROM public.mens_d1_attempt WHERE id=%s',
+                                       (attempt['id'],)).fetchone()['disposition'], 'unknown')
 
     def test_restart_recovers_lease_and_keeps_unconfirmed_credit_held(self):
         with self.connect() as db:
@@ -279,3 +383,65 @@ class MensD1CoverageSQL(LatestBoardFixture):
             revised = next(row for row in latest['games'] if row['source_game_id'] == 'neutral')
             self.assertEqual(revised['result_state'], 'final')
             self.assertEqual(len(latest['result_source_revisions']), 3)
+
+
+@skipUnless(SOCKET, 'Disposable PostgreSQL required')
+class LateCaptureForecastSQL(LatestBoardFixture):
+    def test_forecast_partitions_exact_scopes_and_accounts_for_the_shared_lane(self):
+        from app.research import experiment
+        from app.research.capture_forecast import late_capture_forecast
+
+        at = MORNING + timedelta(minutes=4)
+        target = at + timedelta(minutes=1)
+
+        def event(index, begins):
+            return dict(event_id=f'forecast-game-{index}', source_event_id=f'forecast-game-{index}',
+                league='NCAAB', home='Duke', away='Gonzaga', starts_at=begins.isoformat(),
+                title='Gonzaga at Duke', provider='sportsgameodds', status={})
+
+        def retained_batch(db, size, seconds):
+            claimed = at - timedelta(minutes=30 + size)
+            end = claimed + timedelta(seconds=seconds)
+            for member in range(size):
+                pull_id = f'forecast-receipt-{size}-{member}'
+                details = dict(batch=dict(size=size), attempt_id=f'forecast-attempt-{size}',
+                    dispatch_at=(claimed + timedelta(seconds=1)).isoformat(),
+                    timings=dict(claimed_at=claimed.isoformat(), batch_work_started_at=claimed.isoformat(),
+                        response_received_at=(claimed + timedelta(seconds=2)).isoformat(),
+                        persistence_checked_at=end.isoformat()))
+                db.execute("""INSERT INTO public.market_pull(pull_id,requested_at,request_scope,state,details)
+                    VALUES(%s,%s,'{}','complete',%s)""", (pull_id, claimed, Jsonb(details)))
+
+        with self.connect() as db:
+            db.execute("TRUNCATE public.ev_experiment_record CASCADE")
+            db.execute("TRUNCATE public.market_pull CASCADE")
+            db.execute("INSERT INTO public.ev_experiment_accounting(singleton) VALUES(true) ON CONFLICT DO NOTHING")
+            begins = target + timedelta(minutes=10)
+            experiment.discover(db, [event(index, begins) for index in range(27)]
+                + [event(27, begins + timedelta(seconds=30))], at=at)
+            retained_batch(db, 1, 7)
+            retained_batch(db, 2, 7)
+            retained_batch(db, 24, 44)
+            policy = experiment._policy(db)
+            policy.pop('id')
+            policy['requested_scope']['bookmakers'] = policy['requested_scope']['bookmakers'][:-1]
+            separate_scope, _ = experiment._write(db, 'policy', policy)
+            db.execute("""UPDATE public.ev_experiment_game SET policy_id=%s
+                WHERE source_event_id='forecast-game-0'""", (separate_scope,))
+            forecast = late_capture_forecast(db, at=at, headroom_bytes=100_000_000)
+            first, second = forecast['windows']
+            self.assertEqual(first['scheduled_tasks'], 27)
+            self.assertEqual(first['planned_batch_sizes'], [24, 2, 1])
+            self.assertEqual(first['planned_event_requests'], 3)
+            self.assertEqual(first['maximum_event_objects'], 27)
+            self.assertEqual(first['competing_non_late_tasks'], 28)
+            self.assertEqual(first['ordinary_discovery_slot_at'], target.isoformat())
+            self.assertEqual(first['tasks_without_storage_reservation'], 27)
+            self.assertFalse(first['current_headroom_below_unreserved_claim_floor'])
+            self.assertTrue(late_capture_forecast(db, at=at, headroom_bytes=0)['windows'][0]
+                            ['current_headroom_below_unreserved_claim_floor'])
+            self.assertEqual(first['estimated_window_service_p95_seconds'], 58)
+            self.assertEqual(second['estimated_window_service_p95_seconds'], 7)
+            self.assertEqual(second['measured_competing_lane_seconds'], 28)
+            self.assertEqual(forecast['current_execution_latency']['observed_physical_requests'], 3)
+            self.assertEqual(forecast['current_execution_latency']['stage_p95_seconds']['provider_response'], 1)

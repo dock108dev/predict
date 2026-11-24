@@ -4,14 +4,12 @@ Original task states and checkpoint pointers are never changed. New checkpoint
 records carry their original receipt clocks and their actual database write time.
 """
 from copy import deepcopy
-from dataclasses import replace
 import json
 from types import SimpleNamespace
 
 from psycopg.types.json import Jsonb
 
 from app.collection import original_receipts
-from app.collection.sportsgameodds_adapter import parse_page
 from app.comparison import fee_mode
 from app.storage.store import encoded, hashed, stamp
 from . import experiment as owner, paper, workspace
@@ -26,6 +24,9 @@ def eligible_attempt(game, checkpoint, attempt, metadata):
     try:
         start, end = stamp(checkpoint["target_at"]), stamp(checkpoint["deadline_at"])
         dispatch, received = stamp(details["dispatch_at"]), stamp(details["received_at"])
+        event_id = game["event"]["source_event_id"]
+        batch = details.get("batch")
+        original_receipts.checkpoint_request_scope(metadata, details["request_scope"], batch, event_id)
         return (attempt.get("dispatched") is True
                 and attempt["schedule_id"] == game["schedule_id"]
                 and start <= dispatch <= received <= end
@@ -33,10 +34,8 @@ def eligible_attempt(game, checkpoint, attempt, metadata):
                 and metadata["state"] == "retained"
                 and metadata["provider"] == "sportsgameodds"
                 and metadata["receipt_sha256"] == details["receipt_sha256"]
-                and metadata["request_scope"] == details["request_scope"]
-                and details["request_scope"]["eventIDs"] == game["event"]["source_event_id"]
                 and details["request_scope"].get("includeAltLines") is True
-                and not details["request_scope"].get("cursor"))
+                and (not batch or event_id in batch["response_event_ids"]))
     except (KeyError, TypeError, ValueError):
         return False
 
@@ -82,16 +81,19 @@ def reconstruct(game, checkpoint, attempt_id, attempt, metadata, body):
     if not eligible_attempt(game, checkpoint, attempt, metadata):
         raise ValueError("recovery_source_ineligible")
     details = attempt["details"]
-    page = parse_page(body, details["received_at"])
-    if page.receipt_sha256 != metadata["receipt_sha256"] or len(page.events) != 1:
-        raise ValueError("recovery_receipt_mismatch")
+    scope = details["request_scope"]
+    batch = details.get("batch")
+    try:
+        page = original_receipts.checkpoint_page(body, metadata, scope, batch, game["event"]["source_event_id"],
+            pull_id=details["pull_id"], attempt_id=details["attempt_id"],
+            venues=set(scope["bookmakerID"].split(",")) if batch else None)
+    except ValueError as exc:
+        raise ValueError("recovery_receipt_mismatch") from exc
     source = page.events[0]
     if (source["event_id"] != game["event"]["source_event_id"]
             or source["league"] != "NCAAB" or source["phase"] != "pregame"
             or stamp(source["starts_at"]) != stamp(game["event"]["starts_at"])):
         raise ValueError("recovery_schedule_mismatch")
-    page = replace(page, pull_id=details["pull_id"], attempt_id=details["attempt_id"],
-                   request_scope=details["request_scope"])
     # This is an explicit replay assumption, not a read of today's fee settings.
     mode = fee_mode.state(False)
     context = SimpleNamespace(fee_mode=mode,
@@ -99,6 +101,8 @@ def reconstruct(game, checkpoint, attempt_id, attempt, metadata, body):
         fee=lambda record, at: fee_mode.zero_fee(record, mode))
     snapshot = build_snapshot(None, page, request_scope=details["request_scope"],
         dispatch_at=details["dispatch_at"], known_at=details["received_at"], calculation_context=context)
+    if batch:
+        snapshot["acquisition"].update(batch=deepcopy(batch), original_response=deepcopy(metadata))
     return dict(status="reconstructed", source_kind="retrospective_raw_t10", checkpoint="late",
         schedule_id=game["schedule_id"], target_at=checkpoint["target_at"], deadline_at=checkpoint["deadline_at"],
         requested_at=details["dispatch_at"], received_at=details["received_at"],

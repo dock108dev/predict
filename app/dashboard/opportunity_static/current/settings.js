@@ -68,29 +68,38 @@ async function refreshDailyCoverage(){
  try{
   const value=await request('/api/workspace/mens-d1/status'), credits=value.credits, storage=value.storage, forecast=value.forecast;
   const words=raw=>raw==null?'':String(raw).replaceAll('_',' ');
-  const late=forecast?.late_capture, latency=late?.latency;
+  const sourceNames={college_basketball_data:'CollegeBasketballData API',sports_reference:'Sports Reference'};
+  const isCbbd=value.source==='college_basketball_data';
+  const late=forecast?.late_capture, latency=late?.current_execution_latency;
   const busyWindow=late?.windows?.reduce((busiest,window)=>!busiest||window.scheduled_tasks>busiest.scheduled_tasks?window:busiest,null);
   const seconds=value=>value==null?'Unknown':`${Number(value).toFixed(2)} s`;
   facts($('mens-d1-source'),[
-   ['Sports Reference',words(value.state)],['Source status reason',words(value.reason)||'—'],
+   ...(value.sources||[value]).map(source=>[sourceNames[source.source],
+    [words(source.state),words(source.reason)].filter(Boolean).join(' · ')]),
+   ['Scheduled job source',sourceNames[value.source]],
    ['Next scheduled job',clock(value.next_run_at)],['Past due within job window',value.overdue_jobs],
    ['Last successful source read',clock(value.last_success_at)],
-   ['Recorded requests',credits.requests],['Unconfirmed dispatches',credits.unconfirmed_dispatches],
-   ['Confirmed credits',credits.confirmed],['Unconfirmed credit exposure',credits.held],
+   ['Recorded game requests',credits.requests],['Unconfirmed dispatches',credits.unconfirmed_dispatches],
+   [isCbbd?'Confirmed metered calls':'Confirmed credits',credits.confirmed],
+   [isCbbd?'Unconfirmed call exposure':'Unconfirmed credit exposure',credits.held],
+   ...(isCbbd&&credits.budget?.window_ends_at?[['Shared monthly balance at account check',
+    `${credits.budget.remaining_calls_at_check} of ${credits.budget.monthly_call_limit} calls`],
+    ['Account allowance resets',clock(credits.budget.window_ends_at)]]:[]),
    ['Source cost (USD)',credits.cost_usd],['Daily source evidence retained',bytes(storage.source_bytes)],
    ['Daily source in-flight reservations',bytes(storage.source_reserved_bytes)],
    ['Unreserved shared research headroom',bytes(storage.headroom_bytes)+' of '+bytes(storage.allocation_bytes)],
    ['Database runway',bytes(storage.sql_bytes)+' of '+bytes(storage.sql_cap_bytes)],
    ['Host disk available',bytes(storage.disk?.free_bytes)+' (free-space floor '+bytes(storage.disk?.floor_bytes)+')'],
    ...(forecast ? [['Next 24 hours, planned source jobs',forecast.next_24h_pending_jobs],
-    ['Forecast basic credits before additional retries or detail requests',forecast.planned_basic_credits],
+    [isCbbd?'Forecast game calls before retries':'Forecast basic credits before additional retries or detail requests',forecast.planned_basic_credits],
     ['Forecast maximum source response bytes',bytes(forecast.maximum_response_bytes)],
     ['Next 24 hours, T−10 tasks',`${forecast.next_24h_cbb_late_tasks} college basketball · ${forecast.next_24h_late_tasks} all sports`]] : []),
    ...(busyWindow ? [['Busiest upcoming T−10 window',`${clock(busyWindow.target_at)} to ${clock(busyWindow.deadline_at)}`],
-    ['Tasks and maximum event requests',`${busyWindow.scheduled_tasks} tasks · ${busyWindow.maximum_event_requests} requests · ${busyWindow.ncaab_tasks} college basketball`],
-    ['Window storage',`${bytes(busyWindow.reserved_bytes)} reserved · ${busyWindow.tasks_without_storage_reservation} tasks without a reservation`],
-    ['Capture service / queue p95',`${seconds(latency.service_p95_seconds)} service · ${seconds(latency.queue_p95_seconds)} queue · ${latency.samples} successful captures`],
-    ['Window capacity estimate',`${seconds(busyWindow.estimated_serial_service_p95_seconds)} serial service · ${seconds(busyWindow.seconds_available)} available · ${words(busyWindow.risk)}`],
+    ['Tasks and planned requests',`${busyWindow.scheduled_tasks} tasks · ${busyWindow.planned_event_requests} requests · ${busyWindow.ncaab_tasks} college basketball`],
+    ['Window storage',`${bytes(busyWindow.reserved_bytes)} reserved · ${busyWindow.tasks_without_storage_reservation} tasks use shared headroom`],
+    ['Measured batch samples',`${latency.samples} successful captures · ${latency.observed_physical_requests} observed request receipts`],
+    ['Window capacity estimate',`${seconds(busyWindow.estimated_window_service_p95_seconds)} service · ${seconds(busyWindow.seconds_available)} available · ${words(busyWindow.risk)}`],
+    ['Competing work',`${busyWindow.competing_non_late_tasks} ordinary checkpoint or result tasks · discovery slot ${clock(busyWindow.ordinary_discovery_slot_at)}`],
     ['In-flight and retry allowances',`${late.permitted_in_flight_event_requests} in flight · ${late.paid_retry_allowance} paid retries`]] : []),
   ]);
   $('mens-d1-job-table').hidden=!value.jobs.length;

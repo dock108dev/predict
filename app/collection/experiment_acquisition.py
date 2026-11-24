@@ -6,13 +6,16 @@ here creates an account partition, retries an uncertain request or releases a
 financial hold.
 """
 import asyncio
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import inspect
 
 from app.storage.store import ROOT, connect, hashed, stamp
 from app.comparison.reference_scope import REQUEST_BOOKS
+from app.research.experiment import LATE_BATCH_SIZE
 from .bulk_checkpoint import owned_thread
 from .current_policy import aggregate_provider, aggregate_scope
 from .sportsgameodds_transport import ODD_IDS
@@ -45,6 +48,12 @@ class CheckpointUnavailable(RuntimeError):
         self.dispatched = dispatched
 
 
+class BatchAuthorityChanged(CheckpointUnavailable):
+    def __init__(self, excluded):
+        super().__init__('experiment_authority_or_window_closed')
+        self.excluded = excluded
+
+
 def _start_pull(task, params, at):
     from app.storage.acquisition_snapshot import start
     with connect() as db:
@@ -74,6 +83,17 @@ def request_scope(task):
     elif task['checkpoint'] != 'outcome':
         raise ValueError('experiment_checkpoint_kind')
     return params
+
+
+def batch_scope(tasks):
+    params = request_scope(tasks[0])
+    return dict(params, eventIDs=','.join(request_scope(task)['eventIDs'] for task in tasks),
+                limit=len(tasks))
+
+
+def request_shape(task):
+    scope = request_scope(task)
+    return tuple((key, value) for key, value in scope.items() if key not in ('eventIDs', 'limit'))
 
 
 def authorized(worker, task, *, at):
@@ -158,7 +178,7 @@ async def _request_slot(worker, already_locked):
             yield
 
 
-async def acquire(worker, task, *, eligible=None, request_locked=False):
+async def acquire(worker, task, *, eligible=None, request_locked=False, batch=None):
     """Fetch exactly once after admission; preserve real dispatch/receipt clocks.
 
     Eligibility is checked by GuardedPageCollector again after account usage and
@@ -173,10 +193,14 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
 
     if worker.collector is None or worker.ledger is None or worker.window_id is None:
         raise CheckpointUnavailable('experiment_source_not_initialized')
-    params = request_scope(task)
+    params = batch_scope(batch) if batch else request_scope(task)
     pull_id = None
     receipt = {}
     timings = dict(claimed_at=task.get('requested_at'), lane_entered_at=worker.now().isoformat())
+    if batch:
+        timings['manifest_ready_at'] = max(item['_manifest_ready_at'] for item in batch)
+        timings['lane_entered_at'] = task['_lane_entered_at']
+        timings['batch_work_started_at'] = task['_batch_work_started_at']
     dispatched_at = None
     transport = worker.transport
 
@@ -202,9 +226,15 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
         moment = worker.now()
         if task['checkpoint'] != 'late' and late_protection_until(worker, at=moment):
             raise CheckpointUnavailable('protected_tminus10_capture_due')
-        if not authorized(worker, task, at=moment):
+        if batch:
+            excluded = {item['token'] for item in batch if not authorized(worker, item, at=moment)}
+            if eligible is not None:
+                excluded.update(await eligible(batch, moment))
+            if excluded:
+                raise BatchAuthorityChanged(excluded)
+        elif not authorized(worker, task, at=moment):
             return False
-        if eligible is not None:
+        elif eligible is not None:
             value = eligible(task, moment)
             if not (await value if inspect.isawaitable(value) else value):
                 return False
@@ -214,13 +244,18 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
         # Rolling exposure already includes this request after the collector
         # reserves it. Rechecking must not count that same object twice.
         budget_admit(worker.ledger, worker.window_id,
-                     (0 if own_reserved else 1) + reserved, worker.now())
+                     (0 if own_reserved else params['limit']) + reserved, worker.now())
         reserved_requests = (max(0, getattr(worker, 'experiment_reserved_requests', 0))
                              if task['checkpoint'] != 'late' else 0)
         if reserved_requests:
             rate = worker.ledger.request_capacity(worker.window_id, now=worker.now())
             if rate['available'] < reserved_requests or (not own_reserved and rate['available'] == reserved_requests):
                 raise CheckpointUnavailable('experiment_checkpoint_rate_headroom')
+        if batch:
+            excluded = {item['token'] for item in batch if not authorized(worker, item, at=worker.now())}
+            if excluded:
+                raise BatchAuthorityChanged(excluded)
+            return True
         return authorized(worker, task, at=worker.now())
 
     async def retain(request, response):
@@ -243,7 +278,7 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
         async with _request_slot(worker, request_locked):
             if not await check(params):
                 raise CheckpointUnavailable('experiment_authority_or_window_closed')
-            if task['checkpoint'] != 'outcome':
+            if not batch and task['checkpoint'] != 'outcome':
                 pull_id = await owned_thread(_start_pull, task, params, worker.now())
                 task['_pull_id'] = pull_id
                 timings['manifest_ready_at'] = worker.now().isoformat()
@@ -296,6 +331,15 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
                        charged_objects=response_object_charge(len(page.events)),
                        response_event_count=len(page.events), next_cursor_present=page.next_cursor is not None,
                        timings=dict(timings, parse_finished_at=known_at.isoformat()))
+        if batch:
+            details['batch'] = dict(request_scope=params, size=len(batch),
+                response_event_ids=[event['event_id'] for event in page.events],
+                paid_event_requests=details.pop('paid_event_requests'), charged_objects=details.pop('charged_objects'))
+            if receipt.get('state') != 'retained' or receipt.get('receipt_sha256') != page.receipt_sha256:
+                raise CheckpointUnavailable('experiment_original_receipt_unavailable', details=details, dispatched=True)
+            page = replace(page, physical_event_ids=tuple(details['batch']['response_event_ids']))
+            worker.metrics['experiment_acquisition'] = details
+            return dict(page=page, dispatch_at=dispatched_at, known_at=known_at, acquisition=details)
         if len(page.events) != 1:
             raise CheckpointUnavailable('experiment_event_not_returned' if not page.events else
                                         'experiment_response_event_scope', details=details, dispatched=True)
@@ -320,6 +364,30 @@ async def acquire(worker, task, *, eligible=None, request_locked=False):
         raise
 
 
+def event_from_batch(task, acquired, events, quotes):
+    """Project one declared event from an authentic shared response."""
+    from .sportsgameodds_adapter import project_event
+
+    source_page = acquired['page']
+    params = request_scope(task)
+    identity = params['eventIDs']
+    event = events.get(identity)
+    details = dict(acquired['acquisition'], request_scope=params, pull_id=task['_pull_id'])
+    details['timings'] = dict(details['timings'], claimed_at=task.get('requested_at'))
+    if not event or event['league'] != task['event']['league']:
+        reason = 'experiment_event_not_returned' if not event else 'experiment_response_event_scope'
+        raise CheckpointUnavailable(reason, details=details, dispatched=True)
+    received_at = stamp(event['received_at'])
+    details['received_at'] = event['received_at']
+    if received_at > acquired['known_at']:
+        raise CheckpointUnavailable('experiment_future_receipt', details=details, dispatched=True)
+    if acquired['known_at'] > stamp(task['deadline_at']):
+        raise CheckpointUnavailable('experiment_response_after_deadline', details=details, dispatched=True)
+    page = project_event(source_page, event, quotes.get(identity, ()),
+                         pull_id=task['_pull_id'], request_scope=params)
+    return dict(acquired, page=page, acquisition=details, received_at=received_at, request_scope=params)
+
+
 def utc():
     return datetime.now(timezone.utc)
 
@@ -332,6 +400,7 @@ class ExperimentAcquisition:
         self.closed = False
         self.task = None
         self.last_discovery = None
+        self.last_comparison = None
         self.progress = dict(state='starting', version=VERSION)
 
     async def start(self):
@@ -367,11 +436,37 @@ class ExperimentAcquisition:
             tasks = experiment.due(db, at=at, limit=1, late_only=protected, recheck_clock=True)
             return tasks[0] if tasks else None
 
+    def _claim_late(self, at):
+        from app.research import experiment
+        with self.connector() as db:
+            return experiment.due(db, at=at, limit=LATE_BATCH_SIZE, late_only=True, recheck_clock=True)
+
+    def _compare_pending(self, worker):
+        from app.research import experiment
+        from .background_work import BACKGROUND, SOURCE_RUNWAY
+
+        def can_start():
+            return (not late_protection_active(worker) and not worker.page_in_progress
+                    and not any(worker.controls().values()))
+
+        with BACKGROUND.claim('observations', SOURCE_RUNWAY, source=True) as lease:
+            if lease:
+                with self.connector() as db:
+                    return experiment.finish_pending_comparison(db, can_start=can_start)
+
     async def _authorized(self, task, at):
         from app.research import experiment
         def read():
             with self.connector() as db:
                 return experiment.task_authorized(db, task['token'], at=at)
+        return await owned_thread(read)
+
+    async def _excluded_members(self, tasks, at):
+        from app.research import experiment
+        tokens = {task['token'] for task in tasks}
+        def read():
+            with self.connector() as db:
+                return tokens - experiment.authorized_late_tokens(db, tokens, at=at)
         return await owned_thread(read)
 
     def _fail(self, task, reason, *, at, dispatched=False, details=None):
@@ -393,6 +488,7 @@ class ExperimentAcquisition:
             if not lease:
                 raise CheckpointUnavailable(lease.reason, details=acquired['acquisition'], dispatched=True)
             with self.connector() as db:
+                acquired['acquisition'].setdefault('timings', {})['calculation_started_at'] = worker.now().isoformat()
                 actual_event = event_metadata(page.events[0], page.receipt_sha256)
                 # Schedule mutations commit before the CPU-only calculation.
                 # The due task still has to pass the same schedule/token check.
@@ -426,7 +522,7 @@ class ExperimentAcquisition:
                 finished = worker.now()
                 snapshot['times'].update(inputs_cutoff=acquired['known_at'].isoformat(),
                     calculation_finished_at=finished.isoformat(), known_at=finished.isoformat(), captured_at=finished.isoformat())
-                from app.storage.acquisition_snapshot import finish, prepare_publication, publish
+                from app.storage.acquisition_snapshot import finish, prepare_publication, publish, record_timing
                 acquired['acquisition'].setdefault('timings', {})['calculation_finished_at'] = finished.isoformat()
                 snapshot['acquisition'] = deepcopy(acquired['acquisition'])
                 prepared = prepare_publication(page, snapshot, details=acquired['acquisition'])
@@ -435,10 +531,12 @@ class ExperimentAcquisition:
                     saved = experiment.capture(db, task['game_id'], task['checkpoint'], snapshot,
                         token=task['token'], requested_at=acquired['dispatch_at'],
                         received_at=acquired['received_at'], known_at=finished, scope=acquired['request_scope'],
-                        market_publication_bytes=prepared.allocation_bytes)
+                        market_publication_bytes=prepared.allocation_bytes, snapshot_bytes=prepared.raw_bytes,
+                        defer_comparison='batch' in acquired['acquisition'])
                     if saved['state'] == 'captured':
                         acquired['acquisition']['timings']['checkpoint_recorded_at'] = saved['recorded_at']
                         publish(db, page, snapshot, details=acquired['acquisition'], prepared=prepared)
+                        record_timing(db, page.pull_id, 'persistence_checked_at')
                         persisted = experiment._dbclock(db)
                         if persisted > stamp(task['deadline_at']):
                             acquired['acquisition']['timings']['persistence_checked_at'] = persisted.isoformat()
@@ -447,6 +545,117 @@ class ExperimentAcquisition:
                     else:
                         finish(db, page.pull_id, 'failed', details=dict(acquired['acquisition'], **saved))
                     return saved
+
+    async def _failed_turn(self, worker, task, exc, acquired=None):
+        reason = str(exc)[:160] or type(exc).__name__
+        details = getattr(exc, 'details', None) or (acquired or {}).get('acquisition')
+        dispatched = getattr(exc, 'dispatched', acquired is not None)
+        failure = await owned_thread(self._fail, task, reason, at=worker.now(),
+                                     dispatched=dispatched, details=details)
+        if task.get('_pull_id'):
+            await owned_thread(_end_pull, task['_pull_id'], 'failed' if dispatched else 'refused',
+                               dict(details or {}, reason=reason))
+        self.progress = dict(self.progress, state='degraded', last_failure=failure,
+                             last_completed_at=worker.now().isoformat())
+
+    async def _complete_turn(self, worker, task, acquired):
+        try:
+            if worker.now() > stamp(task['deadline_at']):
+                raise CheckpointUnavailable('experiment_checkpoint_window_missed', dispatched=True)
+            saved = await owned_thread(self._finish, worker, task, acquired)
+        except Exception as exc:
+            await self._failed_turn(worker, task, exc, acquired)
+        else:
+            self.progress = dict(self.progress, state='ready', last_saved=saved,
+                                 last_completed_at=worker.now().isoformat())
+
+    async def _capture_batch(self, worker, tasks):
+        from .sportsgameodds_collector import DailyObjectPacing
+
+        members = []
+        started_at = worker.now().isoformat()
+        for task in tasks:
+            try:
+                if not authorized(worker, task, at=worker.now()):
+                    raise CheckpointUnavailable('experiment_authority_or_window_closed')
+                task['_batch_work_started_at'] = started_at
+                if '_pull_id' not in task:
+                    task['_pull_id'] = await owned_thread(_start_pull, task, request_scope(task), worker.now())
+                    task['_manifest_ready_at'] = worker.now().isoformat()
+            except Exception as exc:
+                await self._failed_turn(worker, task, exc)
+            else:
+                members.append(task)
+
+        while members:
+            try:
+                acquired = await acquire(worker, members[0], eligible=self._excluded_members,
+                                         request_locked=True, batch=members)
+            except BatchAuthorityChanged as exc:
+                # No dispatch occurred. Remove revoked claims and independently
+                # recheck the remaining exact members under a fresh reservation.
+                for task in members:
+                    if task['token'] in exc.excluded:
+                        await self._failed_turn(worker, task, exc)
+                members = [task for task in members if task['token'] not in exc.excluded]
+            except Exception as exc:
+                # A pre-dispatch allowance shortfall for the whole group
+                # does not imply zero capacity. Let smaller groups re-admit.
+                cause = exc.__cause__
+                if (len(members) > 1 and not getattr(exc, 'dispatched', False) and
+                        (isinstance(cause, DailyObjectPacing) or
+                         str(cause) in ('insufficient object allowance', 'operational_object_budget'))):
+                    half = len(members) // 2
+                    await self._capture_batch(worker, members[:half])
+                    await self._capture_batch(worker, members[half:])
+                    return
+                for task in members:
+                    await self._failed_turn(worker, task, exc)
+                return
+            else:
+                break
+        if not members:
+            return
+        events = {event['event_id']: event for event in acquired['page'].events}
+        quotes = defaultdict(list)
+        for quote in acquired['page'].quotes:
+            quotes[quote['event_id']].append(quote)
+        for task in members:
+            try:
+                individual = event_from_batch(task, acquired, events, quotes)
+            except CheckpointUnavailable as exc:
+                await self._failed_turn(worker, task, exc)
+            else:
+                await self._complete_turn(worker, task, individual)
+
+    async def _capture_group(self, worker, tasks):
+        worker.experiment_late_waiting = True
+        groups = {}
+        for task in tasks:
+            groups.setdefault(request_shape(task), []).append(task)
+        try:
+            async with worker.request_lock:
+                entered_at = worker.now().isoformat()
+                for members in groups.values():
+                    if worker.controls()['stopped'] or worker.controls()['source_paused']:
+                        for task in members:
+                            await self._failed_turn(worker, task,
+                                CheckpointUnavailable('experiment_authority_or_window_closed'))
+                        continue
+                    for task in members:
+                        task['_lane_entered_at'] = entered_at
+                    worker.page_in_progress = True
+                    try:
+                        await self._capture_batch(worker, members)
+                    finally:
+                        worker.page_in_progress = False
+        except asyncio.CancelledError:
+            for task in tasks:
+                if task.get('_pull_id'):
+                    await owned_thread(_end_pull, task['_pull_id'], 'cancelled', dict(reason='capture_cancelled'))
+            raise
+        finally:
+            worker.experiment_late_waiting = False
 
     async def tick(self):
         worker = self.service.workers.get('sportsgameodds')
@@ -483,8 +692,21 @@ class ExperimentAcquisition:
                 # Its own fresh authority, timing and capacity checks still run.
                 self.progress = dict(state='degraded', version=VERSION,
                     discovery_reason=str(exc)[:160] or type(exc).__name__)
-        task = await owned_thread(self._claim, worker.now(), protected=late_protection_active(worker))
+        protected = late_protection_active(worker)
+        if protected:
+            tasks = await owned_thread(self._claim_late, worker.now())
+            if tasks:
+                await self._capture_group(worker, tasks)
+                return True
+            task = None
+        else:
+            task = await owned_thread(self._claim, worker.now(), protected=False)
         if task is None:
+            at = worker.now()
+            if not protected and (self.last_comparison is None or
+                                  (at - self.last_comparison).total_seconds() >= DISCOVERY_SECONDS):
+                self.last_comparison = at
+                await owned_thread(self._compare_pending, worker)
             return
         self.progress = dict(self.progress, state='capturing', task={key:task.get(key) for key in
             ('game_id', 'checkpoint', 'target_at', 'deadline_at', 'attempt')})
@@ -502,11 +724,9 @@ class ExperimentAcquisition:
                 worker.page_in_progress = True
                 try:
                     acquired = await acquire(worker, task, eligible=self._authorized, request_locked=True)
-                    saved = await owned_thread(self._finish, worker, task, acquired)
+                    await self._complete_turn(worker, task, acquired)
                 finally:
                     worker.page_in_progress = False
-            self.progress = dict(self.progress, state='ready', last_saved=saved,
-                                 last_completed_at=worker.now().isoformat())
         except asyncio.CancelledError:
             # The durable claim survives termination; an uncertain request is
             # never redispatched merely because this coroutine was cancelled.
@@ -514,16 +734,7 @@ class ExperimentAcquisition:
                 await owned_thread(_end_pull, task['_pull_id'], 'cancelled', dict(reason='capture_cancelled'))
             raise
         except Exception as exc:
-            reason = str(exc)[:160] or type(exc).__name__
-            details = getattr(exc, 'details', None) or (acquired or {}).get('acquisition')
-            dispatched = getattr(exc, 'dispatched', acquired is not None)
-            failure = await owned_thread(self._fail, task, reason, at=worker.now(),
-                                         dispatched=dispatched, details=details)
-            if task.get('_pull_id'):
-                await owned_thread(_end_pull, task['_pull_id'], 'failed',
-                                   dict(details or {}, reason=reason))
-            self.progress = dict(self.progress, state='degraded', last_failure=failure,
-                                 last_completed_at=worker.now().isoformat())
+            await self._failed_turn(worker, task, exc, acquired)
         finally:
             if late:
                 worker.experiment_late_waiting = False

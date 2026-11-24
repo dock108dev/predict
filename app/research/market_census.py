@@ -254,7 +254,8 @@ def _original(snapshot):
     value = original_receipts.lookup(digest)
     if value["state"] != "retained":
         return dict(state=value["state"], reason=value["reason"], receipt_sha256=digest), None
-    scope = _scope_fields(snapshot.get("request_scope") or {})
+    batch = (snapshot.get("acquisition") or {}).get("batch") or {}
+    scope = _scope_fields(batch.get("request_scope") or snapshot.get("request_scope") or {})
     received_at = stamp(snapshot["times"]["received_at"])
     retained = [row for row in value["captures"] if row["state"] == "retained"]
     matching = [row for row in retained if stamp(row["received_at"]) == received_at]
@@ -336,7 +337,11 @@ def from_checkpoint(checkpoint, checkpoint_id, *, include_rows=True, minimum="1/
     raw_rows, market_groups = [], []
     if payload is not None:
         events = {row["eventID"]: row for row in payload["data"] if isinstance(row, dict) and isinstance(row.get("eventID"), str)}
-        response = retrieval(scope, events, payload.get("nextCursor"), digest)
+        batch_scope = ((snapshot.get("acquisition") or {}).get("batch") or {}).get("request_scope")
+        response = retrieval(scope, [event_id] if batch_scope and event_id in events else
+                             [] if batch_scope else events, payload.get("nextCursor"), digest)
+        if batch_scope:
+            response["physical_request"] = retrieval(batch_scope, events, payload.get("nextCursor"), digest)
         if event := events.get(event_id):
             raw_rows = _returned_rows(event, facts)
             market_groups = [dict(odd_id=odd, supported=supported_odd(body),

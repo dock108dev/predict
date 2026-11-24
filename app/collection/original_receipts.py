@@ -4,6 +4,7 @@ No fetch/retry, eviction, credentials, request URLs or cursor values. A full sto
 records a gap instead of making a successful paid response fail admission.
 """
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import datetime, timezone
 from functools import lru_cache
 import fcntl
@@ -19,7 +20,7 @@ import tempfile
 
 from .current_policy import ROOT
 from .current_storage_policy import FREE_DISK_BYTE_FLOOR, disk_capacity
-from .sportsgameodds_adapter import MAX_PAGE_BYTES
+from .sportsgameodds_adapter import MAX_PAGE_BYTES, parse_page, project_event
 from .sportsgameodds_transport import validate_params
 from .sgo_capabilities import supported_odd
 
@@ -43,6 +44,42 @@ def safe_scope(params):
     params = validate_params(params)
     return {key: sha256(value.encode()).hexdigest() if key == 'cursor' else value
             for key, value in params.items()}
+
+
+def checkpoint_request_scope(metadata, params, batch, event_id):
+    """Verify a logical one-event scope against its exact physical request."""
+    physical = metadata['request_scope']
+    if params.get('eventIDs') != event_id or params.get('cursor') or physical.get('cursor'):
+        raise ValueError('retained_explicit_event_scope_unproven')
+    if not batch:
+        if physical != params:
+            raise ValueError('retained_explicit_event_scope_unproven')
+        return physical
+    ids = physical.get('eventIDs', '').split(',')
+    if (physical != batch.get('request_scope') or event_id not in ids or '' in ids
+            or len(set(ids)) != len(ids) or batch.get('size') != len(ids)
+            or physical.get('limit') != len(ids)
+            or params != dict(physical, eventIDs=event_id, limit=1)):
+        raise ValueError('retained_batch_event_scope_unproven')
+    return physical
+
+
+def checkpoint_page(body, metadata, params, batch, event_id, *, pull_id, attempt_id, venues=None):
+    """Reparse the authenticated body and project the claimed member only."""
+    checkpoint_request_scope(metadata, params, batch, event_id)
+    parsed = parse_page(body, metadata['received_at'], venues=venues)
+    if parsed.receipt_sha256 != metadata['receipt_sha256']:
+        raise ValueError('retained_page_receipt_differs')
+    returned = [event['event_id'] for event in parsed.events]
+    if event_id not in returned or (batch and returned != batch.get('response_event_ids')):
+        raise ValueError('retained_explicit_event_membership_unproven')
+    if not batch and returned != [event_id]:
+        raise ValueError('retained_explicit_event_membership_unproven')
+    parsed = replace(parsed, attempt_id=attempt_id, received_at=metadata['received_at'],
+                     physical_event_ids=tuple(returned) if batch else None)
+    event = next(event for event in parsed.events if event['event_id'] == event_id)
+    quotes = (quote for quote in parsed.quotes if quote['event_id'] == event_id)
+    return project_event(parsed, event, quotes, pull_id=pull_id, request_scope=params)
 
 
 def field_census(body, params):

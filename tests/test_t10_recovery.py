@@ -63,6 +63,39 @@ def test_original_raw_bytes_rebuilt_without_current_fees_or_prices():
         recovery.reconstruct(game, checkpoint, "attempt-record", attempt, metadata, raw + b" ")
 
 
+def test_shared_receipt_reconstructs_only_the_claimed_member():
+    game, checkpoint, attempt, metadata, raw = source()
+    body = json.loads(raw)
+    sibling = deepcopy(body["data"][0])
+    sibling["eventID"] = "other"
+    body["data"].append(sibling)
+    raw = json.dumps(body).encode()
+    details = attempt["details"]
+    details["request_scope"].update(limit=1, bookmakerID="kalshi")
+    physical = dict(details["request_scope"], eventIDs="event,other,unreturned", limit=3)
+    details.update(receipt_sha256=sha256(raw).hexdigest(),
+                   batch=dict(request_scope=physical, size=3, response_event_ids=["event", "other"]))
+    metadata.update(request_scope=physical, receipt_sha256=details["receipt_sha256"])
+
+    recovered = recovery.reconstruct(game, checkpoint, "attempt-record", attempt, metadata, raw)
+    snapshot = recovered["snapshot"]
+    assert snapshot["source_event"]["event_id"] == "event"
+    assert {quote["event_id"] for quote in snapshot["raw_quotes"]} == {"event"}
+    assert snapshot["request_scope"]["eventIDs"] == "event"
+    assert snapshot["acquisition"]["batch"]["request_scope"]["eventIDs"] == "event,other,unreturned"
+
+    different_filter = deepcopy(attempt)
+    different_filter["details"]["request_scope"]["bookmakerID"] = "novig"
+    assert not recovery.eligible_attempt(game, checkpoint, different_filter, metadata)
+    not_returned = deepcopy(attempt)
+    not_returned["details"]["batch"]["response_event_ids"] = ["other"]
+    assert not recovery.eligible_attempt(game, checkpoint, not_returned, metadata)
+    contradictory = deepcopy(attempt)
+    contradictory["details"]["batch"]["response_event_ids"].append("unreturned")
+    with pytest.raises(ValueError, match="receipt_mismatch"):
+        recovery.reconstruct(game, checkpoint, "attempt-record", contradictory, metadata, raw)
+
+
 @pytest.mark.parametrize("rows,expected", [(1, True), (2, False), (0, False)])
 def test_old_failure_requires_unique_exact_manifest_receipt(rows, expected):
     game, checkpoint, attempt, metadata, raw = source()

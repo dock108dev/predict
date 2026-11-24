@@ -80,7 +80,7 @@ def _boolean(value):
     return value == 'true'
 
 
-def _team(row, side, final):
+def _team(row, side, final, *, allow_incomplete_periods=False):
     native, name, conference, score, period_scores = (row[side + key] for key in TEAM_FIELDS)
     if not native.isdigit() or not name or len(name) > 160:
         raise ValueError('cbbd_invalid_team')
@@ -88,7 +88,9 @@ def _team(row, side, final):
     points = int(score) if final and score.isdigit() else None
     if periods is not None and (not isinstance(periods, list) or not 2 <= len(periods) <= 20
             or any(type(value) is not int or value < 0 for value in periods) or sum(periods) != points):
-        raise ValueError('cbbd_invalid_period_scores')
+        if not allow_incomplete_periods:
+            raise ValueError('cbbd_invalid_period_scores')
+        periods = None
     return dict(source_team_id=native, name=name, source_conference=conference,
                 display_role=side.lower(), score=points, period_scores=periods)
 
@@ -115,24 +117,29 @@ def _review_membership(team, membership):
     team.update(membership=evidence, canonical_id=evidence.get('canonical_id'))
 
 
-def _game(row, day, receipt):
+def _game(row, day, receipt, *, gender_evidence='CollegeBasketballData men’s college basketball games exporter',
+          allow_provisional_final=False):
     native, upstream = row['Id'], row['SourceId']
     if not native.isdigit() or not upstream or len(upstream) > 128 or row['Status'] not in STATUS:
         raise ValueError('cbbd_invalid_game_identity_or_status')
     start, tbd = stamp(row['StartDate']), _boolean(row['StartTimeTbd'])
     status = STATUS[row['Status']]
-    teams = [_team(row, side, status == 'final') for side in ('Away', 'Home')]
+    teams = [_team(row, side, status == 'final', allow_incomplete_periods=allow_provisional_final)
+             for side in ('Away', 'Home')]
     if teams[0]['source_team_id'] == teams[1]['source_team_id']:
         raise ValueError('cbbd_duplicate_participants')
+    detail_reason = None
     if status == 'final' and (any(team['score'] is None for team in teams) or teams[0]['score'] == teams[1]['score']):
-        raise ValueError('cbbd_invalid_final_scores')
+        if not allow_provisional_final:
+            raise ValueError('cbbd_invalid_final_scores')
+        status, detail_reason = 'incomplete', 'source_final_score_unavailable'
     membership = load_membership(day)
     counts = {len(team['period_scores']) for team in teams if team['period_scores'] is not None}
     overtime = next(iter(counts)) - 2 if len(counts) == 1 and all(team['period_scores'] for team in teams) else None
     game = _row(receipt, day, 'men', teams, membership, source_time=row['StartDate'], source_timezone='UTC',
                 scheduled_start=None if tbd else coverage.clock(start), site=row['Venue'] or None,
                 neutral_site=_boolean(row['NeutralSite']), status=status, native_game_id=native,
-                gender_evidence='CollegeBasketballData men’s college basketball games exporter', overtime_periods=overtime)
+                gender_evidence=gender_evidence, overtime_periods=overtime, detail_reason=detail_reason)
     for team in teams:
         _review_membership(team, membership)
     divisions = {team['membership']['division'] for team in teams}
