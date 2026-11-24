@@ -6,6 +6,7 @@ evidence. Browser reads cannot activate scheduling or dispatch provider calls.
 from collections import Counter
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 from uuid import uuid4
 
 from psycopg.types.json import Jsonb
@@ -108,16 +109,17 @@ def _write(db, kind, value, *, game_id=None, checkpoint=None, reserve=0, summary
     body = dict(version=VERSION, kind=kind, game_id=game_id, checkpoint=checkpoint, value=root)
     if summary is not None:
         body["summary"] = summary
-    identity = hashed(body)
+    wire = encoded(body)
+    identity = sha256(wire).hexdigest()
     bodies = dict(blobs)
     bodies[identity] = body
     existing = {row["id"] for row in db.execute(
         "SELECT id FROM public.ev_experiment_record WHERE id=ANY(%s)", (list(bodies),))}
     new = [(key, payload) for key, payload in bodies.items() if key not in existing]
-    sizes = {key: len(encoded(payload)) for key, payload in new}
-    if any(size > RECORD_BYTE_CAP for size in sizes.values()):
+    payloads = {key: wire if key == identity else encoded(payload) for key, payload in new}
+    if any(len(payload) > RECORD_BYTE_CAP for payload in payloads.values()):
         raise ValueError("research_record_capacity")
-    total = sum(sizes.values())
+    total = sum(map(len, payloads.values()))
     if new or reserve:
         _admit(db, total, reserve=reserve)
     if new:
@@ -127,7 +129,8 @@ def _write(db, kind, value, *, game_id=None, checkpoint=None, reserve=0, summary
                 VALUES(%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(id) DO NOTHING""", [
                 (key, payload["kind"], game_id if payload["kind"] != "blob" else None,
                  checkpoint if payload["kind"] != "blob" else None,
-                 sizes[key], sorted(references(payload)), Jsonb(payload)) for key, payload in new])
+                 len(payloads[key]), sorted(references(payload)), Jsonb(payloads[key], dumps=bytes))
+                for key, payload in new])
     return identity, total
 
 

@@ -30,16 +30,20 @@ MAX_COMPRESSED_CHECKPOINT_BYTES = MAX_DECODED_CHECKPOINT_BYTES + 1024 * 1024
 
 
 def references(value):
-    if isinstance(value, dict):
-        if set(value) == {REFERENCE}:
-            identity = value[REFERENCE]
-            if not isinstance(identity, str) or len(identity) != 64:
-                raise ValueError("experiment_blob_reference_invalid")
-            return {identity}
-        return set().union(*(references(child) for child in value.values())) if value else set()
-    if isinstance(value, list):
-        return set().union(*(references(child) for child in value)) if value else set()
-    return set()
+    identities, pending = set(), [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            if len(item) == 1 and REFERENCE in item:
+                identity = item[REFERENCE]
+                if not isinstance(identity, str) or len(identity) != 64:
+                    raise ValueError("experiment_blob_reference_invalid")
+                identities.add(identity)
+            else:
+                pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return identities
 
 
 def pack(value):
@@ -82,7 +86,7 @@ def pack_checkpoint(value):
         if depth > MAX_DEPTH:
             raise ValueError("experiment_blob_depth")
         if isinstance(item,dict):
-            if any(key in item for key in (REFERENCE,CHECKPOINT_ENVELOPE,COMPRESSED_SNAPSHOT)):
+            if REFERENCE in item or CHECKPOINT_ENVELOPE in item or COMPRESSED_SNAPSHOT in item:
                 raise ValueError("experiment_reserved_source_key")
             pending.extend((child,depth+1) for child in item.values())
         elif isinstance(item,list):
@@ -92,14 +96,25 @@ def pack_checkpoint(value):
         raise ValueError("research_record_capacity")
     metadata,blobs = pack({key:item for key,item in value.items() if key != "snapshot"})
 
+    shared_roots, shared_ids = {}, set()
+
     def shared(item):
+        # Every interned input is canonical JSON. Repeated event and fee
+        # inputs use exactly the same reference as a fresh pack of either.
+        wire = encoded(item)
+        saved = shared_roots.get(wire)
+        if saved and saved[0] == item:
+            return {REFERENCE:saved[1]}
         root,parts = pack(item)
         blobs.update(parts)
         if isinstance(root,dict) and set(root) == {REFERENCE}:
-            return root
-        body = dict(version=VERSION,kind="blob",value=root)
-        identity = hashed(body)
-        blobs.setdefault(identity,body)
+            identity = root[REFERENCE]
+        else:
+            body = dict(version=VERSION,kind="blob",value=root)
+            identity = hashed(body)
+            blobs.setdefault(identity,body)
+        shared_roots[wire] = (item, identity)
+        shared_ids.add(identity)
         return {REFERENCE:identity}
 
     packed_snapshot = dict(snapshot)
@@ -118,7 +133,9 @@ def pack_checkpoint(value):
                 packed_offer["record"] = record
             offers.append(packed_offer)
         packed_snapshot["offers"] = offers
-    external_refs = sorted(references(packed_snapshot))
+    # Validation rejected source-side reference markers. The replacements
+    # above are the only references introduced into the compressed snapshot.
+    external_refs = sorted(shared_ids)
     raw = encoded(packed_snapshot)
     if len(raw) > MAX_DECODED_CHECKPOINT_BYTES:
         raise ValueError("research_record_capacity")

@@ -167,7 +167,10 @@ def compact_snapshot(snapshot, pull_id, family=None):
             display['reference'] = {key:display['reference'][key] for key in
                 ('book','probability','selection_policy','trusted_book_count') if key in display['reference']}
         item['display_offer'] = display
-        item['evidence_revision'] = hashed([pull_id,value])
+        # A full offer already hashes the same exact inputs for its display
+        # revision. Compact or previously versioned input keeps its own path.
+        item['evidence_revision'] = (hashed([pull_id,value]) if value.get('evidence_revision') or value.get('display_offer')
+                                     else display['revision'])
         payload = value.get('calculation_payload')
         if payload:
             small = {key:payload[key] for key in ('id','input_revision','version','display','fee_mode') if key in payload}
@@ -193,7 +196,7 @@ class PreparedPublication:
     body: bytes
     digest: str
     raw_bytes: int
-    scope_snapshots: dict
+    scope_rows: dict
     allocation_bytes: int
 
 
@@ -203,14 +206,14 @@ def prepare_publication(page, snapshot, *, details=None):
     body = zlib.compress(raw, level=6)
     projection = compact_snapshot(snapshot, page.pull_id)
     params = page.request_scope or {}
-    scope_snapshots = {family: dict(projection, offers=[offer for offer in projection['offers']
-                            if offer['record']['market_identity']['family'] == family])
-                       for family in requested_families(params)}
+    scope_rows = {family: (encoded(coverage(params, family)), encoded(dict(projection, offers=[
+        offer for offer in projection['offers'] if offer['record']['market_identity']['family'] == family])))
+        for family in requested_families(params)}
     membership = _membership(page)
     allocation = len(body) + 256 + len(encoded(membership)) * 2 + len(encoded(details or {})) * 2 + 1024
-    for family, scope_snapshot in scope_snapshots.items():
-        allocation += 256 + 2 * (len(encoded(scope_snapshot)) + len(encoded(coverage(params, family))))
-    return PreparedPublication(body, sha256(raw).hexdigest(), len(raw), scope_snapshots, allocation)
+    for scope_coverage, scope_snapshot in scope_rows.values():
+        allocation += 256 + 2 * (len(scope_snapshot) + len(scope_coverage))
+    return PreparedPublication(body, sha256(raw).hexdigest(), len(raw), scope_rows, allocation)
 
 
 def store_evidence(db, pull_id, snapshot, *, prepared=None):
@@ -270,13 +273,14 @@ def publish(db, page, snapshot, *, details=None, prepared=None):
         accept(db, page)
         store_evidence(db, pull_id, snapshot, prepared=prepared)
         source = snapshot['source_event']
-        for family, market_snapshot in prepared.scope_snapshots.items():
+        for family, (scope_coverage, market_snapshot) in prepared.scope_rows.items():
             db.execute('''INSERT INTO public.market_pull_scope
                 (pull_id,event_id,family,coverage,state,snapshot) VALUES(%s,%s,%s,%s,%s,%s)
                 ON CONFLICT(pull_id,event_id,family,period) DO UPDATE SET
                   state=excluded.state,snapshot=excluded.snapshot
                 WHERE market_pull_scope.state='in_progress' ''',
-                (pull_id,source['event_id'],family,Jsonb(coverage(params,family)),state,Jsonb(market_snapshot)))
+                (pull_id,source['event_id'],family,Jsonb(scope_coverage,dumps=bytes),state,
+                 Jsonb(market_snapshot,dumps=bytes)))
         db.execute('''UPDATE public.market_pull SET state=%s,details=details||%s
             WHERE pull_id=%s AND state='in_progress' ''', (state,Jsonb(details or {}),pull_id))
     return state

@@ -228,6 +228,13 @@
   },
   "non_d1": [
     {
+      "id": "NAIA:arkansas-baptist",
+      "name": "Arkansas Baptist College",
+      "aliases": ["Arkansas Baptist", "Arkansas Baptist Buffaloes"],
+      "classification": "NAIA",
+      "sources": ["https://abcbuffaloes.com/sports/mens-basketball/schedule/2026?grid=true", "https://abcbuffaloes.com/news/2026/3/2/general-arkansas-baptist-mbb-captures-2026-cac-mens-basketball-championship.aspx"]
+    },
+    {
       "id": "NCCAA:ecclesia",
       "name": "Ecclesia College",
       "aliases": ["Ecclesia", "Ecclesia Royals"],

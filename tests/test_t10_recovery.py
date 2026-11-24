@@ -10,9 +10,9 @@ import pytest
 
 from app.research import experiment, paper, recovery, workspace
 from app.storage.store import stamp
-from tests.latest_board_fixture import LatestBoardFixture, SOCKET
+from tests.latest_board_fixture import SOCKET
 from tests.test_paper_experiments import linear, priced
-from tests.test_paper_experiments_sql import ResearchWorkspaceSQL
+from tests.test_paper_experiments_sql import ResearchWorkspaceFixture
 from tests.test_sportsgameodds_adapter import response
 
 
@@ -141,12 +141,46 @@ def test_recovery_selects_final_response_before_calculating_any_ev():
 
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
-class RecoverySQL(LatestBoardFixture):
-    asyncSetUp = ResearchWorkspaceSQL.asyncSetUp
-    advance = ResearchWorkspaceSQL.advance
-    game = ResearchWorkspaceSQL.game
-    capture = ResearchWorkspaceSQL.capture
+class DatedD1RecoverySQL(ResearchWorkspaceFixture):
+    async def test_dated_d1_recovery_keeps_failed_task_and_uses_exact_receipt(self):
+        from app.research import mens_d1
 
+        _, _, attempt, metadata, raw = source()
+        identity = metadata['id'] = 'e' * 64
+        details = dict(attempt['details'], original_response={'id':identity})
+        day = '2026-11-23'
+        game = self.game('event', '2026-11-23T18:00:00Z')
+        population = dict(kind='reconciled_occurrences', revision='dated-slate', membership_version='season',
+                          games=[dict(provider_event_id='event', occurrence_id='source:cbbd:game', scope_state='eligible')])
+        with self.connect() as db, patch.object(mens_d1, 'daily_population',
+                side_effect=lambda db, day: deepcopy(population)), patch.object(recovery.original_receipts,
+                'read', return_value=(metadata, raw)):
+            experiment.discover(db, [game], at=self.at)
+            self.capture(db, 'early', game)
+            self.advance(db, stamp('2026-11-23T17:50:00Z'))
+            task = experiment.due(db, at=self.at)[0]
+            self.advance(db, stamp('2026-11-23T17:51:01Z'))
+            failed = experiment.fail_checkpoint(db, task['game_id'], 'late', 'experiment_checkpoint_window_missed',
+                token=task['token'], at=self.at, dispatched=True, details=details)
+            assert failed['state'] == 'missed'
+            assert recovery.record_d1(db, day, 'f' * 64)['eligible_recoveries'] == 0
+            preview = recovery.record_d1(db, day, identity)
+            assert preview['eligible_recoveries'] == 1 and not preview['checkpoint_ids']
+            before = workspace.replay(db, day, mens_d1.DAILY, {})
+            retained = recovery.record_d1(db, day, identity, commit=True)
+            assert recovery.record_d1(db, day, identity, commit=True) == retained
+            after = workspace.replay(db, day, mens_d1.DAILY, {})
+            assert after['run']['supersedes'] == before['run']['id']
+            recovered = after['report']['games'][0]
+            assert (recovered['status'], recovered['original_capture_status']) == ('reconstructed', 'missed')
+            assert recovered['checkpoint_id'] == retained['checkpoint_ids'][task['game_id']]
+            assert recovered['recovery']['receipt_id'] == identity
+            assert db.execute('SELECT late_id FROM ev_experiment_game WHERE id=%s', (task['game_id'],)).fetchone()['late_id'] is None
+            assert workspace.replay(db, day, mens_d1.DAILY, {})['run']['id'] == after['run']['id']
+
+
+@skipUnless(SOCKET, "Disposable PostgreSQL required")
+class RecoverySQL(ResearchWorkspaceFixture):
     async def test_recovery_is_separate_idempotent_and_does_not_grade_results(self):
         from psycopg.types.json import Jsonb
         from app.storage.store import encoded, hashed

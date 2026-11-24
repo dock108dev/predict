@@ -241,6 +241,10 @@ def _coverage_gaps(value, games):
             gaps.append(_gap("Confirmed participant identities or Eastern game date", "Dated eligibility remains unresolved.",
                              game.get("match_reason") or "Conflicting or incomplete upstream identity or schedule evidence.",
                              "external_source_limitation", "Obtain a corrected source record or dated official confirmation.", **location))
+        if (game.get("occurrence_schedule") or {}).get("state") == "start_disputed":
+            gaps.append(_gap("Agreed scheduled start", "The game’s Eastern date is known and its exact start remains disputed.",
+                             "Retained source, provider or official scheduled clocks disagree.", "external_source_limitation",
+                             "Check the organizer’s latest schedule and retain the original capture target.", **location))
         if not _eligible_occurrence(game, value.get("date")):
             continue
         if match in ("provider_only", "source_only", "no_market"):

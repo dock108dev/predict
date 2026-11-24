@@ -136,27 +136,39 @@ def retained_provider_population(db, day):
 
 def daily_recovery(db, day, population):
     """Admit earlier reconstructions only for still-exact reviewed match occurrences."""
+    from .recovery import VERSION as RECOVERY_VERSION
+
+    providers = [row["provider_event_id"] for row in population["games"]
+                 if in_paper_cohort(row) and row.get("provider_event_id")]
+    if not providers:
+        return {}
+    checkpoints = {row["game_id"]: row["id"] for row in db.execute("""SELECT DISTINCT ON (r.game_id) r.game_id,r.id
+        FROM public.ev_experiment_record r JOIN public.ev_experiment_game g ON g.id=r.game_id
+        JOIN public.ev_experiment_task t ON t.game_id=g.id AND t.checkpoint='late'
+        WHERE g.provider='sportsgameodds' AND g.source_event_id=ANY(%s) AND g.late_id IS NULL
+          AND r.kind='checkpoint' AND r.checkpoint='late' AND r.payload#>>'{summary,scope}'=%s
+          AND r.payload#>>'{summary,source_kind}'='retrospective_raw_t10' AND r.payload#>>'{summary,version}'=%s
+          AND r.payload#>>'{summary,schedule_id}'=g.schedule_id AND t.schedule_id=g.schedule_id
+          AND t.state IN ('missed','refused','failed')
+        ORDER BY r.game_id,r.payload#>>'{summary,received_at}' DESC,r.id""", (providers, SCOPE, RECOVERY_VERSION))}
     record = db.execute("""SELECT d.payload->'policy' policy, r.payload#>'{report,games}' games
         FROM public.research_workspace_run r JOIN public.research_workspace_definition d
         ON d.version=r.definition_version
         WHERE r.game_date=%s AND d.payload->>'designation'='retrospective_raw_recovery'
         ORDER BY r.observed_at DESC,r.id LIMIT 1""", (day,)).fetchone()
-    if not record:
-        return {}
-    prior = {game["game_id"]: game for game in record["games"] if game["status"] == "reconstructed"}
-    providers = [row["provider_event_id"] for row in population["games"]
-                 if in_paper_cohort(row) and row.get("provider_event_id")]
-    checkpoints = {}
-    for row in db.execute("""SELECT id,schedule_id FROM public.ev_experiment_game
-        WHERE provider='sportsgameodds' AND source_event_id=ANY(%s) AND id=ANY(%s) AND late_id IS NULL""",
-        (providers, list(prior))):
-        game = prior[row["id"]]
-        if row["schedule_id"] == game["schedule_id"]:
-            checkpoints[row["id"]] = game["checkpoint_id"]
+    if record:
+        prior = {game["game_id"]: game for game in record["games"] if game["status"] == "reconstructed"}
+        for row in db.execute("""SELECT id,schedule_id FROM public.ev_experiment_game
+            WHERE provider='sportsgameodds' AND source_event_id=ANY(%s) AND id=ANY(%s) AND late_id IS NULL""",
+            (providers, list(prior))):
+            game = prior[row["id"]]
+            if row["schedule_id"] == game["schedule_id"]:
+                checkpoints.setdefault(row["id"], game["checkpoint_id"])
     if not checkpoints:
         return {}
-    return dict(recovered_checkpoints=checkpoints, recovery_version=record["policy"]["recovery_version"],
-                fees=record["policy"]["fees"])
+    fees = "Original captures preserve their fee mode; reconstructed responses explicitly assume $0 fees."
+    return dict(recovered_checkpoints=checkpoints, recovery_version=record["policy"]["recovery_version"] if record else RECOVERY_VERSION,
+                fees=record["policy"]["fees"] if record else fees)
 
 
 def main():

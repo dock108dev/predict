@@ -116,12 +116,15 @@ def reconstruct(game, checkpoint, attempt_id, attempt, metadata, body):
             fees="explicit $0-fee replay assumption", results="deferred"))
 
 
-def prepare(db, day):
+def prepare(db, day, *, provider_ids=None, receipt_id=None):
     workspace.game_day(day)
-    games = list(db.execute("""SELECT * FROM public.ev_experiment_game
-        WHERE event->>'league'='NCAAB' AND
-        ((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
-        ORDER BY id""", (day,)))
+    games = list(db.execute("""SELECT g.* FROM public.ev_experiment_game g
+        WHERE g.event->>'league'='NCAAB' AND
+        ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
+        AND (%s::text[] IS NULL OR (g.source_event_id=ANY(%s) AND g.late_id IS NULL AND EXISTS (
+            SELECT 1 FROM public.ev_experiment_task t WHERE t.game_id=g.id AND t.checkpoint='late'
+              AND t.state IN ('missed','refused','failed') AND t.deadline_at<clock_timestamp())))
+        ORDER BY g.id""", (day, provider_ids, provider_ids)))
     recovered, dispositions = {}, []
     for game in games:
         checkpoint = owner._checkpoint_view(db, game, "late")
@@ -140,7 +143,7 @@ def prepare(db, day):
             if bound is None:
                 continue
             attempt, metadata, body = bound
-            if eligible_attempt(game, checkpoint, attempt, metadata):
+            if (receipt_id is None or metadata['id'] == receipt_id) and eligible_attempt(game, checkpoint, attempt, metadata):
                 valid.append((stamp(metadata["received_at"]), row["id"], attempt, metadata, body))
         if valid:
             _, identity, attempt, metadata, body = max(valid, key=lambda item: item[:2])
@@ -148,6 +151,37 @@ def prepare(db, day):
         dispositions.append(dict(game_id=game["id"], title=game["event"]["title"],
             status="reconstructed" if valid else "no_eligible_retained_response", original_status=checkpoint["status"]))
     return recovered, dispositions
+
+
+def record_d1(db, day, receipt_id, *, commit=False):
+    """Record a selected original on the dated D1 path, independent of live task state."""
+    from . import mens_d1
+
+    if not workspace.HASH.fullmatch(receipt_id):
+        raise workspace.SelectionError("Select a retained original response receipt.")
+    with db.transaction():
+        db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        population = mens_d1.daily_population(db, workspace.game_day(day))
+        provider_ids = [row["provider_event_id"] for row in (population or {}).get("games", [])
+                        if mens_d1.in_paper_cohort(row) and row.get("provider_event_id")]
+        recovered, dispositions = prepare(db, day, provider_ids=provider_ids, receipt_id=receipt_id)
+    mapping = {}
+    if commit and recovered:
+        with db.transaction():
+            owner._lock(db)
+            for game_id, value in recovered.items():
+                current = db.execute("""SELECT 1 FROM public.ev_experiment_game g
+                    JOIN public.ev_experiment_task t ON t.game_id=g.id AND t.checkpoint='late'
+                    WHERE g.id=%s AND g.late_id IS NULL AND g.schedule_id=%s AND t.schedule_id=%s
+                      AND t.target_at=%s AND t.deadline_at=%s AND t.state IN ('missed','refused','failed')""",
+                    (game_id, value["schedule_id"], value["schedule_id"], value["target_at"], value["deadline_at"])).fetchone()
+                if current is None:
+                    raise workspace.SelectionError("An original task changed during recovery. Recheck its retained evidence.")
+                mapping[game_id], _ = owner._write(db, "checkpoint", value, game_id=game_id, checkpoint="late",
+                    summary=dict(source_kind="retrospective_raw_t10", version=VERSION, scope=mens_d1.SCOPE,
+                                 schedule_id=value["schedule_id"], received_at=value["received_at"]))
+    return dict(commit=commit, receipt_id=receipt_id, dispositions=dispositions, checkpoint_ids=mapping,
+                eligible_recoveries=len(recovered), provider_requests=0, orders_submitted=0)
 
 
 def record(db, day, *, commit=False):
@@ -197,6 +231,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--date", required=True)
     parser.add_argument("--commit", action="store_true")
+    parser.add_argument("--d1-receipt", help="Recover only eligible men’s D1 games from this exact retained receipt.")
     args = parser.parse_args()
     with connect() as connection:
-        print(json.dumps(record(connection, args.date, commit=args.commit), default=str))
+        result = (record_d1(connection, args.date, args.d1_receipt, commit=args.commit) if args.d1_receipt else
+                  record(connection, args.date, commit=args.commit))
+        print(json.dumps(result, default=str))
