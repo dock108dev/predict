@@ -8,8 +8,10 @@ Research workspace. The collector schedules daily imports and the Data view
 accounts for retained games, captures, and results by date. The feature shipped
 in `0e26f88bac69f0e7984a2dbeba46712a0ce3e9db` through
 [main CI](https://github.com/dock108dev/predict/actions/runs/45432360098/attempts/2).
+The installed follow-up is `c75ffcd52707699a7615decea903feadf799f376`
+([release CI](https://github.com/dock108dev/predict/actions/runs/45434711197)).
 The signed-in walkthrough verified the stored evidence, date selection,
-variant selection, exports and reload.
+variant selection, exports, reload, and the next scheduled job in Settings.
 
 At 11:09 AM Eastern on November 24, retained evidence showed 33 eligible games
 on November 23 (6 frozen, 20 reconstructed and 7 missing) and 77 on November 24

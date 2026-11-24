@@ -237,3 +237,30 @@ Research had 365,450,530 bytes of unreserved headroom against its 512 MiB
 allocation. SQL usage was 972,774,423 bytes against its 4 GiB cap. The host
 volume showed 20,294,918,144 free bytes. Scheduled job rows and observed source
 requests are separate evidence.
+
+### Final deployment check
+
+Web, collector and archive were healthy on
+`c75ffcd52707699a7615decea903feadf799f376` after the
+[follow-up main CI release](https://github.com/dock108dev/predict/actions/runs/45434711197).
+Settings showed the next scheduled job at 12:30 PM Eastern and three past-due
+jobs still inside their windows, with the Sports Reference source disabled.
+The collector had already persisted the job rows before the walkthrough.
+The stored run identity reopened the same correction under both UTC and
+American Eastern database session timezones.
+
+The signed-in flow covered both dates, the Ecclesia exclusion, an original
+provider final response, an elapsed capture, both Monday paper variants,
+coverage and paper downloads, Back, and reload. Exports reported zero provider
+requests and zero orders. A separate server read after the walkthrough
+confirmed zero Sports Reference requests, charges and holds. The original
+response downloaded through Data matched its retained SHA-256.
+
+Local evidence in `.local/mens-d1-20261124` includes
+`production-game-reconciliation.csv` (all 115 retained game rows and reasons),
+browser exports, `production-november-23-experiment.jpg`,
+`production-november-24-coverage.jpg`, and `production-daily-jobs.jpg`.
+The full feature's focused local lane passed 309 portable tests and 16
+disposable PostgreSQL checks. The follow-up passed 161 portable and 11
+disposable PostgreSQL checks before hosted release. Results from a live
+Sports Reference run remain unverified.
