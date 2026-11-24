@@ -33,6 +33,10 @@ reconstructions and exposes receipt and reconstruction clocks. These calculation
 do not establish that positive EV was displayed or saved at T−10. All ticket
 results remain unresolved in this opportunity-only record; result integration is
 deferred. Missing/untracked games and incomplete source markets remain gaps.
+An unchanged saved recovery run reopens through its source identities without
+decoding the full quote population again. This shortcut requires terminal tasks,
+deferred results and unchanged game membership, schedule, checkpoint pointers,
+capture states and attempt records; a changed source or definition is replayed.
 
 ## Selection and sizing
 

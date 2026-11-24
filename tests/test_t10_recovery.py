@@ -124,6 +124,8 @@ class RecoverySQL(LatestBoardFixture):
             self.capture(db, "early", game)
             self.advance(db, stamp("2026-11-23T17:50:00Z"))
             task = experiment.due(db, at=self.at)[0]
+            db.execute("UPDATE ev_experiment_task SET state='refused',last_reason='research_retention_capacity' WHERE game_id=%s AND checkpoint='late'", (task['game_id'],))
+            db.commit()
             original = db.execute("SELECT * FROM ev_experiment_game WHERE id=%s", (task["game_id"],)).fetchone()
             cp = experiment._checkpoint_view(db, original, "late")
             snapshot = dict(event=dict(title="Away at retained-raw", scheduled_start=game["starts_at"]),
@@ -134,16 +136,19 @@ class RecoverySQL(LatestBoardFixture):
             with db.transaction():
                 identity, _ = experiment._write(db, "checkpoint", value, game_id=original["id"], checkpoint="late")
                 parent = workspace._definition(db, workspace.PILOT_VERSION)
-                policy = dict(deepcopy(parent["policy"]), recovered_checkpoints={original["id"]:identity}, defer_results=True)
+                policy = dict(deepcopy(parent["policy"]), recovered_checkpoints={original["id"]:identity},
+                              defer_results=True, recovery_version=recovery.VERSION)
                 payload = {k:v for k,v in parent.items() if k not in ("version","id","recorded_at","supersedes")}
                 payload["policy"] = policy
+                payload["designation"] = "retrospective_raw_recovery"
                 version = hashed(payload)
                 db.execute("""INSERT INTO research_workspace_definition(version,id,payload_bytes,payload)
                     VALUES(%s,%s,%s,%s)""", (version,version,len(encoded(payload)),Jsonb(payload)))
             with patch.object(paper.math, "calculate", side_effect=linear):
                 strict = workspace.replay(db, "2026-11-23", workspace.PILOT_VERSION, {})
                 first = workspace.replay(db, "2026-11-23", version, {})
-                second = workspace.replay(db, "2026-11-23", version, {})
+                with patch.object(paper, "report", side_effect=AssertionError("unchanged evidence must reopen without quote decoding")):
+                    second = workspace.replay(db, "2026-11-23", version, {})
             assert first["run"]["id"] == second["run"]["id"]
             assert strict["report"]["portfolios"]["all_venues"]["count"] == 0
             assert first["run"]["coverage"]["captured_games"] == 0
@@ -157,3 +162,21 @@ class RecoverySQL(LatestBoardFixture):
             detail = workspace.ticket_detail(db, first["run"]["id"], ticket["id"])
             assert detail["evidence"]["checkpoint"]["source_kind"] == "retrospective_raw_t10"
             assert detail["ticket"]["grading"]["reason"] == "results_integration_deferred"
+            db.commit()
+            definition = workspace._definition(db,version)
+            for query in (
+                "UPDATE ev_experiment_task SET state='missed' WHERE game_id=%s AND checkpoint='late'",
+                "UPDATE ev_experiment_task SET target_at=target_at+interval '1 second' WHERE game_id=%s AND checkpoint='late'",
+                "UPDATE ev_experiment_game SET event=jsonb_set(event,'{title}',to_jsonb('Changed title'::text)) WHERE id=%s",
+            ):
+                with db.transaction(force_rollback=True):
+                    db.execute(query,(original['id'],))
+                    assert workspace._unchanged_recovery_run(db,'2026-11-23',definition) is None
+            db.commit()
+            with db.transaction():
+                experiment._write(db, "attempt", dict(at="2026-11-23T17:50:10Z",reason="new_evidence"),
+                                  game_id=original["id"], checkpoint="late")
+            with patch.object(paper.math, "calculate", side_effect=linear):
+                changed = workspace.replay(db, "2026-11-23", version, {})
+            assert changed["run"]["id"] != first["run"]["id"]
+            assert changed["report"]["games"][0]["attempt_ids"] != first["report"]["games"][0]["attempt_ids"]

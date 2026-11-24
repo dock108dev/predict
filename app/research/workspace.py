@@ -1,13 +1,13 @@
 """Append-only research definitions, runs and findings over retained evidence."""
 
 from collections import Counter
-from datetime import date
+from datetime import date, datetime, timezone
 from fractions import Fraction
 import re
 
 from psycopg.types.json import Jsonb
 
-from app.storage.store import ROOT, encoded, hashed
+from app.storage.store import ROOT, encoded, hashed, stamp
 from . import experiment, paper, records
 
 SCHEMA = "predict-research-workspace-1"
@@ -262,6 +262,58 @@ def _admit(db, size):
     require_disk_space(ROOT / ".local/postgres", append_bytes=size * 3)
 
 
+def _unchanged_recovery_run(db, day, definition):
+    """Reopen an unchanged, terminal opportunity record without decoding quotes.
+
+    Restricted to the versioned raw-recovery projection with results deferred:
+    time cannot release cash or change grading. Any population, schedule, task,
+    checkpoint or attempt change falls through to the full replay. A calculation
+    change must version the recovery policy, like other frozen paper policies.
+    """
+    policy = definition["policy"]
+    if (definition.get("designation") != "retrospective_raw_recovery"
+            or policy.get("recovery_version") != "raw-t10-opportunity-recovery-1"
+            or policy.get("defer_results") is not True):
+        return None
+    previous = db.execute("""SELECT id,payload FROM public.research_workspace_run
+        WHERE definition_version=%s AND game_date=%s ORDER BY observed_at DESC,id LIMIT 1""",
+        (definition["version"], day)).fetchone()
+    if not previous:
+        return None
+    saved = {g["game_id"]:g for g in previous["payload"]["report"]["games"]}
+    current = list(db.execute("""SELECT g.*,t.state AS task_state,t.schedule_id AS task_schedule_id,
+        t.target_at,t.deadline_at FROM public.ev_experiment_game g
+        JOIN public.ev_experiment_task t ON t.game_id=g.id AND t.checkpoint='late'
+        WHERE g.event->>'league'=%s AND
+        ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date""",
+        (policy["league"], day)))
+    if set(saved) != {g["id"] for g in current}:
+        return None
+    attempts = {row["game_id"]:row["ids"] for row in db.execute("""SELECT game_id,
+        array_agg(id ORDER BY recorded_at,id) AS ids FROM public.ev_experiment_record
+        WHERE game_id=ANY(%s) AND kind='attempt' AND checkpoint='late' GROUP BY game_id""", (list(saved),))}
+    now = datetime.now(timezone.utc)
+    for game in current:
+        prior = saved[game["id"]]
+        if (game["task_state"] not in ("captured", "refused", "missed")
+                or game["baseline_correction_id"] or game["deadline_at"] >= now
+                or game["schedule_id"] != prior["schedule_id"]
+                or game["task_schedule_id"] != game["schedule_id"]
+                or game["event"]["title"] != prior["title"]
+                or game["event"]["starts_at"] != prior["starts_at"]
+                or game["target_at"] != stamp(prior["target_at"])
+                or game["deadline_at"] != stamp(prior["deadline_at"])
+                or attempts.get(game["id"], []) != prior["attempt_ids"]):
+            return None
+        if prior["status"] == "reconstructed":
+            if (game["late_id"] is not None or game["task_state"] != prior["original_capture_status"]
+                    or policy.get("recovered_checkpoints", {}).get(game["id"]) != prior["checkpoint_id"]):
+                return None
+        elif game["task_state"] != prior["status"] or game["late_id"] != prior["checkpoint_id"]:
+            return None
+    return previous["id"]
+
+
 def replay(db, day, definition_version, values, *, registration=None):
     """Use a stable evidence snapshot, then publish the definition and run atomically."""
     with db.transaction():
@@ -270,6 +322,9 @@ def replay(db, day, definition_version, values, *, registration=None):
         definition = _changed_definition(parent, values)
         if registration:
             definition = _register_definition(db, parent, definition, registration)
+        existing = _unchanged_recovery_run(db, day, definition)
+        if existing:
+            return run_detail(db, existing)
         report = paper.report(db, day, evidence=True, policy=definition["policy"])
     document = _compact_report(report)
     revision = hashed(dict(document, report={k: v for k, v in report.items() if k != "as_of"}))
