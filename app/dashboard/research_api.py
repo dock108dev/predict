@@ -165,6 +165,8 @@ class CatalogReads(RawReads):
 
 
 def mount(app):
+    from .paper_api import mount as mount_paper
+    mount_paper(app)
     reads = CatalogReads(connect)
     gate = asyncio.Semaphore(CATALOG_READ_CAPACITY)
 

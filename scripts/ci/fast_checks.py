@@ -45,6 +45,7 @@ DOMAINS = {
         "tests/test_experiment_acquisition.py",
     },
     "research": {
+        "tests/test_paper_experiments.py",
         "tests/test_ev_experiment_evidence.py",
         "tests/test_experiment_api.py",
     },
@@ -56,6 +57,7 @@ DOMAINS = {
         "tests/test_comparison_cashflows.py",
     },
     "dashboard": {
+        "tests/test_paper_experiments.py",
         "tests/test_experiment_api.py",
         "tests/test_data_workspace_client.py",
         "tests/test_catalog_admission.py",
@@ -107,6 +109,8 @@ def plan(root, paths):
         if path.startswith(("app/research/", "app/storage/")):
             scopes.add("research")
             sql.update(SQL_CORE)
+        if path.startswith("app/research/paper") or path == "app/dashboard/paper_api.py":
+            sql.add("tests/test_paper_experiments_sql.py")
         if path.startswith(("app/fees/", "app/comparison/", "app/settlement")):
             scopes.add("fees")
         if path.startswith("app/dashboard/"):

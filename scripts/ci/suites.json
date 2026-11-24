@@ -705,6 +705,7 @@
   {
     "name": "phase2-research",
     "tests": [
+      "tests/test_paper_experiments.py",
       "tests/test_original_receipts.py",
       "tests/test_sgo_game_results.py",
       "tests/test_research_probability.py",

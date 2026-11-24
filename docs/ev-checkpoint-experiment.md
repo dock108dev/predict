@@ -1,5 +1,8 @@
 # First observation versus ten minutes before start
 
+The **Experiments** tab now starts with [paper portfolios and backtests](paper-experiments.md).
+The original comparison inspector remains under **Checkpoint evidence**.
+
 Policy `first-observed-24h-vs-tminus10-screen-ev-1` is the primary automatic
 research workflow. It replaces daily population polling and the one-hour
 checkpoint scheduler. Existing cohorts, observations, outcomes and exports are
