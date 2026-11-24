@@ -240,25 +240,47 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None):
     outcome_evidence = {}
     for game in games:
         checkpoint = owner._checkpoint_view(db, game, "late")
+        original_status = checkpoint["status"]
+        recovered_id = frozen_policy.get("recovered_checkpoints", {}).get(game["id"])
+        if recovered_id:
+            index = owner._closure(db, [recovered_id])
+            row = index[recovered_id]
+            recovered = owner._value(row, index)
+            if (row["game_id"] != game["id"] or row["kind"] != "checkpoint"
+                    or recovered.get("source_kind") != "retrospective_raw_t10"
+                    or recovered["schedule_id"] != game["schedule_id"]
+                    or recovered["target_at"] != checkpoint["target_at"]
+                    or recovered["deadline_at"] != checkpoint["deadline_at"]
+                    or not stamp(checkpoint["target_at"]) <= stamp(recovered["received_at"]) <= stamp(checkpoint["deadline_at"])):
+                raise ValueError("recovery_checkpoint_ineligible")
+            checkpoint = dict(recovered, id=recovered_id, persisted_at=owner.clock(row["recorded_at"]))
         status = checkpoint["status"]
         entry = dict(game_id=game["id"], title=game["event"]["title"], starts_at=game["event"]["starts_at"],
                      status=status, reason=checkpoint.get("reason"), checkpoint_id=checkpoint.get("id"), tickets=0)
         if status in ("pending", "claimed") and stamp(checkpoint["deadline_at"]) < stamp(at):
             entry.update(status="missed", reason="capture_window_closed")
         if policy is not None:
-            entry.update(schedule_id=game["schedule_id"], outcome_id=game.get("outcome_id"),
+            entry.update(schedule_id=game["schedule_id"], outcome_id=None if frozen_policy.get("defer_results") else game.get("outcome_id"),
                 target_at=checkpoint["target_at"], deadline_at=checkpoint["deadline_at"],
                 attempt_ids=[row["id"] for row in db.execute("""SELECT id FROM public.ev_experiment_record
                     WHERE game_id=%s AND kind='attempt' AND checkpoint='late' ORDER BY recorded_at,id""", (game["id"],))])
-        if status == "captured":
+        if status in ("captured", "reconstructed"):
             snapshot = checkpoint["snapshot"]
             outcome = None
-            if game.get("outcome_id"):
+            if game.get("outcome_id") and not frozen_policy.get("defer_results"):
                 index = owner._closure(db, [game["outcome_id"]])
                 outcome = owner._value(index[game["outcome_id"]], index)
                 outcome_evidence[game["id"]] = dict(id=game["outcome_id"], **outcome)
             found, gaps = candidates(snapshot, game_id=game["id"], checkpoint_id=checkpoint["id"],
-                at=checkpoint["persisted_at"], outcome=outcome, policy=policy)
+                at=checkpoint["received_at"] if recovered_id else checkpoint["persisted_at"], outcome=outcome, policy=policy)
+            if recovered_id:
+                entry.update(original_capture_status=original_status, reconstructed_at=checkpoint["persisted_at"],
+                             recovery=checkpoint["recovery"])
+                for ticket in found:
+                    ticket.update(source_kind="retrospective_raw_t10", reconstructed_at=checkpoint["persisted_at"])
+            if frozen_policy.get("defer_results"):
+                for ticket in found:
+                    ticket["grading"] = dict(state="unresolved", reason="results_integration_deferred", pnl_usd=None, released_at=None)
             if outcome and outcome.get("schedule_id") != checkpoint.get("schedule_id"):
                 for ticket in found:
                     ticket["grading"] = dict(state="unresolved", reason="result_schedule_changed", pnl_usd=None, released_at=None)
@@ -269,12 +291,17 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None):
         dispositions.append(entry)
     values = portfolios(tickets, as_of=at)
     result = dict(policy=deepcopy(frozen_policy), policy_id=policy_id, date=day, as_of=at,
-        designation="Retrospective paper replay of frozen T−10 evidence; no actual orders or fills",
+        designation=("Opportunity record only; original frozen checkpoints plus explicitly reconstructed T−10 raw responses; results deferred"
+                     if frozen_policy.get("recovered_checkpoints") else
+                     "Retrospective paper replay of frozen T−10 evidence; no actual orders or fills"),
         portfolio_revision=hashed([policy_id, day, sorted(t["id"] for t in tickets)]),
         tracked_games=len(games), captured_games=sum(g["status"] == "captured" for g in dispositions),
         games=dispositions, exclusions=dict(exclusions), portfolios=values,
-        coverage="tracked_games_only; missing/untracked games cannot be reconstructed",
+        coverage=("tracked_games_only; no later prices or inferred missing markets" if frozen_policy.get("recovered_checkpoints")
+                  else "tracked_games_only; missing/untracked games cannot be reconstructed"),
         outcome_evidence=outcome_evidence if evidence else {}, provider_requests=0, orders_submitted=0)
+    if frozen_policy.get("recovered_checkpoints"):
+        result["reconstructed_games"] = sum(g["status"] == "reconstructed" for g in dispositions)
     if not evidence:
         for portfolio in values.values():
             portfolio["tickets"] = [{k: v for k, v in t.items() if k != "witness"} for t in portfolio["tickets"]]

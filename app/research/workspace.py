@@ -169,13 +169,16 @@ def _summary(report, title):
     states = Counter(game["status"] for game in games)
     pending = states["pending"] + states["claimed"]
     captured = states["captured"]
-    missing = len(games) - captured - pending
-    partial = sum(game["status"] == "captured" and (game.get("coverage") or {}).get("incomplete") is not False
+    reconstructed = states["reconstructed"]
+    missing = len(games) - captured - reconstructed - pending
+    partial = sum(game["status"] in ("captured", "reconstructed") and (game.get("coverage") or {}).get("incomplete") is not False
                   for game in games)
     coverage = dict(expected_games=None, tracked_games=len(games), captured_games=captured,
                     missing_tracked_games=missing, pending_games=pending, untracked_games=None,
                     source_coverage_unconfirmed_games=partial, dispositions=dict(states))
-    if not captured:
+    if reconstructed:
+        coverage["reconstructed_games"] = reconstructed
+    if not captured and not reconstructed:
         validity = "no_valid_capture"
     elif missing or pending or partial:
         validity = "incomplete_tracked_capture"
@@ -208,7 +211,9 @@ def _finding_payloads(run_id, definition, report, summary):
          "unexamined", ["A paper replay applies the arithmetic under its assumptions. The identity follows from the definition of expectation."],
          ticket_evidence),
         ("coverage", "Capture coverage", ["evidence-quality", "t10-selection"],
-         f'{coverage["captured_games"]} of {coverage["tracked_games"]} tracked games had an eligible frozen T−10 capture.',
+         (f'{coverage["captured_games"]} of {coverage["tracked_games"]} tracked games had an eligible frozen T−10 capture.'
+          + (f' Another {coverage["reconstructed_games"]} were calculated retrospectively from original responses received in the T−10 window; these are not original EV captures.'
+             if coverage.get("reconstructed_games") else "")),
          "support" if summary["validity"] == "tracked_captures_only" else "inconclusive",
          ["The expected league-wide population and untracked games are unknown.",
           "Missing captures and incomplete source returns limit what this run can examine."], capture_evidence),
@@ -359,7 +364,7 @@ def ticket_detail(db, run_id, ticket_id):
     links = _source_links(run_id, game["game_id"])
     evidence = dict(checkpoint=dict(id=checkpoint_id, game_id=game["game_id"], revision=checkpoint_id,
         persisted_at=index[checkpoint_id]["recorded_at"].isoformat(),
-        **{key: checkpoint.get(key) for key in ("target_at", "deadline_at", "received_at", "known_at")}),
+        **{key: checkpoint.get(key) for key in ("target_at", "deadline_at", "received_at", "known_at", "source_kind", "recovery")}),
         sporting_result=outcome, original_offer=original_offer, sized_calculation=calculated, links=links)
     return dict(run=_run_summary(row), ticket=dict(ticket, witness=dict(original_offer=original_offer,
         sized_calculation=calculated)), evidence=evidence, provider_requests=0, orders_submitted=0)

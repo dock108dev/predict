@@ -405,7 +405,7 @@ def score_comparison(comparison, outcome):
         sporting_outcome_only=True, venue_settlement=None, actual_fills=None)
 
 
-def build_snapshot(db, page, *, request_scope, dispatch_at, known_at):
+def build_snapshot(db, page, *, request_scope, dispatch_at, known_at, calculation_context=None):
     """Compute directly from this received page, not an asynchronous working row."""
     from app.collection.sportsgameodds_current_rows import current_rows, event_record
     from app.normalization.college_registry import sgo_registry
@@ -426,7 +426,7 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at):
     role_conflict = reviewed[2:] != (event["home"], event["away"])
     game_key = "ev-experiment:" + hashed([event["competition"], event["home"], event["away"], source["event_id"]])
     inputs = math.ReferenceInputs({source["event_id"]: references}, books=math.COHERENT_POLICIES[math.EXPANSION_POLICY])
-    fee_context = CalculationContext(db, at)
+    fee_context = calculation_context or CalculationContext(db, at)
     fee_context.db = db
     offers = []
     cached = {}

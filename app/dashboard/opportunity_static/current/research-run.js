@@ -10,12 +10,14 @@ const validity = {
 const statuses = {
   screened:'Captured population screened', incomplete:'Run incomplete', awaiting_captures:'Awaiting captures',
   pending:'Pending capture', captured:'Captured', refused:'Capture refused', missed:'Capture missed',
+  reconstructed:'Reconstructed from original T−10 response',
   superseded_by_reschedule:'Capture superseded by reschedule',
 };
 const resultLabel = {win:'Modeled win', loss:'Modeled loss', unresolved:'Unresolved'};
 const capturedFee = mode => mode?.enabled === true ? 'Captured with fees included' : mode?.enabled === false ? '$0 fees assumed in capture' : 'Captured fee treatment unknown';
 const evidenceLink = (title, href) => link(title, href, 'research-button');
 function coverageDescription(run) {
+  if (run.coverage?.reconstructed_games) return 'This opportunity record separates original frozen calculations from calculations made later using retained responses received inside the T−10 window. Missing games and unseen source markets remain unavailable. Results integration is deferred.';
   if (run.validity === 'no_valid_capture') return 'No paper result can be evaluated from this saved run. Capture dispositions show why evidence is unavailable.';
   if (run.coverage?.missing_tracked_games) return 'Some tracked games have no valid T−10 capture. Financial metrics are limited to tickets from captured games.';
   return 'Financial metrics use the available frozen T−10 captures. Slate-wide completeness is unknown.';
@@ -66,13 +68,15 @@ export function renderRun(root, {run, definition, report}, navigation) {
     'Pending checkpoints':count(coverage.pending_games),
     'Untracked games':count(coverage.untracked_games),
   }, 'workspace-stats'));
+  if (coverage.reconstructed_games) intro.append(pairs({'Raw T−10 responses reconstructed later':count(coverage.reconstructed_games)}, 'workspace-stats'));
   if (coverage.source_coverage_unconfirmed_games) intro.append(node('p', `Source coverage is unconfirmed for ${count(coverage.source_coverage_unconfirmed_games)} captured games.`));
   const methods = node('details');
   methods.open = true;
   methods.append(node('summary', 'Frozen assumptions for this run'));
   const policy = report?.policy || definition?.policy || {};
+  if (policy.recovered_checkpoints) methods.append(node('p', 'Retrospective recovery: the original pilot is preserved. Recovered probabilities and EV were calculated after the game from the original response, under an explicit $0-fee assumption. These are hypothetical opportunities, not evidence that EV was displayed at T−10.'));
   const feeModes = [...new Set((report?.games || []).filter(game => game.fee_mode).map(game => capturedFee(game.fee_mode)))];
-  methods.append(node('p', `The game date uses Eastern time. Screening requires a valid frozen T−10 checkpoint and unrounded EV of at least ${pct(policy.minimum_ev)}. The replay uses ${pct(policy.kelly_multiplier)} of Kelly against a fixed ${usd(policy.reference_bankroll_usd)} sizing reference, without an aggregate budget cap or intraday compounding.`));
+  methods.append(node('p', `The game date uses Eastern time. Screening requires ${policy.recovered_checkpoints ? 'an original frozen checkpoint or an explicitly reconstructed T−10 response' : 'a valid frozen T−10 checkpoint'} and unrounded EV of at least ${pct(policy.minimum_ev)}. The replay uses ${pct(policy.kelly_multiplier)} of Kelly against a fixed ${usd(policy.reference_bankroll_usd)} sizing reference, without an aggregate budget cap or intraday compounding.`));
   methods.append(node('p', `Each paper commitment is repriced under the original fee assumption. ${feeModes.length ? feeModes.join(' · ') + '.' : 'No captured fee treatments are recorded for this run.'} Quoted price is assumed available at the modeled size.`));
   methods.append(node('p', 'Paper replay and sporting-result grading are recorded separately. Execution and actual venue settlement are unverified.'), definitionLink);
   intro.append(methods);
@@ -91,14 +95,14 @@ export function renderRun(root, {run, definition, report}, navigation) {
   }
   runs.append(nav);
   const portfolio = report?.portfolios?.[variant];
-  if (portfolio && coverage.captured_games) {
+  if (portfolio && (coverage.captured_games || coverage.reconstructed_games)) {
     runs.append(node('h3', variants[variant]), pairs({
       'Qualifying tickets':count(portfolio.count), 'Unique games':count(portfolio.unique_games),
       'Days represented':count(portfolio.days_represented), Turnover:usd(portfolio.turnover_usd),
       'Peak overlapping commitment':usd(portfolio.peak_committed_usd),
     }, 'workspace-stats'));
     const resultGrid = node('div', undefined, 'workspace-grid');
-    const resolved = card('Resolved tickets');
+    const resolved = card(policy.defer_results ? 'Results integration deferred' : 'Resolved tickets');
     resolved.append(node('p', portfolio.resolved ? 'Expected and realized-model values use the same resolved-ticket population.' : 'No tickets have a decisive sporting result in this saved run.'), pairs({
       'Resolved tickets':count(portfolio.resolved),
       'Expected profit at entry':portfolio.resolved ? usd(portfolio.resolved_expected_profit_usd) : 'Unavailable',
@@ -123,7 +127,7 @@ export function renderRun(root, {run, definition, report}, navigation) {
   if (report?.games?.length) dispositions.append(table(['Tracked game', 'T−10 capture', 'Qualifying offers', 'Evidence'], report.games.map(game => [
     stack(game.title, time(game.starts_at)),
     stack(statuses[game.status] || label(game.status), game.reason ? label(game.reason) : null),
-    game.status === 'captured' ? count(game.tickets) : 'Unavailable',
+    ['captured', 'reconstructed'].includes(game.status) ? count(game.tickets) : 'Unavailable',
     evidenceLink('Inspect capture', gameLink(game)),
   ])));
   else dispositions.append(node('p', 'No tracked game records are available on this date. The expected population remains unknown.'));
@@ -148,14 +152,15 @@ export function renderSavedEvidence(root, value, {ticket, exportLink, gameLink})
     const game = value.game || value.disposition || value.evidence?.game || value;
     const checkpoint = value.checkpoint || value.evidence?.checkpoint;
     root.append(node('h3', game.title || 'T−10 capture disposition'));
-    root.append(node('p', game.status === 'captured' ? 'This is the frozen checkpoint used in the saved replay.' : 'This game remains in the tracked population. Its unavailable or ineligible checkpoint contributed no paper tickets.'));
+    root.append(node('p', game.status === 'reconstructed' ? 'This calculation was reconstructed after the game from the original response received inside its T−10 window. The original failed capture remains recorded.' : game.status === 'captured' ? 'This is the frozen checkpoint used in the saved replay.' : 'This game remains in the tracked population. Its unavailable or ineligible checkpoint contributed no paper tickets.'));
     evidenceSection(root, 'Capture provenance', null, {
       Status:statuses[game.status] || label(game.status || checkpoint?.status),
       Reason:game.reason ? label(game.reason) : 'None recorded',
       'Scheduled start':time(game.starts_at),
       'Checkpoint time':time(checkpoint?.persisted_at || checkpoint?.captured_at || checkpoint?.received_at),
-      'Capture type':'Frozen T−10 checkpoint',
-      'Experiment eligibility':game.status === 'captured' ? 'Valid at saved replay' : 'Unavailable or ineligible',
+      'Original receipt time':time(checkpoint?.received_at),
+      'Capture type':game.status === 'reconstructed' ? 'Retrospective raw-response reconstruction' : 'Frozen T−10 checkpoint',
+      'Experiment eligibility':['captured', 'reconstructed'].includes(game.status) ? 'Included under saved definition' : 'Unavailable or ineligible',
     }, value);
     for (const attempt of value.attempts || []) {
       const fields = attempt.data || attempt.payload || attempt;
@@ -180,13 +185,15 @@ export function renderSavedEvidence(root, value, {ticket, exportLink, gameLink})
     const reference = offer.calculation_payload?.reference || sized.reference || {};
     const original = offer.record?.quote?.original;
     const fee = sized.fee || {};
+    const recovered = item.source_kind === 'retrospective_raw_t10';
     root.append(node('h3', item.title + ' · ' + selection({ ...item, selection_label:item.label })));
     root.append(node('p', `${venue(item.venue)} at ${text(item.posted_odds)}. This modeled ticket uses the frozen T−10 offer and its recorded probability.`));
+    if (recovered) root.append(node('p', `Calculated retrospectively from an original T−10 response. Reconstruction saved ${time(item.reconstructed_at)}. EV was not successfully frozen at T−10. Results integration is deferred.`, 'workspace-notice'));
     if (item.game_id) root.append(evidenceLink('Open frozen checkpoint', gameLink(item.game_id)));
     evidenceSection(root, 'Frozen quote', null, {
       'Posted odds':item.posted_odds, 'Original source price':original?.value ?? item.posted_odds,
       'Source time':time(item.times?.source_at), 'Receipt time':time(item.times?.received_at),
-      'Decision time':time(item.decision_at), 'Capture eligibility':'Valid frozen T−10 checkpoint',
+      'Modeled decision time':time(item.decision_at), 'Capture eligibility':recovered ? 'Retrospective reconstruction; original T−10 response' : 'Valid frozen T−10 checkpoint',
     }, {checkpoint:evidence.checkpoint, original_offer:offer});
     evidenceSection(root, 'Probability and screening', 'The captured probability is used for both screening and paper sizing.', {
       'Estimated outcome probability':pct(item.probability), 'Reference book':reference.book ? venue(reference.book) : 'Unknown',

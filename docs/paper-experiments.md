@@ -14,6 +14,26 @@ decision basis. Refreshing or repeating a replay over the same inputs reopens
 the existing run. A modified policy or changed evidence produces a separate
 saved run. Prior results and evidence stay accessible.
 
+## Retrospective raw-response recovery
+
+The November 24 opportunity-recording closeout can supplement the original
+November 23 pilot with retained original responses whose dispatch and receipt
+were inside the recorded T−10 window. This is a separate definition and saved
+run. It never changes a failed task into a successful capture or borrows initial
+or later prices. Recovery chooses the last eligible response before computing
+EV, without selecting responses by their profitability.
+
+`python -m app.research.recovery --date 2026-11-23` previews admission and counts
+without writes. Add `--commit` to append reconstructed evidence, a separate
+definition and both portfolios. Repeating identical evidence reopens the saved
+run. The reconstruction uses the original response's prices and reference quotes
+with an explicit $0-fee replay assumption, rather than today's prices, fee
+settings or results. The UI separates original frozen captures from later
+reconstructions and exposes receipt and reconstruction clocks. These calculations
+do not establish that positive EV was displayed or saved at T−10. All ticket
+results remain unresolved in this opportunity-only record; result integration is
+deferred. Missing/untracked games and incomplete source markets remain gaps.
+
 ## Selection and sizing
 
 Only a valid frozen late checkpoint qualifies. The existing collector targets

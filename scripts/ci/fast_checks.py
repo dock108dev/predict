@@ -111,6 +111,9 @@ def plan(root, paths):
             sql.update(SQL_CORE)
         if path.startswith("app/research/paper") or path == "app/dashboard/paper_api.py":
             sql.add("tests/test_paper_experiments_sql.py")
+        if path in ("app/research/recovery.py", "tests/test_t10_recovery.py"):
+            pure.add("tests/test_t10_recovery.py")
+            sql.add("tests/test_t10_recovery.py::RecoverySQL")
         if path.startswith(("app/fees/", "app/comparison/", "app/settlement")):
             scopes.add("fees")
         if path.startswith("app/dashboard/"):

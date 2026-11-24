@@ -362,7 +362,7 @@ async function experiments(query, requestVersion) {
   const runs = workspace.runs || [];
   if (runs.length) root.append(table(['Saved run', 'Definition', 'Validity', 'Tracked / captured'], runs.map(run => [
     runLink(run, `${run.date} · ${run.title}`), run.definition_version,
-    label(run.validity), `${count(run.coverage?.tracked_games)} / ${count(run.coverage?.captured_games)}`,
+    label(run.validity), `${count(run.coverage?.tracked_games)} / ${count(run.coverage?.captured_games)}` + (run.coverage?.reconstructed_games ? ` + ${count(run.coverage.reconstructed_games)} reconstructed` : ''),
   ])));
   else root.append(node('p', 'No replay has been saved. Choose a date to read its retained checkpoint evidence.'));
   const data = node('div', undefined, 'workspace-links');
