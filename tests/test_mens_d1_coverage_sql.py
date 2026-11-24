@@ -3,7 +3,7 @@ from hashlib import sha256
 import json
 from types import SimpleNamespace
 from unittest import skipUnless
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import httpx
 from psycopg.errors import RaiseException
@@ -117,7 +117,10 @@ class MensD1CoverageSQL(LatestBoardFixture):
                 self.assertEqual(before['counts']['expected'], None)
                 self.assertEqual(len(before['source_revisions']), 1)
                 self.assertEqual(original['requested_at'], at.isoformat())
-                self.assertNotIn('raw_body', original)
+                self.assertEqual(json.loads(original['raw_body']), rows)
+                self.assertEqual(sha256(original['raw_body'].encode()).hexdigest(), original['body_sha256'])
+                with patch.object(cbbd, 'PARSER_VERSION', 'future-parser'):
+                    self.assertEqual(coverage.read_receipt(db, original['id']), original)
                 self.assertEqual(original['body_sha256'], db.execute(
                     'SELECT body_sha256 FROM public.mens_d1_receipt WHERE id=%s', (original['id'],)).fetchone()['body_sha256'])
 

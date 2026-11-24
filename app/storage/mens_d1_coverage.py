@@ -91,7 +91,11 @@ def read_receipt(db, identity):
                   purpose=row['purpose'], observed_at=clock(row['observed_at']),
                   recorded_at=clock(row['recorded_at']), body_sha256=row['body_sha256'])
     if row['source'] == PUBLIC_SOURCE:
-        return dict(common, raw_access='retained_privately_under_source_terms')
+        from app.collection import mens_d1_cbbd as cbbd
+
+        if (common.get('evidence_mode') == 'retrospective_public_export' or not common.get('requested_at')
+                or not (common.get('requested_url') or '').startswith(cbbd.GAMES_URL + '?')):
+            return dict(common, raw_access='retained_privately_under_source_terms')
     try:
         response = json.loads(body)
         data = response.get('data') if isinstance(response, dict) else None
