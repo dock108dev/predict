@@ -99,11 +99,11 @@ export function renderRun(root, {run, definition, report}, navigation) {
     runs.append(node('h3', variants[variant]), pairs({
       'Qualifying tickets':count(portfolio.count), 'Unique games':count(portfolio.unique_games),
       'Days represented':count(portfolio.days_represented), Turnover:usd(portfolio.turnover_usd),
-      'Peak overlapping commitment':usd(portfolio.peak_committed_usd),
+      ...(!policy.defer_results ? {'Peak overlapping commitment':usd(portfolio.peak_committed_usd)} : {}),
     }, 'workspace-stats'));
     const resultGrid = node('div', undefined, 'workspace-grid');
     const resolved = card(policy.defer_results ? 'Results integration deferred' : 'Resolved tickets');
-    resolved.append(node('p', portfolio.resolved ? 'Expected and realized-model values use the same resolved-ticket population.' : 'No tickets have a decisive sporting result in this saved run.'), pairs({
+    resolved.append(node('p', policy.defer_results ? 'Results are deliberately excluded from this opportunity record. Cash releases and peak capital after results have not been modeled.' : portfolio.resolved ? 'Expected and realized-model values use the same resolved-ticket population.' : 'No tickets have a decisive sporting result in this saved run.'), pairs({
       'Resolved tickets':count(portfolio.resolved),
       'Expected profit at entry':portfolio.resolved ? usd(portfolio.resolved_expected_profit_usd) : 'Unavailable',
       'Modeled P/L':portfolio.resolved ? usd(portfolio.modeled_resolved_pnl_usd) : 'Unavailable',
