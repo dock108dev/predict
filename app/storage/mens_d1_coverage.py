@@ -563,11 +563,13 @@ def read_coverage(db, game_date, *, at=None):
     official = _official_corroborations(db, slates[0], at) if slates else {}
     eligible_pairs = {_pair(game['teams'], 'canonical_id') for game in games if game['scope_state'] == 'eligible'}
     corroborated_pairs = set()
+    date_conflicts = 0
     for row in games:
         _with_result(row, result_rows, providers, at)
         citations = official.get(row['source_game_id'])
         if citations:
             row['official_source_evidence'] = citations
+            date_conflicts += any(item.get('eastern_date_disagreement') for item in citations)
             pairs = {_pair(item['teams'], 'canonical_id') for item in citations}
             if row['scope_state'] == 'unresolved' and len(pairs) == 1:
                 corroborated_pairs.update(pairs - eligible_pairs)
@@ -625,6 +627,7 @@ def read_coverage(db, game_date, *, at=None):
             expected=population['expected_games'] if population else None,
             source_eligible=membership['eligible'] if slates else None,
             source_corroborated_additional_eligible=len(corroborated_pairs) if slates else None,
+            source_official_eastern_date_conflicts=date_conflicts if slates else None,
             source_pre_tminus10=sum(row['known_before_tminus10'] is True for row in games
                 if row['scope_state'] == 'eligible') if slates else None,
             source_time_tbd=sum(row['schedule']['source_time_tbd'] is True for row in games

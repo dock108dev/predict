@@ -246,8 +246,7 @@ def _official_game(note, original, day, observed):
     url, publisher, start, status = (note[key] for key in ('source_url', 'publisher', 'scheduled_start', 'status'))
     address = urlsplit(url)
     if (address.scheme != 'https' or not address.hostname or address.username or address.password
-            or len(url) > 500 or not 0 < len(publisher) <= 120 or status not in ('scheduled', 'final')
-            or start and stamp(start).astimezone(coverage.EASTERN).date() != day):
+            or len(url) > 500 or not 0 < len(publisher) <= 120 or status not in ('scheduled', 'final')):
         raise ValueError('invalid_official_source_evidence')
     membership = load_membership(day)
     teams = []
@@ -264,9 +263,19 @@ def _official_game(note, original, day, observed):
             or original['membership_status'] == 'excluded'
             or status == 'final' and teams[0]['score'] == teams[1]['score']):
         raise ValueError('official_game_does_not_corroborate_source_row')
+    official_day = stamp(start).astimezone(coverage.EASTERN).date() if start else None
+    date_disagreement = official_day is not None and official_day != day
+    if date_disagreement:
+        # Require exact participants and allow the midnight boundary clock
+        # difference. Wider schedule changes need a separate occurrence witness.
+        original_start = original.get('scheduled_start')
+        if (original_ids != pair or not original_start
+                or abs(stamp(start) - stamp(original_start)) > timedelta(minutes=1)):
+            raise ValueError('official_game_cross_date_identity_unverified')
     return dict(kind=CORROBORATION_VERSION, source_game_id=original['source_game_id'],
         publisher=publisher, source_url=url, observed_at=coverage.clock(observed), status=status,
-        scheduled_start=coverage.clock(start), teams=teams)
+        scheduled_start=coverage.clock(start), eastern_game_date=str(official_day) if official_day else None,
+        eastern_date_disagreement=date_disagreement, teams=teams)
 
 
 def attach_corroborations(db, body):

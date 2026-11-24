@@ -199,6 +199,7 @@ def _coverage_summary(value, games, run, report):
                         revision=value.get("population_revision"), expected_games=expected,
                         source_identity=value.get("source"), source_mode=value.get("source_mode"),
                         source_corroborated_additional_eligible=counts.get("source_corroborated_additional_eligible"),
+                        source_official_eastern_date_conflicts=counts.get("source_official_eastern_date_conflicts"),
                         source_url=value.get("source_url"), source_eligible_games=counts.get("source_eligible"),
                         source_returned_mens_games=counts.get("source_returned_mens_games"),
                         source_eligible_known_before_tminus10=sum(game.get("known_before_tminus10") is True

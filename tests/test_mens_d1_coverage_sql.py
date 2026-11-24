@@ -98,7 +98,7 @@ class MensD1CoverageSQL(LatestBoardFixture):
     def test_offline_public_export_is_idempotent_and_preserves_observation_and_final(self):
         headers = sorted(public_export.REQUIRED_FIELDS)
         at = min(coverage.utc() - timedelta(seconds=1), MORNING)
-        base = dict(Id='120', SourceId='241', Season='2027', StartDate=TIP, StartTimeTbd='false',
+        base = dict(Id='120', SourceId='241', Season='2027', StartDate='2026-11-25T04:59:00Z', StartTimeTbd='false',
             NeutralSite='true', Status='final', Venue='Neutral fixture', HomeTeamId='262', HomeTeam='Seattle U',
             HomeConference='WCC', HomePoints='91', HomePeriodPoints='[38,43,10]', AwayTeamId='151',
             AwayTeam='Loyola Chicago', AwayConference='A-10', AwayPoints='88', AwayPeriodPoints='[40,41,7]')
@@ -156,6 +156,19 @@ class MensD1CoverageSQL(LatestBoardFixture):
             self.assertEqual(witness['id'], proof['retained_corroborations'][0])
             self.assertEqual(witness['status'], 'final')
             self.assertEqual(witness['teams'][1]['score'], 80)
+            midnight = dict(official, games=[dict(official['games'][0], source_game_id='cbbd:120',
+                scheduled_start='2026-11-25T05:00:00Z', teams=[dict(name='Seattle University', score=91),
+                    dict(name='Loyola Chicago', score=88)])])
+            public_export.attach_corroborations(db, json.dumps(midnight).encode())
+            shifted = coverage.read_coverage(db, DAY, at=coverage.utc())
+            self.assertEqual(shifted['counts']['source_official_eastern_date_conflicts'], 1)
+            self.assertEqual(shifted['counts']['source_eligible'], 1)
+            dated_game = next(game for game in shifted['games'] if game['source_game_id'] == 'cbbd:120')
+            self.assertEqual(dated_game['official_source_evidence'][0]['eastern_game_date'], '2026-11-25')
+            self.assertEqual(dated_game['schedule']['source_date'], str(DAY))
+            midnight['games'][0]['scheduled_start'] = '2026-11-25T05:01:00Z'
+            with self.assertRaisesRegex(ValueError, 'official_game_cross_date_identity_unverified'):
+                public_export.attach_corroborations(db, json.dumps(midnight).encode())
 
     def test_coalesces_overdue_schedule_and_preserves_challenge_vs_empty(self):
         observed = stamp('2026-11-24T15:15:00Z')
