@@ -108,7 +108,7 @@ def grade(identity, outcome, sized):
                 pnl_usd=money(pnl), pnl_exact_usd=str(pnl), released_at=(outcome or {}).get("known_at"))
 
 
-def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None):
+def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None, counts=None):
     policy_id, scale = POLICY_ID, SCALE
     if policy is not None:
         policy_id, minimum, scale = hashed(policy), F(policy["minimum_ev"]), F(policy["sizing_scale_usd"])
@@ -121,6 +121,8 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
             if raw_ev is None:
                 excluded[measurement["screen"].get("reason") or "ev_unavailable"] += 1
                 continue
+            if counts is not None:
+                counts["evaluated_offers"] += 1
             if F(raw_ev) < minimum or F(raw_ev) <= 0:
                 excluded["below_minimum_ev"] += 1
                 continue
@@ -225,17 +227,41 @@ def summarize(tickets, *, as_of):
         by_game={k: money(v) for k, v in sorted(games.items())})
 
 
-def report(db, day=POLICY["default_date"], *, evidence=False, policy=None):
+def scoped_candidates(entry, checkpoint, policy):
+    """Reprice a saved checkpoint and report its observed and evaluated offers."""
+    snapshot = checkpoint["snapshot"]
+    counts = dict(observed_offer_count=len(snapshot.get("offers", [])), evaluated_offers=0)
+    reconstructed = entry["status"] == "reconstructed"
+    at = checkpoint["received_at"] if reconstructed else checkpoint["persisted_at"]
+    tickets, gaps = candidates(snapshot, game_id=entry["game_id"], checkpoint_id=entry["checkpoint_id"],
+                               at=at, policy=policy, counts=counts)
+    entry.update(counts, tickets=len(tickets), coverage=snapshot.get("coverage"),
+                 fee_mode=snapshot.get("fee_mode"), exclusions=gaps,
+                 **{key: checkpoint.get(key) for key in
+                    ("requested_at", "received_at", "known_at", "persisted_at")})
+    for ticket in tickets:
+        ticket["grading"] = dict(state="unresolved", reason="results_integration_deferred", pnl_usd=None, released_at=None)
+        if reconstructed:
+            ticket.update(source_kind="retrospective_raw_t10", reconstructed_at=checkpoint["persisted_at"])
+    return tickets, gaps
+
+
+def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, population=None):
     """Passive backtest, independent of early-positive retention and live prices."""
     from . import experiment as owner
     date.fromisoformat(day)
     frozen_policy = policy or POLICY
-    policy_id = hashed(frozen_policy)
     at = datetime.now(timezone.utc).isoformat()
     games = list(db.execute("""SELECT * FROM public.ev_experiment_game
         WHERE event->>'league'=%s AND
         ((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
         ORDER BY (event->>'starts_at')::timestamptz,id""", (frozen_policy["league"], day)))
+    if population is not None:
+        by_provider = {game["event"]["source_event_id"]: game["id"] for game in games}
+        for row in population["games"]:
+            row["game_id"] = by_provider.get(row.get("provider_event_id"))
+        eligible = {row["game_id"] for row in population["games"] if row["scope_state"] == "eligible"}
+        games = [game for game in games if game["id"] in eligible]
     tickets, dispositions, exclusions = [], [], Counter()
     outcome_evidence = {}
     for game in games:
@@ -266,6 +292,15 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None):
                     WHERE game_id=%s AND kind='attempt' AND checkpoint='late' ORDER BY recorded_at,id""", (game["id"],))])
         if status in ("captured", "reconstructed"):
             snapshot = checkpoint["snapshot"]
+            if population is not None:
+                if recovered_id:
+                    entry.update(original_capture_status=original_status, reconstructed_at=checkpoint["persisted_at"],
+                                 recovery=checkpoint["recovery"])
+                found, gaps = scoped_candidates(entry, checkpoint, frozen_policy)
+                tickets.extend(found)
+                exclusions.update(gaps)
+                dispositions.append(entry)
+                continue
             outcome = None
             if game.get("outcome_id") and not frozen_policy.get("defer_results"):
                 index = owner._closure(db, [game["outcome_id"]])
@@ -289,17 +324,27 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None):
             entry.update(tickets=len(found), coverage=snapshot.get("coverage"),
                          fee_mode=snapshot.get("fee_mode"), exclusions=gaps)
         dispositions.append(entry)
+    return assemble(day, at, frozen_policy, dispositions, tickets, exclusions,
+                    outcome_evidence=outcome_evidence, evidence=evidence, population=population)
+
+
+def assemble(day, at, frozen_policy, dispositions, tickets, exclusions, *,
+             outcome_evidence=None, evidence=False, population=None):
+    policy_id = hashed(frozen_policy)
     values = portfolios(tickets, as_of=at)
     result = dict(policy=deepcopy(frozen_policy), policy_id=policy_id, date=day, as_of=at,
         designation=("Opportunity record only; original frozen checkpoints plus explicitly reconstructed T−10 raw responses; results deferred"
                      if frozen_policy.get("recovered_checkpoints") else
                      "Retrospective paper replay of frozen T−10 evidence; no actual orders or fills"),
         portfolio_revision=hashed([policy_id, day, sorted(t["id"] for t in tickets)]),
-        tracked_games=len(games), captured_games=sum(g["status"] == "captured" for g in dispositions),
+        tracked_games=len(dispositions), captured_games=sum(g["status"] == "captured" for g in dispositions),
         games=dispositions, exclusions=dict(exclusions), portfolios=values,
         coverage=("tracked_games_only; no later prices or inferred missing markets" if frozen_policy.get("recovered_checkpoints")
                   else "tracked_games_only; missing/untracked games cannot be reconstructed"),
-        outcome_evidence=outcome_evidence if evidence else {}, provider_requests=0, orders_submitted=0)
+        outcome_evidence=(outcome_evidence or {}) if evidence else {}, provider_requests=0, orders_submitted=0)
+    if population is not None:
+        result.update(population=population, coverage=population["kind"],
+                      designation="Men’s D1 opportunity analysis. Sporting results are reported separately.")
     if frozen_policy.get("recovered_checkpoints"):
         result["reconstructed_games"] = sum(g["status"] == "reconstructed" for g in dispositions)
     if not evidence:

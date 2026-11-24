@@ -8,7 +8,7 @@ import re
 from psycopg.types.json import Jsonb
 
 from app.storage.store import ROOT, encoded, hashed, stamp
-from . import experiment, paper, records
+from . import experiment, mens_d1, paper, records
 
 SCHEMA = "predict-research-workspace-1"
 PILOT_VERSION = "ncaab-t10-paper-v1"
@@ -111,7 +111,8 @@ def index(db):
     return dict(schema=SCHEMA, pilot=dict(date=PILOT_DAY, title=pilot["title"], definition_version=PILOT_VERSION),
         theories=[_record(row) for row in catalog if row["kind"] == "theory"],
         claims=[_record(row) for row in catalog if row["kind"] == "claim"],
-        definitions=definitions, runs=runs, findings=findings, available_dates=available,
+        definitions=definitions, mens_d1_template=mens_d1.template(pilot),
+        runs=runs, findings=findings, available_dates=available,
         provider_requests=0, orders_submitted=0)
 
 
@@ -178,9 +179,19 @@ def _summary(report, title):
                     source_coverage_unconfirmed_games=partial, dispositions=dict(states))
     if reconstructed:
         coverage["reconstructed_games"] = reconstructed
+    population = report.get("population")
+    uncovered = 0
+    if population:
+        scopes = Counter(entry["scope_state"] for entry in population["games"])
+        coverage.update(population_kind=population["kind"], population_revision=population["revision"],
+                        eligible_games=scopes["eligible"], excluded_games=scopes["excluded"],
+                        unverified_membership_games=scopes["unresolved"])
+        if population["kind"] == "verified_daily_schedule":
+            coverage.update(expected_games=scopes["eligible"], untracked_games=scopes["eligible"] - len(games))
+        uncovered = scopes["unresolved"] + (coverage["untracked_games"] or 0)
     if not captured and not reconstructed:
         validity = "no_valid_capture"
-    elif missing or pending or partial:
+    elif missing or pending or partial or uncovered:
         validity = "incomplete_tracked_capture"
     else:
         validity = "tracked_captures_only"
@@ -262,18 +273,17 @@ def _admit(db, size):
     require_disk_space(ROOT / ".local/postgres", append_bytes=size * 3)
 
 
-def _unchanged_recovery_run(db, day, definition):
+def _unchanged_recovery_run(db, day, definition, *, population=None):
     """Reopen an unchanged, terminal opportunity record without decoding quotes.
 
-    Restricted to the versioned raw-recovery projection with results deferred:
-    time cannot release cash or change grading. Any population, schedule, task,
-    checkpoint or attempt change falls through to the full replay. A calculation
-    change must version the recovery policy, like other frozen paper policies.
+    Applies to the versioned recovery and verified D1 opportunity projections.
+    Any scope, schedule, task, checkpoint or attempt change requires a new
+    calculation. Deadline passage changes a pending report even without writes.
     """
     policy = definition["policy"]
-    if (definition.get("designation") != "retrospective_raw_recovery"
-            or policy.get("recovery_version") != "raw-t10-opportunity-recovery-1"
-            or policy.get("defer_results") is not True):
+    legacy = (definition.get("designation") == "retrospective_raw_recovery"
+              and policy.get("recovery_version") == "raw-t10-opportunity-recovery-1")
+    if (not legacy and population is None) or policy.get("defer_results") is not True:
         return None
     previous = db.execute("""SELECT id,payload FROM public.research_workspace_run
         WHERE definition_version=%s AND game_date=%s ORDER BY observed_at DESC,id LIMIT 1""",
@@ -282,11 +292,14 @@ def _unchanged_recovery_run(db, day, definition):
         return None
     saved = {g["game_id"]:g for g in previous["payload"]["report"]["games"]}
     current = list(db.execute("""SELECT g.*,t.state AS task_state,t.schedule_id AS task_schedule_id,
-        t.target_at,t.deadline_at FROM public.ev_experiment_game g
+        t.target_at,t.deadline_at,t.last_reason FROM public.ev_experiment_game g
         JOIN public.ev_experiment_task t ON t.game_id=g.id AND t.checkpoint='late'
         WHERE g.event->>'league'=%s AND
         ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date""",
         (policy["league"], day)))
+    if population is not None:
+        allowed = {row.get("provider_event_id") for row in population["games"] if row["scope_state"] == "eligible"}
+        current = [game for game in current if game["event"]["source_event_id"] in allowed]
     if set(saved) != {g["id"] for g in current}:
         return None
     attempts = {row["game_id"]:row["ids"] for row in db.execute("""SELECT game_id,
@@ -295,8 +308,8 @@ def _unchanged_recovery_run(db, day, definition):
     now = datetime.now(timezone.utc)
     for game in current:
         prior = saved[game["id"]]
-        if (game["task_state"] not in ("captured", "refused", "missed")
-                or game["baseline_correction_id"] or game["deadline_at"] >= now
+        if (legacy and (game["task_state"] not in ("captured", "refused", "missed") or game["deadline_at"] >= now)
+                or game["baseline_correction_id"]
                 or game["schedule_id"] != prior["schedule_id"]
                 or game["task_schedule_id"] != game["schedule_id"]
                 or game["event"]["title"] != prior["title"]
@@ -309,8 +322,13 @@ def _unchanged_recovery_run(db, day, definition):
             if (game["late_id"] is not None or game["task_state"] != prior["original_capture_status"]
                     or policy.get("recovered_checkpoints", {}).get(game["id"]) != prior["checkpoint_id"]):
                 return None
-        elif game["task_state"] != prior["status"] or game["late_id"] != prior["checkpoint_id"]:
-            return None
+        else:
+            state, reason = game["task_state"], game["last_reason"]
+            if state in ("pending", "claimed") and game["deadline_at"] < now:
+                state, reason = "missed", "capture_window_closed"
+            if (state != prior["status"] or game["late_id"] != prior["checkpoint_id"]
+                    or not legacy and state != "captured" and reason != prior["reason"]):
+                return None
     return previous["id"]
 
 
@@ -318,14 +336,71 @@ def replay(db, day, definition_version, values, *, registration=None):
     """Use a stable evidence snapshot, then publish the definition and run atomically."""
     with db.transaction():
         db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
-        parent = _definition(db, definition_version)
-        definition = _changed_definition(parent, values)
-        if registration:
-            definition = _register_definition(db, parent, definition, registration)
-        existing = _unchanged_recovery_run(db, day, definition)
+        population = None
+        if definition_version == mens_d1.DAILY:
+            if values or registration:
+                raise SelectionError("Daily coverage uses the published paper policy.")
+            parent = _definition(db, PILOT_VERSION)
+            population = mens_d1.daily_population(db, day)
+            if population is None:
+                raise SelectionError("This date has no verified source slate. Review retained evidence in Data.")
+            recovery = mens_d1.daily_recovery(db, day, population)
+            definition = mens_d1.definition(mens_d1.template(parent), population, mens_d1.DAILY_DESIGNATION,
+                                            recovery=recovery)
+        else:
+            parent = _definition(db, definition_version)
+            if parent["policy"].get("scope") == mens_d1.SCOPE:
+                if values or registration:
+                    raise SelectionError("This saved scope and policy are fixed.")
+                record = db.execute("""SELECT id FROM public.research_workspace_run
+                    WHERE definition_version=%s AND game_date=%s ORDER BY observed_at DESC,id LIMIT 1""",
+                    (parent["version"], day)).fetchone()
+                if record:
+                    return run_detail(db, record["id"])
+                raise UnknownSelection("This scoped definition belongs to a different game date.")
+            definition = _changed_definition(parent, values)
+            if registration:
+                definition = _register_definition(db, parent, definition, registration)
+        existing = _unchanged_recovery_run(db, day, definition, population=population)
         if existing:
             return run_detail(db, existing)
-        report = paper.report(db, day, evidence=True, policy=definition["policy"])
+        report = paper.report(db, day, evidence=True, policy=definition["policy"], population=population)
+    return _publish(db, day, parent, definition, report)
+
+
+def correct_mens_d1_recovery(db):
+    with db.transaction():
+        db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        original = _run(db, mens_d1.ORIGINAL_RUN)
+        parent = _definition(db, original["definition_version"])
+        day = original["game_date"].isoformat()
+        population = mens_d1.retained_population(db, original)
+        definition = mens_d1.definition(parent, population, mens_d1.RECOVERY)
+        record = db.execute("""SELECT id FROM public.research_workspace_run
+            WHERE definition_version=%s AND game_date=%s LIMIT 1""", (definition["version"], day)).fetchone()
+        if record:
+            return run_detail(db, record["id"])
+        report = mens_d1.replay_retained(db, day, definition["policy"], population, original)
+    return _publish(db, day, parent, definition, report)
+
+
+def save_mens_d1_provider_snapshot(db, day):
+    with db.transaction():
+        db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        parent = _definition(db, PILOT_VERSION)
+        population = mens_d1.retained_provider_population(db, day)
+        if population is None:
+            raise SelectionError("No odds-provider game observations were retained on this date.")
+        recovery = mens_d1.daily_recovery(db, day, population)
+        definition = mens_d1.definition(mens_d1.template(parent), population, mens_d1.RETAINED, recovery=recovery)
+        existing = _unchanged_recovery_run(db, day, definition, population=population)
+        if existing:
+            return run_detail(db, existing)
+        report = paper.report(db, day, evidence=True, policy=definition["policy"], population=population)
+    return _publish(db, day, parent, definition, report)
+
+
+def _publish(db, day, parent, definition, report):
     document = _compact_report(report)
     revision = hashed(dict(document, report={k: v for k, v in report.items() if k != "as_of"}))
     run_id = hashed([definition["version"], day, revision])

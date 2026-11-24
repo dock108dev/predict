@@ -7,7 +7,7 @@ from aiohttp import web
 from .local_security import HEADERS, PublicRequestError, read_json
 
 # Keep local selection context, never an arbitrary redirect target.
-SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book section run claim theory definition finding variant ticket evidence pull'.split())
+SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book section run claim theory definition finding variant ticket evidence pull scope coverage_game coverage_filter coverage_job'.split())
 CATALOG_CONTEXT = {'search', 'sport', 'provider', 'original_bookmaker_id', 'book', 'family', 'calculation_status', 'max_age_minutes', 'game', 'bet', 'reference_scope'}
 DATA_PATHS = {'/browse-odds', '/odds', '/raw-odds', '/game', '/replay', '/admin/retained'}
 RETIRED_PATHS = {'/scanner', '/my-bets', '/about', '/trading-fees'}
@@ -116,6 +116,9 @@ def compatibility_middleware():
 
 
 def mount(app, static_root):
+    from .mens_d1_coverage_api import mount as mount_daily_coverage
+    mount_daily_coverage(app)
+
     async def page(request):
         name = {'/research': 'research-workspace.html', '/data': 'data.html', '/settings': 'settings.html'}[request.path]
         return web.FileResponse(static_root / 'opportunity_static/current' / name, headers=HEADERS)

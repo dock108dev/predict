@@ -2,13 +2,14 @@ import './experiment-populations.js';
 import {inspectExperiment, closeExperiment} from './experiment.js';
 import {byId, count, details, label, link, node, pairs, pct, readJSON, stack, table, time} from './workspace-ui.js';
 import {number, selection, venue} from './workspace-format.js';
+import {coverageURL, renderCoverage} from './mens-d1-coverage.js';
 
-const viewNames = ['observations', 'pulls', 'checkpoints', 'populations'];
+const viewNames = ['observations', 'pulls', 'checkpoints', 'populations', 'mens-d1'];
 const currentQuery = () => new URLSearchParams(location.search);
 const pullForm = byId('pull-workbench-form'), day = byId('pull-day'), choice = byId('pull-choice'), filter = byId('pull-filter');
 const pullDetail = byId('pull-detail'), pullStatus = byId('pull-status'), pullRows = byId('pull-rows');
 let lastRequest = 0, saved;
-let lastResultRequest = 0;
+let lastResultRequest = 0, lastCoverageRequest = 0;
 
 function dateInEastern() {
   return new Intl.DateTimeFormat('en-CA', {timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
@@ -150,6 +151,7 @@ function screen() {
   for (const anchor of document.querySelectorAll('[data-evidence-view]')) {
     if (anchor.dataset.evidenceView === active) anchor.setAttribute('aria-current','page');
     else anchor.removeAttribute('aria-current');
+    if (anchor.dataset.evidenceView === 'mens-d1') anchor.href = coverageURL(query);
   }
   if (active === 'pulls') {
     day.value = query.get('date') || dateInEastern();
@@ -157,6 +159,8 @@ function screen() {
   } else ++lastRequest;
   if (active === 'populations') loadResults(query);
   else ++lastResultRequest;
+  const coverageRequest = ++lastCoverageRequest;
+  if (active === 'mens-d1') renderCoverage(byId('data-mens-d1'), query, () => coverageRequest === lastCoverageRequest);
 }
 window.addEventListener('popstate', screen);
 screen();

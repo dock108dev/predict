@@ -1,12 +1,14 @@
 """Passive checkpoint API boundaries and revision-bound browser downloads."""
 
 from contextlib import nullcontext
+import asyncio
 import json
 from pathlib import Path
 from types import ModuleType
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock, patch
 import sys
+from threading import Event
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
@@ -113,3 +115,45 @@ class ExperimentAPI(IsolatedAsyncioTestCase):
         response = await self.client.get('/api/research/experiment', params=self.query)
         self.assertEqual(response.status, 422)
         self.assertIn('Unknown tracked experiment game', await response.text())
+
+
+class ScopedReplayAPI(IsolatedAsyncioTestCase):
+    async def test_replay_outlives_post_and_reuses_active_date(self):
+        from app.dashboard.research_workspace_api import BASE, mount as mount_workspace
+        from app.owned_work import joined_thread
+        from app.research import mens_d1
+
+        app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+        mount_workspace(app)
+        done = Event()
+        calls = Mock()
+
+        def replay(_db, day, version, values):
+            calls(day, version, values)
+            if not done.wait(timeout=5):
+                raise AssertionError("job was never released")
+            return {"run": {"id": "saved-daily-run"}}
+
+        with patch("app.dashboard.research_workspace_api.joined_thread", new=joined_thread), \
+             patch("app.dashboard.research_workspace_api.connect", return_value=ReadConnection([])), \
+             patch("app.dashboard.research_workspace_api.workspace.replay", side_effect=replay):
+            async with TestClient(TestServer(app)) as client:
+                try:
+                    origin = str(client.make_url("/")).rstrip("/")
+                    body = dict(date="2026-11-24", definition_version=mens_d1.DAILY)
+                    first = await client.post(BASE + "/runs", headers={"Origin": origin}, json=body)
+                    self.assertEqual(first.status, 202)
+                    job = await first.json()
+                    same = await client.post(BASE + "/runs", headers={"Origin": origin}, json=body)
+                    self.assertEqual(same.status, 202)
+                    self.assertEqual((await same.json())["job_id"], job["job_id"])
+                    status = await (await client.get(job["status_url"])).json()
+                    self.assertIn(status["state"], {"queued", "running"})
+                finally:
+                    done.set()
+                async with asyncio.timeout(2):
+                    while status["state"] in {"queued", "running"}:
+                        status = await (await client.get(job["status_url"])).json()
+                self.assertEqual(status["state"], "succeeded")
+                self.assertEqual(status["run_id"], "saved-daily-run")
+                calls.assert_called_once_with(body["date"], mens_d1.DAILY, {})

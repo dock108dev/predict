@@ -1,5 +1,7 @@
 import {byId, card, count, details, label, link, list, node, pairs, pct, readJSON, table, time, usd} from './workspace-ui.js';
 import {renderRun, renderSavedEvidence} from './research-run.js';
+import {coverageContext, experimentCoverage, readDailyCoverage} from './mens-d1-coverage.js';
+import {renderWorkspaceNavigation} from './workspace-nav.js';
 
 const endpoint = '/api/research/workspace';
 const sections = new Set(['theories', 'experiments', 'results']);
@@ -20,6 +22,8 @@ const runLink = (run, title = run.title || run.date) => link(title, url('experim
 const claimLink = id => link(claimById(id)?.title || id, url('theories', {claim:id}));
 const findingLink = finding => link(finding.title, url('results', {finding:finding.id}));
 const runAPI = id => endpoint + '/runs/' + encodeURIComponent(id);
+const dailyJobAPI = id => endpoint + '/mens-d1-jobs/' + id;
+const jobIdentity = /^[a-f0-9]{32}$/;
 const safeLocal = href => typeof href === 'string' && /^\/(?!\/)[^\\]*$/.test(href);
 function claims(root, ids) {
   if (ids?.length) root.append(list(ids, id => {
@@ -188,7 +192,7 @@ function field(title, control) {
   element.append(node('span', title), control);
   return element;
 }
-function replayForm(definition) {
+function replayForm(definition, query) {
   const panel = card('Replay a game date');
   panel.classList.add('workspace-panel');
   const form = node('form', undefined, 'workspace-form');
@@ -196,7 +200,7 @@ function replayForm(definition) {
   date.id = 'research-replay-date';
   date.type = 'date';
   date.required = true;
-  date.value = workspace.pilot?.date || '';
+  date.value = query.get('date') || workspace.pilot?.date || '';
   const dateChoice = node('select');
   dateChoice.id = 'research-available-dates';
   dateChoice.append(new Option('Choose a retained date', ''), ...(workspace.available_dates || []).map(item => new Option(`${item.date} · ${count(item.captured_games)} valid captures`, item.date)));
@@ -270,7 +274,8 @@ function replayForm(definition) {
       loadedRun = value;
       workspace = await readJSON(endpoint);
       if (location.href === source) {
-        history.pushState(null, '', url('experiments', {run:value.run.id}));
+        const context = query.get('scope') === 'mens-d1' ? coverageContext(query) : {};
+        history.pushState(null, '', url('experiments', {...context, date:value.run.date, run:value.run.id}));
         await render();
       }
     } catch (error) {
@@ -303,22 +308,86 @@ function definitionCard(definition) {
   if (definition.policy) panel.append(details('Exact definition and policy', definition));
   return panel;
 }
+function dailyRunForm(template, query, requestVersion) {
+  const context = coverageContext(query, workspace.pilot?.date);
+  const panel = card('Save a men’s D1 paper run');
+  const feedback = node('p', 'Checking retained schedule evidence…', 'workspace-caption');
+  feedback.setAttribute('role', 'status');
+  const submit = node('button', 'Save run from verified schedule');
+  submit.type = 'button';
+  submit.disabled = true;
+  panel.append(feedback, submit);
+  const current = () => version === requestVersion;
+  const updateURL = (extra = {}) => history.replaceState(null, '', url('experiments', {...context, ...extra}));
+  const jobError = message => {
+    feedback.textContent = message;
+    submit.disabled = false;
+  };
+  const watch = async id => {
+    if (!current()) return;
+    try {
+      const job = await readJSON(dailyJobAPI(id));
+      if (!current()) return;
+      if (job.state === 'succeeded' && job.run_id) {
+        updateURL({run:job.run_id});
+        render();
+      } else if (job.state === 'failed') {
+        jobError(label(job.reason || 'The run could not be saved.'));
+      } else {
+        feedback.textContent = 'Saving from retained evidence. This job can continue while you leave the page.';
+        setTimeout(() => watch(id), 1200);
+      }
+    } catch (error) {
+      if (current()) jobError(error.message);
+    }
+  };
+  submit.onclick = async () => {
+    submit.disabled = true;
+    feedback.textContent = 'Starting a run from retained evidence…';
+    try {
+      const job = await readJSON(endpoint + '/runs', {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({date:context.date, definition_version:template.version})});
+      if (!current()) return;
+      if (!jobIdentity.test(job.job_id)) throw Error('The saved run job identity could not be verified.');
+      updateURL({coverage_job:job.job_id});
+      watch(job.job_id);
+    } catch (error) {
+      if (current()) jobError(error.message);
+    }
+  };
+  const jobId = query.get('coverage_job');
+  if (jobIdentity.test(jobId)) watch(jobId);
+  else readDailyCoverage(new URLSearchParams({date:context.date})).then(value => {
+    if (!current()) return;
+    submit.disabled = !value.population_revision;
+    feedback.textContent = value.population_revision
+      ? `${context.date} · ${count(value.counts.expected)} eligible games in the retained schedule. Paper results use the frozen 4% EV and quarter Kelly policy.`
+      : `A verified source schedule has yet to be retained for ${context.date}.`;
+  }).catch(error => { if (current()) feedback.textContent = error.message; });
+  return panel;
+}
 async function experiments(query, requestVersion) {
   const id = query.get('run');
   if (id) {
     const selected = loadedRun?.run.id === id ? loadedRun : await readJSON(runAPI(id));
     if (requestVersion !== version) return;
     loadedRun = selected;
+    const context = query.get('scope') === 'mens-d1' || selected.definition?.policy?.scope === 'mens-d1'
+      ? {...coverageContext(query, selected.run.date), date:selected.run.date} : {};
+    const dateContext = {...context};
+    delete dateContext.run;
     const nav = node('div', undefined, 'workspace-links');
-    nav.append(link('Experiments and runs', url('experiments')), link('Open evaluation results', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
+    nav.append(link('Experiments and runs', url('experiments', dateContext)),
+      link('Open evaluation results', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
     const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
     root.replaceChildren(nav);
+    if (Object.keys(context).length) root.append(experimentCoverage(new URLSearchParams(context), selected.run.date, selected.run));
     renderRun(root, selected, {
-      variant, variantLink:name => url('experiments', {run:id, variant:name}),
-      ticketLink:ticket => url('experiments', {run:id, variant, ticket:ticket.id}),
-      gameLink:game => url('experiments', {run:id, variant, evidence:game.game_id}),
+      variant, variantLink:name => url('experiments', {...context, run:id, variant:name}),
+      ticketLink:ticket => url('experiments', {...context, run:id, variant, ticket:ticket.id}),
+      gameLink:game => url('experiments', {...context, run:id, variant, evidence:game.game_id}),
       exportLink:runAPI(id) + '?export=1',
-      definitionLink:link('Open frozen definition', url('experiments', {definition:selected.run.definition_version})),
+      definitionLink:link('Open frozen definition', url('experiments', {...dateContext, definition:selected.run.definition_version})),
     });
     if (selected.findings?.length) {
       const resultPanel = node('section', undefined, 'workspace-panel');
@@ -337,7 +406,7 @@ async function experiments(query, requestVersion) {
         const value = await readJSON(runAPI(id) + path);
         if (requestVersion === version) renderSavedEvidence(content, value, {
           ticket:Boolean(ticket), exportLink:runAPI(id) + '?export=1',
-          gameLink:gameId => url('experiments', {run:id, variant, evidence:gameId}),
+          gameLink:gameId => url('experiments', {...context, run:id, variant, evidence:gameId}),
         });
       } catch (error) {
         if (requestVersion === version) content.replaceChildren(node('p', error.message));
@@ -346,10 +415,20 @@ async function experiments(query, requestVersion) {
     return;
   }
   const definitions = workspace.definitions || [];
-  const selected = query.get('definition') ? definitionById(query.get('definition')) : definitionById(workspace.pilot?.definition_version) || definitions[0];
+  const scoped = query.get('scope') === 'mens-d1';
+  const date = coverageContext(query, workspace.pilot?.date).date;
+  const availableRuns = (workspace.runs || []).filter(run => !scoped || run.date === date);
+  const template = scoped && workspace.mens_d1_template;
+  const selected = query.get('definition') ? definitionById(query.get('definition'))
+    : (scoped && definitions.find(definition => definition.policy?.scope === 'mens-d1'
+        && availableRuns.some(run => run.definition_version === definition.version)))
+      || template || definitionById(workspace.pilot?.definition_version) || definitions[0];
   root.replaceChildren(node('h2', 'Experiment definitions and dated runs'));
+  root.append(experimentCoverage(query, workspace.pilot?.date));
+  if (template) root.append(dailyRunForm(template, query, requestVersion));
   if (selected) {
-    root.append(definitionCard(selected), replayForm(selected));
+    root.append(definitionCard(selected));
+    if (selected !== template && selected.policy?.scope !== 'mens-d1') root.append(replayForm(selected, query));
     const versions = definitions.filter(definition => definition.id === selected.id && definition.version !== selected.version);
     if (versions.length) links(root, 'Other frozen versions', versions, definition => link(definition.version, url('experiments', {definition:definition.version})));
   } else root.append(node('p', 'No matching experiment definition is available.'));
@@ -359,9 +438,9 @@ async function experiments(query, requestVersion) {
     if ((selected?.id || selected?.version) !== key && !experiments.has(key)) experiments.set(key, definition);
   }
   links(root, 'Other experiment definitions', [...experiments.values()], definition => link(definition.title, url('experiments', {definition:definition.version})));
-  const runs = workspace.runs || [];
+  const runs = availableRuns;
   if (runs.length) root.append(table(['Saved run', 'Definition', 'Validity', 'Tracked / captured'], runs.map(run => [
-    runLink(run, `${run.date} · ${run.title}`), run.definition_version,
+    scoped ? link(`${run.date} · ${run.title}`, url('experiments', {...coverageContext(query), run:run.id})) : runLink(run, `${run.date} · ${run.title}`), run.definition_version,
     label(run.validity), `${count(run.coverage?.tracked_games)} / ${count(run.coverage?.captured_games)}` + (run.coverage?.reconstructed_games ? ` + ${count(run.coverage.reconstructed_games)} reconstructed` : ''),
   ])));
   else root.append(node('p', 'No replay has been saved. Choose a date to read its retained checkpoint evidence.'));
@@ -372,9 +451,12 @@ async function experiments(query, requestVersion) {
 async function render() {
   if (!workspace) return;
   const query = locationState(), section = sectionName(query), requestVersion = ++version;
+  renderWorkspaceNavigation();
   for (const anchor of document.querySelectorAll('[data-section]')) {
     if (anchor.dataset.section === section) anchor.setAttribute('aria-current', 'page');
     else anchor.removeAttribute('aria-current');
+    if (anchor.dataset.section === 'experiments') anchor.href = url('experiments',
+      query.get('scope') === 'mens-d1' ? coverageContext(query) : {});
   }
   status.textContent = '';
   if (dialogs.open && (section !== 'experiments' || (!query.has('ticket') && !query.has('evidence')))) dialogs.close();

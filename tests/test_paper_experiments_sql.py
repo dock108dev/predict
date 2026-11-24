@@ -1,5 +1,6 @@
 """Disposable SQL for acquisition previews and saved paper research."""
 from asyncio import gather
+from copy import deepcopy
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -62,8 +63,7 @@ class PaperSQL(LatestBoardFixture):
             self.assertEqual(failed["pull"]["details"]["reason"],"authored_failure")
 
 
-@skipUnless(SOCKET, "Disposable PostgreSQL required")
-class ResearchWorkspaceSQL(LatestBoardFixture):
+class ResearchWorkspaceFixture(LatestBoardFixture):
     async def asyncSetUp(self):
         from app.research import experiment
 
@@ -106,6 +106,82 @@ class ResearchWorkspaceSQL(LatestBoardFixture):
         self.assertEqual(capture["state"], "captured")
         return capture
 
+
+@skipUnless(SOCKET, "Disposable PostgreSQL required")
+class MensD1WorkspaceSQL(ResearchWorkspaceFixture):
+    async def test_mens_d1_daily_replay_invalidates_on_source_change(self):
+        from app.research import experiment, mens_d1, paper, workspace
+
+        day = "2026-11-23"
+        eligible = self.game("eligible", "2026-11-23T18:00:00Z")
+        excluded = self.game("non-d1", "2026-11-23T18:00:00Z", cancelled=True)
+        population = dict(kind="verified_daily_schedule", revision="schedule-1", membership_version="season-1",
+                          games=[dict(source_game_id="a", provider_event_id="eligible", scope_state="eligible"),
+                                 dict(source_game_id="b", provider_event_id="non-d1", scope_state="excluded"),
+                                 dict(source_game_id="c", provider_event_id=None, scope_state="eligible")])
+        with self.connect() as db, patch.object(paper.math, "calculate", side_effect=linear):
+            experiment.discover(db, [eligible, excluded], at=self.at)
+            self.capture(db, "early", eligible)
+            self.advance(db, stamp("2026-11-23T17:50:00Z"))
+            self.capture(db, "late", eligible)
+            original = workspace.replay(db, day, workspace.PILOT_VERSION, {})
+            with patch.object(mens_d1, "daily_population", side_effect=lambda db, day: deepcopy(population)):
+                first = workspace.replay(db, day, mens_d1.DAILY, {})
+                with patch.object(paper, "report", side_effect=AssertionError("unchanged replay decoded checkpoints")):
+                    self.assertEqual(workspace.replay(db, day, mens_d1.DAILY, {}), first)
+                population["revision"] = "schedule-2"
+                population["games"][2]["scope_state"] = "unresolved"
+                population["membership_version"] = "season-2"
+                next_run = workspace.replay(db, day, mens_d1.DAILY, {})
+            self.assertNotEqual(next_run["run"]["id"], first["run"]["id"])
+            self.assertEqual(first["run"]["coverage"]["expected_games"], 2)
+            self.assertEqual(first["run"]["coverage"]["untracked_games"], 1)
+            self.assertEqual(first["run"]["coverage"]["excluded_games"], 1)
+            self.assertEqual(next_run["run"]["coverage"]["expected_games"], 1)
+            self.assertEqual(next_run["run"]["coverage"]["unverified_membership_games"], 1)
+            self.assertEqual(first["report"]["games"][0]["evaluated_offers"], 2)
+            self.assertEqual(first["report"]["portfolios"]["all_venues"]["unresolved"], 2)
+            self.assertEqual(workspace.run_detail(db, original["run"]["id"]), original)
+            self.assertEqual(workspace.run_detail(db, first["run"]["id"]), first)
+
+
+@skipUnless(SOCKET, "Disposable PostgreSQL required")
+class CorrectedRecoverySQL(ResearchWorkspaceFixture):
+    async def test_scope_correction_leaves_original_capture_and_run_unchanged(self):
+        from app.research import experiment, mens_d1, paper, workspace
+
+        day = "2026-11-23"
+        eligible = dict(self.game("eligible", "2026-11-23T18:00:00Z"),
+                        title="Akron Zips at Wright State Raiders")
+        excluded = dict(self.game("non-d1", "2026-11-23T19:00:00Z"),
+                        title="Ecclesia Royals at Grambling St Tigers")
+        with self.connect() as db, patch.object(paper.math, "calculate", side_effect=linear):
+            experiment.discover(db, [eligible], at=self.at)
+            self.capture(db, "early", eligible)
+            self.advance(db, stamp("2026-11-23T17:50:00Z"))
+            self.capture(db, "late", eligible)
+            experiment.discover(db, [excluded], at=self.at)
+            self.capture(db, "early", excluded)
+            self.advance(db, stamp("2026-11-23T18:50:00Z"))
+            self.capture(db, "late", excluded)
+            original = workspace.replay(db, day, workspace.PILOT_VERSION, {})
+            with patch.object(mens_d1, "ORIGINAL_RUN", original["run"]["id"]):
+                corrected = workspace.correct_mens_d1_recovery(db)
+                with patch.object(mens_d1, "replay_retained", side_effect=AssertionError("unchanged run repriced")):
+                    self.assertEqual(workspace.correct_mens_d1_recovery(db), corrected)
+            coverage = corrected["run"]["coverage"]
+            self.assertEqual(coverage["captured_games"], 1)
+            self.assertIsNone(coverage["expected_games"])
+            self.assertEqual(coverage["excluded_games"], 1)
+            self.assertEqual(corrected["report"]["portfolios"]["all_venues"]["count"], 2)
+            exclusion = next(row for row in corrected["report"]["population"]["games"] if row["scope_state"] == "excluded")
+            self.assertEqual(exclusion["teams"][0]["division"], "non_d1")
+            self.assertEqual(original["report"]["portfolios"]["all_venues"]["count"], 4)
+            self.assertEqual(workspace.run_detail(db, original["run"]["id"]), original)
+
+
+@skipUnless(SOCKET, "Disposable PostgreSQL required")
+class ResearchWorkspaceSQL(ResearchWorkspaceFixture):
     async def test_saved_replay_keeps_evidence_and_definition_history(self):
         from app.dashboard.request_guard import dashboard_guard
         from app.dashboard.research_workspace_api import BASE, mount

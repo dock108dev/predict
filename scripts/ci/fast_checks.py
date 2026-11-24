@@ -114,6 +114,12 @@ def plan(root, paths):
         if path in ("app/research/recovery.py", "tests/test_t10_recovery.py"):
             pure.add("tests/test_t10_recovery.py")
             sql.add("tests/test_t10_recovery.py::RecoverySQL")
+        if "mens_d1" in path or "mens-d1" in path:
+            pure.update({"tests/test_mens_d1_source.py", "tests/test_mens_d1_daily_jobs.py",
+                         "tests/test_mens_d1_coverage_api.py::test_coverage_reads_and_downloads_do_not_dispatch"})
+            sql.update({"tests/test_mens_d1_coverage_sql.py",
+                        "tests/test_mens_d1_coverage_api.py::MensD1CoverageSQL",
+                        "tests/test_paper_experiments_sql.py"})
         if path.startswith(("app/fees/", "app/comparison/", "app/settlement")):
             scopes.add("fees")
         if path.startswith("app/dashboard/"):

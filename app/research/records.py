@@ -102,6 +102,18 @@ def retention_usage(db):
         row['workspace_bytes'] = workspace['bytes']
         row['total'] += workspace['bytes']
         row['records'] += workspace['n']
+    if db.execute("SELECT to_regclass('public.mens_d1_receipt') r").fetchone()['r']:
+        daily = db.execute("""SELECT
+            (SELECT sum(pg_total_relation_size(relation)) FROM unnest(ARRAY[
+                 'public.mens_d1_source_state','public.mens_d1_job','public.mens_d1_attempt',
+                 'public.mens_d1_receipt','public.mens_d1_revision','public.mens_d1_binding'
+            ]::regclass[]) AS relation) bytes,
+            (SELECT COALESCE(sum(reserved_storage_bytes),0) FROM public.mens_d1_attempt
+             WHERE reserved_storage_bytes>0) reserved""").fetchone()
+        row['daily_coverage_bytes'] = int(daily['bytes'])
+        row['daily_coverage_reserved_bytes'] = int(daily['reserved'])
+        row['total'] += row['daily_coverage_bytes']
+        row['reserved'] += row['daily_coverage_reserved_bytes']
     return row
 
 

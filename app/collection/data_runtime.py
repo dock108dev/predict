@@ -39,6 +39,7 @@ class DataRuntime:
         self.storage_interval = False
         self.sql_bytes = None
         self.startup_maintenance = None
+        self.daily_coverage = None
 
     def prepare_status(self):
         from .background_work import BACKGROUND
@@ -137,6 +138,10 @@ class DataRuntime:
                 result = self.board.start()
                 if inspect.isawaitable(result):
                     await result
+            if isinstance(self.service, CurrentService) and self.service.database_mode:
+                from .mens_d1_jobs import DailyCoverageJobs
+                self.daily_coverage = DailyCoverageJobs(self, connector=self.connector)
+                self.daily_coverage.start()
             from .retained_memory import watch
             self.memory_task=asyncio.create_task(watch(self),name='predict-retained-memory')
             self.heartbeat_task = asyncio.create_task(self.heartbeat(), name='predict-data-heartbeat')
@@ -263,11 +268,12 @@ class DataRuntime:
                 await asyncio.gather(status_task, return_exceptions=True)
 
     def storage_interval_ready(self):
+        daily_idle = not self.daily_coverage or self.daily_coverage.idle.is_set()
         worker = self.service.workers.get('sportsgameodds')
         if worker is not None:
-            return worker.request_storage_interval()
+            return worker.request_storage_interval() and daily_idle
         worker = self.service.workers.get('the_odds_api')
-        return getattr(worker, 'phase', None) not in ('reservation', 'transport', 'accounting')
+        return daily_idle and getattr(worker, 'phase', None) not in ('reservation', 'transport', 'accounting')
 
     async def commands(self):
         # Keep one session for the command poll instead of opening ten database
@@ -308,7 +314,7 @@ class DataRuntime:
             self.service.dispatch=False
             self.service.ingress.revoke()
             await self.persist_control('stopping')
-            finite_clean = await self.withdraw(self.service.close())
+            finite_clean = await self.withdraw(self.service.close(), wait_daily=True)
             if not finite_clean:
                 raise SelectionError(409,'cleanup_safety_unresolved','The finite operation has not confirmed transport cleanup.')
         elif action == 'pause' and set(body) == {'source'} and body['source'] in ('kalshi', 'polymarket_us', 'the_odds_api', 'sportsgameodds'):
@@ -351,15 +357,16 @@ class DataRuntime:
         if action in ('stop', 'pause') and self.service.cleanup_errors:
             raise SelectionError(409, 'cleanup_safety_unresolved', 'The owning runtime withdrew acquisition, but safe cleanup remains unresolved.')
 
-    async def withdraw(self, ordinary, *, finite=True):
+    async def withdraw(self, ordinary, *, finite=True, wait_daily=False):
         # Schedule ordinary revocation first; neither cleanup may delay or skip
         # the other. A supplemental failure cannot leave source dispatch alive.
         operations=[ordinary]
         if finite and self.selected_fees:operations.append(self.selected_fees.stop())
+        if wait_daily and self.daily_coverage:operations.append(self.daily_coverage.wait_idle())
         results=await asyncio.gather(*operations,return_exceptions=True)
         if isinstance(results[0],BaseException):
             self.service.cleanup_errors.append('source_cleanup_unresolved')
-        clean=not any(isinstance(value,BaseException) for value in results) and (len(results)==1 or results[1] is True)
+        clean=not isinstance(results[0],BaseException) and all(value is True for value in results[1:])
         if not clean:self.service.cleanup_errors.append('selected_fee_cleanup_unresolved')
         return clean
 
@@ -385,6 +392,8 @@ class DataRuntime:
         if self.selected_fees:
             await attempt('data_runtime_finite_close', stop_fees)
             if errors:self.service.cleanup_errors.append('selected_fee_cleanup_unresolved')
+        if self.daily_coverage:
+            await attempt('data_runtime_daily_coverage_close', self.daily_coverage.close)
         for task in (self.heartbeat_task, self.command_task, self.memory_task):
             if task and task is not asyncio.current_task():
                 # Cancellation we request is normal; an already failed task is

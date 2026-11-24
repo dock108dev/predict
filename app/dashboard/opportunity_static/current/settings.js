@@ -64,9 +64,42 @@ function renderWorkspace(value){
  );
  facts($('retention-gaps'),gaps);
 }
+async function refreshDailyCoverage(){
+ try{
+  const value=await request('/api/workspace/mens-d1/status'), credits=value.credits, storage=value.storage, forecast=value.forecast;
+  const words=raw=>raw==null?'':String(raw).replaceAll('_',' ');
+  facts($('mens-d1-source'),[
+   ['Sports Reference',words(value.state)],['Source status reason',words(value.reason)||'—'],
+   ['Next eligible run',clock(value.next_run_at)],['Last successful source read',clock(value.last_success_at)],
+   ['Recorded requests',credits.requests],['Unconfirmed dispatches',credits.unconfirmed_dispatches],
+   ['Confirmed credits',credits.confirmed],['Unconfirmed credit exposure',credits.held],
+   ['Source cost (USD)',credits.cost_usd],['Daily source evidence retained',bytes(storage.source_bytes)],
+   ['Daily source in-flight reservations',bytes(storage.source_reserved_bytes)],
+   ['Unreserved shared research headroom',bytes(storage.headroom_bytes)+' of '+bytes(storage.allocation_bytes)],
+   ['Database runway',bytes(storage.sql_bytes)+' of '+bytes(storage.sql_cap_bytes)],
+   ['Host disk available',bytes(storage.disk?.free_bytes)+' (free-space floor '+bytes(storage.disk?.floor_bytes)+')'],
+   ...(forecast ? [['Next 24 hours, planned source jobs',forecast.next_24h_pending_jobs],
+    ['Forecast basic credits before additional retries or detail requests',forecast.planned_basic_credits],
+    ['Forecast maximum source response bytes',bytes(forecast.maximum_response_bytes)],
+    ['Next 24 hours, T−10 tasks',`${forecast.next_24h_cbb_late_tasks} college basketball · ${forecast.next_24h_late_tasks} all sports`]] : []),
+  ]);
+  $('mens-d1-job-table').hidden=!value.jobs.length;
+  $('mens-d1-job-rows').replaceChildren(...value.jobs.map(job=>{
+   const row=node('tr');
+   for(const item of [job.game_date,words(job.purpose),words(job.state),
+    clock(job.next_attempt_at||job.due_at),clock(job.last_attempt_at),clock(job.last_success_at),
+    `${job.attempts}${job.last_reason?' · '+words(job.last_reason):''}`])row.append(node('td',item));
+   return row;
+  }));
+ }catch(error){
+  $('mens-d1-source').textContent='Daily job status unavailable. '+error.message;
+  $('mens-d1-job-table').hidden=true;
+ }
+}
 async function refresh(){
  if(refreshing||busy)return;
  refreshing=true;renderFeeMode(feeMode);$('settings-status').textContent='Reading operating status…';
+ void refreshDailyCoverage();
  const results=await Promise.allSettled([request('/api/admin/status'),request('/api/admin/activity-mode'),request('/api/workspace/status')]);
  if(results[0].status==='fulfilled'){current=results[0].value;render();}
  else{current=null;for(const button of document.querySelectorAll('[data-control]'))button.disabled=true;}

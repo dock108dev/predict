@@ -2,12 +2,14 @@
 
 import asyncio
 import re
+from uuid import uuid4
 
 from aiohttp import web
 
 from app.collection.odds_http import BudgetStop
+from app.diagnostics import failure
 from app.owned_work import joined_thread
-from app.research import workspace
+from app.research import mens_d1, workspace
 from app.storage.store import connect, encoded
 from .local_security import HEADERS, PublicRequestError, read_json
 
@@ -29,8 +31,10 @@ def _identity(value):
 
 def mount(app):
     gate = asyncio.Semaphore(2)
+    jobs = {}
+    active = None
 
-    async def work(fn, *args, read_only=True, **kwargs):
+    async def work(fn, *args, read_only=True, timeout=45, **kwargs):
         def operation():
             with connect() as db:
                 db.execute("SET statement_timeout='10s'")
@@ -41,7 +45,7 @@ def mount(app):
                     return fn(db, *args, **kwargs)
 
         try:
-            async with asyncio.timeout(45), gate:
+            async with asyncio.timeout(timeout), gate:
                 return await joined_thread(__name__, "research_workspace_after_cancellation", operation)
         except workspace.UnknownSelection as exc:
             raise web.HTTPNotFound(reason=str(exc)) from None
@@ -67,6 +71,7 @@ def mount(app):
         return _response(value, filename=f'predict-research-{value["run"]["date"]}-{identity[:12]}.json' if query else None)
 
     async def replay(request):
+        nonlocal active
         if request.query:
             raise PublicRequestError("Replay options belong in the JSON body.")
         body = await read_json(request)
@@ -82,7 +87,47 @@ def mount(app):
             registration = workspace.experiment_registration(body["experiment"]) if "experiment" in body else None
         except workspace.SelectionError as exc:
             raise PublicRequestError(str(exc)) from None
+        if version == mens_d1.DAILY:
+            if values or registration:
+                raise PublicRequestError("Daily coverage uses the published paper policy.")
+            if active and not active.done():
+                current = next(reversed(jobs.values()))
+                if current["date"] != day:
+                    raise web.HTTPServiceUnavailable(reason="A dated replay is running.", headers={"Retry-After": "5"})
+                return web.json_response(current, headers=HEADERS, status=202)
+            if len(jobs) >= 8:
+                del jobs[next(iter(jobs))]
+            identity = uuid4().hex
+            job = jobs[identity] = dict(job_id=identity, status_url=f"{BASE}/mens-d1-jobs/{identity}",
+                                        date=day, state="queued")
+            active = asyncio.create_task(replay_scoped(job))
+            return web.json_response(job, headers=HEADERS, status=202)
         return _response(await work(workspace.replay, day, version, values, registration=registration, read_only=False))
+
+    async def replay_scoped(job):
+        job["state"] = "running"
+        try:
+            saved = await work(workspace.replay, job["date"], mens_d1.DAILY, {},
+                               read_only=False, timeout=None)
+        except PublicRequestError as exc:
+            job.update(state="failed", reason=str(exc))
+        except web.HTTPException as exc:
+            job.update(state="failed", reason=exc.reason)
+        except Exception as exc:
+            failure(__name__, "mens_d1_scoped_replay", exc)
+            job.update(state="failed", reason="The dated replay could not be saved.")
+        else:
+            job.update(state="succeeded", run_id=saved["run"]["id"])
+
+    async def replay_status(request):
+        value = jobs.get(request.match_info["job_id"])
+        if value is None:
+            raise web.HTTPNotFound(reason="This replay job is unavailable. Select the date to retry.")
+        return _response(value)
+
+    async def drain_jobs(_app):
+        if active:
+            await active
 
     async def ticket(request):
         if request.query:
@@ -105,6 +150,8 @@ def mount(app):
 
     app.router.add_get(BASE, index)
     app.router.add_post(BASE + "/runs", replay)
+    app.router.add_get(BASE + "/mens-d1-jobs/{job_id}", replay_status)
     app.router.add_get(BASE + "/runs/{run_id}", run)
     app.router.add_get(BASE + "/runs/{run_id}/tickets/{ticket_id}", ticket)
     app.router.add_get(BASE + "/runs/{run_id}/evidence/{game_id}", evidence)
+    app.on_cleanup.append(drain_jobs)

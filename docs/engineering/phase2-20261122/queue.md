@@ -1,5 +1,24 @@
 # Phase 2 completion and deferred backlog
 
+## Active follow-on: men’s D1 daily coverage
+
+The November 24, 2026 [implementation assignment](../mens-d1-daily-coverage-20261124.md)
+starts from main `4cc9f745c193b3ef03a2fac1a589f510f1a4a566` and the deployed
+Research workspace. The collector schedules daily imports and the Data view
+accounts for retained games, captures, and results by date. The November 23
+scope correction and November 24 retained-provider snapshot were reproduced
+against a private copy of production.
+Sports Reference ingestion is disabled pending permission for private hosted
+use and verified Firecrawl account/access. Both dates' source-declared
+denominators and cross-source matches remain open.
+
+The phase 2 completion entries below are historical. Their former landing-page
+and 128 MiB allocation observations do not override the current Research landing
+page or the current 512 MiB research allocation. The broader model-comparison
+backlog remains deferred beyond the inventory/result work explicitly assigned.
+
+## Historical phase 2 completion
+
 Phase 2 engineering, integration and engineer-led verification are complete.
 The historical phase 2 deployed baseline was `6ed321157bb44dd98833deeaf246a371940477b8`.
 All six foundation phases and the subsequent checkpoint experiment,

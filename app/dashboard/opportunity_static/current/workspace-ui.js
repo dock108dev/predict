@@ -67,8 +67,9 @@ export function table(headers, rows) {
   head.append(titles);
   for (const row of rows) {
     const tr = node('tr');
-    for (const value of row) {
+    for (const [index, value] of row.entries()) {
       const td = node('td');
+      td.dataset.label = headers[index];
       if (value instanceof Node) td.append(value);
       else td.textContent = text(value);
       tr.append(td);
