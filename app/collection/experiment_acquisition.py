@@ -35,7 +35,8 @@ class CheckpointUnavailable(RuntimeError):
 def _start_pull(task, params, at):
     from app.storage.acquisition_snapshot import start
     with connect() as db:
-        return start(db, params, at=at, event=task['event'])
+        return start(db, params, at=at, event=task['event'],
+                     late_task=task if task['checkpoint'] == 'late' else None)
 
 
 def _end_pull(pull_id, state, details):
@@ -373,12 +374,17 @@ class ExperimentAcquisition:
                 snapshot['times'].update(inputs_cutoff=acquired['known_at'].isoformat(),
                     calculation_finished_at=finished.isoformat(), known_at=finished.isoformat(), captured_at=finished.isoformat())
                 snapshot['acquisition'] = acquired['acquisition']
+                from app.storage.acquisition_snapshot import finish, prepare_publication, publish
+                prepared = prepare_publication(page, snapshot, details=acquired['acquisition'])
                 saved = experiment.capture(db, task['game_id'], task['checkpoint'], snapshot,
                     token=task['token'], requested_at=acquired['dispatch_at'],
-                    received_at=acquired['received_at'], known_at=finished, scope=acquired['request_scope'])
-                from app.storage.acquisition_snapshot import publish, finish
+                    received_at=acquired['received_at'], known_at=finished, scope=acquired['request_scope'],
+                    market_publication_bytes=prepared.allocation_bytes)
                 if saved['state'] == 'captured':
-                    publish(db, page, snapshot, details=acquired['acquisition'])
+                    publish(db, page, snapshot, details=acquired['acquisition'], prepared=prepared)
+                    if experiment._dbclock(db) > stamp(task['deadline_at']):
+                        raise CheckpointUnavailable('experiment_checkpoint_persistence_after_deadline',
+                            dispatched=True, details=acquired['acquisition'])
                 else:
                     finish(db, page.pull_id, 'failed', details=saved)
                 return saved

@@ -1,0 +1,407 @@
+"""Append-only research definitions, runs and findings over retained evidence."""
+
+from collections import Counter
+from datetime import date
+from fractions import Fraction
+import re
+
+from psycopg.types.json import Jsonb
+
+from app.storage.store import ROOT, encoded, hashed
+from . import experiment, paper, records
+
+SCHEMA = "predict-research-workspace-1"
+PILOT_VERSION = "ncaab-t10-paper-v1"
+PILOT_DAY = paper.POLICY["default_date"]
+ASSUMPTIONS = ("minimum_ev", "reference_bankroll_usd", "kelly_multiplier")
+HASH = re.compile(r"[0-9a-f]{64}")
+
+
+class SelectionError(ValueError):
+    """An authored workspace validation error safe to display to the owner."""
+
+
+class UnknownSelection(SelectionError):
+    pass
+
+
+def game_day(value):
+    try:
+        if date.fromisoformat(value).isoformat() == value:
+            return value
+    except (TypeError, ValueError):
+        pass
+    raise SelectionError("Use an Eastern game date in YYYY-MM-DD format.")
+
+
+def assumptions(values):
+    if not isinstance(values, dict) or set(values) - set(ASSUMPTIONS):
+        raise SelectionError("Choose a screening EV, sizing reference, or Kelly fraction.")
+    normalized = {}
+    for key, raw in values.items():
+        if not isinstance(raw, str) or not re.fullmatch(r"(?:\d{1,12}(?:\.\d{1,12})?|\.\d{1,12}|\d{1,12}/\d{1,12})", raw):
+            raise SelectionError("Use decimal or fraction strings for replay assumptions.")
+        try:
+            value = Fraction(raw)
+        except (ValueError, ZeroDivisionError):
+            raise SelectionError("Use a valid decimal or fraction for each replay assumption.") from None
+        if value <= 0 or key == "kelly_multiplier" and value > 1:
+            raise SelectionError("Use positive replay assumptions and a Kelly fraction no greater than one.")
+        normalized[key] = str(value)
+    return normalized
+
+
+def experiment_registration(value):
+    if not isinstance(value, dict) or set(value) != {"title", "question", "claim_ids"}:
+        raise SelectionError("Provide a title, question and claims for the new experiment.")
+    title, question, claim_ids = value["title"], value["question"], value["claim_ids"]
+    if (not isinstance(title, str) or not 1 <= len(title.strip()) <= 120
+            or not isinstance(question, str) or not 1 <= len(question.strip()) <= 600):
+        raise SelectionError("Enter a short title and question for the new experiment.")
+    if (not isinstance(claim_ids, list) or not claim_ids
+            or any(not isinstance(claim, str) or not re.fullmatch(r"[0-9a-z-]{1,64}", claim) for claim in claim_ids)):
+        raise SelectionError("Select at least one recorded claim for the new experiment.")
+    return dict(title=title.strip(), question=question.strip(), claim_ids=sorted(set(claim_ids)))
+
+
+def _record(row):
+    result = dict(row["payload"], id=row["id"], version=row["version"],
+                  recorded_at=row["recorded_at"].isoformat())
+    if "supersedes" in row:
+        result["supersedes"] = row["supersedes"]
+    if "run_id" in row:
+        result["run_id"] = row["run_id"]
+    return result
+
+
+def _definition(db, version):
+    row = db.execute("SELECT * FROM public.research_workspace_definition WHERE version=%s", (version,)).fetchone()
+    if row is None:
+        raise UnknownSelection("Unknown experiment definition version.")
+    return _record(row)
+
+
+def _run_summary(row):
+    return dict(row["summary"], id=row["id"], date=row["game_date"].isoformat(),
+                created_at=row["recorded_at"].isoformat(), as_of=row["observed_at"].isoformat(),
+                supersedes=row["supersedes"], definition_version=row["definition_version"],
+                report_revision=row["report_revision"])
+
+
+def index(db):
+    catalog = list(db.execute("""SELECT * FROM public.research_workspace_catalog
+        ORDER BY recorded_at,version"""))
+    definitions = [_record(row) for row in db.execute("""SELECT * FROM public.research_workspace_definition
+        ORDER BY recorded_at DESC,version""")]
+    pilot = next(definition for definition in definitions if definition["version"] == PILOT_VERSION)
+    runs = [_run_summary(row) for row in db.execute("""SELECT id,game_date,recorded_at,observed_at,supersedes,
+        definition_version,report_revision,summary FROM public.research_workspace_run
+        ORDER BY observed_at DESC,id""")]
+    findings = [_record(row) for row in db.execute("""SELECT * FROM public.research_workspace_finding
+        ORDER BY recorded_at DESC,version""")]
+    # Date keys come from the retained checkpoint owner, independently of saved analyses.
+    available = list(db.execute("""SELECT
+        ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date::text AS date,
+        count(*) AS tracked_games,
+        count(*) FILTER (WHERE g.late_id IS NOT NULL AND t.state='captured'
+            AND t.schedule_id=g.schedule_id) AS captured_games
+        FROM public.ev_experiment_game g
+        LEFT JOIN public.ev_experiment_task t ON t.game_id=g.id AND t.checkpoint='late'
+        WHERE g.event->>'league'=%s GROUP BY 1 ORDER BY 1 DESC""", (pilot["policy"]["league"],)))
+    return dict(schema=SCHEMA, pilot=dict(date=PILOT_DAY, title=pilot["title"], definition_version=PILOT_VERSION),
+        theories=[_record(row) for row in catalog if row["kind"] == "theory"],
+        claims=[_record(row) for row in catalog if row["kind"] == "claim"],
+        definitions=definitions, runs=runs, findings=findings, available_dates=available,
+        provider_requests=0, orders_submitted=0)
+
+
+def _changed_definition(parent, values):
+    prior = parent["policy"]
+    changes = {name: value for name, value in values.items() if value != prior[name]}
+    if not changes:
+        return parent
+    version = hashed([parent["version"], changes])
+    policy = dict(prior, **changes)
+    policy.update(version=f"paper-tminus10-exploratory-{version}", baseline=None,
+                  selection="unrounded captured screening EV at the versioned threshold; recheck at sized cash commitment",
+                  sizing_scale_usd=str(Fraction(policy["reference_bankroll_usd"]) * Fraction(policy["kelly_multiplier"])))
+    changed = dict(parent, version=version, supersedes=parent["version"], policy=policy,
+                   designation="exploratory_replay", registration="Exploratory assumptions recorded when this version is saved.")
+    changed.pop("recorded_at")
+    return changed
+
+
+def _register_definition(db, template, proposed, registration):
+    claim_ids = registration["claim_ids"]
+    claims = list(db.execute("""SELECT DISTINCT ON (id) id,version FROM public.research_workspace_catalog
+        WHERE kind='claim' AND id=ANY(%s) ORDER BY id,recorded_at DESC,version""", (claim_ids,)))
+    if len(claims) != len(claim_ids):
+        raise SelectionError("Select existing research claims for the new experiment.")
+    identity = hashed([template["id"], registration])
+    claim_versions = [row["version"] for row in claims]
+    version = hashed([identity, template["version"], proposed["policy"], claim_versions])
+    definition = dict(proposed, **registration, id=identity, version=version, supersedes=None,
+                      template_version=template["version"], designation="exploratory_replay",
+                      claim_versions=claim_versions,
+                      registration="Separate experiment registered at the time of replay, using a recorded template policy.")
+    definition.pop("recorded_at", None)
+    return definition
+
+
+def _compact_report(report):
+    witnesses = {}
+    for portfolio in report["portfolios"].values():
+        compact = []
+        for ticket in portfolio["tickets"]:
+            ticket = dict(ticket)
+            witness = ticket.pop("witness")
+            witnesses[ticket["id"]] = dict(offer_index=ticket.pop("offer_index"),
+                                          sized_calculation=witness["sized_calculation"])
+            compact.append(ticket)
+        portfolio["tickets"] = compact
+    # The exact sporting result stays under its immutable source ID.
+    report.pop("outcome_evidence")
+    return dict(report=report, witnesses=witnesses)
+
+
+def _summary(report, title):
+    games = report["games"]
+    states = Counter(game["status"] for game in games)
+    pending = states["pending"] + states["claimed"]
+    captured = states["captured"]
+    missing = len(games) - captured - pending
+    partial = sum(game["status"] == "captured" and (game.get("coverage") or {}).get("incomplete") is not False
+                  for game in games)
+    coverage = dict(expected_games=None, tracked_games=len(games), captured_games=captured,
+                    missing_tracked_games=missing, pending_games=pending, untracked_games=None,
+                    source_coverage_unconfirmed_games=partial, dispositions=dict(states))
+    if not captured:
+        validity = "no_valid_capture"
+    elif missing or pending or partial:
+        validity = "incomplete_tracked_capture"
+    else:
+        validity = "tracked_captures_only"
+    status = {"no_valid_capture": "awaiting_captures" if pending else "incomplete",
+              "incomplete_tracked_capture": "incomplete", "tracked_captures_only": "screened"}[validity]
+    return dict(title=title, status=status, validity=validity, coverage=coverage,
+                variants={name: {k: v for k, v in portfolio.items() if k != "tickets"}
+                          for name, portfolio in report["portfolios"].items()})
+
+
+def _finding_payloads(run_id, definition, report, summary):
+    all_venues = report["portfolios"]["all_venues"]
+    capture_evidence = [dict(label="Run population and coverage", run_id=run_id)]
+    ticket_evidence = [dict(label="Both venue variants", run_id=run_id)]
+    for game in report["games"]:
+        capture_evidence.append(dict(label=game["title"], run_id=run_id, game_id=game["game_id"],
+                                     checkpoint_id=game["checkpoint_id"]))
+    if all_venues["tickets"]:
+        ticket = next((row for row in all_venues["tickets"] if row["grading"]["pnl_usd"] is not None),
+                      all_venues["tickets"][0])
+        ticket_evidence.append(dict(label="Frozen quote, sized calculation and result evidence", run_id=run_id,
+                                    ticket_id=ticket["id"], game_id=ticket["game_id"],
+                                    checkpoint_id=ticket["checkpoint_id"]))
+    coverage = summary["coverage"]
+    rows = (
+        ("law", "Expected value identity", ["net-ev-law"],
+         "The saved calculations show the recorded state probabilities, receipts and committed capital used by the EV rule.",
+         "unexamined", ["A paper replay applies the arithmetic under its assumptions. The identity follows from the definition of expectation."],
+         ticket_evidence),
+        ("coverage", "Capture coverage", ["evidence-quality", "t10-selection"],
+         f'{coverage["captured_games"]} of {coverage["tracked_games"]} tracked games had an eligible frozen T−10 capture.',
+         "support" if summary["validity"] == "tracked_captures_only" else "inconclusive",
+         ["The expected league-wide population and untracked games are unknown.",
+          "Missing captures and incomplete source returns limit what this run can examine."], capture_evidence),
+        ("sizing", "Paper selection and sizing", ["t10-selection", "fee-sizing"],
+         f'{all_venues["count"]} tickets qualified across {all_venues["unique_games"]} games in All qualifying venues.',
+         "support" if all_venues["count"] else "unexamined",
+         ["The replay documents which branch ran. Independent checks are needed to verify the calculation.",
+          "Every ticket uses a modeled amount and captured price. Execution and venue settlement remain unverified."],
+         ticket_evidence),
+        ("returns", "Repeated profitability", ["positive-net-returns"],
+         "This pipeline replay leaves repeated net returns and the 12-month risk objective unexamined.",
+         "unexamined", ["A retrospective day does not establish representative return behavior.",
+                        "Finite capital, fill and dependence assumptions are still open."],
+         [dict(label="Pipeline run and limitations", run_id=run_id)]),
+    )
+    linked = set()
+    for key, title, claim_ids, statement, disposition, limitations, evidence in rows:
+        claim_ids = [claim for claim in claim_ids if claim in definition["claim_ids"]]
+        if not claim_ids:
+            continue
+        linked.update(claim_ids)
+        identity = hashed([run_id, key])
+        payload = dict(definition_version=definition["version"], title=title, statement=statement,
+                       disposition=disposition, claim_ids=claim_ids, limitations=limitations, evidence=evidence)
+        yield identity, hashed([identity, payload]), payload
+    unsupported = sorted(set(definition["claim_ids"]) - linked)
+    if unsupported:
+        identity = hashed([run_id, "unexamined"])
+        payload = dict(definition_version=definition["version"], title="Claims left unexamined",
+            statement="This replay produced no specific finding for these selected claims.",
+            disposition="unexamined", claim_ids=unsupported, limitations=["The replay evaluates the recorded template policy."],
+            evidence=[dict(label="Run population and evaluation", run_id=run_id)])
+        yield identity, hashed([identity, payload]), payload
+
+
+def _admit(db, size):
+    from app.collection.current_storage_policy import SQL_BYTE_CAP, require_disk_space, sql_usage
+
+    if size > records.EVALUATION_RECORD_BYTE_CAP:
+        raise SelectionError("The replay exceeds the saved research evaluation size limit.")
+    used = records.retention_usage(db)
+    if used["total"] + used["reserved"] + size > records.TOTAL_BYTE_CAP:
+        raise SelectionError("Research retention is full. Existing captures and saved runs were preserved.")
+    if sql_usage(db) + size * 3 + 8 * 1024 * 1024 > SQL_BYTE_CAP:
+        raise SelectionError("Database storage has insufficient runway for this replay.")
+    require_disk_space(ROOT / ".local/postgres", append_bytes=size * 3)
+
+
+def replay(db, day, definition_version, values, *, registration=None):
+    """Use a stable evidence snapshot, then publish the definition and run atomically."""
+    with db.transaction():
+        db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        parent = _definition(db, definition_version)
+        definition = _changed_definition(parent, values)
+        if registration:
+            definition = _register_definition(db, parent, definition, registration)
+        report = paper.report(db, day, evidence=True, policy=definition["policy"])
+    document = _compact_report(report)
+    revision = hashed(dict(document, report={k: v for k, v in report.items() if k != "as_of"}))
+    run_id = hashed([definition["version"], day, revision])
+    summary = _summary(report, definition["title"])
+    findings = list(_finding_payloads(run_id, definition, report, summary))
+
+    with db.transaction():
+        records._writer_lock(db)
+        if db.execute("SELECT 1 FROM public.research_workspace_run WHERE id=%s", (run_id,)).fetchone():
+            return run_detail(db, run_id)
+        create_definition = definition["version"] != parent["version"] and db.execute(
+            "SELECT 1 FROM public.research_workspace_definition WHERE version=%s",
+            (definition["version"],)).fetchone() is None
+        definition_body = {k: v for k, v in definition.items() if k not in ("version", "id", "supersedes", "recorded_at")}
+        document_bytes = len(encoded(document)) + len(encoded(summary))
+        _admit(db, document_bytes + sum(len(encoded(item[2])) for item in findings)
+               + (len(encoded(definition_body)) if create_definition else 0))
+        if create_definition:
+            db.execute("""INSERT INTO public.research_workspace_definition
+                (version,id,supersedes,payload_bytes,payload) VALUES (%s,%s,%s,%s,%s)""",
+                (definition["version"], definition["id"], definition["supersedes"],
+                 len(encoded(definition_body)), Jsonb(definition_body)))
+        prior = db.execute("""SELECT id FROM public.research_workspace_run
+            WHERE definition_version=%s AND game_date=%s AND observed_at<=%s
+            ORDER BY observed_at DESC,id LIMIT 1""", (definition["version"], day, report["as_of"])).fetchone()
+        db.execute("""INSERT INTO public.research_workspace_run
+            (id,definition_version,game_date,report_revision,observed_at,supersedes,summary,payload_bytes,payload)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (run_id, definition["version"], day, revision, report["as_of"], prior["id"] if prior else None,
+             Jsonb(summary), document_bytes, Jsonb(document)))
+        with db.cursor() as cursor:
+            cursor.executemany("""INSERT INTO public.research_workspace_finding
+                (version,id,run_id,payload_bytes,payload) VALUES (%s,%s,%s,%s,%s)""",
+                [(version, identity, run_id, len(encoded(payload)), Jsonb(payload))
+                 for identity, version, payload in findings])
+    return run_detail(db, run_id)
+
+
+def _run(db, run_id):
+    row = db.execute("SELECT * FROM public.research_workspace_run WHERE id=%s", (run_id,)).fetchone()
+    if row is None:
+        raise UnknownSelection("Unknown saved research run.")
+    return row
+
+
+def run_detail(db, run_id, *, export=False):
+    row = _run(db, run_id)
+    definition = _definition(db, row["definition_version"])
+    findings = [_record(value) for value in db.execute("""SELECT * FROM public.research_workspace_finding
+        WHERE run_id=%s ORDER BY recorded_at,version""", (run_id,))]
+    report = row["payload"]["report"]
+    result = dict(schema=SCHEMA, run=_run_summary(row), definition=definition, findings=findings, report=report,
+                  provider_requests=0, orders_submitted=0)
+    if export:
+        result["witnesses"] = row["payload"]["witnesses"]
+        claims = list(db.execute("""SELECT * FROM public.research_workspace_catalog
+            WHERE version=ANY(%s) ORDER BY version""", (definition["claim_versions"],)))
+        result["claims"] = [_record(claim) for claim in claims]
+        result["manifest"] = dict(bundle_sha256=hashed(result),
+            exact_sources="/api/research/workspace/runs/" + run_id + "/evidence/{game_id}?export=1")
+    return result
+
+
+def _game(report, game_id):
+    for game in report["games"]:
+        if game["game_id"] == game_id:
+            return game
+    raise UnknownSelection("Unknown game in this saved run.")
+
+
+def _source_links(run_id, game_id):
+    url = f"/api/research/workspace/runs/{run_id}/evidence/{game_id}"
+    return dict(inspect=url, export=url + "?export=1", raw=url + "?raw=1")
+
+
+def ticket_detail(db, run_id, ticket_id):
+    row = _run(db, run_id)
+    document = row["payload"]
+    witness = document["witnesses"].get(ticket_id)
+    if witness is None:
+        raise UnknownSelection("Unknown ticket in this saved run.")
+    report = document["report"]
+    ticket = next(t for t in report["portfolios"]["all_venues"]["tickets"] if t["id"] == ticket_id)
+    game = _game(report, ticket["game_id"])
+    checkpoint_id, outcome_id = game["checkpoint_id"], game["outcome_id"]
+    index = experiment._closure(db, [key for key in (checkpoint_id, outcome_id) if key])
+    checkpoint = experiment._value(index[checkpoint_id], index)
+    outcome = dict(experiment._value(index[outcome_id], index), id=outcome_id) if outcome_id else None
+    original_offer = checkpoint["snapshot"]["offers"][witness["offer_index"]]
+    calculated = witness["sized_calculation"]
+    links = _source_links(run_id, game["game_id"])
+    evidence = dict(checkpoint=dict(id=checkpoint_id, game_id=game["game_id"], revision=checkpoint_id,
+        persisted_at=index[checkpoint_id]["recorded_at"].isoformat(),
+        **{key: checkpoint.get(key) for key in ("target_at", "deadline_at", "received_at", "known_at")}),
+        sporting_result=outcome, original_offer=original_offer, sized_calculation=calculated, links=links)
+    return dict(run=_run_summary(row), ticket=dict(ticket, witness=dict(original_offer=original_offer,
+        sized_calculation=calculated)), evidence=evidence, provider_requests=0, orders_submitted=0)
+
+
+def game_evidence(db, run_id, game_id, *, export=False):
+    from app.collection.original_receipts import lookup
+
+    row = _run(db, run_id)
+    game = _game(row["payload"]["report"], game_id)
+    checkpoint_id = game["checkpoint_id"]
+    roots = [key for key in (game["schedule_id"], checkpoint_id, game["outcome_id"], *game["attempt_ids"]) if key]
+    index = experiment._closure(db, roots)
+    checkpoint = experiment._value(index[checkpoint_id], index) if checkpoint_id else None
+    snapshot = checkpoint["snapshot"] if checkpoint else {}
+    metadata = None
+    if checkpoint:
+        metadata = dict({k: v for k, v in checkpoint.items() if k != "snapshot"}, id=checkpoint_id,
+                        persisted_at=index[checkpoint_id]["recorded_at"].isoformat())
+    receipt = lookup(snapshot.get("receipt_sha256"))
+    outcome = experiment._value(index[game["outcome_id"]], index) if game["outcome_id"] else None
+    links = _source_links(run_id, game_id)
+    result = dict(run=_run_summary(row), game=game, links=links,
+        checkpoint=metadata,
+        receipt_sha256=snapshot.get("receipt_sha256"), original_response=receipt,
+        attempts=[dict(experiment._value(index[key], index), id=key) for key in game["attempt_ids"]],
+        sporting_result=outcome, provider_requests=0, orders_submitted=0)
+    if export:
+        result.update(root_ids=roots, records=[dict(value, recorded_at=value["recorded_at"].isoformat())
+                                               for value in index.values()])
+        result["manifest"] = dict(bundle_sha256=hashed(result))
+    return result
+
+
+def raw_response(db, run_id, game_id):
+    from app.collection.original_receipts import read
+
+    value = game_evidence(db, run_id, game_id)
+    receipt = value["original_response"]
+    if receipt["state"] == "retained":
+        candidates = [row for row in receipt["captures"] if row["state"] == "retained"]
+        if candidates:
+            metadata, body = read(candidates[-1]["id"])
+            return metadata["receipt_sha256"], body
+    raise UnknownSelection("Original provider response bytes are unavailable for this frozen capture.")

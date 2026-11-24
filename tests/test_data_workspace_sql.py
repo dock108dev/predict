@@ -261,6 +261,10 @@ class DataWorkspaceSQL(PregameFixture):
                 self.assertEqual((status['provider_requests'], status['scheduled_calculations']), (0, 0))
                 self.assertIn('remaining_bytes', status['storage'])
                 self.assertIsNone(status['next_capture'])
+                readiness = status['readiness']
+                self.assertEqual(readiness['retention']['remaining_bytes'], status['storage']['remaining_bytes'])
+                self.assertEqual(readiness['retention']['checkpoint_refusals'], 0)
+                self.assertIsNone(readiness['retention']['historical_gap_attempts'])
         with self.connect() as db:
             self.assertEqual(before, list(db.execute('SELECT * FROM current_pregame_calculation ORDER BY contract_id')))
 

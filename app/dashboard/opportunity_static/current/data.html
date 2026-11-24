@@ -3,13 +3,22 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Predict · Data</title><link rel="icon" href="/view/current/predict-icon.png"><link rel="apple-touch-icon" href="/view/current/predict-icon.png">
 <link rel="stylesheet" href="/view/current/pregame.css"><link rel="stylesheet" href="/view/current/research.css">
+<link rel="stylesheet" href="/view/current/research-workspace.css">
 <script type="module" src="/view/current/workspace-nav.js"></script>
+<script type="module" src="/view/current/data-workbench.js"></script>
 <script type="module" src="/view/current/data.js"></script>
 </head><body class="research-page">
-<a class="skip" href="#catalog">Skip to Data</a>
-<header class="masthead"><a class="brand" href="/data">PREDICT</a><nav aria-label="Main" data-workspace-nav></nav></header>
-<main class="board-wrap">
-<header class="board-heading"><div><h1>Data</h1><p>Compare each market and open the exact offer behind its stored EV.</p></div></header>
+<a class="skip" href="#data-main">Skip to Data</a>
+<header class="masthead"><a class="brand" href="/research">PREDICT</a><nav aria-label="Main" data-workspace-nav></nav></header>
+<main class="board-wrap" id="data-main">
+<header class="board-heading"><div><h1>Data</h1><p>Inspect stored observations, acquisition attempts, frozen checkpoints and sporting results.</p></div></header>
+<nav class="workspace-sections" aria-label="Data sections">
+<a href="/data" data-evidence-view="observations" aria-current="page">Observations</a>
+<a href="/data?evidence=pulls" data-evidence-view="pulls">Odds pulls</a>
+<a href="/data?evidence=checkpoints" data-evidence-view="checkpoints">Historical captures</a>
+<a href="/data?evidence=populations" data-evidence-view="populations">Results &amp; populations</a>
+</nav>
+<div id="data-observations">
 <form id="catalog-filters" class="catalog-filters data-filters">
 <label>Search<input id="search" name="search" type="search" placeholder="Team, event or source market" maxlength="150"></label>
 <label>Sport<select id="sport" name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
@@ -34,6 +43,38 @@
 <nav id="game-pagination" class="catalog-pagination" aria-label="Game pages"><button id="previous" disabled>Previous markets</button><span id="page"></span><button id="next" disabled>Next markets</button></nav>
 <section id="game-detail" hidden aria-labelledby="game-title"><div class="experiment-heading"><h2 id="game-title">Selected game</h2><button id="close-game" type="button">Back to games</button></div><div id="game-content"></div></section>
 <p class="research-muted">Refresh reads stored data. Browsing and exports make no provider requests. Each comparison keeps its acquisition identity. Previous captures and source evidence remain inspectable.</p>
+</div>
+<section id="data-pulls" class="workspace-panel" hidden aria-labelledby="pull-workbench-title">
+<h2 id="pull-workbench-title">College basketball odds pulls</h2>
+<p>Each view uses one acquisition attempt. The most recent attempt may be incomplete or failed. Frozen T−10 checkpoints and their paper eligibility are available under Historical captures.</p>
+<form id="pull-workbench-form" class="workspace-form">
+<label>Game date (Eastern)<input id="pull-day" type="date" required></label>
+<label>Acquisition attempt<select id="pull-choice"><option value="">Newest covering attempt</option></select></label>
+<label>Observations<select id="pull-filter"><option value="all">Every recorded status</option><option value="positive">Positive screening EV</option><option value="experiment">Screening EV ≥4%</option></select></label>
+<button type="submit">Read pull evidence</button>
+</form>
+<p id="pull-status" role="status"></p><div id="pull-detail"></div><div id="pull-rows"></div>
+</section>
+<div id="data-checkpoints" hidden>
+<section id="experiment" class="workspace-panel" data-lazy aria-labelledby="experiment-heading" aria-busy="true">
+<div class="experiment-heading"><h2 id="experiment-heading">Frozen first-observation and T−10 checkpoints</h2><button id="experiment-refresh" type="button">Refresh comparisons</button></div>
+<p>These retained captures show the exact observations and missing evidence behind early-to-late comparisons. T−10 eligibility for a paper run also depends on its frozen experiment definition.</p>
+<div class="experiment-controls"><label><input id="experiment-context" type="checkbox" checked> All tracked games, including incomplete captures</label></div>
+<p id="experiment-status" role="status">Reading scheduled checkpoint evidence…</p><p id="experiment-policy" class="research-muted"></p>
+<div id="experiment-cases"></div><div id="experiment-games"></div>
+<nav class="catalog-pagination" aria-label="Checkpoint game pages"><button id="experiment-previous" type="button" disabled>Previous games</button><span id="experiment-page"></span><button id="experiment-next" type="button" disabled>Next games</button></nav>
+<details id="experiment-operation"><summary>Checkpoint timing, coverage and retention</summary><div id="experiment-operation-content"></div></details>
+</section>
+</div>
+<section id="data-populations" class="workspace-panel" hidden aria-labelledby="populations-title">
+<h2 id="populations-title">Sporting results and declared populations</h2>
+<p>Open a declared population to inspect its frozen cases, sporting outcomes, exclusions and scoring evidence. Research findings and paper portfolio metrics are available on <a href="/research?section=results">Research Results</a>.</p>
+<div id="data-sporting-results"></div>
+<section class="research-panels" aria-label="Retained population evidence">
+<details id="cohorts"><summary>Declared research populations and result evidence</summary><div id="cohort-content"></div></details>
+<details id="coverage"><summary>Collection, archive and retention</summary><div id="coverage-content"></div></details>
+</section>
+</section>
 </main>
 <dialog id="input-detail" aria-labelledby="input-title"><div class="research-dialog-heading"><h2 id="input-title">Exact captured observation</h2><button id="close-detail" type="button">Close</button></div><div id="input-content"></div></dialog>
 <dialog id="experiment-detail" aria-labelledby="experiment-title"><div class="research-dialog-heading"><h2 id="experiment-title">Captured checkpoint comparison</h2><button id="experiment-close" type="button">Close comparison</button></div><div id="experiment-content"></div></dialog>

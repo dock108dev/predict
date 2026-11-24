@@ -69,11 +69,23 @@ price context and their own main progression without acquiring offer/fee support
 
 Shared event, quote, reference and fee subobjects are content-addressed immutable
 dependencies. Only required early/late checkpoints, schedule changes, bounded
-outcome follow-ups and their dependencies are retained. The existing 128 MiB
-research allocation includes legacy records, new records, operational metadata
-and late-checkpoint reservations. It is not raised for this experiment. Unique
-evidence is not automatically evicted; refusals remain visible. Actual bytes per
-game, deduplication and remaining runway are reported by the store.
+outcome follow-ups and their dependencies are retained. The 512 MiB logical
+research allocation covers legacy evidence, checkpoint and market witnesses,
+workspace versions, operational metadata and late reservations. The previous
+128 MiB allocation filled as Data witnesses accumulated alongside the frozen
+checkpoints and protected late reservations. The 4 GiB SQL guard,
+1 GiB free-disk floor, 512 tracked-game limit, legacy observation
+sublimit and individual response bounds still apply. Evidence stays immutable
+and refusals remain visible. This finite allocation gives continued collection
+room after rollout. It establishes no guaranteed collection period.
+
+New early captures reserve estimated space for both the late research packet
+and its inspectable Data publication. A claimed late task can spend its own
+protected space to record the pull manifest before dispatch. Existing late
+reservations and past refusals stay recorded. Settings reports unreserved
+space, protected reservations, separate SQL and disk guards, and the history
+of refused or missed checkpoints. An eligible attempt still depends on the
+source, account gates, and the declared capture window.
 
 The first deployed full-surface run measured 11.33 MB of shared-JSON evidence
 for a two-checkpoint game: thousands of small records and reference hashes still

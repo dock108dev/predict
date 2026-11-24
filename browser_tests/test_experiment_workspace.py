@@ -70,8 +70,8 @@ def test_exact_checkpoint_comparison_context_and_captured_download(
             route.fulfill(json=dict(released=True))
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
-        elif url.path == "/research":
-            route.fulfill(path=ASSETS / "research.html")
+        elif url.path == "/data":
+            route.fulfill(path=ASSETS / "data.html")
         else:
             route.fulfill(status=404)
 
@@ -86,7 +86,7 @@ def test_exact_checkpoint_comparison_context_and_captured_download(
         )
         page = context.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
-        page.goto(base + "/research")
+        page.goto(base + "/data?evidence=checkpoints&context=0")
         expect(page.locator("#experiment-status")).to_contain_text("4 retained cases")
         expect(page.locator("#experiment-cases [data-case]")).to_have_count(4)
         expect(page.locator("#experiment-cases")).to_contain_text(
@@ -105,7 +105,7 @@ def test_exact_checkpoint_comparison_context_and_captured_download(
         expect(dialog).to_contain_text("Screening exact EV")
         expect(dialog).to_contain_text("Coherent exact EV")
         expect(dialog).to_contain_text(
-            "Early offer using the late probability reference"
+            "early offer using the late probability reference"
         )
         expect(dialog).to_contain_text("synthetic_fixture_fee")
         expect(dialog).to_contain_text("main to alternate")
@@ -128,7 +128,7 @@ def test_exact_checkpoint_comparison_context_and_captured_download(
             "Offered decimal price"
         )
         expect(dialog).to_contain_text(
-            "Reference-only book: offered-price observations"
+            "Reference only: offered-price observations"
         )
         dialog.locator('[data-context="reference-fd-1"]').click()
         expect(dialog).to_contain_text("fanduel-early--3")
@@ -187,6 +187,7 @@ def test_exact_checkpoint_comparison_context_and_captured_download(
         assert not errors
         assert all(method in ("GET", "DELETE") for method, _, _ in requests)
         assert not any(
-            "acquire" in path or "capture" in path for _, path, _ in requests
+            path.startswith("/api/") and ("acquire" in path or "capture" in path)
+            for _, path, _ in requests
         )
         browser.close()

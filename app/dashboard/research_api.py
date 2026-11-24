@@ -166,7 +166,9 @@ class CatalogReads(RawReads):
 
 def mount(app):
     from .paper_api import mount as mount_paper
+    from .research_workspace_api import mount as mount_workspace
     mount_paper(app)
+    mount_workspace(app)
     reads = CatalogReads(connect)
     gate = asyncio.Semaphore(CATALOG_READ_CAPACITY)
 
@@ -342,10 +344,10 @@ def mount(app):
 
     async def experiment(request):
         query = dict(request.query)
-        if set(query)-{'id', 'revision', 'export', 'include_context', 'limit', 'offset'} or any(
+        if set(query)-{'id', 'revision', 'export', 'include_context', 'outcomes_only', 'limit', 'offset'} or any(
                 len(value) > 256 for value in query.values()):
             raise PublicRequestError('Invalid checkpoint experiment selection.')
-        if query.get('export') not in (None, '1') or query.get('include_context') not in (None, '1'):
+        if any(query.get(key) not in (None, '1') for key in ('export', 'include_context', 'outcomes_only')):
             raise PublicRequestError('Invalid checkpoint experiment view.')
         identity, revision = query.get('id'), query.get('revision')
         exporting = query.get('export') == '1'
@@ -359,7 +361,7 @@ def mount(app):
                 raise ValueError()
         except ValueError:
             raise PublicRequestError('Invalid checkpoint experiment page.') from None
-        if identity and any(key in query for key in ('include_context', 'limit', 'offset')):
+        if identity and any(key in query for key in ('include_context', 'outcomes_only', 'limit', 'offset')):
             raise PublicRequestError('Context filtering applies to the game list.')
 
         def work():
@@ -374,7 +376,8 @@ def mount(app):
                     return owner.detail(db, identity, revision=revision)
                 with db.transaction():
                     db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
-                    return owner.catalog(db, include_context=query.get('include_context') == '1', limit=limit, offset=offset)
+                    return owner.catalog(db, include_context=query.get('include_context') == '1',
+                        outcomes_only=query.get('outcomes_only') == '1', limit=limit, offset=offset)
 
         try:
             async with admission():

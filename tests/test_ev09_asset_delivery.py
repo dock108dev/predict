@@ -13,7 +13,7 @@ from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
 
 
-PUBLIC_DESK_PAGES = ("/data", "/experiments", "/settings")
+PUBLIC_DESK_PAGES = ("/research", "/data", "/settings")
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
@@ -25,9 +25,11 @@ class Assets(unittest.IsolatedAsyncioTestCase):
     async def test_research_landing_preserves_selected_legacy_links(self):
         async with TestClient(TestServer(self.app())) as client:
             for path, expected, values in (
-                ('/', '/data', {}),
+                ('/', '/research', {}),
                 ('/?id=exact-existing-contract', '/data', {'id':['exact-existing-contract']}),
-                ('/research?id=experiment-one&revision=revision-one', '/experiments', {'id':['experiment-one'],'revision':['revision-one']}),
+                ('/experiments', '/research', {'section':['experiments']}),
+                ('/experiments?context=1&offset=10', '/data', {'evidence':['checkpoints'],'context':['1'],'offset':['10']}),
+                ('/research?id=experiment-one&revision=revision-one', '/data', {'id':['experiment-one'],'revision':['revision-one'],'evidence':['checkpoints']}),
                 ('/game?game_key=combined%3Aevent%3Aone&game_capture=captured-one&line=exact-winner', '/data', {'game_key':['combined:event:one'],'game_capture':['captured-one'],'line':['exact-winner']}),
                 ('/arbs?game=one&capture=early', '/data', {'view':['arbitrage'],'game':['one'],'capture':['early']}),
                 ('/admin?section=inspection&bet=exact-bet', '/data', {'bet':['exact-bet']}),
@@ -48,7 +50,7 @@ class Assets(unittest.IsolatedAsyncioTestCase):
     async def test_static_bookmarks_resolve_to_workspace_context(self):
         async with TestClient(TestServer(self.app())) as client:
             for path, target in (
-                ('/view/current/research.html?id=game-one&revision=frozen', '/experiments'),
+                ('/view/current/research.html?id=game-one&revision=frozen', '/data'),
                 ('/view/current/pregame.html?game=canonical&bet=exact&capture=early', '/data'),
                 ('/view/current/pregame-arbs.html?game=canonical', '/data'),
                 ('/view/current/admin.html?section=usage', '/settings'),

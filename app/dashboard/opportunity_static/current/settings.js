@@ -26,7 +26,59 @@ function render() {
  $('operating-evidence').textContent=JSON.stringify({service:s.service_state,recovery:s.recovery,background:s.background_work,issues:s.issues,source_pauses:paused},null,2);
 }
 function renderMode(value){mode=value.activity_mode||value;if(!mode?.settings)return;facts($('collection-schedule'),[['Next discovery',clock(mode.next_monitor_at)],['Discovery schedule','24/7 · first full capture, then T−10']]);if(!dirty){$('discovery-interval').value=mode.settings.monitor_interval_seconds/60;$('discovery-phase').value=(mode.settings.monitor_phase_seconds??1200)/60;$('discovery-horizon').value=mode.settings.monitor_horizon_seconds===null?'':mode.settings.monitor_horizon_seconds/3600;}$('save-collection').disabled=busy;}
-async function refresh(){if(refreshing||busy)return;refreshing=true;renderFeeMode(feeMode);$('settings-status').textContent='Reading operating status…';const results=await Promise.allSettled([request('/api/admin/status'),request('/api/admin/activity-mode'),request('/api/workspace/status')]);if(results[0].status==='fulfilled'){current=results[0].value;render();}else{current=null;for(const button of document.querySelectorAll('[data-control]'))button.disabled=true;}if(results[1].status==='fulfilled')renderMode(results[1].value);else $('save-collection').disabled=true;if(results[2].status==='fulfilled'){const value=results[2].value,storage=value.storage,referenceScope=value.reference_scope;renderFeeMode(value.fee_mode);if(referenceScope?.books){$('reference-books').textContent=referenceScope.books.map(book=>book.label).join(', ')+'. SportsGameOdds provides the source identity; Kalshi, Polymarket US, Novig and ProphetX remain the four trading markets.';}else $('reference-books').textContent='The selected sportsbook reference list is unavailable for this status read.';facts($('storage-state'),[['Retained research',bytes(storage.retained_bytes)+' of '+bytes(storage.byte_cap)],['Unreserved capacity',bytes(storage.remaining_bytes)],['Protected late-capture reservations',bytes(storage.late_reserved_bytes)],['Next checkpoint capture',value.next_capture?value.next_capture.checkpoint+' · '+clock(value.next_capture.target_at):'No eligible pending checkpoint'],['Current price database',current?.database?bytes(current.database.sql_bytes)+' of '+bytes(current.database.sql_byte_cap):'Not reported'],['Retention','Finite capacity; new captures can be refused when reserved space is exhausted. No automatic eviction.']]);}else $('storage-state').textContent='Storage status is unavailable. Collection still enforces existing storage limits.';$('settings-status').textContent=results.every(r=>r.status==='fulfilled')?'Status read at '+clock(new Date().toISOString())+'.':results[0].status==='rejected'?'Operating status unavailable. Controls require a current response.':'Some operating details are unavailable.';refreshing=false;renderFeeMode(feeMode);}
+function renderWorkspace(value){
+ const {storage,reference_scope:referenceScope,readiness}=value;
+ renderFeeMode(value.fee_mode);
+ $('reference-books').textContent=referenceScope?.books
+  ? referenceScope.books.map(book=>book.label).join(', ')+'. SportsGameOdds provides the source identity. Kalshi, Polymarket US, Novig and ProphetX remain the four trading markets.'
+  : 'The selected sportsbook reference list is unavailable for this status read.';
+ const retention=readiness?.retention;
+ const knownStorage=[
+  ['Retained research',bytes(storage.retained_bytes)+' of '+bytes(storage.byte_cap)],
+  ['Unreserved capacity',bytes(storage.remaining_bytes)],
+  ['Protected late-capture reservations',bytes(storage.late_reserved_bytes)],
+  ['Next checkpoint capture',value.next_capture?value.next_capture.checkpoint+' · '+clock(value.next_capture.target_at):'No eligible pending checkpoint'],
+ ];
+ if(retention)knownStorage.push(
+  ['Tracked games',`${retention.tracked_games} of ${retention.max_tracked_games}`],
+  ['Current price database',bytes(retention.database_bytes)+' of '+bytes(retention.database_byte_cap)],
+  ['Host disk available',bytes(retention.disk_free_bytes)+' (free-space floor '+bytes(retention.disk_floor_bytes)+')'],
+ );
+ facts($('storage-state'),knownStorage);
+ $('retention-readiness').textContent=readiness?.blockers?.length
+  ? readiness.blockers.map(issue=>issue.message).join(' ')
+  : readiness?.state==='limited'
+    ? 'Unreserved capacity is below the measured mean for a retained checkpoint pair.'
+    : readiness?.state==='ready' ? 'Current collection and storage guards allow new capture attempts.' : '';
+ if(!retention)return;
+ const gaps=[
+  ['Historical checkpoint and outcome refusals',retention.checkpoint_refusals],
+  ['Last checkpoint or outcome refusal',clock(retention.last_checkpoint_refused_at)],
+  ['Missed price checkpoints',retention.missed_checkpoints],
+  ['Legacy observation refusals',retention.observation_refusals],
+  ['Legacy capture refusals',retention.capture_refusals],
+ ];
+ if(retention.historical_gap_started_at)gaps.push(
+  ['Earlier uncounted refusal window',clock(retention.historical_gap_started_at)],
+  ['Earlier refused attempts',retention.historical_gap_attempts??'Unknown'],
+ );
+ facts($('retention-gaps'),gaps);
+}
+async function refresh(){
+ if(refreshing||busy)return;
+ refreshing=true;renderFeeMode(feeMode);$('settings-status').textContent='Reading operating status…';
+ const results=await Promise.allSettled([request('/api/admin/status'),request('/api/admin/activity-mode'),request('/api/workspace/status')]);
+ if(results[0].status==='fulfilled'){current=results[0].value;render();}
+ else{current=null;for(const button of document.querySelectorAll('[data-control]'))button.disabled=true;}
+ if(results[1].status==='fulfilled')renderMode(results[1].value);else $('save-collection').disabled=true;
+ if(results[2].status==='fulfilled')renderWorkspace(results[2].value);
+ else{
+  $('storage-state').textContent='Storage status is unavailable. Collection still enforces existing storage limits.';
+  $('retention-readiness').textContent='';$('retention-gaps').replaceChildren();
+ }
+ $('settings-status').textContent=results.every(r=>r.status==='fulfilled')?'Status read at '+clock(new Date().toISOString())+'.':results[0].status==='rejected'?'Operating status unavailable. Controls require a current response.':'Some operating details are unavailable.';
+ refreshing=false;renderFeeMode(feeMode);
+}
 $('settings-refresh').onclick=refresh;
 $('include-fees').onchange=async()=>{
  if(!feeMode||busy||refreshing||feePending){renderFeeMode(feeMode);return;}

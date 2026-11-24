@@ -138,6 +138,8 @@ def plan(root, paths):
             sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_fee_mode_transition_appends_policy_without_rewriting_old_evidence")
         if path in ("app/research/experiment.py", "app/collection/experiment_acquisition.py", "app/comparison/reference_scope.py"):
             sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests")
+        if path in ("app/research/experiment.py", "app/collection/experiment_acquisition.py", "app/storage/acquisition_snapshot.py"):
+            sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_late_pull_manifest_spends_its_own_reserved_bytes")
         if path == "app/dashboard/workspace_routes.py" or path.startswith(
             "app/dashboard/opportunity_static/current/"
         ):

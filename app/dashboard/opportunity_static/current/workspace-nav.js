@@ -1,8 +1,8 @@
 import {applyTheme} from './desk-preferences.js';
 
 export const workspaceNavigation = Object.freeze([
+ {href:'/research', label:'Research'},
  {href:'/data', label:'Data'},
- {href:'/experiments', label:'Experiments'},
  {href:'/settings', label:'Settings'},
 ]);
 for (const nav of document.querySelectorAll('[data-workspace-nav]')) {
@@ -11,4 +11,5 @@ for (const nav of document.querySelectorAll('[data-workspace-nav]')) {
   if(location.pathname===href)link.setAttribute('aria-current','page');return link;
  }));
 }
+for (const brand of document.querySelectorAll('.masthead .brand')) brand.href='/research';
 applyTheme();

@@ -1,0 +1,434 @@
+import {byId, card, count, details, label, link, list, node, pairs, pct, readJSON, table, time, usd} from './workspace-ui.js';
+import {renderRun, renderSavedEvidence} from './research-run.js';
+
+const endpoint = '/api/research/workspace';
+const sections = new Set(['theories', 'experiments', 'results']);
+const root = byId('research-view'), status = byId('research-status');
+const dialogs = byId('research-evidence');
+let workspace, readiness, version = 0, loadedRun, busy = false;
+
+const locationState = () => new URLSearchParams(location.search);
+const sectionName = query => sections.has(query.get('section')) ? query.get('section') : 'overview';
+const runById = id => (workspace.runs || []).find(run => run.id === id);
+const claimById = id => (workspace.claims || []).find(claim => claim.id === id);
+const definitionById = version => (workspace.definitions || []).find(definition => definition.version === version);
+function url(section, params = {}) {
+  const query = new URLSearchParams({...(section === 'overview' ? {} : {section}), ...params});
+  return '/research' + (query.size ? '?' + query : '');
+}
+const runLink = (run, title = run.title || run.date) => link(title, url('experiments', {run:run.id}));
+const claimLink = id => link(claimById(id)?.title || id, url('theories', {claim:id}));
+const findingLink = finding => link(finding.title, url('results', {finding:finding.id}));
+const runAPI = id => endpoint + '/runs/' + encodeURIComponent(id);
+const safeLocal = href => typeof href === 'string' && /^\/(?!\/)[^\\]*$/.test(href);
+function claims(root, ids) {
+  if (ids?.length) root.append(list(ids, id => {
+    const li = node('li');
+    li.append(claimLink(id));
+    return li;
+  }));
+}
+function evidenceLink(item, runId) {
+  if (safeLocal(item.href)) return link(item.label, item.href);
+  const id = item.run_id || runId;
+  if (!id) return node('span', item.label || 'Evidence not recorded');
+  const params = {run:id};
+  if (item.ticket_id) params.ticket = item.ticket_id;
+  else if (item.game_id) params.evidence = item.game_id;
+  return link(item.label || 'Open saved evidence', url('experiments', params));
+}
+function links(root, title, values, render) {
+  if (!values?.length) return;
+  root.append(node('h3', title), list(values, value => {
+    const item = node('li');
+    item.append(render(value));
+    return item;
+  }));
+}
+function lines(root, title, values) {
+  if (values?.length) root.append(node('h3', title), list(values));
+}
+function badge(value, state) {
+  const element = node('span', value, 'workspace-tag');
+  if (state) element.dataset.state = state;
+  return element;
+}
+function readinessCard() {
+  const panel = card('Capture readiness');
+  const value = readiness?.readiness;
+  if (!value) panel.append(node('p', 'Capture readiness is unavailable.'));
+  else {
+    const warnings = value.blockers || [];
+    panel.append(badge(({ready:'Ready to capture', blocked:'Capture blocked', unknown:'Readiness unknown', limited:'Capture limited'})[value.state] || label(value.state), value.state));
+    if (warnings.length) panel.append(list(warnings, warning => {
+      const item = node('li', warning.message);
+      if (safeLocal(warning.settings_url)) item.append(document.createTextNode(' '), link('Open Settings', warning.settings_url));
+      return item;
+    }));
+    const storage = value.retention || {};
+    const countKnown = ['checkpoint_refusals','observation_refusals','capture_refusals'].some(key => storage[key] != null);
+    if (countKnown) panel.append(node('p', `Recorded refusals: ${count(storage.checkpoint_refusals)} scheduled checkpoints, ${count(storage.observation_refusals)} research observations, ${count(storage.capture_refusals)} cohort captures.`));
+    if (storage.historical_gap_started_at) panel.append(node('p', `Earlier retention gaps date to ${time(storage.historical_gap_started_at)}. Refusal count: ${count(storage.historical_gap_attempts)}.`));
+    if (readiness.next_capture?.target_at) panel.append(node('p', `Next scheduled ${readiness.next_capture.checkpoint === 'late' ? 'T−10' : 'early'} checkpoint: ${time(readiness.next_capture.target_at)}.`));
+  }
+  const actions = node('div', undefined, 'workspace-links');
+  actions.append(link('Collection settings', '/settings#collection'), link('Storage settings', '/settings#storage'), link('Latest odds pull', '/data?evidence=pulls'));
+  panel.append(actions);
+  return panel;
+}
+function overview() {
+  const layout = node('div', undefined, 'workspace-grid');
+  for (const theory of workspace.theories || []) {
+    const panel = card('Active research question');
+    panel.append(node('h3', theory.title), node('p', theory.statement));
+    links(panel, 'Open claims', (theory.claim_ids || []).filter(id => !['established', 'verified'].includes(claimById(id)?.status)), claimLink);
+    panel.append(link('Open theory and risk objective', url('theories', {theory:theory.id}), 'research-button'));
+    layout.append(panel);
+  }
+  const pilot = workspace.pilot;
+  if (pilot) {
+    const run = (workspace.runs || []).find(run => run.date === pilot.date && run.definition_version === pilot.definition_version);
+    const panel = card('Experiment progress');
+    panel.append(node('h3', pilot.title), node('p', `${pilot.date} · Retrospective pipeline pilot`));
+    if (run) {
+      panel.append(node('p', `${count(run.coverage?.captured_games)} valid T−10 captures from ${count(run.coverage?.tracked_games)} tracked games. Expected slate: ${count(run.coverage?.expected_games)}.`), runLink(run, 'Open pilot run'));
+    } else panel.append(node('p', 'A replay has yet to be saved from retained evidence.'), link('Open pilot experiment', url('experiments', {definition:pilot.definition_version}), 'research-button'));
+    layout.append(panel);
+  }
+  const recent = card('Recent findings');
+  if (workspace.findings?.length) {
+    recent.append(list(workspace.findings.slice(0, 4), finding => {
+      const item = node('li');
+      item.append(findingLink(finding), node('p', finding.statement, 'workspace-caption'));
+      return item;
+    }));
+  } else recent.append(node('p', 'Findings will appear when a saved run has been evaluated.'));
+  layout.append(recent, readinessCard());
+  const next = card('Next useful work');
+  next.append(list([
+    link('Inspect tracked games with missing T−10 captures', '/data?evidence=checkpoints'),
+    link('Check the newest acquisition attempt', '/data?evidence=pulls'),
+    link('Replay a retained game date', url('experiments')),
+  ], action => {
+    const item = node('li');
+    item.append(action);
+    return item;
+  }));
+  root.replaceChildren(layout, next);
+}
+function theories(query) {
+  const theoryId = query.get('theory'), claimId = query.get('claim');
+  const selectedTheory = theoryId && (workspace.theories || []).find(theory => theory.id === theoryId);
+  const selectedClaim = claimId && claimById(claimId);
+  const theoryList = selectedTheory ? [selectedTheory] : workspace.theories || [];
+  const claimList = selectedClaim ? [selectedClaim] : (workspace.claims || []).filter(claim => !selectedTheory || selectedTheory.claim_ids.includes(claim.id));
+  const output = document.createDocumentFragment();
+  if (theoryId || claimId) output.append(link('All theories and laws', url('theories')));
+  if ((theoryId && !selectedTheory) || (claimId && !selectedClaim)) output.append(node('p', 'The requested research record could not be found.', 'workspace-notice'));
+  if (!selectedClaim) for (const theory of theoryList) {
+    const panel = card(theory.title);
+    panel.classList.add('workspace-panel');
+    panel.append(node('p', theory.statement), pairs({Scope:theory.scope, Version:theory.version}));
+    links(panel, 'Supporting claims and laws', theory.claim_ids, claimLink);
+    for (const objective of theory.risk_objectives || []) {
+      panel.append(node('h3', 'Risk objective'), node('p', objective.statement));
+      panel.append(pairs({'Current estimate':objective.estimate ?? 'Not established', Status:label(objective.status)}));
+      lines(panel, 'Assumptions still needed', objective.missing_assumptions);
+    }
+    output.append(panel);
+  }
+  const collection = node('div', undefined, 'workspace-grid');
+  for (const claim of claimList) {
+    const panel = card(claim.title, claimId ? null : claimLink(claim.id));
+    panel.append(badge(label(claim.type)), node('p', claim.statement));
+    panel.append(pairs({Status:label(claim.status), Scope:claim.scope, Version:claim.version}));
+    if (claim.challenge) panel.append(node('h3', 'What would challenge it'), node('p', claim.challenge));
+    lines(panel, 'Assumptions', claim.assumptions);
+    links(panel, 'Dependencies', claim.dependencies, claimLink);
+    const parents = (workspace.theories || []).filter(theory => theory.claim_ids.includes(claim.id));
+    links(panel, 'Theories using this claim', parents, theory => link(theory.title, url('theories', {theory:theory.id})));
+    links(panel, 'Supporting evidence', claim.supporting_evidence, evidence => evidenceLink(evidence));
+    links(panel, 'Contrary evidence', claim.contrary_evidence, evidence => evidenceLink(evidence));
+    const definitions = (workspace.definitions || []).filter(definition => definition.claim_ids.includes(claim.id));
+    links(panel, 'Experiments examining this claim', definitions, definition => link(definition.title + ' · ' + definition.version, url('experiments', {definition:definition.version})));
+    links(panel, 'Findings', (workspace.findings || []).filter(finding => finding.claim_ids.includes(claim.id)), findingLink);
+    collection.append(panel);
+  }
+  output.append(collection);
+  root.replaceChildren(output);
+}
+function findings(root, values, selected) {
+  if (!values.length) {
+    root.append(node('p', 'No findings have been recorded for this selection.'));
+    return;
+  }
+  for (const finding of values) {
+    const panel = card(finding.title, selected ? null : findingLink(finding));
+    panel.classList.add('workspace-panel');
+    panel.append(badge(label(finding.disposition)), node('p', finding.statement));
+    const run = runById(finding.run_id);
+    const definition = definitionById(finding.definition_version);
+    if (definition?.question) panel.append(node('h3', 'Experiment question'), node('p', definition.question));
+    if (run) panel.append(runLink(run, `Open run · ${run.date}`));
+    links(panel, 'Claims examined', finding.claim_ids, claimLink);
+    lines(panel, 'Limitations', Array.isArray(finding.limitations) ? finding.limitations : finding.limitations ? [finding.limitations] : []);
+    links(panel, 'Source evidence', finding.evidence, evidence => evidenceLink(evidence, finding.run_id));
+    root.append(panel);
+  }
+}
+function results(query) {
+  const selected = query.get('finding');
+  const values = (workspace.findings || []).filter(row => !selected || row.id === selected);
+  root.replaceChildren(node('h2', 'Findings across saved runs'));
+  if (selected) root.append(link('All findings', url('results')));
+  findings(root, values, selected);
+}
+function field(title, control) {
+  const element = node('label');
+  element.append(node('span', title), control);
+  return element;
+}
+function replayForm(definition) {
+  const panel = card('Replay a game date');
+  panel.classList.add('workspace-panel');
+  const form = node('form', undefined, 'workspace-form');
+  const date = node('input');
+  date.id = 'research-replay-date';
+  date.type = 'date';
+  date.required = true;
+  date.value = workspace.pilot?.date || '';
+  const dateChoice = node('select');
+  dateChoice.id = 'research-available-dates';
+  dateChoice.append(new Option('Choose a retained date', ''), ...(workspace.available_dates || []).map(item => new Option(`${item.date} · ${count(item.captured_games)} valid captures`, item.date)));
+  dateChoice.onchange = () => { if (dateChoice.value) date.value = dateChoice.value; };
+  const settings = node('details');
+  settings.append(node('summary', 'Change assumptions for a new analysis version'));
+  const settingFields = node('div', undefined, 'workspace-form');
+  const inputs = {};
+  for (const [key, title, example] of [
+    ['minimum_ev', 'Minimum unrounded EV (decimal or fraction)', '0.04'],
+    ['reference_bankroll_usd', 'Fixed sizing reference (USD)', '10000'],
+    ['kelly_multiplier', 'Kelly fraction', '1/4'],
+  ]) {
+    const input = node('input');
+    input.name = key;
+    input.placeholder = definition.policy?.[key] ?? example;
+    input.maxLength = 32;
+    inputs[key] = input;
+    settingFields.append(field(title, input));
+  }
+  settings.append(settingFields);
+  const register = node('details');
+  register.append(node('summary', 'Register a related exploratory experiment'));
+  const registration = node('div', undefined, 'workspace-form');
+  const title = node('input'), question = node('input');
+  title.maxLength = 120;
+  question.maxLength = 500;
+  const claimControls = node('fieldset', undefined, 'workspace-claims');
+  claimControls.append(node('legend', 'Claims to examine'));
+  const availableClaims = (workspace.claims || []).map(claim => {
+    const checkbox = node('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = claim.id;
+    checkbox.checked = (definition.claim_ids || []).includes(claim.id);
+    claimControls.append(field(claim.title, checkbox));
+    return checkbox;
+  });
+  registration.append(field('New experiment title', title), field('Research question', question), claimControls);
+  register.append(registration, node('p', 'This creates a separate retrospective experiment using the selected definition as its starting policy.', 'workspace-caption'));
+  register.addEventListener('toggle', () => {
+    title.required = question.required = register.open;
+    submit.textContent = register.open ? 'Register experiment and save replay' : 'Save replay';
+  });
+  const submit = node('button', 'Save replay');
+  submit.type = 'submit';
+  form.append(field('Game date (Eastern)', date), field('Available evidence', dateChoice), submit, settings, register);
+  const feedback = node('p');
+  feedback.id = 'research-replay-status';
+  feedback.setAttribute('role','status');
+  form.onsubmit = async event => {
+    event.preventDefault();
+    if (busy) return;
+    const source = location.href;
+    const assumptions = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value.trim()]).filter(([, value]) => value));
+    const payload = {date:date.value, definition_version:definition.version};
+    if (Object.keys(assumptions).length) payload.assumptions = assumptions;
+    if (register.open) {
+      const ids = availableClaims.filter(control => control.checked).map(control => control.value);
+      if (!title.value.trim() || !question.value.trim() || !ids.length) {
+        feedback.textContent = 'Enter a title and question and select at least one claim.';
+        return;
+      }
+      payload.experiment = {title:title.value.trim(), question:question.value.trim(), claim_ids:ids};
+    }
+    busy = submit.disabled = true;
+    feedback.textContent = 'Saving replay from retained checkpoint evidence…';
+    try {
+      const value = await readJSON(endpoint + '/runs', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload),
+      });
+      loadedRun = value;
+      workspace = await readJSON(endpoint);
+      if (location.href === source) {
+        history.pushState(null, '', url('experiments', {run:value.run.id}));
+        await render();
+      }
+    } catch (error) {
+      feedback.textContent = error.message;
+    } finally {
+      busy = submit.disabled = false;
+    }
+  };
+  panel.append(form, feedback, node('p', 'Each saved replay keeps its definition and source revision. Replaying the same evidence uses the existing run.', 'workspace-caption'));
+  return panel;
+}
+function definitionCard(definition) {
+  const panel = card(definition.title);
+  panel.classList.add('workspace-panel');
+  panel.append(badge(label(definition.designation)), node('p', definition.question));
+  if (definition.registration) panel.append(node('p', definition.registration, 'workspace-caption'));
+  if (definition.recorded_at) panel.append(node('p', 'Registered ' + time(definition.recorded_at), 'workspace-caption'));
+  panel.append(pairs({
+    Version:definition.version,
+    'Minimum screening EV':pct(definition.policy?.minimum_ev),
+    'Sizing reference':usd(definition.policy?.reference_bankroll_usd),
+    'Kelly multiplier':pct(definition.policy?.kelly_multiplier),
+  }));
+  for (const [earlier, caption] of [[definition.supersedes, 'Earlier version'], [definition.template_version, 'Template version']]) {
+    if (earlier) panel.append(node('p', caption), link(earlier, url('experiments', {definition:earlier})));
+  }
+  links(panel, 'Claims examined', definition.claim_ids, claimLink);
+  lines(panel, 'Assumptions', definition.assumptions);
+  lines(panel, 'Evaluation criteria', definition.evaluation_criteria);
+  if (definition.policy) panel.append(details('Exact definition and policy', definition));
+  return panel;
+}
+async function experiments(query, requestVersion) {
+  const id = query.get('run');
+  if (id) {
+    const selected = loadedRun?.run.id === id ? loadedRun : await readJSON(runAPI(id));
+    if (requestVersion !== version) return;
+    loadedRun = selected;
+    const nav = node('div', undefined, 'workspace-links');
+    nav.append(link('Experiments and runs', url('experiments')), link('Open evaluation results', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
+    const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
+    root.replaceChildren(nav);
+    renderRun(root, selected, {
+      variant, variantLink:name => url('experiments', {run:id, variant:name}),
+      ticketLink:ticket => url('experiments', {run:id, variant, ticket:ticket.id}),
+      gameLink:game => url('experiments', {run:id, variant, evidence:game.game_id}),
+      exportLink:runAPI(id) + '?export=1',
+      definitionLink:link('Open frozen definition', url('experiments', {definition:selected.run.definition_version})),
+    });
+    if (selected.findings?.length) {
+      const resultPanel = node('section', undefined, 'workspace-panel');
+      resultPanel.append(node('h2', 'Run findings'));
+      findings(resultPanel, selected.findings);
+      root.append(resultPanel);
+    }
+    const ticket = query.get('ticket'), evidence = query.get('evidence');
+    if (ticket || evidence) {
+      const title = byId('research-evidence-title'), content = byId('research-evidence-content');
+      title.textContent = ticket ? 'Saved paper ticket' : 'Frozen game evidence';
+      content.replaceChildren(node('p', 'Reading saved source evidence…'));
+      if (!dialogs.open) dialogs.showModal();
+      const path = ticket ? '/tickets/' + encodeURIComponent(ticket) : '/evidence/' + encodeURIComponent(evidence);
+      try {
+        const value = await readJSON(runAPI(id) + path);
+        if (requestVersion === version) renderSavedEvidence(content, value, {
+          ticket:Boolean(ticket), exportLink:runAPI(id) + '?export=1',
+          gameLink:gameId => url('experiments', {run:id, variant, evidence:gameId}),
+        });
+      } catch (error) {
+        if (requestVersion === version) content.replaceChildren(node('p', error.message));
+      }
+    }
+    return;
+  }
+  const definitions = workspace.definitions || [];
+  const selected = query.get('definition') ? definitionById(query.get('definition')) : definitionById(workspace.pilot?.definition_version) || definitions[0];
+  root.replaceChildren(node('h2', 'Experiment definitions and dated runs'));
+  if (selected) {
+    root.append(definitionCard(selected), replayForm(selected));
+    const versions = definitions.filter(definition => definition.id === selected.id && definition.version !== selected.version);
+    if (versions.length) links(root, 'Other frozen versions', versions, definition => link(definition.version, url('experiments', {definition:definition.version})));
+  } else root.append(node('p', 'No matching experiment definition is available.'));
+  const experiments = new Map();
+  for (const definition of definitions) {
+    const key = definition.id || definition.version;
+    if ((selected?.id || selected?.version) !== key && !experiments.has(key)) experiments.set(key, definition);
+  }
+  links(root, 'Other experiment definitions', [...experiments.values()], definition => link(definition.title, url('experiments', {definition:definition.version})));
+  const runs = workspace.runs || [];
+  if (runs.length) root.append(table(['Saved run', 'Definition', 'Validity', 'Tracked / captured'], runs.map(run => [
+    runLink(run, `${run.date} · ${run.title}`), run.definition_version,
+    label(run.validity), `${count(run.coverage?.tracked_games)} / ${count(run.coverage?.captured_games)}`,
+  ])));
+  else root.append(node('p', 'No replay has been saved. Choose a date to read its retained checkpoint evidence.'));
+  const data = node('div', undefined, 'workspace-links');
+  data.append(link('Frozen checkpoint comparisons', '/data?evidence=checkpoints'), link('Declared populations and evaluations', '/data?evidence=populations'));
+  root.append(data);
+}
+async function render() {
+  if (!workspace) return;
+  const query = locationState(), section = sectionName(query), requestVersion = ++version;
+  for (const anchor of document.querySelectorAll('[data-section]')) {
+    if (anchor.dataset.section === section) anchor.setAttribute('aria-current', 'page');
+    else anchor.removeAttribute('aria-current');
+  }
+  status.textContent = '';
+  if (dialogs.open && (section !== 'experiments' || (!query.has('ticket') && !query.has('evidence')))) dialogs.close();
+  if (section === 'overview') overview();
+  else if (section === 'theories') theories(query);
+  else if (section === 'results') results(query);
+  else {
+    if (query.get('run') && loadedRun?.run.id !== query.get('run')) root.replaceChildren(node('p', 'Reading saved run…'));
+    try {
+      await experiments(query, requestVersion);
+    } catch (error) {
+      if (version === requestVersion) root.replaceChildren(link('Back to experiments', url('experiments')), node('p', error.message));
+    }
+  }
+}
+document.addEventListener('click', event => {
+  const anchor = event.target.closest('a');
+  if (!anchor || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const target = new URL(anchor.href, location.href);
+  if (target.origin !== location.origin || target.pathname !== '/research' || target.hash) return;
+  event.preventDefault();
+  history.pushState(null, '', target.pathname + target.search);
+  render();
+});
+window.addEventListener('popstate', render);
+byId('research-evidence-close').onclick = () => dialogs.close();
+dialogs.addEventListener('close', () => {
+  const query = locationState();
+  if (!query.has('ticket') && !query.has('evidence')) return;
+  query.delete('ticket');
+  query.delete('evidence');
+  history.replaceState(null, '', '/research?' + query);
+  ++version;
+});
+async function init() {
+  const query = locationState();
+  if (['#evidence', '#experiment'].includes(location.hash)) {
+    query.delete('section');
+    query.set('evidence', 'checkpoints');
+    location.replace('/data?' + query);
+    return;
+  }
+  // Show saved research independently of the slower operational status read.
+  readJSON('/api/workspace/status').then(value => { readiness = value; }, () => { readiness = null; }).finally(() => {
+    if (workspace && sectionName(locationState()) === 'overview') overview();
+  });
+  try {
+    workspace = await readJSON(endpoint);
+    render();
+  } catch (error) {
+    status.textContent = error.message;
+    const retry = node('button', 'Retry research read');
+    retry.onclick = init;
+    root.replaceChildren(retry);
+  }
+}
+init();

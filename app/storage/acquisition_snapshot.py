@@ -4,6 +4,7 @@ No fetch, retry, eviction or reconstruction from nearby timestamps. An event
 object returned in a closed explicit-ID request proves returned coverage, not
 that every requested book quotes every line or that omissions are withdrawals.
 """
+from dataclasses import dataclass
 from uuid import uuid4
 from hashlib import sha256
 import json
@@ -48,29 +49,41 @@ def coverage(params, family=None):
         omissions='not_returned; no_source_withdrawal_inferred')
 
 
-def start(db, params, *, at, pull_id=None, event=None, started_order=None):
+def start(db, params, *, at, pull_id=None, event=None, started_order=None, late_task=None):
     """Must commit before dispatch. Ordering is allocated at start, never finish."""
     pull_id = pull_id or str(uuid4())
     scope = {k:v for k,v in params.items() if k != 'cursor'}
+    details = dict(event=event) if event else {}
+    scopes = [(event_id, family, coverage(params, family))
+              for event_id in sorted(set(params.get('eventIDs', '').split(',')) - {''})
+              for family in requested_families(params)]
+    size = 256 + 2 * (len(encoded(scope)) + len(encoded(details)))
+    size += sum(256 + 2 * len(encoded(description)) for _, _, description in scopes)
     with db.transaction():
-        _admit(db, len(encoded(scope))*2 + (2048 if params.get('eventIDs') else 512))
-        # Use the existing global SQL allocation rather than expand storage.
-        from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage
-        if sql_usage(db) + len(encoded(scope)) >= SQL_BYTE_CAP:
-            raise ValueError('market_snapshot_storage_capacity')
+        if late_task:
+            # The manifest is written before a late response can release its
+            # reservation. Charge that small write to the active claim's own
+            # allowance, under the same lock as all research budget checks.
+            from app.research.experiment import _lock
+            _lock(db)
+            db.execute('''UPDATE public.ev_experiment_game g
+                SET late_reserved_bytes=greatest(0, g.late_reserved_bytes-%s)
+                WHERE g.id=%s AND EXISTS(SELECT 1 FROM public.ev_experiment_task t
+                    WHERE t.game_id=g.id AND t.checkpoint='late' AND t.state='claimed' AND t.token=%s)''',
+                (size, late_task['game_id'], late_task['token']))
+        _admit(db, size)
         if started_order is None:
             db.execute('''INSERT INTO public.market_pull(pull_id,requested_at,request_scope,state,details)
                 VALUES(%s,%s,%s,'in_progress',%s)''',
-                (pull_id, at, Jsonb(scope), Jsonb(dict(event=event) if event else {})))
+                (pull_id, at, Jsonb(scope), Jsonb(details)))
         else:
             db.execute('''INSERT INTO public.market_pull(pull_id,started_order,requested_at,request_scope,state,details)
                 VALUES(%s,%s,%s,%s,'in_progress',%s)''',
-                (pull_id,started_order,at,Jsonb(scope),Jsonb(dict(event=event) if event else {})))
-        for event_id in set(params.get('eventIDs', '').split(',')) - {''}:
-            for family in requested_families(params):
-                db.execute('''INSERT INTO public.market_pull_scope
-                    (pull_id,event_id,family,coverage,state) VALUES(%s,%s,%s,%s,'in_progress')''',
-                    (pull_id,event_id,family,Jsonb(coverage(params,family))))
+                (pull_id,started_order,at,Jsonb(scope),Jsonb(details)))
+        for event_id, family, description in scopes:
+            db.execute('''INSERT INTO public.market_pull_scope
+                (pull_id,event_id,family,coverage,state) VALUES(%s,%s,%s,%s,'in_progress')''',
+                (pull_id,event_id,family,Jsonb(description)))
     return pull_id
 
 
@@ -89,12 +102,16 @@ def begin(db, params, *, at):
     return start(db, params, at=at)
 
 
+def _membership(page):
+    return dict(event_ids=sorted(event['event_id'] for event in page.events),
+                next_cursor_present=bool(page.next_cursor))
+
+
 def accept(db, page):
     """Store the child ledger attempt and exact accepted response membership."""
     if not page.pull_id or not page.attempt_id or not page.received_at:
         raise ValueError('acquisition_membership_unverified')
-    membership = dict(event_ids=sorted(event['event_id'] for event in page.events),
-                      next_cursor_present=bool(page.next_cursor))
+    membership = _membership(page)
     with db.transaction():
         _admit(db, len(encoded(membership))+256)
         previous = db.execute('''SELECT receipt_sha256,received_at,membership FROM public.market_pull_receipt
@@ -162,14 +179,42 @@ def compact_snapshot(snapshot, pull_id, family=None):
     return dict(result, offers=offers, compact=True)
 
 
-def store_evidence(db, pull_id, snapshot):
-    """Write one canonical compressed witness; callers own the publication tx."""
+@dataclass(frozen=True)
+class PreparedPublication:
+    body: bytes
+    digest: str
+    raw_bytes: int
+    scope_snapshots: dict
+    allocation_bytes: int
+
+
+def prepare_publication(page, snapshot, *, details=None):
+    """Encode the exact witness once and estimate its complete SQL allocation."""
     raw = encoded(snapshot)
-    compressed = zlib.compress(raw, level=6)
-    _admit(db, len(compressed)+256)
+    body = zlib.compress(raw, level=6)
+    projection = compact_snapshot(snapshot, page.pull_id)
+    params = page.request_scope or {}
+    scope_snapshots = {family: dict(projection, offers=[offer for offer in projection['offers']
+                            if offer['record']['market_identity']['family'] == family])
+                       for family in requested_families(params)}
+    membership = _membership(page)
+    allocation = len(body) + 256 + len(encoded(membership)) * 2 + len(encoded(details or {})) * 2 + 1024
+    for family, scope_snapshot in scope_snapshots.items():
+        allocation += 256 + 2 * (len(encoded(scope_snapshot)) + len(encoded(coverage(params, family))))
+    return PreparedPublication(body, sha256(raw).hexdigest(), len(raw), scope_snapshots, allocation)
+
+
+def store_evidence(db, pull_id, snapshot, *, prepared=None):
+    """Write one canonical compressed witness; callers own the publication tx."""
+    if prepared is None:
+        raw = encoded(snapshot)
+        body, digest, raw_bytes = zlib.compress(raw, level=6), sha256(raw).hexdigest(), len(raw)
+    else:
+        body, digest, raw_bytes = prepared.body, prepared.digest, prepared.raw_bytes
+    _admit(db, len(body)+256)
     db.execute('''INSERT INTO public.market_pull_evidence(pull_id,body,sha256,raw_bytes)
-        VALUES(%s,%s,%s,%s)''', (pull_id,compressed,sha256(raw).hexdigest(),len(raw)))
-    return len(compressed)
+        VALUES(%s,%s,%s,%s)''', (pull_id,body,digest,raw_bytes))
+    return len(body)
 
 
 def read_snapshot(db, pull_id, family=None):
@@ -178,8 +223,8 @@ def read_snapshot(db, pull_id, family=None):
                      (pull_id,)).fetchone()
     if not row:
         raise ValueError('market_snapshot_evidence_missing')
-    from app.research.records import TOTAL_BYTE_CAP
-    if not 0 < row['raw_bytes'] <= 2*TOTAL_BYTE_CAP+1024*1024:
+    from app.research.records import EVIDENCE_RESPONSE_BYTE_CAP
+    if not 0 < row['raw_bytes'] <= EVIDENCE_RESPONSE_BYTE_CAP:
         raise ValueError('market_snapshot_evidence_capacity')
     decoder = zlib.decompressobj()
     body = decoder.decompress(bytes(row['body']), row['raw_bytes']+1)
@@ -195,7 +240,7 @@ def read_snapshot(db, pull_id, family=None):
     return snapshot
 
 
-def publish(db, page, snapshot, *, details=None):
+def publish(db, page, snapshot, *, details=None, prepared=None):
     """Accepted membership, snapshot and calculation bindings publish together."""
     pull_id = page.pull_id
     if not pull_id or not page.attempt_id or not page.received_at:
@@ -210,21 +255,13 @@ def publish(db, page, snapshot, *, details=None):
     closed = (len(expected) == 1 and returned == expected
               and not page.conflicting_alternate_lines and not page.ignored_bookmaker_groups)
     state = 'complete' if closed else 'partial'
-    raw = encoded(snapshot)
-    compressed = zlib.compress(raw, level=6)
-    projection = compact_snapshot(snapshot, pull_id)
-    size = len(compressed) + len(encoded(projection))*2 + 2048
+    prepared = prepared or prepare_publication(page, snapshot, details=details)
     with db.transaction():
-        from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage
-        _admit(db, size)
-        if sql_usage(db) + size >= SQL_BYTE_CAP:
-            raise ValueError('market_snapshot_storage_capacity')
+        _admit(db, prepared.allocation_bytes)
         accept(db, page)
-        store_evidence(db, pull_id, snapshot)
+        store_evidence(db, pull_id, snapshot, prepared=prepared)
         source = snapshot['source_event']
-        for family in requested_families(params):
-            market_snapshot = dict(projection,
-                offers=[offer for offer in projection['offers'] if offer['record']['market_identity']['family'] == family])
+        for family, market_snapshot in prepared.scope_snapshots.items():
             db.execute('''INSERT INTO public.market_pull_scope
                 (pull_id,event_id,family,coverage,state,snapshot) VALUES(%s,%s,%s,%s,%s,%s)
                 ON CONFLICT(pull_id,event_id,family,period) DO UPDATE SET

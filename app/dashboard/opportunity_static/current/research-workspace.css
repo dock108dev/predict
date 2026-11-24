@@ -1,0 +1,52 @@
+.workspace-sections { display:flex; gap:.25rem 1.4rem; flex-wrap:wrap; border-bottom:1px solid var(--line); margin-bottom:1.25rem; }
+.workspace-sections a { align-content:center; padding:.55rem .1rem; min-height:44px; text-decoration:none; border-bottom:2px solid transparent; }
+.workspace-sections a[aria-current=page] { color:var(--p-accent); border-color:currentColor; font-weight:700; }
+.workspace-tag { display:inline-block; align-self:center; padding:.22rem .62rem; border:1px solid var(--line); border-radius:1rem; font-size:.83rem; white-space:normal; }
+.workspace-tag[data-state=incomplete],.workspace-tag[data-state=blocked] { border-color:currentColor; color:var(--research-negative); }
+.workspace-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-block:1rem; }
+.workspace-card { padding:1rem 1.15rem; border:1px solid var(--line); border-radius:.55rem; min-width:0; overflow-wrap:anywhere; }
+.workspace-card > :first-child { margin-top:0; }
+.workspace-card > :last-child { margin-bottom:0; }
+.workspace-card ul,.workspace-card ol { padding-left:1.25rem; }
+.workspace-card li+li { margin-top:.45rem; }
+.workspace-card a:not(.research-button),.workspace-links a { color:var(--p-accent); text-decoration:underline; text-underline-offset:2px; }
+.workspace-panel { margin:1.2rem 0; min-width:0; }
+.workspace-panel h2,.workspace-panel h3 { margin-bottom:.55rem; }
+.workspace-panel p { line-height:1.55; }
+.workspace-card h2 { font-size:1.25rem; }
+.workspace-card h3 { font-size:1.02rem; }
+.workspace-caption { font-size:.875rem; color:var(--muted); }
+.workspace-links { display:flex; gap:.55rem 1rem; flex-wrap:wrap; align-items:center; margin:.8rem 0; }
+.workspace-notice { border-left:3px solid var(--p-accent); background:var(--p-alternate); padding:.65rem .85rem; }
+.workspace-notice[data-state=incomplete],.workspace-notice[data-state=blocked] { border-left-color:var(--research-negative); }
+.workspace-clocks { color:var(--muted); font-size:.875rem; }
+.workspace-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(8rem,1fr)); gap:.65rem; margin:.8rem 0; }
+.workspace-stats > div { background:var(--p-alternate); border-radius:.3rem; padding:.65rem .75rem; }
+.workspace-stats dt { font-size:.85rem; }
+.workspace-stats dd { margin:.25rem 0 0; font-size:1.15rem; font-weight:650; font-variant-numeric:tabular-nums; }
+.workspace-form { display:flex; gap:.7rem; flex-wrap:wrap; align-items:end; }
+.workspace-form label { display:grid; gap:.25rem; font-size:.875rem; min-width:8rem; }
+.workspace-form :is(input,select) { font:inherit; color:inherit; background:var(--paper); border:1px solid var(--line); border-radius:4px; min-height:42px; padding:.5rem; max-width:100%; }
+.workspace-form details { width:100%; padding:.75rem 0; }
+.workspace-claims { border:1px solid var(--line); border-radius:.35rem; padding:.6rem .8rem; }
+.workspace-claims label { display:flex; align-items:center; gap:.5rem; flex-direction:row-reverse; justify-content:flex-end; }
+.workspace-claims input { min-height:auto; }
+.workspace-form details summary,.workspace-panel summary { cursor:pointer; font-weight:650; margin-block:.5rem; }
+.workspace-variant { display:flex; flex-wrap:wrap; gap:.45rem; }
+.workspace-variant a[aria-current=true] { border-color:var(--p-accent); font-weight:700; }
+.workspace-dialog { width:min(860px,calc(100vw - 28px)); max-height:90vh; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:.55rem; overflow:auto; padding:1rem 1.2rem; }
+.workspace-dialog::backdrop { background:#0b1829b8; }
+.workspace-dialog :is(pre,dd),.workspace-panel pre { overflow-wrap:anywhere; white-space:pre-wrap; }
+.workspace-dialog pre,.workspace-panel pre { max-height:28rem; overflow:auto; }
+.workspace-dialog summary { cursor:pointer; }
+.workspace-table th { white-space:normal; }
+.workspace-table td:first-child { min-width:9rem; }
+.workspace-highlight { outline:2px solid var(--p-accent); outline-offset:3px; }
+.workspace-dialog .research-dialog-heading { gap:1rem; }
+#research-status:empty,#research-replay-status:empty { display:none; }
+@media (max-width:700px) {
+ .workspace-grid { grid-template-columns:1fr; }
+ .workspace-sections { column-gap:.85rem; }
+ .workspace-card { padding:.8rem; }
+ .workspace-table { min-width:38rem; }
+}

@@ -370,7 +370,52 @@ class ExperimentSQL(LatestBoardFixture):
                 current=records.retention_usage(db)
                 self.assertLessEqual(current["total"]+current["reserved"],records.TOTAL_BYTE_CAP)
 
+    async def test_late_pull_manifest_spends_its_own_reserved_bytes(self):
+        from types import SimpleNamespace
+        from app.collection.experiment_acquisition import request_scope
+        from app.storage.acquisition_snapshot import prepare_publication, publish, read_snapshot, start
+
+        with self.connect() as db:
+            event = self.event()
+            owner.discover(db, [event])
+            early = owner.due(db)[0]
+            witness_bytes = 160 * 1024
+            first = owner.capture(db, early['game_id'], 'early', self.snapshot(event),
+                                  token=early['token'], market_publication_bytes=witness_bytes)
+            reserved = records.retention_usage(db)
+            game = db.execute('SELECT late_reserved_bytes FROM public.ev_experiment_game').fetchone()
+            combined = first['new_unique_payload_bytes'] + witness_bytes
+            self.assertEqual(game['late_reserved_bytes'], combined + max(owner.MIN_CHECKPOINT_RUNWAY, combined // 4))
+            self.advance(owner.stamp(event['starts_at']) - timedelta(seconds=600))
+            cap = reserved['total'] + reserved['reserved']
+            with patch.object(records, 'TOTAL_BYTE_CAP', cap):
+                late = owner.due(db)[0]
+                params = request_scope(late)
+                with self.assertRaisesRegex(ValueError, 'research_retention_capacity'):
+                    start(db, params, at=self.now, event=late['event'])
+                pull_id = start(db, params, at=self.now, event=late['event'], late_task=late)
+                manifest = db.execute('SELECT state FROM public.market_pull WHERE pull_id=%s', (pull_id,)).fetchone()
+                self.assertEqual(manifest['state'], 'in_progress')
+                current = records.retention_usage(db)
+                self.assertLessEqual(current['total'] + current['reserved'], cap)
+                self.assertGreater(current['total'], reserved['total'])
+                self.assertLess(current['reserved'], reserved['reserved'])
+                snapshot = dict(self.snapshot(event), offers=[], raw_quotes=[])
+                page = SimpleNamespace(pull_id=pull_id, attempt_id='attempt', receipt_sha256='a' * 64,
+                    received_at=self.now, request_scope=params, events=[snapshot['source_event']],
+                    next_cursor=None, conflicting_alternate_lines=[], ignored_bookmaker_groups=[])
+                prepared = prepare_publication(page, snapshot)
+                with db.transaction():
+                    result = owner.capture(db, late['game_id'], 'late', snapshot, token=late['token'])
+                    self.assertEqual(result['state'], 'captured')
+                    self.assertEqual(publish(db, page, snapshot, prepared=prepared), 'complete')
+                self.assertEqual(read_snapshot(db, pull_id), snapshot)
+                charged = records.retention_usage(db)
+                self.assertLessEqual(charged['total'] + charged['reserved'], cap)
+
     async def test_no_reserved_or_free_space_refuses_late_before_paid_claim(self):
+        from app.research.readiness import report
+
         with self.connect() as db:
             event=self.event();owner.discover(db,[event])
             early=owner.due(db)[0]
@@ -379,11 +424,17 @@ class ExperimentSQL(LatestBoardFixture):
             usage=records.retention_usage(db)
             with patch.object(records,"TOTAL_BYTE_CAP",usage["total"]+usage["reserved"]):
                 self.assertEqual(owner.due(db,limit=2),[])
+                blocked = report(db, owner.status(db))
+                self.assertIn('research_retention_capacity', {issue['code'] for issue in blocked['blockers']})
+                self.assertEqual(blocked['retention']['checkpoint_refusals'], 1)
             task=db.execute("SELECT * FROM ev_experiment_task WHERE checkpoint='late'").fetchone()
             self.assertEqual(task["state"],"refused")
             self.assertEqual(task["attempts"],0)
             self.assertEqual(task["refusals"],1)
             self.assertIn("before_dispatch",task["last_reason"])
+            recovered = report(db, owner.status(db))
+            self.assertNotIn('research_retention_capacity', {issue['code'] for issue in recovered['blockers']})
+            self.assertEqual(recovered['retention']['checkpoint_refusals'], 1)
 
     async def test_inflight_reschedule_and_cancellation_preserve_first_early(self):
         with self.connect() as db:

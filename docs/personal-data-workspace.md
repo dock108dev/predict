@@ -1,7 +1,7 @@
 # Personal data workspace
 
-Predict has three destinations: [Data](https://predict.dock108.dev/data),
-[Experiments](https://predict.dock108.dev/experiments), and
+Predict opens on [Research](https://predict.dock108.dev/research), with
+[Data](https://predict.dock108.dev/data) and
 [Settings](https://predict.dock108.dev/settings). The existing remembered owner
 login protects all routes, assets, APIs and exports.
 
@@ -63,11 +63,26 @@ it refuses an absent or changed revision instead of choosing another offer.
 Exporting an opened exact input uses its captured bytes. Checkpoint exports retain
 the complete immutable dependency bundle for offline reproduction.
 
-## Experiments
+## Research
 
-The existing first-observation/T−10 experiment lists tracked games, capture
-coverage, missing/refused/missed cases, early/late changes and available sporting
-outcomes. Experiments retains its game/bet inspector and captured evidence; Data
+Overview links the current research question, recent findings, saved runs and
+capture readiness. Theories & laws records assumptions, contrary evidence and
+the conditions that would challenge a claim. Experiments groups the dated runs
+and their analysis versions. Results links findings back to the associated
+claims and forward to the saved run and its original evidence. Mathematical
+validity, implementation verification and empirical support have separate status.
+
+The November 23, 2026 college basketball T−10 pipeline pilot is a retrospective
+check of capture, selection, sizing, exposure and result linkage. It examines
+the ≥4% T−10 policy without establishing repeated profitability or an annual
+loss probability. Replay another retained Eastern game date to save a separate
+run. Changing supported inputs registers a new definition version and keeps
+earlier runs, tickets, findings and exports available. See the
+[paper research rules and evidence guide](paper-experiments.md).
+
+The first-observation/T−10 evidence lists tracked games, capture coverage,
+missing/refused/missed cases, early/late changes and available sporting outcomes.
+The game/bet inspector and captured evidence remain available; Data
 opens the exact headline offer directly.
 Declared populations, evaluation and frozen cohort exports remain available in
 contextual details. Scheduled checkpoints show their actual due time; Capturing,
@@ -119,7 +134,7 @@ storage cap increase or automatic eviction is introduced.
 
 ## Bookmarks and preserved capabilities
 
-Research redirects to Experiments. Browse Odds, Odds, Raw Inputs and game/replay
+The former Experiments bookmark redirects to Research. Browse Odds, Odds, Raw Inputs and game/replay
 bookmarks resolve into Data. Opportunities/EV maps to the positive filter and
 Arbitrage maps to its calculation view. Admin/coverage bookmarks resolve to the
 relevant Settings or Data section. Static HTML aliases use the same fixed local

@@ -38,6 +38,7 @@ async def fee_api_flow():
     with patch.dict(sys.modules,{'app.comparison.fee_mode':central}), \
          patch('app.storage.store.connect',side_effect=DB), \
          patch('app.research.experiment.status',return_value={'storage':{}}), \
+         patch('app.research.readiness.report',return_value={'state':'ready'}), \
          patch('app.collection.sportsgameodds_transport.SportsgameoddsTransport.fetch',side_effect=AssertionError('provider acquisition')):
         async with TestClient(TestServer(app)) as client:
             origin=str(client.make_url('/')).rstrip('/')

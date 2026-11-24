@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from datetime import date, datetime, timezone
 from fractions import Fraction as F
+from zoneinfo import ZoneInfo
 
 from app.comparison import current_pregame as math
 from app.comparison.pregame_valuation import decimal_display, score
@@ -40,7 +41,7 @@ def money(value):
     return decimal_display(F(value), 2)
 
 
-def kelly_budget(payload):
+def kelly_budget(payload, *, scale=SCALE):
     fee = payload["fee"]
     committed = F(fee["committed_usd"])
     if committed <= 0 or set(fee["cashflows"]) != {"win", "loss"}:
@@ -50,10 +51,10 @@ def kelly_budget(payload):
         raise ValueError("probability_invalid")
     ratios = {k: F(v["net_receipt_usd"]) / committed - 1 for k, v in fee["cashflows"].items()}
     ev = p * ratios["win"] + (1-p) * ratios["loss"]
-    return cents(SCALE * score(dict(win=p, loss=1-p), ratios, ev) / 10000), ev
+    return cents(scale * score(dict(win=p, loss=1-p), ratios, ev) / 10000), ev
 
 
-def sized_offer(offer, *, at, game_id):
+def sized_offer(offer, *, at, game_id, minimum=MINIMUM, scale=SCALE):
     """Reprice using captured fee inputs, including quantity grids and rounding.
 
     Iterate the same Kelly rule at the actual amount; on a rounding oscillation
@@ -62,18 +63,20 @@ def sized_offer(offer, *, at, game_id):
     original = offer["calculation_payload"]
     if not isinstance(offer.get("fee_input"), dict):
         raise ValueError("captured_fee_inputs_unavailable")
-    target, _ = kelly_budget(original)
+    target, _ = kelly_budget(original, scale=scale)
     seen = set()
     result = None
     for _ in range(12):
         if target <= 0:
             raise ValueError("kelly_below_one_cent")
+        priced_target = target
         result = math.calculate(offer["record"], original["reference"], offer["fee_input"],
-                                at=stamp(at), game_key=game_id, amount=target)
-        next_target, ev = kelly_budget(result)
+                                at=stamp(at), game_key=game_id, amount=priced_target)
+        next_target, ev = kelly_budget(result, scale=scale)
         committed = F(result["fee"]["committed_usd"])
-        if ev < MINIMUM:
-            raise ValueError("sized_ev_below_4pct")
+        if ev < minimum:
+            reason = "sized_ev_below_4pct" if minimum == MINIMUM else "sized_ev_below_minimum"
+            raise ValueError(reason)
         if next_target == target or next_target in seen:
             if committed <= next_target:
                 return result, target
@@ -81,8 +84,8 @@ def sized_offer(offer, *, at, game_id):
         else:
             seen.add(target)
             target = next_target
-    if result and F(result["fee"]["committed_usd"]) <= kelly_budget(result)[0]:
-        return result, target
+    if result and F(result["fee"]["committed_usd"]) <= kelly_budget(result, scale=scale)[0]:
+        return result, priced_target
     raise ValueError("kelly_sizing_did_not_converge")
 
 
@@ -102,10 +105,13 @@ def grade(identity, outcome, sized):
     fee = sized["fee"]
     pnl = F(fee["cashflows"][state]["net_receipt_usd"]) - F(fee["committed_usd"])
     return dict(state=state, reason="modeled_from_sporting_result; venue_settlement_unverified",
-                pnl_usd=money(pnl), released_at=(outcome or {}).get("known_at"))
+                pnl_usd=money(pnl), pnl_exact_usd=str(pnl), released_at=(outcome or {}).get("known_at"))
 
 
-def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM):
+def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None):
+    policy_id, scale = POLICY_ID, SCALE
+    if policy is not None:
+        policy_id, minimum, scale = hashed(policy), F(policy["minimum_ev"]), F(policy["sizing_scale_usd"])
     tickets, excluded, conflicts = {}, Counter(), set()
     for index, offer in enumerate(snapshot.get("offers", [])):
         try:
@@ -118,8 +124,8 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
             if F(raw_ev) < minimum or F(raw_ev) <= 0:
                 excluded["below_minimum_ev"] += 1
                 continue
-            if minimum == MINIMUM:
-                sized, target = sized_offer(offer, at=at, game_id=game_id)
+            if policy is not None or minimum == MINIMUM:
+                sized, target = sized_offer(offer, at=at, game_id=game_id, minimum=minimum, scale=scale)
             else:
                 sized, target = offer["calculation_payload"], None
             key = identity["id"]
@@ -131,7 +137,7 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
             equivalent = {k: v for k, v in identity.items() if k not in ("id", "provider", "book", "venue")}
             fee = sized["fee"]
             ev = F(sized["raw"]["net_ev"])
-            ticket = dict(id=hashed([POLICY_ID, checkpoint_id, key]), exact_bet_id=key,
+            ticket = dict(id=hashed([policy_id, checkpoint_id, key]), exact_bet_id=key,
                 equivalent_bet_id=hashed(equivalent), game_id=game_id,
                 checkpoint_id=checkpoint_id, decision_at=at,
                 title=snapshot["event"].get("title") or " at ".join((snapshot["event"].get("away", "Away"), snapshot["event"].get("home", "Home"))),
@@ -157,6 +163,8 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                     raise ValueError("conflicting_duplicate_offer")
                 excluded["duplicate_offer"] += 1
             else:
+                if policy is not None:
+                    ticket["offer_index"] = index
                 tickets[key] = ticket
         except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
             excluded[str(exc) if isinstance(exc, ValueError) else "sizing_inputs_incomplete"] += 1
@@ -176,42 +184,58 @@ def portfolios(tickets, *, as_of):
 
 def summarize(tickets, *, as_of):
     venues, games, flows = defaultdict(F), defaultdict(F), []
-    turnover = expected = pnl = F(0)
+    unresolved_games, unresolved_venues = defaultdict(F), defaultdict(F)
+    days = set()
+    turnover = expected = resolved_expected = pnl = unresolved_turnover = F(0)
     resolved = 0
+    zone = ZoneInfo(POLICY["timezone"])
     for ticket in tickets:
         stake = F(ticket.get("cash_commitment_usd", ticket["stake_usd"]))
+        profit = F(ticket.get("expected_profit_exact_usd", ticket["expected_profit_usd"]))
         turnover += stake
-        expected += F(ticket.get("expected_profit_exact_usd", ticket["expected_profit_usd"]))
+        expected += profit
         venues[ticket["venue"]] += stake
         games[ticket["game_id"]] += stake
+        days.add(stamp(ticket["starts_at"]).astimezone(zone).date())
         flows.append((stamp(ticket["decision_at"]), 1, stake))
         grading = ticket["grading"]
         if grading["pnl_usd"] is not None:
             resolved += 1
-            pnl += F(grading["pnl_usd"])
+            resolved_expected += profit
+            pnl += F(grading.get("pnl_exact_usd", grading["pnl_usd"]))
             if grading["released_at"] and stamp(grading["released_at"]) <= stamp(as_of):
                 flows.append((stamp(grading["released_at"]), 0, -stake))
+        else:
+            unresolved_turnover += stake
+            unresolved_games[ticket["game_id"]] += stake
+            unresolved_venues[ticket["venue"]] += stake
     current = peak = F(0)
     for _, _, amount in sorted(flows):
         current += amount
         peak = max(current, peak)
     return dict(tickets=sorted(tickets, key=lambda t: (t["starts_at"], t["title"], t["family"], t["id"])),
         count=len(tickets), turnover_usd=money(turnover), expected_profit_usd=money(expected),
+        unique_games=len(games), days_represented=len(days), resolved_expected_profit_usd=money(resolved_expected),
         peak_committed_usd=money(peak), outstanding_usd=money(current),
         modeled_resolved_pnl_usd=money(pnl), resolved=resolved, unresolved=len(tickets)-resolved,
+        unresolved_turnover_usd=money(unresolved_turnover), unresolved_exposure_usd=money(unresolved_turnover),
+        unresolved_by_game={k: money(v) for k, v in sorted(unresolved_games.items())},
+        unresolved_by_venue={k: money(v) for k, v in sorted(unresolved_venues.items())},
         by_venue={k: money(v) for k, v in sorted(venues.items())},
         by_game={k: money(v) for k, v in sorted(games.items())})
 
 
-def report(db, day=POLICY["default_date"], *, evidence=False):
+def report(db, day=POLICY["default_date"], *, evidence=False, policy=None):
     """Passive backtest, independent of early-positive retention and live prices."""
     from . import experiment as owner
     date.fromisoformat(day)
+    frozen_policy = policy or POLICY
+    policy_id = hashed(frozen_policy)
     at = datetime.now(timezone.utc).isoformat()
     games = list(db.execute("""SELECT * FROM public.ev_experiment_game
         WHERE event->>'league'=%s AND
         ((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
-        ORDER BY (event->>'starts_at')::timestamptz,id""", (POLICY["league"], day)))
+        ORDER BY (event->>'starts_at')::timestamptz,id""", (frozen_policy["league"], day)))
     tickets, dispositions, exclusions = [], [], Counter()
     outcome_evidence = {}
     for game in games:
@@ -219,8 +243,13 @@ def report(db, day=POLICY["default_date"], *, evidence=False):
         status = checkpoint["status"]
         entry = dict(game_id=game["id"], title=game["event"]["title"], starts_at=game["event"]["starts_at"],
                      status=status, reason=checkpoint.get("reason"), checkpoint_id=checkpoint.get("id"), tickets=0)
-        if status == "pending" and stamp(checkpoint["deadline_at"]) < stamp(at):
+        if status in ("pending", "claimed") and stamp(checkpoint["deadline_at"]) < stamp(at):
             entry.update(status="missed", reason="capture_window_closed")
+        if policy is not None:
+            entry.update(schedule_id=game["schedule_id"], outcome_id=game.get("outcome_id"),
+                target_at=checkpoint["target_at"], deadline_at=checkpoint["deadline_at"],
+                attempt_ids=[row["id"] for row in db.execute("""SELECT id FROM public.ev_experiment_record
+                    WHERE game_id=%s AND kind='attempt' AND checkpoint='late' ORDER BY recorded_at,id""", (game["id"],))])
         if status == "captured":
             snapshot = checkpoint["snapshot"]
             outcome = None
@@ -229,7 +258,7 @@ def report(db, day=POLICY["default_date"], *, evidence=False):
                 outcome = owner._value(index[game["outcome_id"]], index)
                 outcome_evidence[game["id"]] = dict(id=game["outcome_id"], **outcome)
             found, gaps = candidates(snapshot, game_id=game["id"], checkpoint_id=checkpoint["id"],
-                at=checkpoint["persisted_at"], outcome=outcome)
+                at=checkpoint["persisted_at"], outcome=outcome, policy=policy)
             if outcome and outcome.get("schedule_id") != checkpoint.get("schedule_id"):
                 for ticket in found:
                     ticket["grading"] = dict(state="unresolved", reason="result_schedule_changed", pnl_usd=None, released_at=None)
@@ -239,9 +268,9 @@ def report(db, day=POLICY["default_date"], *, evidence=False):
                          fee_mode=snapshot.get("fee_mode"), exclusions=gaps)
         dispositions.append(entry)
     values = portfolios(tickets, as_of=at)
-    result = dict(policy=deepcopy(POLICY), policy_id=POLICY_ID, date=day, as_of=at,
+    result = dict(policy=deepcopy(frozen_policy), policy_id=policy_id, date=day, as_of=at,
         designation="Retrospective paper replay of frozen T−10 evidence; no actual orders or fills",
-        portfolio_revision=hashed([POLICY_ID, day, sorted(t["id"] for t in tickets)]),
+        portfolio_revision=hashed([policy_id, day, sorted(t["id"] for t in tickets)]),
         tracked_games=len(games), captured_games=sum(g["status"] == "captured" for g in dispositions),
         games=dispositions, exclusions=dict(exclusions), portfolios=values,
         coverage="tracked_games_only; missing/untracked games cannot be reconstructed",
@@ -249,7 +278,7 @@ def report(db, day=POLICY["default_date"], *, evidence=False):
     if not evidence:
         for portfolio in values.values():
             portfolio["tickets"] = [{k: v for k, v in t.items() if k != "witness"} for t in portfolio["tickets"]]
-    result["report_revision"] = hashed([POLICY_ID, day, dispositions,
+    result["report_revision"] = hashed([policy_id, day, dispositions,
         {k: dict(v, tickets=[{a: b for a, b in t.items() if a != "witness"} for t in v["tickets"]])
          for k, v in values.items()}])
     return result

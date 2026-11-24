@@ -1,18 +1,18 @@
 # Paper portfolios and backtests
 
-Open **Experiments → Paper portfolios**. The first saved policy defaults to
+Open **Research → Experiments**. The first saved policy defaults to
 college basketball games scheduled for November 23, 2026 in America/New_York.
 It is available on the deployed server without activating a trading account or
 leaving a browser open. Existing collector-owned first-observation/T−10 captures
 and bounded sporting-result follow-ups supply the evidence. No new polling,
 orders, account changes or acquisition budget are introduced.
 
-The same date control replays other days as retained evidence accumulates.
-This is a retrospective paper replay, not a claim that a simulated order was
-submitted when the source capture occurred. The versioned policy and its hash,
-source checkpoint IDs and deterministic ticket IDs preserve the decision basis.
-Refreshes do not accumulate tickets. Existing immutable evidence is the ledger;
-the read-only API does not need a second mutable trading journal.
+Choose another retained Eastern game date to replay and save it separately. A
+replay describes a retrospective paper calculation. The versioned policy and
+its hash, source checkpoint IDs and deterministic ticket IDs preserve the
+decision basis. Refreshing or repeating a replay over the same inputs reopens
+the existing run. A modified policy or changed evidence produces a separate
+saved run. Prior results and evidence stay accessible.
 
 ## Selection and sizing
 
@@ -45,31 +45,34 @@ alternative scenarios; adding their turnover does not measure one bankroll.
 
 ## Results and exports
 
-Report turnover, peak overlapping cash commitment, outstanding commitment,
-expected entry profit and commitments per venue/game. Decisive full-game sporting
+The run leads with coverage and assumption limits. Each alternative shows
+turnover, peak overlapping cash commitment, unresolved exposure, and commitments
+per venue and game. Expected profit and modeled P/L use the same set of resolved
+tickets. Decisive full-game sporting
 results can model ticket profit/loss from its sized net receipts. Result knowledge
 time controls modeled cash release. Missing results, pushes, cancellations,
 unsupported settlement and changed schedules remain unresolved; no venue
 settlement is inferred. Resolved-only P/L is labeled separately from outstanding
 tickets, and is not an estimate of strategy profitability from a single day.
 
-**Export evidence** downloads a revision-bound JSON report containing the policy,
-exact selected offer witnesses, sized calculations, clocks, source checkpoint
-identities, game dispositions and outcome evidence. If source results or portfolio
-evidence changed since rendering, refresh before exporting. The normal page omits
-the bulky original offer witnesses; calculations stay on the server.
+Open a ticket to see the frozen price, probability, modeled commitment and
+sporting result. **Export evidence** retains the exact offer witness, sized
+calculation and checkpoint identity for the saved run. The passive legacy report
+remains revision bound; its export asks for a fresh read if the projected
+evidence changes.
 
 ## Latest odds pull
 
-**Latest odds pull** first selects the newest covering acquisition attempt for
-the selected NCAAB game day. It shows only that attempt, with positive EV by
-default and an optional ≥4% display filter. Source/calculation witnesses must
-belong to accepted receipts from that same pull. A newer incomplete or failed
-attempt cannot inherit an older positive. This view is a changing preview, not
-the frozen T−10 entry list. Preview commitments apply the same ≥4% policy.
+**Data → Odds pulls** opens the newest covering acquisition attempt for the
+selected NCAAB game day. Select an individual retained pull to inspect or export
+its receipts and original snapshot. Positive, zero, negative and unavailable
+observations remain visible. Exact EV requires accepted receipts from the same
+pull. A newer failed attempt displays its own failure. Preview commitments apply
+the baseline ≥4% rules, and only frozen checkpoints can qualify for a saved
+paper replay.
 
 Endpoints are passive GETs: `/api/research/paper?date=2026-11-23` and
 `/api/research/paper/latest?date=2026-11-23`. Export adds `export=1&revision=HASH`
-to the first endpoint. Both use repeatable-read, read-only SQL and submit zero
-provider requests and zero orders. Future policies should receive new versions
-and retain their own probability, fee, cutoff and settlement assumptions.
+to the first endpoint. For a terminal odds pull, add `pull=ID&export=1` to the
+second endpoint. Both use repeatable-read, read-only SQL. Workspace mutations
+register paper analysis versions and save runs over retained inputs.

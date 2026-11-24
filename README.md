@@ -8,12 +8,11 @@ login. Hosted use needs no local `.env` or running app. Pushes to `main` deploy
 through the focused private-beta CI path; [server and Mac setup](docs/hetzner.md) explains
 the private deployment and optional local development.
 
-Predict opens on **Data**: games, captured observations, and exact source and
-calculation evidence. Trading views cover prediction-market offers against
-sportsbook references and other prediction markets; sportsbook prices remain
-reference evidence. Positive EV and arbitrage are Data views. **Experiments**
-contains the existing first-observation/T−10 comparisons, coverage, outcomes and
-exports. **Settings** holds collection controls and operating status.
+Predict opens on **Research**, with theories and claims linked to dated paper
+experiments, findings and their original evidence. **Data** holds current markets,
+individual odds pulls, historical captures and sporting results. Market-to-book
+EV and market-to-market arbitrage remain Data views. **Settings** holds collection
+controls and operating status.
 See the [personal workspace guide](docs/personal-data-workspace.md).
 
 The collector receives odds, normalizes affected games, calculates using posted

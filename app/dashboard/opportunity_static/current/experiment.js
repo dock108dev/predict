@@ -127,8 +127,10 @@ function renderListing(value){
 }
 async function load(){
  const version=++loadVersion;busy=true;controls();$('experiment-status').textContent=listing?'Reading stored comparisons… Previous captured values remain visible.':'Reading scheduled checkpoint evidence…';
+ const current=new URLSearchParams(location.search);
+ if(current.get('id')&&current.get('revision'))inspectExperiment(current.get('id'),current.get('revision'),current.get('case'),null,{updateURL:false});
  const query=new URLSearchParams({limit:'10',offset:String(pageOffset)});if($('experiment-context').checked)query.set('include_context','1');
- try{const value=await get('/api/research/experiment?'+query);if(version!==loadVersion)return;renderListing(value);const current=new URLSearchParams(location.search);if(current.get('id')&&current.get('revision'))await inspectExperiment(current.get('id'),current.get('revision'),current.get('case'),null,{updateURL:false});}
+ try{const value=await get('/api/research/experiment?'+query);if(version===loadVersion)renderListing(value);}
  catch(error){if(version===loadVersion)$('experiment-status').textContent=`${listing?'Could not refresh. Displayed comparisons are last-known.':'Experiment evidence unavailable.'} ${error.message}`;}
  finally{if(version===loadVersion){busy=false;controls();}}
 }
@@ -289,16 +291,26 @@ function detailView(value,selection){
  checkpointTiming(root,'Early checkpoint · first observed by this experiment within 24 hours',value.early,value.checkpoint_status?.find(task=>task.checkpoint==='early'));
  checkpointTiming(root,'T−10 checkpoint',value.late,value.checkpoint_status?.find(task=>task.checkpoint==='late'));
  mainLinks(root,value.main_line_links,context,value);plots(root,context,value);
- const outcomes=section(root,'Sporting outcomes and probability evaluation');outcomes.append(node('p','Sporting outcomes, venue settlements and actual fills remain separate evidence streams. Movement analysis is available before outcomes arrive. Scores cover cases selected by positive screening EV at either checkpoint; multiple bets from one game are dependent.'));
+ const outcomes=section(root,'Sporting outcomes and probability evaluation');outcomes.id='captured-sporting-outcomes';outcomes.append(node('p','Sporting outcomes, venue settlements and actual fills remain separate evidence streams. Movement analysis is available before outcomes arrive. Scores cover cases selected by positive screening EV at either checkpoint; multiple bets from one game are dependent.'));
+ if(value.outcomes?.length)table(outcomes,['Recorded result','Score · away–home','Known'],value.outcomes.map(outcome=>{
+  const data=outcome.data||{};
+  return [data.final===true?'Final sporting result':label(data.status||'Sporting observation'),
+   data.away_score==null||data.home_score==null?'Score unavailable':`${data.away_score}–${data.home_score}`,dateTime(outcome.known_at||outcome.persisted_at)];
+ }));
  if(value.quality){grid(outcomes,{'Observed scoring scope':value.quality.scope,'Retained cases in scoring scope':value.quality.retained_cases});if(value.quality.reports?.some(item=>item.records>0))table(outcomes,['Checkpoint','Measurement policy','Scored records','Distinct events','Mean Brier'],value.quality.reports.filter(item=>item.records>0).map(item=>[label(item.checkpoint),label(item.policy),item.records,item.distinct_events,item.mean_brier]));else outcomes.append(node('p','No scored completed games in this captured view.'));}
  evidence(outcomes,'Sporting outcome observations and corrections',value.outcomes);evidence(outcomes,'Probability scoring, exclusions and observed-scope limitations',value.quality);
  evidence(root,'Schedule history, reschedules and current checkpoint status',{schedule_history:value.schedule_history,checkpoint_status:value.checkpoint_status});
  evidence(root,'Experiment retention, refused captures and runway',value.retention);
  evidence(root,'Complete captured comparison and reproduction metadata',value);
+ if(new URLSearchParams(location.search).get('evidence')==='populations'){
+  outcomes.querySelector('h3').tabIndex=-1;
+  outcomes.querySelector('h3').focus({preventScroll:true});
+  outcomes.scrollIntoView({block:'start'});
+ }
 }
 export async function inspectExperiment(id,revision,caseId,button,{updateURL=true}={}){
  if(!id||!revision){const status=$('experiment-status')||$('catalog-status');status.textContent='Captured game identity is unavailable; refresh stored data.';return;}
- if(updateURL&&location.pathname==='/experiments'){const query=new URLSearchParams(location.search);query.set('id',id);query.set('revision',revision);if(caseId)query.set('case',caseId);else query.delete('case');history.pushState(null,'','/experiments?'+query);}
+ if(updateURL&&listingRoute()){const query=new URLSearchParams(location.search);query.set('id',id);query.set('revision',revision);if(caseId)query.set('case',caseId);else query.delete('case');history.pushState(null,'',location.pathname+'?'+query);}
  opener=button;if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);const selection={id,revision,caseId};selected=selection;
  $('experiment-title').textContent='Captured checkpoint comparison';$('experiment-content').replaceChildren(node('p','Reading captured game evidence…'));if(!$('experiment-detail').open)$('experiment-detail').showModal();
  try{const value=await get('/api/research/experiment?'+new URLSearchParams({id,revision}));if(value.revision!==revision)throw Error('Captured comparison revision differs; refresh comparisons.');if(selected===selection)detailView(value,selection);}
@@ -306,14 +318,16 @@ export async function inspectExperiment(id,revision,caseId,button,{updateURL=tru
 }
 export function closeExperiment(){if($('experiment-detail')?.open){suppressCloseURL=true;$('experiment-detail').close();}}
 $('experiment-close').onclick=()=>$('experiment-detail').close();
-$('experiment-detail').addEventListener('close',()=>{if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);selected=null;opener?.focus({preventScroll:true});const suppress=suppressCloseURL;suppressCloseURL=false;if(!suppress&&location.pathname==='/experiments'){const q=new URLSearchParams(location.search);for(const key of ['id','revision','case'])q.delete(key);history.pushState(null,'','/experiments'+(q.size?'?'+q:''));}});
-function saveListURL(){const q=new URLSearchParams();if($('experiment-context').checked)q.set('context','1');else q.set('context','0');if(pageOffset)q.set('offset',String(pageOffset));history.pushState(null,'','/experiments?'+q);}
+function listingRoute(){return location.pathname==='/experiments'||(location.pathname==='/data'&&new URLSearchParams(location.search).get('evidence')==='checkpoints');}
+$('experiment-detail').addEventListener('close',()=>{if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);selected=null;opener?.focus({preventScroll:true});const suppress=suppressCloseURL;suppressCloseURL=false;const q=new URLSearchParams(location.search);if(!suppress&&(listingRoute()||q.get('evidence')==='populations')){for(const key of ['id','revision','case'])q.delete(key);history.replaceState(null,'',location.pathname+(q.size?'?'+q:''));}});
+function saveListURL(){if(!listingRoute())return;const q=new URLSearchParams(location.search);for(const key of ['id','revision','case','offset'])q.delete(key);q.set('context',$('experiment-context').checked?'1':'0');if(pageOffset)q.set('offset',String(pageOffset));history.pushState(null,'',location.pathname+'?'+q);}
 if($('experiment')){
  if(initialSelection.has('context'))$('experiment-context').checked=initialSelection.get('context')==='1';
  $('experiment-refresh').onclick=()=>load();$('experiment-context').onchange=()=>{pageOffset=0;saveListURL();load();};
  $('experiment-previous').onclick=()=>{if(busy)return;pageOffset=Math.max(0,pageOffset-10);saveListURL();load();};
  $('experiment-next').onclick=()=>{if(busy||listing?.next_offset==null)return;pageOffset=listing.next_offset;saveListURL();load();};
- window.addEventListener('popstate',()=>{const q=new URLSearchParams(location.search);pageOffset=Number(q.get('offset')||0);$('experiment-context').checked=q.get('context')!=='0';if(!q.has('id'))closeExperiment();load();});
- load();
+ const active=()=>!$('experiment').hasAttribute?.('data-lazy')||listingRoute();
+ window.addEventListener('popstate',()=>{if(!active())return;const q=new URLSearchParams(location.search);pageOffset=Number(q.get('offset')||0);$('experiment-context').checked=q.get('context')!=='0';if(!q.has('id'))closeExperiment();load();});
+ if(active())load();
 }
 window.addEventListener('pagehide',()=>{if(selected?.exportUrl)URL.revokeObjectURL(selected.exportUrl);});

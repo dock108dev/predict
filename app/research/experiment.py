@@ -29,6 +29,15 @@ OUTCOME_WINDOW_SECONDS = 900
 CLAIM_TIMEOUT_SECONDS = 120
 MAX_EVENT_BYTES = 8192
 MIN_CHECKPOINT_RUNWAY = 64 * 1024
+RETENTION_VERSION = 'checkpoint-and-market-witness-2'
+
+
+def _retention_policy():
+    return dict(version=RETENTION_VERSION, checkpoints_only=True,
+        shared_inputs='content_addressed_nested_JSON', no_automatic_eviction=True,
+        total_byte_cap=records.TOTAL_BYTE_CAP, max_games=MAX_GAMES,
+        metadata_bytes_per_game=GAME_METADATA_BYTES,
+        late_reservation='early_unique_bytes_plus_market_publication_estimate_plus_max_64KiB_or_25_percent')
 
 
 def utc():
@@ -136,9 +145,10 @@ def activate(db, *, at=None):
         if row["policy_id"]:
             index = _closure(db, [row["policy_id"]])
             previous = _value(index[row["policy_id"]], index)
+            retention_current = previous.get('retention', {}).get('version') == RETENTION_VERSION
             if (previous.get('requested_scope_version') == REFERENCE_SCOPE_VERSION
                     and previous['requested_scope']['bookmakers'] == list(REQUEST_BOOKS)
-                    and previous.get('fee_mode') == mode):
+                    and previous.get('fee_mode') == mode and retention_current):
                 return dict(previous, id=row['policy_id'])
             # Scope changes append a new policy for future games. A declared
             # game's policy_id, original activation, clocks and frozen evidence
@@ -156,6 +166,10 @@ def activate(db, *, at=None):
                 policy['fee_mode'] = deepcopy(mode)
                 policy['fee_mode_transition'] = dict(previous_policy_id=row['policy_id'], changed_at=clock(at),
                     existing_evidence='immutable; each_new_checkpoint_freezes_its_actual_fee_mode')
+            if not retention_current:
+                policy['retention'] = _retention_policy()
+                policy['retention_transition'] = dict(previous_policy_id=row['policy_id'], changed_at=clock(at),
+                    existing_evidence='immutable; existing_late_reservations_preserved')
             policy['fee_mode_rule'] = 'declared_mode_is_context; each_checkpoint_freezes_actual_mode; no_retroactive_recalculation'
             identity, _ = _write(db, 'policy', policy)
             db.execute('UPDATE public.ev_experiment_accounting SET policy_id=%s WHERE singleton', (identity,))
@@ -181,10 +195,7 @@ def activate(db, *, at=None):
                 odd_ids=["points-all-game-ou-over","points-all-game-ou-under","points-away-game-ml-away",
                     "points-away-game-sp-away","points-home-game-ml-home","points-home-game-sp-home"]),
             reschedules="preserve_early; append_schedule; retarget_late; mark_settlement_continuity_unverified",
-            retention=dict(checkpoints_only=True, shared_inputs="content_addressed_nested_JSON",
-                no_automatic_eviction=True, total_byte_cap=records.TOTAL_BYTE_CAP, max_games=MAX_GAMES,
-                metadata_bytes_per_game=GAME_METADATA_BYTES,
-                late_reservation="early_new_unique_bytes + max(64KiB,25percent); charged_inside_total; larger_late_surface_can_still_refuse"),
+            retention=_retention_policy(),
             scheduling_transition=dict(from_policy=records.VERSION, from_default_horizon_seconds=3600,
                 retired_at=clock(at), to_policy=VERSION, historical_records="unchanged_and_readable"))
         identity, _ = _write(db, "policy", policy)
@@ -566,7 +577,7 @@ def correct_first_observation(db, game_id, *, reason, evidence_reference):
 
 
 def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
-            received_at=None, known_at=None, scope=None):
+            received_at=None, known_at=None, scope=None, market_publication_bytes=0):
     if checkpoint not in ("early", "late"):
         raise ValueError("experiment_checkpoint_kind")
     try:
@@ -623,7 +634,10 @@ def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
                 late_target = stamp(game["event"]["starts_at"])-timedelta(seconds=LATE_SECONDS)
                 reserve = 0
                 if known < late_target:
-                    reserve = size + max(MIN_CHECKPOINT_RUNWAY, size // 4)
+                    # The late transaction must retain both immutable research
+                    # inputs and the inspectable Data publication.
+                    paired_bytes = size + market_publication_bytes
+                    reserve = paired_bytes + max(MIN_CHECKPOINT_RUNWAY, paired_bytes // 4)
                     _admit(db, 0, reserve=reserve)
                 else:
                     db.execute("UPDATE public.ev_experiment_task SET state='missed',token=NULL,last_reason=CASE WHEN last_reason='late_discovery_no_pre_target_baseline' THEN last_reason ELSE 'early_baseline_after_target' END,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='late' AND state<>'captured'", (game_id,))
@@ -817,13 +831,17 @@ def _policy(db):
     return dict(_value(index[row["policy_id"]], index), id=row["policy_id"])
 
 
-def catalog(db, *, include_context=False, limit=50, offset=0):
+def catalog(db, *, include_context=False, outcomes_only=False, limit=50, offset=0):
     limit = max(1, min(100, int(limit)))
     offset = max(0, int(offset))
-    predicate = "true" if include_context else "retained_cases>0"
+    predicate = "outcome_id IS NOT NULL" if outcomes_only else "true" if include_context else "retained_cases>0"
     total = db.execute("SELECT count(*) n FROM public.ev_experiment_game WHERE " + predicate).fetchone()["n"]
     rows = list(db.execute("SELECT * FROM public.ev_experiment_game WHERE " + predicate +
         " ORDER BY first_observed_at DESC,id LIMIT %s OFFSET %s", (limit, offset)))
+    if outcomes_only:
+        return dict(games=[_game_summary(row, _revision(db, row)) for row in rows],
+            total_games=total, offset=offset, limit=limit, next_offset=offset+limit if offset+limit<total else None,
+            provider_requests=0)
     index = _closure(db, [row["comparison_id"] for row in rows if row["comparison_id"]])
     checkpoints = {row["id"]:row for row in db.execute(
         "SELECT id,recorded_at,payload->'summary' summary FROM public.ev_experiment_record WHERE id=ANY(%s)",
@@ -915,7 +933,7 @@ def export_game(db, game_id, *, revision=None):
             payload_bytes=sum(row["payload_bytes"] for row in exported),
             records_by_kind=dict(Counter(row["kind"] for row in exported)),
             hash_scope="canonical JSON; all top-level fields except manifest",
-            byte_cap=2*records.TOTAL_BYTE_CAP+1024*1024))
+            byte_cap=records.EVIDENCE_RESPONSE_BYTE_CAP))
         if len(encoded(result)) > result["manifest"]["byte_cap"]:
             raise ValueError("experiment_export_capacity")
         return result

@@ -22,7 +22,7 @@ async function coverage(){
   evidence(root,'Outages, gaps, controls and coverage limitations',report);evidence(root,'Original-response retention bounds and gaps',retention);
  }catch(error){root.replaceChildren(node('p','Coverage unavailable. '+error.message));}
 }
-$('coverage').addEventListener('toggle',()=>{if($('coverage').open)coverage();});
+$('coverage')?.addEventListener('toggle',()=>{if($('coverage').open)coverage();});
 function cohortResult(root,detail){
  root.replaceChildren();const value=detail.evaluation;
  grid(root,{Designation:value.designation,'Declared records':value.population_records,'Distinct events':value.distinct_events,'Due records':value.due_records,'Due distinct events':value.due_distinct_events,'Future records':value.future_records,'Future distinct events':value.future_distinct_events,'Scored records':value.scored_records,'Scored distinct events':value.scored_distinct_events,'Case statuses':json(value.status_counts),'Evaluation knowledge cutoff':value.as_of});
@@ -39,4 +39,4 @@ function researchRetention(root,value){
  evidence(panel,'Retention bounds, counter scope and recorded gaps',value);
 }
 async function cohorts(){const root=$('cohort-content');root.replaceChildren(node('p','Reading declared populations…'));try{const value=await get('/api/research/cohorts');root.replaceChildren();researchRetention(root,value.research_retention);if(!value.cohorts.length)root.append(node('p','No research population has been declared. The operator CLI declares event/market/line horizons before capture; journal selections are separate.'));for(const item of value.cohorts){const row=node('div',undefined,'research-panel-row'),button=node('button',item.name||item.id),results=node('div'),download=node('a','Export frozen evidence','research-button');download.href='/api/research/cohorts?'+new URLSearchParams({id:item.id,export:'1'});download.download='predict-research-cohort.json';button.onclick=async()=>{button.disabled=true;try{cohortResult(results,await get('/api/research/cohorts?id='+encodeURIComponent(item.id)));}catch(error){results.replaceChildren(node('p',error.message));}finally{button.disabled=false;}};row.append(button,node('small',item.id),download,results);root.append(row);}}catch(error){root.replaceChildren(node('p','Research populations unavailable. '+error.message));}}
-$('cohorts').addEventListener('toggle',()=>{if($('cohorts').open)cohorts();});
+$('cohorts')?.addEventListener('toggle',()=>{if($('cohorts').open)cohorts();});

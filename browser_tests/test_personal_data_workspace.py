@@ -34,7 +34,7 @@ def test_data_game_exact_export_checkpoint_and_back():
         url = urlparse(route.request.url)
         query = {key: value[0] for key,value in parse_qs(url.query).items()}
         requests.append((route.request.method, url.path, query))
-        if url.path in ('/data','/experiments'):
+        if url.path == '/data':
             route.fulfill(path=ASSETS / (url.path[1:]+'.html'))
         elif url.path.startswith('/view/current/'):
             route.fulfill(path=ASSETS / Path(url.path).name)
@@ -61,8 +61,8 @@ def test_data_game_exact_export_checkpoint_and_back():
         browser=runtime.chromium.launch()
         page=browser.new_page(viewport=dict(width=960,height=700),accept_downloads=True)
         page.on('pageerror',lambda error: errors.append(str(error)))
-        page.goto(base+'/data?sport=NCAAB&date=2026-11-22')
-        expect(page.locator('#catalog-status')).to_contain_text('1 games')
+        page.goto(base+'/data?view=history&sport=NCAAB&date=2026-11-22')
+        expect(page.locator('#catalog-status')).to_contain_text('1 game')
         expect(page.locator('nav[aria-label=Main] a')).to_have_count(3)
         page.get_by_role('link',name='Open game',exact=True).click()
         expect(page.locator('#game-detail')).to_be_visible()
@@ -104,14 +104,15 @@ def test_data_game_exact_export_checkpoint_and_back():
         page.goto(base+'/data?id=old-contract')
         expect(dialog).to_be_visible()
         assert 'bet=sgo%3Aunavailable' in page.url
-        page.goto(base+'/experiments')
+        page.get_by_role('button',name='Close',exact=True).click()
+        page.get_by_role('link',name='Historical captures').click()
         expect(page.locator('#experiment-status')).to_contain_text('4 retained cases')
-        expect(page.locator('#catalog')).to_have_count(0)
+        expect(page.locator('#catalog')).to_be_hidden()
         assert any(path=='/api/research/games' and query.get('reference_scope')=='selected' and query.get('provider')=='sportsgameodds' for _,path,query in requests)
         assert any(path=='/api/research/catalog' and query.get('reference_scope')=='all' and not query.get('provider') for _,path,query in requests)
         assert not errors,errors
         assert all(method=='GET' or path=='/api/research/read' for method,path,_ in requests)
-        assert all('/api/research/' in path or '/view/' in path or path in ('/data','/experiments','/favicon.ico') for _,path,_ in requests)
+        assert all('/api/research/' in path or '/view/' in path or path in ('/data','/favicon.ico') for _,path,_ in requests)
         browser.close()
 
 
@@ -129,11 +130,11 @@ def test_arbitrage_selection_revision_and_supported_filters():
         browser=runtime.chromium.launch();page=browser.new_page()
         page.on('pageerror',lambda error:errors.append(str(error)))
         page.goto(base+'/data?view=arbitrage&date=2026-11-22&provider=sportsgameodds&calculation_status=negative')
-        expect(page.locator('#catalog-status')).to_contain_text('1 positive modeled arbitrage')
+        expect(page.locator('#catalog-status')).to_contain_text('1 stored paired comparisons')
         for field in ('date','calculation'):expect(page.locator('#'+field)).to_be_disabled()
         expect(page.locator('select#provider')).to_have_count(0)
         assert 'date=' not in page.url and 'calculation_status=' not in page.url and 'provider=sportsgameodds' in page.url
-        page.get_by_role('button',name='Inspect paired calculation',exact=True).click()
+        page.get_by_role('button',name='Inspect calculation',exact=True).click()
         expect(page.locator('#arb-detail')).to_be_visible()
         assert 'pair=pair-one' in page.url and 'pair_revision=' in page.url
         page.reload();expect(page.locator('#arb-detail')).to_be_visible()

@@ -20,11 +20,13 @@ LOCK = 901112
 MAX_CASES = 2048
 RECORD_BYTE_CAP = 1024 * 1024
 EVALUATION_RECORD_BYTE_CAP = 4 * 1024 * 1024
-# The declared live population exhausted 24 MiB with distinct changed inputs.
-# Keep a finite research allocation sized for that measured population; every
-# write still passes the shared 4 GiB SQL cap and 1 GiB free-disk floor below.
+# Keep the retired cohort's observation sublimit. Current checkpoint and market
+# witnesses share the wider allocation under the existing SQL and disk guards.
 OBSERVATION_BYTE_CAP = 96 * 1024 * 1024
-TOTAL_BYTE_CAP = 128 * 1024 * 1024
+TOTAL_BYTE_CAP = 512 * 1024 * 1024
+# Keep the original single-response memory ceiling independent of disk retention.
+COHORT_EXPORT_PAYLOAD_BYTE_CAP = 128 * 1024 * 1024
+EVIDENCE_RESPONSE_BYTE_CAP = 257 * 1024 * 1024
 DISPOSITION_SLOT_BYTES = 2048
 ACCOUNTING_BYTES = 2048
 DEFAULT_HORIZONS = [3600]
@@ -69,7 +71,7 @@ def retention_usage(db):
         max(recorded_at) latest_recorded_at FROM public.research_record""").fetchone())
     slots = db.execute("SELECT count(*) n FROM public.research_retention_disposition").fetchone()["n"]
     row["reserved"] = slots * DISPOSITION_SLOT_BYTES + ACCOUNTING_BYTES
-    row.update(experiment_records=0, experiment_bytes=0, experiment_reserved_bytes=0)
+    row.update(experiment_records=0, experiment_bytes=0, experiment_reserved_bytes=0, workspace_bytes=0)
     if db.execute("SELECT to_regclass('public.ev_experiment_record') r").fetchone()["r"]:
         from .experiment_evidence import GAME_METADATA_BYTES, ACCOUNTING_METADATA_BYTES
         extra = db.execute("SELECT count(*) n,COALESCE(sum(payload_bytes),0) bytes,max(recorded_at) latest FROM public.ev_experiment_record").fetchone()
@@ -91,6 +93,15 @@ def retention_usage(db):
             UNION ALL SELECT allocation_bytes FROM public.market_pull_evidence) allocation''').fetchone()
         row['market_snapshot_bytes'] = int(market['bytes'])
         row['total'] += row['market_snapshot_bytes']
+    if db.execute("SELECT to_regclass('public.research_workspace_run') r").fetchone()['r']:
+        workspace = db.execute('''SELECT count(*) n, COALESCE(sum(payload_bytes),0) bytes FROM (
+            SELECT payload_bytes FROM public.research_workspace_catalog
+            UNION ALL SELECT payload_bytes FROM public.research_workspace_definition
+            UNION ALL SELECT payload_bytes FROM public.research_workspace_run
+            UNION ALL SELECT payload_bytes FROM public.research_workspace_finding) allocation''').fetchone()
+        row['workspace_bytes'] = workspace['bytes']
+        row['total'] += workspace['bytes']
+        row['records'] += workspace['n']
     return row
 
 
@@ -717,23 +728,27 @@ def export_cohort(db, cohort_id):
     clocks. Summary reads stay small; export never acquires data or appends a
     freshly computed evaluation that could differ from the exported evidence.
     """
-    rows = db.execute("""SELECT id,kind,cohort_id,case_key,slot,recorded_at,
-        payload_bytes,payload,statement_timestamp() AS export_statement_at
+    payload_byte_cap = min(TOTAL_BYTE_CAP, COHORT_EXPORT_PAYLOAD_BYTE_CAP)
+    rows = db.execute("""SELECT id,kind,cohort_id,case_key,slot,recorded_at,payload_bytes,
+        CASE WHEN sum(payload_bytes) OVER ()<=%s THEN payload END payload,
+        statement_timestamp() AS export_statement_at
         FROM public.research_record
         WHERE (id=%s AND kind='cohort') OR cohort_id=%s
-        ORDER BY recorded_at,id""", (cohort_id, cohort_id))
+        ORDER BY recorded_at,id""", (payload_byte_cap, cohort_id, cohort_id))
     exported = []
     payload_bytes = 0
     declaration = None
     saved_evaluations = []
     for row in rows:
         payload = row["payload"]
+        if payload is None:
+            raise ValueError("research_export_capacity")
         size = len(encoded(payload))
         if (hashed(payload) != row["id"] or size != row["payload_bytes"]
                 or payload.get("kind") != row["kind"]):
             raise ValueError("research_export_record_integrity")
         payload_bytes += size
-        if size > record_byte_cap(row["kind"]) or payload_bytes > TOTAL_BYTE_CAP:
+        if size > record_byte_cap(row["kind"]):
             raise ValueError("research_export_capacity")
         item = {key: row[key] for key in
                 ("id", "kind", "cohort_id", "case_key", "slot", "payload_bytes", "payload")}
@@ -779,10 +794,10 @@ def export_cohort(db, cohort_id):
     # Immutable envelopes add IDs, persistence clocks and audit metadata to the
     # already bounded retained payloads. Reserve a bounded API allocation rather
     # than rejecting valid near-cap state or changing the storage allowance.
-    export_byte_cap = 2 * TOTAL_BYTE_CAP + 1024 * 1024
+    export_byte_cap = EVIDENCE_RESPONSE_BYTE_CAP
     bundle = dict(body, manifest=dict(
         record_count=len(exported), records_by_kind=dict(Counter(r["kind"] for r in exported)),
-        total_payload_bytes=payload_bytes, retained_payload_byte_cap=TOTAL_BYTE_CAP,
+        total_payload_bytes=payload_bytes, retained_payload_byte_cap=payload_byte_cap,
         canonical_byte_cap=export_byte_cap,
         payload_hash="each record id is SHA256 of its canonical JSON payload",
         bundle_sha256=hashed(body),
@@ -798,25 +813,29 @@ def export_cohort(db, cohort_id):
     return bundle
 
 
-def status(db):
-    used = retention_usage(db)
-    row = dict(records=used["records"], retained_bytes=used["total"], observation_bytes=used["observations"],
-               latest_recorded_at=used["latest_recorded_at"], experiment_records=used["experiment_records"],
-               experiment_payload_bytes=used["experiment_bytes"], experiment_allocation_bytes=used["experiment_reserved_bytes"])
-    if row["latest_recorded_at"] is not None:
-        row["latest_recorded_at"] = row["latest_recorded_at"].isoformat()
-    disposition = db.execute("""SELECT count(*) slots,COALESCE(sum(observation_refusals),0)::bigint observation_refusals,
+def retention_disposition_summary(db):
+    return db.execute("""SELECT count(*) slots,COALESCE(sum(observation_refusals),0)::bigint observation_refusals,
         COALESCE(sum(capture_refusals),0)::bigint capture_refusals,
         count(*) FILTER(WHERE observation_refusals>0 AND observation_recovered_at IS NULL) observation_open_gaps,
         count(*) FILTER(WHERE capture_refusals>0 AND capture_recovered_at IS NULL) capture_open_gaps,
         count(*) FILTER(WHERE observation_refusals>0) observation_affected_slots,
         count(*) FILTER(WHERE capture_refusals>0) capture_affected_slots
         FROM public.research_retention_disposition""").fetchone()
+
+
+def status(db):
+    used = retention_usage(db)
+    row = dict(records=used["records"], retained_bytes=used["total"], observation_bytes=used["observations"],
+               latest_recorded_at=used["latest_recorded_at"], experiment_records=used["experiment_records"],
+               experiment_payload_bytes=used["experiment_bytes"], experiment_allocation_bytes=used["experiment_reserved_bytes"],
+               workspace_bytes=used['workspace_bytes'])
+    if row["latest_recorded_at"] is not None:
+        row["latest_recorded_at"] = row["latest_recorded_at"].isoformat()
     allocation = used["reserved"]
     return dict(row, byte_cap=TOTAL_BYTE_CAP, observation_byte_cap=OBSERVATION_BYTE_CAP,
                 record_byte_caps=dict(ordinary=RECORD_BYTE_CAP, evaluation=EVALUATION_RECORD_BYTE_CAP),
                 disposition_allocation_bytes=allocation, total_allocation_bytes=row["retained_bytes"]+allocation,
-                retention_dispositions=dict(disposition), retention_accounting=retention_accounting(db),
+                retention_dispositions=retention_disposition_summary(db), retention_accounting=retention_accounting(db),
                 provider_requests=0)
 
 
