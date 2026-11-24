@@ -115,16 +115,21 @@ class MensD1WorkspaceSQL(ResearchWorkspaceFixture):
         day = "2026-11-23"
         eligible = self.game("eligible", "2026-11-23T18:00:00Z")
         excluded = self.game("non-d1", "2026-11-23T18:00:00Z", cancelled=True)
-        population = dict(kind="verified_daily_schedule", revision="schedule-1", membership_version="season-1",
-                          games=[dict(source_game_id="a", provider_event_id="eligible", scope_state="eligible"),
-                                 dict(source_game_id="b", provider_event_id="non-d1", scope_state="excluded"),
-                                 dict(source_game_id="c", provider_event_id=None, scope_state="eligible")])
+        population = dict(kind="reconciled_occurrences", revision="schedule-1", membership_version="season-1",
+                          expected_games=None, games=[
+                              dict(occurrence_id="source:a", provider_event_id="eligible", scope_state="eligible"),
+                              dict(occurrence_id="source:b", provider_event_id="non-d1", scope_state="excluded"),
+                              dict(occurrence_id="source:c", provider_event_id=None, scope_state="eligible")])
         with self.connect() as db, patch.object(paper.math, "calculate", side_effect=linear):
             experiment.discover(db, [eligible, excluded], at=self.at)
             self.capture(db, "early", eligible)
             self.advance(db, stamp("2026-11-23T17:50:00Z"))
             self.capture(db, "late", eligible)
             original = workspace.replay(db, day, workspace.PILOT_VERSION, {})
+            retained = dict(population, revision="provider-snapshot", kind="retained_provider_snapshot",
+                            games=deepcopy(population["games"][:2]))
+            with patch.object(mens_d1, "retained_provider_population", return_value=retained):
+                old_snapshot = workspace.save_mens_d1_provider_snapshot(db, day)
             with patch.object(mens_d1, "daily_population", side_effect=lambda db, day: deepcopy(population)):
                 first = workspace.replay(db, day, mens_d1.DAILY, {})
                 with patch.object(paper, "report", side_effect=AssertionError("unchanged replay decoded checkpoints")):
@@ -134,12 +139,30 @@ class MensD1WorkspaceSQL(ResearchWorkspaceFixture):
                 population["membership_version"] = "season-2"
                 next_run = workspace.replay(db, day, mens_d1.DAILY, {})
             self.assertNotEqual(next_run["run"]["id"], first["run"]["id"])
-            self.assertEqual(first["run"]["coverage"]["expected_games"], 2)
+            self.assertIsNone(first["run"]["coverage"]["expected_games"])
             self.assertEqual(first["run"]["coverage"]["untracked_games"], 1)
             self.assertEqual(first["run"]["coverage"]["excluded_games"], 1)
-            self.assertEqual(next_run["run"]["coverage"]["expected_games"], 1)
+            self.assertIsNone(next_run["run"]["coverage"]["expected_games"])
             self.assertEqual(next_run["run"]["coverage"]["unverified_membership_games"], 1)
             self.assertEqual(first["report"]["games"][0]["evaluated_offers"], 2)
+            self.assertEqual(first["report"]["games"][1]["status"], "no_task")
+            self.assertEqual(first["comparison"]["prior_run_id"], old_snapshot["run"]["id"])
+            self.assertEqual(first["comparison"]["games"]["delta"], 1)
+            self.assertEqual(first["comparison"]["offers"]["delta"], 0)
+            self.assertEqual(next_run["comparison"]["prior_run_id"], first["run"]["id"])
+            self.assertEqual(next_run["comparison"]["captures"]["no_task"]["delta"], -1)
+            identity = first["run"]["id"]
+            bundle = workspace.run_detail(db, identity, export=True)
+            ticket = bundle["report"]["portfolios"]["all_venues"]["tickets"][0]
+            stored = workspace._run(db, identity)["payload"]["witnesses"][ticket["id"]]
+            self.assertIn("encoded_calculation", stored)
+            inspected = workspace.ticket_detail(db, identity, ticket["id"])
+            self.assertEqual(bundle["witnesses"][ticket["id"]]["sized_calculation"], inspected["evidence"]["sized_calculation"])
+            exported = workspace.offer_export(db, first["run"]["id"])
+            self.assertEqual([len(game["offers"] or []) for game in exported["games"]], [2, 0])
+            offers = exported["games"][0]["offers"]
+            self.assertEqual([offer["disposition"] for offer in offers], ["screen_passed", "screen_passed"])
+            self.assertEqual(sum("best_venue" in offer["selected_tickets"] for offer in offers), 1)
             self.assertEqual(first["report"]["portfolios"]["all_venues"]["unresolved"], 2)
             self.assertEqual(workspace.run_detail(db, original["run"]["id"]), original)
             self.assertEqual(workspace.run_detail(db, first["run"]["id"]), first)

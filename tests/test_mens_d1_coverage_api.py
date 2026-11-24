@@ -145,6 +145,8 @@ class MensD1CoverageSQL(PregameFixture):
                     patch('app.dashboard.mens_d1_coverage_api._saved', return_value=([run], run, saved_report)):
                 data = coverage_view(db, DAY, None, 'source:source-captured')
         rows = {row['source_game_id']:row for row in data['games'] if 'source_game_id' in row}
+        assert data['run'] is None
+        assert data['analysis_run']['id'] == run['id']
         captured = rows['source-captured']
         assert captured['capture']['frozen_received_at'] == received
         assert captured['capture']['frozen_requested_at'] == target

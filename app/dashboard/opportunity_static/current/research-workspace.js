@@ -308,10 +308,10 @@ function definitionCard(definition) {
   if (definition.policy) panel.append(details('Exact definition and policy', definition));
   return panel;
 }
-function dailyRunForm(template, query, requestVersion) {
+function dailyRunForm(template, query, requestVersion, summaryRead) {
   const context = coverageContext(query, workspace.pilot?.date);
   const panel = card('Save a men’s D1 paper run');
-  const feedback = node('p', 'Checking retained schedule evidence…', 'workspace-caption');
+  const feedback = node('p', 'Checking retained game evidence…', 'workspace-caption');
   feedback.setAttribute('role', 'status');
   const submit = node('button', 'Save run from retained schedule');
   submit.type = 'button';
@@ -320,6 +320,7 @@ function dailyRunForm(template, query, requestVersion) {
   const current = () => version === requestVersion;
   const updateURL = (extra = {}) => history.replaceState(null, '', url('experiments', {...context, ...extra}));
   const jobError = message => {
+    updateURL();
     feedback.textContent = message;
     submit.disabled = false;
   };
@@ -349,7 +350,7 @@ function dailyRunForm(template, query, requestVersion) {
         body:JSON.stringify({date:context.date, definition_version:template.version})});
       if (!current()) return;
       if (!jobIdentity.test(job.job_id)) throw Error('The saved run job identity could not be verified.');
-      updateURL({coverage_job:job.job_id});
+      history.pushState(null, '', url('experiments', {...context, coverage_job:job.job_id}));
       watch(job.job_id);
     } catch (error) {
       if (current()) jobError(error.message);
@@ -357,15 +358,18 @@ function dailyRunForm(template, query, requestVersion) {
   };
   const jobId = query.get('coverage_job');
   if (jobIdentity.test(jobId)) watch(jobId);
-  else readDailyCoverage(new URLSearchParams({date:context.date})).then(value => {
+  else summaryRead.then(value => {
     if (!current()) return;
-    submit.disabled = !value.population_revision;
-    if (!value.population_revision) {
-      feedback.textContent = `No independent schedule is retained for ${context.date}.`;
+    const population = value.coverage_summary.population;
+    submit.disabled = !(population.revision || population.occurrence_games);
+    if (submit.disabled) {
+      feedback.textContent = `No men’s D1 occurrence evidence is retained for ${context.date}.`;
       return;
     }
-    const expected = value.counts.expected;
-    feedback.textContent = `${context.date} · ${count(expected ?? value.counts.source_eligible)} eligible source games.`
+    const expected = population.expected_games;
+    const evidence = population.source_eligible_games == null ? `${count(population.provider_known_games)} eligible provider-known games`
+      : `${count(population.source_eligible_games)} eligible source games`;
+    feedback.textContent = `${context.date} · ${evidence}.`
       + (expected == null ? ' The full expected slate is unknown.' : '') + ' Paper results use the frozen 4% EV and quarter Kelly policy.';
   }).catch(error => { if (current()) feedback.textContent = error.message; });
   return panel;
@@ -381,7 +385,7 @@ async function experiments(query, requestVersion) {
     const dateContext = {...context};
     delete dateContext.run;
     const nav = node('div', undefined, 'workspace-links');
-    nav.append(link('Experiments and runs', url('experiments', dateContext)),
+    nav.append(link(Object.keys(context).length ? 'Current evidence and saved runs' : 'Experiments and runs', url('experiments', dateContext)),
       link('Open evaluation results', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
     const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
     root.replaceChildren(nav);
@@ -392,6 +396,8 @@ async function experiments(query, requestVersion) {
       ticketLink:ticket => url('experiments', {...context, run:id, variant, ticket:ticket.id}),
       gameLink:game => url('experiments', {...context, run:id, variant, evidence:game.game_id}),
       exportLink:runAPI(id) + '?export=1',
+      offerExportLink:Object.keys(context).length ? runAPI(id) + '/offers' : null,
+      priorRunLink:prior => url('experiments', {...dateContext, run:prior, variant}),
       definitionLink:link('Open frozen definition', url('experiments', {...dateContext, definition:selected.run.definition_version})),
     });
     if (selected.findings?.length) {
@@ -424,13 +430,14 @@ async function experiments(query, requestVersion) {
   const date = coverageContext(query, workspace.pilot?.date).date;
   const availableRuns = (workspace.runs || []).filter(run => !scoped || run.date === date);
   const template = scoped && workspace.mens_d1_template;
+  const summaryRead = scoped ? readDailyCoverage(new URLSearchParams({date}), {summary:true}) : null;
   const selected = query.get('definition') ? definitionById(query.get('definition'))
     : (scoped && definitions.find(definition => definition.policy?.scope === 'mens-d1'
         && availableRuns.some(run => run.definition_version === definition.version)))
       || template || definitionById(workspace.pilot?.definition_version) || definitions[0];
   root.replaceChildren(node('h2', 'Experiment definitions and dated runs'));
-  root.append(experimentCoverage(query, workspace.pilot?.date));
-  if (template) root.append(dailyRunForm(template, query, requestVersion));
+  root.append(experimentCoverage(query, workspace.pilot?.date, null, () => requestVersion === version, summaryRead));
+  if (template) root.append(dailyRunForm(template, query, requestVersion, summaryRead));
   if (selected) {
     root.append(definitionCard(selected));
     if (selected !== template && selected.policy?.scope !== 'mens-d1') root.append(replayForm(selected, query));
@@ -444,11 +451,11 @@ async function experiments(query, requestVersion) {
   }
   links(root, 'Other experiment definitions', [...experiments.values()], definition => link(definition.title, url('experiments', {definition:definition.version})));
   const runs = availableRuns;
-  if (runs.length) root.append(table(['Saved run', 'Definition', 'Validity', 'Tracked / captured'], runs.map(run => [
-    scoped ? link(`${run.date} · ${run.title}`, url('experiments', {...coverageContext(query), run:run.id})) : runLink(run, `${run.date} · ${run.title}`), run.definition_version,
+  if (!scoped && runs.length) root.append(table(['Saved run', 'Definition', 'Validity', 'Tracked / captured'], runs.map(run => [
+    runLink(run, `${run.date} · ${run.title}`), run.definition_version,
     label(run.validity), `${count(run.coverage?.tracked_games)} / ${count(run.coverage?.captured_games)}` + (run.coverage?.reconstructed_games ? ` + ${count(run.coverage.reconstructed_games)} reconstructed` : ''),
   ])));
-  else root.append(node('p', 'No replay has been saved. Choose a date to read its retained checkpoint evidence.'));
+  else if (!scoped) root.append(node('p', 'No replay has been saved. Choose a date to read its retained checkpoint evidence.'));
   const data = node('div', undefined, 'workspace-links');
   data.append(link('Frozen checkpoint comparisons', '/data?evidence=checkpoints'), link('Declared populations and evaluations', '/data?evidence=populations'));
   root.append(data);

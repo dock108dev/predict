@@ -1,5 +1,5 @@
-import {card, count, details, label, link, node, pairs, pct, stack, table, text, time, usd} from './workspace-ui.js';
-import {selection, venue} from './workspace-format.js';
+import {card, count, details, label, link, list, node, pairs, pct, stack, table, text, time, usd} from './workspace-ui.js';
+import {number, selection, venue} from './workspace-format.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
 const validity = {
@@ -53,8 +53,33 @@ function ticketTable(portfolio, ticketLink) {
     evidenceLink('Inspect ticket', ticketLink(ticket)),
   ]));
 }
-export function renderRun(root, {run, definition, report}, navigation) {
-  const {variant, variantLink, ticketLink, gameLink, exportLink, definitionLink} = navigation;
+function runComparison(comparison, priorRunLink) {
+  const panel = node('section', undefined, 'workspace-panel');
+  panel.append(node('h2', 'Changes from the previous saved run'),
+    link(`Open prior run · ${comparison.prior_run_id.slice(0, 12)}`, priorRunLink(comparison.prior_run_id)));
+  const rows = [];
+  function add(name, change, format = count) {
+    if (!change) return;
+    const delta = number(change.delta);
+    rows.push([name, format(change.before), format(change.after), delta == null ? 'Unknown'
+      : `${delta > 0 ? '+' : ''}${format(change.delta)}`]);
+  }
+  add('Eligible games', comparison.games);
+  for (const [key, value] of Object.entries(comparison.captures || {})) add(statuses[key] || label(key), value);
+  add('Offers observed', comparison.offers);
+  for (const [key, value] of Object.entries(comparison.exclusions || {})) add(label(key), value);
+  for (const [variant, value] of Object.entries(comparison.variants || {})) {
+    add(`${variants[variant]} tickets`, value.tickets);
+    add(`${variants[variant]} paper turnover`, value.turnover_usd, usd);
+  }
+  panel.append(table(['Evidence or measure', 'Prior run', 'This run', 'Change'], rows));
+  if (comparison.added_games?.length) panel.append(node('h3', 'Games added to this run'), list(comparison.added_games));
+  if (comparison.removed_games?.length) panel.append(node('h3', 'Games removed from this run'), list(comparison.removed_games));
+  return panel;
+}
+
+export function renderRun(root, {run, definition, report, comparison}, navigation) {
+  const {variant, variantLink, ticketLink, gameLink, exportLink, offerExportLink, definitionLink} = navigation;
   const coverage = run.coverage || {};
   const intro = node('section', undefined, 'workspace-panel');
   intro.append(node('h2', run.title));
@@ -85,8 +110,10 @@ export function renderRun(root, {run, definition, report}, navigation) {
   intro.append(methods);
   const actions = node('div', undefined, 'workspace-links');
   actions.append(evidenceLink('Export saved run and evidence', exportLink));
+  if (offerExportLink) actions.append(evidenceLink('Export dated offer ledger', offerExportLink));
   intro.append(actions);
   root.append(intro);
+  if (comparison?.prior_run_id && navigation.priorRunLink) root.append(runComparison(comparison, navigation.priorRunLink));
 
   const runs = node('section', undefined, 'workspace-panel');
   runs.append(node('h2', 'Portfolio variants'), node('p', 'Both variants use the same observations. Best venue keeps the highest qualifying sized EV for each exact bet; all qualifying venues keeps one ticket per exact bet per venue.'));

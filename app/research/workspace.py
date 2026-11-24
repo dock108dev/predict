@@ -3,10 +3,12 @@
 from collections import Counter
 from datetime import date, datetime, timezone
 from fractions import Fraction
+import json
 import re
 
 from psycopg.types.json import Jsonb
 
+from app.storage import payload_codec
 from app.storage.store import ROOT, encoded, hashed, stamp
 from . import experiment, mens_d1, paper, paper_evidence, records
 
@@ -150,19 +152,39 @@ def _register_definition(db, template, proposed, registration):
 
 
 def _compact_report(report):
+    reconciled = (report.get("population") or {}).get("kind") == "reconciled_occurrences"
     witnesses = {}
     for portfolio in report["portfolios"].values():
         compact = []
         for ticket in portfolio["tickets"]:
             ticket = dict(ticket)
             witness = ticket.pop("witness")
-            witnesses[ticket["id"]] = dict(offer_index=ticket.pop("offer_index"),
-                                          sized_calculation=witness["sized_calculation"])
+            identity = ticket["id"]
+            offer_index = ticket.pop("offer_index")
+            if identity not in witnesses:
+                calculation = witness["sized_calculation"]
+                if reconciled:
+                    witnesses[identity] = dict(offer_index=offer_index,
+                        encoded_calculation=payload_codec.encode(encoded(calculation).decode()))
+                else:
+                    witnesses[identity] = dict(offer_index=offer_index, sized_calculation=calculation)
             compact.append(ticket)
         portfolio["tickets"] = compact
     # The exact sporting result stays under its immutable source ID.
     report.pop("outcome_evidence")
+    if reconciled:
+        # Detailed rejected quotes and exact lines remain on the frozen checkpoint.
+        for game in report["games"]:
+            if game.get("coverage"):
+                game["coverage"] = {key:value for key,value in game["coverage"].items()
+                                    if key not in ("rejected_projection", "line_ranges")}
     return dict(report=report, witnesses=witnesses)
+
+
+def _sized_calculation(witness):
+    if "sized_calculation" in witness:
+        return witness["sized_calculation"]
+    return json.loads(payload_codec.decode(witness["encoded_calculation"]))
 
 
 def _summary(report, title):
@@ -188,6 +210,11 @@ def _summary(report, title):
                         unverified_membership_games=scopes["unresolved"])
         if population["kind"] == "verified_daily_schedule":
             coverage.update(expected_games=scopes["eligible"], untracked_games=scopes["eligible"] - len(games))
+        elif population["kind"] == "reconciled_occurrences":
+            coverage.update(tracked_games=len(games) - states["no_task"],
+                            missing_tracked_games=missing - states["no_task"], untracked_games=states["no_task"],
+                            expected_games=population.get("expected_games"), dated_eligible_games=len(games),
+                            disputed_date_games=sum(row.get("day_applicability") == "disputed" for row in population["games"]))
         uncovered = scopes["unresolved"] + (coverage["untracked_games"] or 0)
     if not captured and not reconstructed:
         validity = "no_valid_capture"
@@ -290,7 +317,7 @@ def _unchanged_recovery_run(db, day, definition, *, population=None):
         (definition["version"], day)).fetchone()
     if not previous:
         return None
-    saved = {g["game_id"]:g for g in previous["payload"]["report"]["games"]}
+    saved = {g["game_id"]:g for g in previous["payload"]["report"]["games"] if g["status"] != "no_task"}
     current = list(db.execute("""SELECT g.*,t.state AS task_state,t.schedule_id AS task_schedule_id,
         t.target_at,t.deadline_at,t.last_reason FROM public.ev_experiment_game g
         JOIN public.ev_experiment_task t ON t.game_id=g.id AND t.checkpoint='late'
@@ -298,7 +325,7 @@ def _unchanged_recovery_run(db, day, definition, *, population=None):
         ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date""",
         (policy["league"], day)))
     if population is not None:
-        allowed = {row.get("provider_event_id") for row in population["games"] if row["scope_state"] == "eligible"}
+        allowed = {row.get("provider_event_id") for row in population["games"] if mens_d1.in_paper_cohort(row)}
         current = [game for game in current if game["event"]["source_event_id"] in allowed]
     if set(saved) != {g["id"] for g in current}:
         return None
@@ -343,9 +370,9 @@ def replay(db, day, definition_version, values, *, registration=None):
             parent = _definition(db, PILOT_VERSION)
             population = mens_d1.daily_population(db, day)
             if population is None:
-                raise SelectionError("This date has no verified source slate. Review retained evidence in Data.")
+                raise SelectionError("This date has no retained occurrence evidence. Review the date in Data.")
             recovery = mens_d1.daily_recovery(db, day, population)
-            definition = mens_d1.definition(mens_d1.template(parent), population, mens_d1.DAILY_DESIGNATION,
+            definition = mens_d1.definition(mens_d1.template(parent), population, mens_d1.RECONCILED,
                                             recovery=recovery)
         else:
             parent = _definition(db, definition_version)
@@ -423,9 +450,16 @@ def _publish(db, day, parent, definition, report):
                 (version,id,supersedes,payload_bytes,payload) VALUES (%s,%s,%s,%s,%s)""",
                 (definition["version"], definition["id"], definition["supersedes"],
                  len(encoded(definition_body)), Jsonb(definition_body)))
-        prior = db.execute("""SELECT id FROM public.research_workspace_run
-            WHERE definition_version=%s AND game_date=%s AND observed_at<=%s
-            ORDER BY observed_at DESC,id LIMIT 1""", (definition["version"], day, report["as_of"])).fetchone()
+        if definition.get("designation") == mens_d1.RECONCILED:
+            prior = db.execute("""SELECT r.id FROM public.research_workspace_run r
+                JOIN public.research_workspace_definition d ON r.definition_version=d.version
+                WHERE r.game_date=%s AND r.observed_at<=%s AND d.payload->>'designation'=ANY(%s)
+                ORDER BY r.observed_at DESC,r.id LIMIT 1""", (day, report["as_of"],
+                [mens_d1.RECONCILED, mens_d1.DAILY_DESIGNATION, mens_d1.RETAINED, mens_d1.RECOVERY])).fetchone()
+        else:
+            prior = db.execute("""SELECT id FROM public.research_workspace_run
+                WHERE definition_version=%s AND game_date=%s AND observed_at<=%s
+                ORDER BY observed_at DESC,id LIMIT 1""", (definition["version"], day, report["as_of"])).fetchone()
         db.execute("""INSERT INTO public.research_workspace_run
             (id,definition_version,game_date,report_revision,observed_at,supersedes,summary,payload_bytes,payload)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
@@ -446,6 +480,40 @@ def _run(db, run_id):
     return row
 
 
+def _run_comparison(before, after, prior_id):
+    def change(old, new):
+        return dict(before=old, after=new, delta=new - old if old is not None and new is not None else None)
+
+    def counts(old, new):
+        return {key:change(old.get(key, 0), new.get(key, 0)) for key in sorted(set(old) | set(new))}
+
+    def offers(report):
+        observed = [game.get("observed_offer_count") for game in report["games"]
+                    if game["status"] in ("captured", "reconstructed")]
+        return None if None in observed else sum(observed)
+
+    def game_identities(report):
+        population = report.get("population") or {}
+        by_game = {game["game_id"]: game.get("provider_event_id") or game.get("occurrence_id")
+                   for game in population.get("games", []) if game.get("game_id")}
+        return {by_game.get(game["game_id"]) or game["game_id"]:game for game in report["games"]}
+
+    old_games, new_games = game_identities(before), game_identities(after)
+    variants = {}
+    for name, new in after["portfolios"].items():
+        old = before["portfolios"][name]
+        turnover = dict(before=old["turnover_usd"], after=new["turnover_usd"],
+                        delta=paper.money(Fraction(new["turnover_usd"]) - Fraction(old["turnover_usd"])))
+        variants[name] = dict(tickets=change(old["count"], new["count"]), turnover_usd=turnover)
+    return dict(prior_run_id=prior_id, games=change(len(old_games), len(new_games)),
+        added_games=[new_games[key]["title"] for key in sorted(new_games.keys() - old_games.keys())],
+        removed_games=[old_games[key]["title"] for key in sorted(old_games.keys() - new_games.keys())],
+        captures=counts(Counter(game["status"] for game in before["games"]),
+                        Counter(game["status"] for game in after["games"])),
+        offers=change(offers(before), offers(after)), exclusions=counts(before["exclusions"], after["exclusions"]),
+        variants=variants)
+
+
 def run_detail(db, run_id, *, export=False):
     row = _run(db, run_id)
     definition = _definition(db, row["definition_version"])
@@ -454,14 +522,52 @@ def run_detail(db, run_id, *, export=False):
     report = row["payload"]["report"]
     result = dict(schema=SCHEMA, run=_run_summary(row), definition=definition, findings=findings, report=report,
                   provider_requests=0, orders_submitted=0)
+    if definition.get("designation") == mens_d1.RECONCILED and row["supersedes"]:
+        prior = db.execute("SELECT payload->'report' report FROM public.research_workspace_run WHERE id=%s",
+                           (row["supersedes"],)).fetchone()["report"]
+        result["comparison"] = _run_comparison(prior, report, row["supersedes"])
     if export:
-        result["witnesses"] = row["payload"]["witnesses"]
+        result["witnesses"] = {identity:dict(offer_index=witness["offer_index"], sized_calculation=_sized_calculation(witness))
+                               for identity, witness in row["payload"]["witnesses"].items()}
         claims = list(db.execute("""SELECT * FROM public.research_workspace_catalog
             WHERE version=ANY(%s) ORDER BY version""", (definition["claim_versions"],)))
         result["claims"] = [_record(claim) for claim in claims]
         result["manifest"] = dict(bundle_sha256=hashed(result),
             exact_sources="/api/research/workspace/runs/" + run_id + "/evidence/{game_id}?export=1")
     return result
+
+
+def offer_export(db, run_id):
+    """Read only the evidence-bearing games and exact offer indices of this saved run."""
+    from .market_census import offer_rows
+
+    row = _run(db, run_id)
+    report = row["payload"]["report"]
+    if not report.get("population"):
+        raise UnknownSelection("Select a dated men’s D1 analysis to export its observed offers.")
+    witnesses = row["payload"]["witnesses"]
+    selected = {name: {(ticket["game_id"], witnesses[ticket["id"]]["offer_index"]):ticket["id"]
+                       for ticket in portfolio["tickets"]} for name, portfolio in report["portfolios"].items()}
+    games = []
+    for game in report["games"]:
+        entry = {key:game.get(key) for key in ("game_id", "title", "status", "checkpoint_id", "exclusions")}
+        if game["status"] in ("captured", "reconstructed"):
+            identity = game["checkpoint_id"]
+            index = experiment._closure(db, [identity])
+            checkpoint = experiment._value(index[identity], index)
+            at = checkpoint["received_at"] if game["status"] == "reconstructed" else experiment.clock(index[identity]["recorded_at"])
+            offers = offer_rows(checkpoint, game_id=game["game_id"], minimum=report["policy"]["minimum_ev"], at=at)
+            for offer in offers:
+                key = game["game_id"], offer["offer_index"]
+                offer["selected_tickets"] = {name:rows[key] for name, rows in selected.items() if key in rows}
+            entry.update(receipt_sha256=checkpoint["snapshot"].get("receipt_sha256"), decision_at=at, offers=offers)
+        else:
+            entry["offers"] = None
+        games.append(entry)
+    value = dict(date=report["date"], as_of=report["as_of"], run_id=run_id,
+                 report_revision=row["report_revision"], minimum_ev=report["policy"]["minimum_ev"], games=games,
+                 provider_requests=0, orders_submitted=0)
+    return dict(value, evidence_sha256=hashed(value))
 
 
 def _game(report, game_id):
@@ -490,7 +596,7 @@ def ticket_detail(db, run_id, ticket_id):
     checkpoint = experiment._value(index[checkpoint_id], index)
     outcome = dict(experiment._value(index[outcome_id], index), id=outcome_id) if outcome_id else None
     original_offer = checkpoint["snapshot"]["offers"][witness["offer_index"]]
-    calculated = witness["sized_calculation"]
+    calculated = _sized_calculation(witness)
     links = _source_links(run_id, game["game_id"])
     persisted_at = index[checkpoint_id]["recorded_at"].isoformat()
     trade = paper_evidence.inspect(ticket, checkpoint, original_offer, calculated, report["policy"])

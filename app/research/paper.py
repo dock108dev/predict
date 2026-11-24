@@ -249,18 +249,32 @@ def scoped_candidates(entry, checkpoint, policy):
 def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, population=None):
     """Passive backtest, independent of early-positive retention and live prices."""
     from . import experiment as owner
+    from .mens_d1 import in_paper_cohort
     date.fromisoformat(day)
     frozen_policy = policy or POLICY
     at = datetime.now(timezone.utc).isoformat()
-    games = list(db.execute("""SELECT * FROM public.ev_experiment_game
+    reconciled = population is not None and population["kind"] == "reconciled_occurrences"
+    games = list(db.execute("""SELECT g.* FROM public.ev_experiment_game g
         WHERE event->>'league'=%s AND
         ((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
-        ORDER BY (event->>'starts_at')::timestamptz,id""", (frozen_policy["league"], day)))
+        AND (NOT %s OR EXISTS (SELECT 1 FROM public.ev_experiment_task t
+            WHERE t.game_id=g.id AND t.checkpoint='late'))
+        ORDER BY (event->>'starts_at')::timestamptz,id""", (frozen_policy["league"], day, reconciled)))
+    untracked = []
     if population is not None:
         by_provider = {game["event"]["source_event_id"]: game["id"] for game in games}
         for row in population["games"]:
             row["game_id"] = by_provider.get(row.get("provider_event_id"))
-        eligible = {row["game_id"] for row in population["games"] if row["scope_state"] == "eligible"}
+            if not in_paper_cohort(row) or row["game_id"]:
+                continue
+            if not reconciled:
+                continue
+            row["game_id"] = hashed([day, row["occurrence_id"], "absent_capture_task"])
+            untracked.append(dict(game_id=row["game_id"], occurrence_id=row["occurrence_id"],
+                title=row.get("title") or row["occurrence_id"], starts_at=row.get("starts_at"),
+                status="no_task", reason="no_retained_t10_capture_task", checkpoint_id=None, tickets=0,
+                schedule_id=None, outcome_id=None, attempt_ids=[]))
+        eligible = {row["game_id"] for row in population["games"] if in_paper_cohort(row)}
         games = [game for game in games if game["id"] in eligible]
     tickets, dispositions, exclusions = [], [], Counter()
     outcome_evidence = {}
@@ -324,6 +338,7 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, popul
             entry.update(tickets=len(found), coverage=snapshot.get("coverage"),
                          fee_mode=snapshot.get("fee_mode"), exclusions=gaps)
         dispositions.append(entry)
+    dispositions.extend(untracked)
     return assemble(day, at, frozen_policy, dispositions, tickets, exclusions,
                     outcome_evidence=outcome_evidence, evidence=evidence, population=population)
 
@@ -337,7 +352,8 @@ def assemble(day, at, frozen_policy, dispositions, tickets, exclusions, *,
                      if frozen_policy.get("recovered_checkpoints") else
                      "Retrospective paper replay of frozen T−10 evidence; no actual orders or fills"),
         portfolio_revision=hashed([policy_id, day, sorted(t["id"] for t in tickets)]),
-        tracked_games=len(dispositions), captured_games=sum(g["status"] == "captured" for g in dispositions),
+        tracked_games=sum(g["status"] != "no_task" for g in dispositions),
+        captured_games=sum(g["status"] == "captured" for g in dispositions),
         games=dispositions, exclusions=dict(exclusions), portfolios=values,
         coverage=("tracked_games_only; no later prices or inferred missing markets" if frozen_policy.get("recovered_checkpoints")
                   else "tracked_games_only; missing/untracked games cannot be reconstructed"),

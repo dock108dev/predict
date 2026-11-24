@@ -18,7 +18,9 @@ const facets = {
   evaluated:'Offers evaluated for EV', qualifying_best_venue:'Best venue tickets', qualifying_all_venues:'All venues tickets',
   observed_offers:'Games with a saved offer census', reference_gaps:'Games with reference exclusions',
   current_market_evidence:'Games with current frozen market evidence',
+  zero_offers:'Measured games with zero observed offers',
   zero_qualifiers:'Evaluated games with zero qualifying tickets',
+  result_ledger:'Sporting results for eligible occurrences',
   final:'Verified source final', provider_final:'Provider final evidence', result_pending:'Result pending',
   result_unresolved:'Result unresolved', provider_pending:'Provider result pending',
   provider_result_unresolved:'Provider result unresolved', conflicting:'Conflicting results',
@@ -27,6 +29,11 @@ const sourceFacets = new Set(['source_mens','expected','excluded','membership_un
   'no_market','identity_conflict','schedule_conflict','site_conflict','final','result_pending','result_unresolved','conflicting']);
 const offerFacets = new Set(['evaluated','qualifying_best_venue','qualifying_all_venues']);
 const paperFacets = new Set([...offerFacets, 'reconstructed']);
+const resultStates = {final:'Final', pending:'Pending', disputed:'Disputed', missing:'Missing'};
+const captureStates = {upcoming:'upcoming', due:'due', claimed:'in progress', missed:'missed', refused:'refused',
+  failed:'failed', no_task:'without a task', cancelled:'cancelled', superseded_by_reschedule:'superseded'};
+const gapClasses = {recoverable_engineering:'Recoverable engineering', external_source_limitation:'External source limitation',
+  irrecoverable_historical_loss:'Irrecoverable historical loss', future_event:'Future event'};
 
 export function coverageContext(query, fallbackDate) {
   return Object.fromEntries(Object.entries({
@@ -56,6 +63,7 @@ function dateLinks(query, to = coverageURL) {
   const group = node('div', undefined, 'workspace-links');
   for (const [date, title] of dates) {
     const params = date === query.get('date') ? query : new URLSearchParams({date});
+    if (params !== query && query.get('variant')) params.set('variant', query.get('variant'));
     const action = link(title, to(params), 'research-button');
     if (date === query.get('date')) action.setAttribute('aria-current', 'date');
     group.append(action);
@@ -85,29 +93,67 @@ function dateForm(query, path, key, value) {
   return form;
 }
 
-export function experimentCoverage(query, fallbackDate, run, isCurrent = () => true) {
+function versionsPicker(value, query, to) {
+  const root = node('div', undefined, 'workspace-panel');
+  const selected = query.get('run');
+  const context = new URLSearchParams(query);
+  context.delete('run');
+  context.delete('coverage_filter');
+  const actions = node('div', undefined, 'workspace-links workspace-variant');
+  const current = link('Current evidence', to(context), 'research-button');
+  if (!selected) current.setAttribute('aria-current', 'true');
+  actions.append(current);
+  const active = (value.runs || []).find(run => run.id === selected);
+  if (active) {
+    const saved = link(`Saved ${time(active.observed_at)}`, to(context, {run:active.id}), 'research-button');
+    saved.setAttribute('aria-current', 'true');
+    actions.append(saved);
+  }
+  root.append(actions);
+  if (value.runs?.length) {
+    const versions = node('details');
+    versions.append(node('summary', 'Saved experiment versions for this date'));
+    const list = node('ul');
+    for (const run of value.runs) {
+      const item = node('li');
+      const name = run.summary?.title || 'Paper run';
+      const action = link(`${name} · ${time(run.observed_at)} · ${run.id.slice(0, 12)}`, to(context, {run:run.id}));
+      if (run.id === selected) action.setAttribute('aria-current', 'true');
+      item.append(action);
+      list.append(item);
+    }
+    versions.append(list);
+    root.append(versions);
+  }
+  return root;
+}
+
+export function experimentCoverage(query, fallbackDate, run, isCurrent = () => true, summaryRead) {
   const context = new URLSearchParams({...coverageContext(query, fallbackDate), ...(run ? {date:run.date, run:run.id} : {})});
   const panel = node('section', undefined, 'workspace-panel workspace-card');
   panel.append(node('h2', 'Men’s Division I daily coverage'), dateLinks(context, researchURL));
   if (!run) panel.append(dateForm(context, '/research', 'section', 'experiments'));
   panel.append(link(`Open ${context.get('date')} coverage in Data`, coverageURL(context)));
-  if (run) {
+  if (run || query.get('scope') === 'mens-d1') {
     const status = node('p', 'Reading coverage denominators…');
     panel.append(status);
-    readDailyCoverage(context, {summary:true}).then(value => {
-      if (isCurrent() && value.coverage_summary) status.replaceWith(coverageSummary(value.coverage_summary, context));
+    (summaryRead || readDailyCoverage(context, {summary:true})).then(value => {
+      if (isCurrent() && value.coverage_summary) status.replaceWith(versionsPicker(value, context, researchURL),
+        coverageSummary(value.coverage_summary, context, value.analysis_run),
+        link('Open the missing-item ledger in Data', coverageURL(context) + '#mens-d1-missing'));
       else if (isCurrent()) status.remove();
     }).catch(error => { if (isCurrent()) status.textContent = error.message; });
   }
   return panel;
 }
 
-function coverageSummary(value, query) {
-  const {population, capture, markets, reference, trade} = value;
+function coverageSummary(value, query, analysisRun) {
+  const {population, capture, markets, reference, trade, results} = value;
   const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
   const tickets = trade.variants[variant];
   const denom = (n, d) => `${count(n)} of ${count(d)}`;
-  const scope = capture.population_basis === 'source' ? 'eligible source-slate games' : 'eligible provider-known games';
+  const scope = capture.population_basis === 'source' ? 'eligible source-slate games'
+    : capture.population_basis === 'provider_known' ? 'eligible provider-known games' : 'reconciled eligible occurrences';
   const sourceName = population.source_identity === 'college_basketball_data' ? 'CollegeBasketballData'
     : population.source_identity === 'sports_reference' ? 'Sports Reference' : 'Independent source';
   const retainedSlate = population.source_eligible_games == null ? '' :
@@ -116,24 +162,48 @@ function coverageSummary(value, query) {
     ? ` Official sources identify ${count(population.source_corroborated_additional_eligible)} additional D1 matchups with an unresolved participant in the dated receipt.` : '';
   const dateConflicts = population.source_official_eastern_date_conflicts
     ? ` Official starts cross the Eastern date boundary for ${count(population.source_official_eastern_date_conflicts)} ${population.source_official_eastern_date_conflicts === 1 ? 'source row' : 'source rows'}.` : '';
+  const populationGaps = [[population.source_only_games, 'source only'], [population.provider_only_games, 'provider only'],
+    [population.unresolved_membership_games, 'membership unresolved'], [population.schedule_disputes, 'schedule disputes'],
+    [population.date_disputes, 'Eastern date disputes']]
+    .filter(([n]) => n != null).map(([n, name]) => `${count(n)} ${name}`).join(' · ');
+  const currentCaptures = Object.entries(captureStates).filter(([key]) => capture.current_states?.[key])
+    .map(([key, name]) => `${count(capture.current_states[key])} ${name}`).join(' · ');
+  const noOffers = [[capture.zero_offer_games, 'with zero observed offers'], [capture.zero_qualifier_games, 'with zero qualifying tickets']]
+    .filter(([n]) => n != null).map(([n, name]) => `${count(n)} ${name}`).join(' · ');
+  const marketStates = Object.entries(markets.saved_retrieval_states || {}).filter(([,n]) => n > 0)
+    .map(([key,n]) => `${count(n)} ${label(key)}`).join(' · ');
+  const traversal = Object.entries(markets.traversal_states || {}).filter(([,n]) => n > 0)
+    .map(([key,n]) => `${count(n)} ${label(key)}`).join(' · ');
+  const currentMarkets = markets.current_evidence_games == null ? ''
+    : `${count(markets.current_evidence_games)} current frozen games with market evidence`;
+  const referenceCauses = Object.entries(reference.reference_exclusions || {}).filter(([,n]) => n > 0)
+    .map(([key,n]) => `${count(n)} ${label(key.replace(/^reference_/, ''))}`).join(' · ');
+  const analysis = analysisRun && !query.has('run') ? `Latest saved analysis · ${time(analysisRun.observed_at)}` : undefined;
+  const savedCaptureClock = capture.saved_at && `Saved captures as of ${time(capture.saved_at)}`;
   const entries = [
     ['Population coverage', (population.expected_games == null ? `${count(population.provider_known_games)} provider-known · complete expected slate unknown.`
       : `${denom(population.matched_games, population.expected_games)} source-declared eligible games linked to the odds provider.`) + retainedSlate + additional + dateConflicts,
       population.observed_at || population.as_of, population.revision ? 'Source games' : 'Provider-known games',
-      population.revision ? 'expected' : 'provider_scope_eligible'],
+      population.revision ? 'expected' : 'provider_scope_eligible', populationGaps],
     ['Capture coverage', `${denom(capture.current_frozen, capture.current_denominator)} ${scope} frozen in the current ledger. ` +
-      (capture.saved_denominator == null ? 'No saved run selected.' : `Saved run has ${denom(capture.saved_frozen + capture.saved_reconstructed, capture.saved_denominator)} with evidence (${count(capture.saved_frozen)} frozen, ${count(capture.saved_reconstructed)} reconstructed).`),
-      capture.as_of, 'Original capture tasks', 'frozen', capture.saved_at && `Saved run as of ${time(capture.saved_at)}`],
-    ['Returned-market coverage', markets.evidence_games == null ? 'No saved run selected.' :
-      `${denom(markets.observed_offer_games, markets.evidence_games)} saved evidence-bearing games have a normalized offer count (${count(markets.observed_offers)} offers). Venue-wide market denominator is unknown.`,
-      markets.as_of, 'Game market census', 'observed_offers', `${count(markets.current_evidence_games)} games with current frozen evidence`],
+      (capture.known_before_target == null ? '' : `${count(capture.known_before_target)} were known before their target. `) +
+      (capture.saved_denominator == null ? '' : `Saved analysis has ${denom(capture.saved_frozen + capture.saved_reconstructed, capture.saved_denominator)} with evidence (${count(capture.saved_frozen)} frozen, ${count(capture.saved_reconstructed)} reconstructed).`),
+      capture.as_of, 'Original capture tasks', 'frozen', [currentCaptures, noOffers, savedCaptureClock].filter(Boolean).join(' · ')],
+    ['Returned-market coverage', (markets.evidence_games == null ? '' :
+      `${denom(markets.observed_offer_games, markets.evidence_games)} saved evidence-bearing games have a normalized offer count (${count(markets.observed_offers)} offers). `) +
+      'Venue-wide market denominator is unknown.',
+      markets.as_of || markets.current_as_of, 'Game market census', 'observed_offers',
+      [marketStates, traversal && `Pagination · ${traversal}`, currentMarkets, analysis].filter(Boolean).join(' · ')],
     ['Reference coverage', reference.observed_offers == null ? 'No saved offer denominator.' :
       `${denom(reference.evaluated_offers, reference.observed_offers)} observed offers evaluated. ${count(reference.reference_gaps)} lacked required reference evidence.`,
-      reference.as_of, 'Reference exclusions', 'reference_gaps'],
+      reference.as_of, 'Reference exclusions', 'reference_gaps', referenceCauses],
     ['Trade-evidence quality', tickets ? `${denom(tickets.quote_ages_known, tickets.tickets)} ${variant === 'all_venues' ? 'All venues' : 'Best venue'} tickets have a known quote age. ` +
-      `${count(tickets.verified_actual_fees)} have verified actual fees and ${count(tickets.verified_executable_size)} have verified executable size.` : 'No saved ticket denominator.',
-      trade.as_of, 'Saved paper tickets', variant === 'all_venues' ? 'qualifying_all_venues' : 'qualifying_best_venue'],
+      `${count(tickets.verified_actual_fees)} have verified actual fees and ${count(tickets.verified_executable_size)} have verified executable size. Venue-native identity is shown per ticket when available. Paper turnover uses modeled size.` : 'No saved ticket denominator.',
+      trade.as_of, 'Saved paper tickets', variant === 'all_venues' ? 'qualifying_all_venues' : 'qualifying_best_venue', analysis],
   ];
+  if (results) entries.push(['Sporting results', `${count(results.denominator)} eligible occurrences. ` +
+    Object.entries(resultStates).map(([key, name]) => `${count(results.states?.[key] ?? 0)} ${name.toLowerCase()}`).join(' · '),
+    results.as_of, 'Sporting result evidence', 'result_ledger']);
   const grid = node('div', undefined, 'workspace-grid mens-d1-summary');
   const context = new URLSearchParams(query);
   context.delete('coverage_game');
@@ -163,6 +233,10 @@ function observed(at, now) {
   return at ? `${time(at)} · ${age(now, at)}` : 'Not recorded';
 }
 
+function beforeTarget(known) {
+  return known === true ? 'Recorded before the T−10 target' : known === false ? 'No retained observation before T−10' : 'Unknown';
+}
+
 function teams(row) {
   const sides = Array.isArray(row.teams) ? row.teams : Object.values(row.teams || {});
   return sides.map(team => team.name || team.label || team.id || team).filter(team => typeof team === 'string');
@@ -170,6 +244,10 @@ function teams(row) {
 
 function title(row) {
   return row.title || teams(row).join(' vs ') || row.provider_event_id || row.source_game_id;
+}
+
+function startLabel(row) {
+  return row.occurrence_schedule ? time(row.occurrence_schedule.starts_at) : time(row.schedule?.starts_at || row.starts_at);
 }
 
 function resultLabel(row) {
@@ -189,6 +267,53 @@ function resultLabel(row) {
 
 function addReceipt(root, name, id) {
   if (id) root.append(link(name, endpoint + '/receipts/' + encodeURIComponent(id), 'research-button'));
+}
+
+function missingLedger(items, query, summary) {
+  const section = node('details', undefined, 'workspace-panel');
+  if (summary) {
+    section.id = 'mens-d1-missing';
+    section.open = location.hash === '#mens-d1-missing';
+  }
+  section.append(node('summary', `${summary ? 'Missing-item ledger' : 'Market and offer evidence gaps'} · ${count(items.length)} items`));
+  if (!items.length) {
+    section.append(node('p', 'No gaps were recorded for this evidence selection. Unobserved inventory remains unknown.'));
+    return section;
+  }
+  const searchLabel = node('label', 'Filter gaps by game, venue, market, line or cause ');
+  const search = node('input');
+  search.type = 'search';
+  searchLabel.append(search);
+  const status = node('p', undefined, 'workspace-clocks');
+  status.setAttribute('role', 'status');
+  const results = node('div');
+  const previous = node('button', 'Previous gaps'), next = node('button', 'Next gaps');
+  const pageSize = 25;
+  let offset = 0;
+  section.append(searchLabel, status, results, previous, next);
+  function render() {
+    const term = search.value.trim().toLowerCase();
+    const rows = items.filter(row => !term || Object.values(row)
+      .some(value => value != null && label(value).toLowerCase().includes(term)));
+    const page = rows.slice(offset, offset + pageSize);
+    status.textContent = rows.length ? `${count(offset + 1)}–${count(offset + page.length)} of ${count(rows.length)} gaps` : 'No matching gaps.';
+    previous.disabled = offset === 0;
+    next.disabled = offset + pageSize >= rows.length;
+    results.replaceChildren();
+    if (!page.length) return;
+    results.append(table(['Affected evidence', 'What is missing', 'Consequence', 'Cause and classification', 'Next remedy'], page.map(row => {
+      const target = [row.venue, row.market, row.outcome, row.line].filter(value => value != null).map(label).join(' · ');
+      const affected = row.game_title || row.game_id || (target ? 'Market' : 'Dated slate');
+      const scope = stack(affected, target);
+      if (summary && row.game_id) scope.firstChild.replaceChildren(link(affected, coverageURL(query, {coverage_game:row.game_id})));
+      return [scope, row.evidence, row.consequence, stack(row.cause || 'Unknown', gapClasses[row.classification] || state(row.classification)), row.remedy];
+    })));
+  }
+  search.oninput = () => { offset = 0; render(); };
+  previous.onclick = () => { offset = Math.max(0, offset - pageSize); render(); };
+  next.onclick = () => { offset += pageSize; render(); };
+  render();
+  return section;
 }
 
 function censusRows(value) {
@@ -254,7 +379,8 @@ function marketCensus(row, value) {
   let sequence = 0;
   for (const [version, title] of variants) {
     const request = new URLSearchParams({date:value.date, game:row.id, version});
-    if (value.run) request.set('run', value.run.id);
+    const run = version === 'saved' ? value.analysis_run || value.run : value.run;
+    if (run) request.set('run', run.id);
     const url = `${endpoint}/market-census?${request}`;
     const inspect = node('button', title);
     inspect.onclick = async () => {
@@ -282,6 +408,7 @@ function marketCensus(row, value) {
             original_response:census.original_response, evidence_revision:census.evidence_revision}), censusRows(census));
         if (census.original_response?.state === 'retained')
           result.append(link('Download original market response', url + '&raw=1'));
+        if (census.missing_items) result.append(missingLedger(census.missing_items));
       } catch (error) {
         if (selected === sequence) status.textContent = error.message;
       }
@@ -293,18 +420,27 @@ function marketCensus(row, value) {
 
 function gameDetail(row, value, query) {
   const schedule = row.schedule || {}, result = row.result || {}, capture = row.capture || {}, saved = row.saved || {};
+  const occurrence = row.occurrence_schedule, records = row.source_records || [];
+  const observation = row.observation || {};
   const root = node('section', undefined, 'workspace-card workspace-panel');
   root.append(node('h3', title(row)), pairs({
+    ...(row.occurrence_id ? {'Occurrence ID':row.occurrence_id, 'Reconciled Eastern game date':row.eastern_game_date,
+      'Date applicability':state(row.day_applicability),
+      'Occurrence schedule disposition':state(occurrence?.state), 'Reconciled start':startLabel(row)} : {}),
     'Source game':row.source_game_id, 'Odds provider game':row.provider_event_id,
     'Source scope':state(row.scope_state), 'Scope reason':row.scope_reason,
     'Provider population membership':row.provider_membership?.state, 'Provider membership reason':row.provider_membership?.reason,
     'Saved scope':row.retained_scope?.state, 'Saved scope reason':row.retained_scope?.reason,
     'Match':state(row.match_state), 'Match reason':row.match_reason,
-    'Scheduled start':time(schedule.starts_at || row.starts_at), 'Source date':schedule.source_date,
+    'Retained source start':time(schedule.starts_at), 'Source date':schedule.source_date,
     'Source time':schedule.source_time, 'Source timezone':schedule.source_timezone, 'Venue/site':schedule.site,
     'Schedule status':state(schedule.status), 'Schedule observed':observed(schedule.observed_at, value.as_of),
-    'Retained source observation before T−10':row.known_before_tminus10 === true ? 'Recorded before the T−10 target'
-      : row.known_before_tminus10 === false ? 'No observation before the T−10 target in this source ledger' : 'Unknown',
+    'First source observation':time(observation.first_source_observed_at),
+    'First odds-provider observation':time(observation.first_provider_observed_at || capture.first_provider_observed_at),
+    'Retained source clock before T−10':beforeTarget(observation.source_known_before_tminus10 ?? row.known_before_tminus10),
+    'Source participant identities before T−10':beforeTarget(observation.source_identity_known_before_tminus10),
+    'Retained odds-provider observation before T−10':beforeTarget(observation.provider_known_before_tminus10),
+    'Retained official corroboration before T−10':beforeTarget(observation.official_known_before_tminus10),
     'Schedule published/updated':observed(schedule.published_at, value.as_of), 'Schedule recorded':time(schedule.recorded_at),
     'Schedule source':schedule.source_url, 'Sporting result':resultLabel(row), 'Result reason':row.result_reason,
     'Provider result follow-up':time(row.provider_result_target_at),
@@ -318,7 +454,7 @@ function gameDetail(row, value, query) {
   if (row.official_source_evidence?.length) {
     root.append(node('h4', 'Official school or conference evidence'));
     for (const evidence of row.official_source_evidence) {
-      const participants = evidence.teams.map(team => team.score == null ? team.name : `${team.name} ${team.score}`).join(' · ');
+      const participants = (evidence.teams || []).map(team => team.score == null ? team.name : `${team.name} ${team.score}`).join(' · ');
       const status = evidence.status === 'final' ? 'Sporting final' : 'Scheduled';
       const start = evidence.scheduled_start ? ` · ${time(evidence.scheduled_start)}` : '';
       const dateConflict = evidence.eastern_date_disagreement ? ` · Eastern game date ${evidence.eastern_game_date} differs from this receipt` : '';
@@ -338,6 +474,24 @@ function gameDetail(row, value, query) {
       endpoint + '/provider-results/' + encodeURIComponent(revision.id), 'research-button'));
   }
   root.append(sources);
+  if (records.length) {
+    const history = node('details');
+    history.append(node('summary', `Source records across revisions · ${count(records.length)}`),
+      table(['Source record', 'Original clock and revision date', 'Normalized start', 'Observed', 'Receipt'], records.map(record => {
+        const clock = record.schedule || {};
+        return [
+          stack(state(record.source), [state(record.kind), record.source_game_id].filter(Boolean).join(' · ')),
+          [clock.source_date, clock.source_time, clock.source_timezone,
+            record.revision_eastern_date && `${record.revision_eastern_date} Eastern`].filter(Boolean).join(' · '),
+          time(clock.starts_at), time(record.observed_at), record.receipt_id
+            ? link('Download receipt', endpoint + '/receipts/' + encodeURIComponent(record.receipt_id)) : 'Unavailable',
+        ];
+      })), details('Original source fields and participants', records));
+    root.append(history);
+  }
+  if (row.provider_evidence || occurrence) root.append(details('Schedule reconciliation, original clocks and odds-provider revisions', {
+    occurrence_schedule:occurrence, odds_provider:row.provider_evidence,
+  }));
   if (row.teams || row.retained_scope?.teams) root.append(details('Participant IDs and membership evidence', {
     source:row.teams, saved:row.retained_scope?.teams,
   }));
@@ -372,15 +526,17 @@ function gameDetail(row, value, query) {
     row.checkpoint_inspect + '&' + new URLSearchParams(coverageContext(query))));
   if (row.checkpoint_export) captureLinks.append(link('Export checkpoint records', row.checkpoint_export));
   if (saved.evidence_export) captureLinks.append(link('Export this game’s saved run evidence', saved.evidence_export));
-  if (saved.checkpoint_id) captureLinks.append(link('Original odds response, if retained', saved.original_response_export));
+  if (saved.original_response_export) captureLinks.append(link('Original odds response, if retained', saved.original_response_export));
   root.append(captureLinks);
   const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
   const tickets = row.ticket_clocks?.[variant] || [];
-  if (tickets.length) {
-    const context = new URLSearchParams({...coverageContext(query), run:value.run.id, variant});
+  const analysis = value.analysis_run || value.run;
+  if (tickets.length && analysis) {
+    const context = new URLSearchParams({...coverageContext(query), run:analysis.id, variant});
+    const dataContext = new URLSearchParams(query);
     const other = variant === 'all_venues' ? 'best_venue' : 'all_venues';
     root.append(node('h4', variant === 'all_venues' ? 'All venues quote clocks' : 'Best venue quote clocks'),
-      link(other === 'all_venues' ? 'Show all venues' : 'Show best venue', coverageURL(context, {variant:other})),
+      link(other === 'all_venues' ? 'Show all venues' : 'Show best venue', coverageURL(dataContext, {variant:other})),
       table(['Saved ticket', 'Quote source at receipt', 'Quote receipt'], tickets.map(ticket => [
         link(`${ticket.label} · ${state(ticket.venue)}`, researchURL(context, {ticket:ticket.id})),
         observed(ticket.times?.source_at, ticket.times?.received_at), time(ticket.times?.received_at),
@@ -397,7 +553,7 @@ function coverageCounters(value, query, filter, keys) {
     const title = facets[key];
     const fromSource = sourceFacets.has(key), fromRun = paperFacets.has(key);
     if (key.startsWith('retained_') && !value.run_population) continue;
-    const measured = !(fromSource && !value.population_revision || fromRun && !value.run);
+    const measured = !(fromSource && !value.population_revision || fromRun && !(value.analysis_run || value.run));
     const group = node('div'), term = node('dt', title), total = node('dd');
     const selection = new URLSearchParams(query);
     selection.delete('coverage_game');
@@ -424,10 +580,6 @@ export async function renderCoverage(root, incoming, isCurrent) {
   try {
     const value = await readDailyCoverage(query);
     if (!isCurrent()) return;
-    if (value.run) {
-      request.set('run', value.run.id);
-      query.set('run', value.run.id);
-    }
     const canonical = coverageURL(query);
     if (location.pathname + location.search !== canonical) {
       history.replaceState(null, '', canonical + location.hash);
@@ -436,16 +588,19 @@ export async function renderCoverage(root, incoming, isCurrent) {
     status.textContent = `As of ${time(value.as_of)} · Schedule source ${state(value.source_state)}`;
     const message = value.source_state_reason || value.source_reason;
     if (message) root.append(node('p', state(message), 'workspace-notice'));
-    if (value.coverage_summary) root.append(coverageSummary(value.coverage_summary, query));
+    root.append(versionsPicker(value, query, coverageURL));
+    if (value.coverage_summary) root.append(coverageSummary(value.coverage_summary, query, value.analysis_run));
     if (!value.population_revision) root.append(node('p', 'The source-declared D1 slate is unverified. Retained odds-provider games and earlier saved runs provide partial coverage.'));
     else root.append(node('p', `${value.source_mode === 'retrospective_public_export' ? 'Retrospective source schedule' : 'Retained source schedule'} for ${value.date}, observed ${observed(value.source_observed_at, value.as_of)}. Membership, timing and provider disagreements are listed by game.`));
     if (value.run_population?.kind === 'retained_original_run') root.append(node('p', 'This retrospective scope correction uses membership evidence for games in the original saved run. Source-declared counts depend on the daily schedule receipt.', 'workspace-notice'));
     if (value.run_population?.kind === 'retained_provider_snapshot') root.append(node('p', 'This saved provider snapshot uses the odds-provider games and season membership known when it was saved. Its saved expected-slate denominator is unknown.', 'workspace-notice'));
     if (!value.population_revision && !value.run_population) root.append(node('p', 'Capture counts use retained provider games with evidence of D1 membership for both teams.'));
     const actions = node('div', undefined, 'workspace-links');
-    actions.append(link(value.run ? 'Open selected experiment' : 'Open Experiments', researchURL(query), 'research-button'));
+    actions.append(link(value.run ? 'Open selected experiment' : 'Open current analysis in Research', researchURL(query), 'research-button'));
     request.set('export', '1');
-    actions.append(link('Export coverage and reconciliation', endpoint + '?' + request, 'research-button'));
+    actions.append(link('Export dated game and coverage ledger', endpoint + '?' + request, 'research-button'));
+    const analysis = value.analysis_run || value.run;
+    if (analysis) actions.append(link('Export dated offer ledger', '/api/research/workspace/runs/' + encodeURIComponent(analysis.id) + '/offers', 'research-button'));
     addReceipt(actions, value.source_mode === 'retrospective_public_export' ? 'Source schedule receipt metadata'
       : 'Original daily schedule receipt', value.source_receipt_id);
     if (value.last_source_attempt?.id !== value.source_receipt_id) addReceipt(actions, 'Latest source attempt receipt', value.last_source_attempt?.id);
@@ -456,19 +611,7 @@ export async function renderCoverage(root, incoming, isCurrent) {
       for (const revision of value.source_revisions.slice(1)) addReceipt(revisions, `Schedule read ${time(revision.observed_at)}`, revision.receipt_id);
       root.append(revisions);
     }
-    if (value.runs.length) {
-      const versions = node('details');
-      versions.append(node('summary', 'Saved experiment versions for this date'));
-      const links = node('ul');
-      for (const run of value.runs) {
-        const item = node('li');
-        item.append(link(run.summary.title, coverageURL(query, {run:run.id})),
-          document.createTextNode(' · '), link('Open run in Research', researchURL(query, {run:run.id})));
-        links.append(item);
-      }
-      versions.append(links);
-      root.append(versions);
-    }
+    if (value.missing_items) root.append(missingLedger(value.missing_items, query, true));
     const filter = query.get('coverage_filter');
     const primary = ['expected', 'matched', value.population_revision ? 'source_only' : 'provider_scope_eligible',
       'frozen', 'reconstructed', 'missed', value.population_revision ? 'final' : 'provider_final'];
@@ -478,7 +621,7 @@ export async function renderCoverage(root, incoming, isCurrent) {
       Object.keys(facets).filter(key => !primary.includes(key))));
     root.append(coverageCounters(value, query, filter, primary), more);
     const selection = query.get('coverage_game');
-    const row = selection && value.games.find(row => row.id === selection);
+    const row = selection && value.games.find(row => row.id === selection || row.legacy_ids?.includes(selection));
     if (row) root.append(gameDetail(row, value, query));
     else if (selection) root.append(node('p', 'The selected game is unavailable in this retained view.', 'workspace-notice'));
     const visible = Object.hasOwn(facets, filter) ? value.games.filter(row => row.facets.includes(filter)) : value.games;
@@ -490,7 +633,7 @@ export async function renderCoverage(root, incoming, isCurrent) {
     }
     if (!visible.length) root.append(node('p', 'No retained game rows for this selection.'));
     else root.append(table(['Game/start', 'Scope', 'Odds match', 'T−10 task and evidence', 'Saved EV / paper tickets', 'Sporting result'], visible.map(row => [
-      link(`${title(row)} · ${time(row.schedule?.starts_at || row.starts_at)}`, coverageURL(query, {coverage_game:row.id})),
+      link(`${title(row)} · ${startLabel(row)}`, coverageURL(query, {coverage_game:row.id})),
       stack(state(row.scope_state || row.retained_scope?.state || row.provider_membership?.state),
         state(row.scope_reason || row.retained_scope?.reason || row.provider_membership?.reason)),
       stack(state(row.match_state), row.match_reason && state(row.match_reason)),
@@ -498,6 +641,7 @@ export async function renderCoverage(root, incoming, isCurrent) {
       row.saved?.qualifying ? `${count(row.saved.evaluated_offers)} EV evaluated · ${count(row.saved.qualifying.best_venue)} best, ${count(row.saved.qualifying.all_venues)} all` : 'Unavailable',
       stack(resultLabel(row), row.result_reason && state(row.result_reason)),
     ])));
+    if (location.hash === '#mens-d1-missing') root.querySelector(location.hash)?.scrollIntoView();
   } catch (error) {
     if (isCurrent()) status.textContent = error.message;
   }

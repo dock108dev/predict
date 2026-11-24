@@ -270,6 +270,50 @@ class MensD1CoverageSQL(LatestBoardFixture):
             dated_game = next(game for game in shifted['games'] if game['source_game_id'] == 'cbbd:120')
             self.assertEqual(dated_game['official_source_evidence'][0]['eastern_game_date'], '2026-11-25')
             self.assertEqual(dated_game['schedule']['source_date'], str(DAY))
+
+            # The newer authenticated revision preserves the original public-export evidence and its citations.
+            api_at = coverage.utc()
+            account = cbbd.Account(api_at - timedelta(days=1), api_at + timedelta(days=1), 1000, 999,
+                                   'Free', 'fixture-cbbd-key')
+            jobs._job(db, DAY, 'schedule_authenticated_fixture', 'schedule', api_at,
+                      api_at + timedelta(hours=1), source_id=jobs.CBBD)
+            job, attempt = jobs.claim(db, api_at, account, source_id=jobs.CBBD)
+            parsed = db.execute('SELECT facts FROM public.mens_d1_revision WHERE id=%s',
+                                (value['source_revisions'][0]['id'],)).fetchone()['facts']
+            api_receipt = evidence(attempt['request_url'], api_at, body=b'[]')
+            jobs.finish(db, job, attempt, api_receipt.received_at, receipt=api_receipt, rows=parsed,
+                        membership_version=load_membership(DAY).version)
+            midnight_start = '2026-11-25T05:00:00Z'
+            frame = dict(starts_at=midnight_start, received_at=api_at.isoformat(), receipt_sha256='b' * 64,
+                         event_context=dict(league='NCAAB', phase='pregame', status={}, teams=dict(
+                             home=dict(id='SEATTLE_NCAAB', name='Seattle University'),
+                             away=dict(id='LOYOLA_CHICAGO_NCAAB', name='Loyola Chicago'))))
+            db.execute("""INSERT INTO public.sgo_event_evidence(kind,event_id,received_order,expires_at,payload_bytes,facts)
+                VALUES ('frame','midnight-provider',1,%s,1,%s)""", (stamp(midnight_start) + timedelta(days=1), Jsonb(frame)))
+            as_of = max(coverage.utc(), api_receipt.received_at)
+            coverage_today = coverage.read_coverage(db, DAY, at=as_of)
+            self.assertEqual(coverage_today['source_revisions'][0]['parser_version'], cbbd.PARSER_VERSION)
+            ledger = {row['source_game_id']: row for row in coverage_today['occurrences'] if row.get('source_game_id')}
+            self.assertNotIn('cbbd:121', ledger)
+            self.assertIn('cbbd:121', {row['source_game_id'] for row in ledger['cbbd:120']['source_records']})
+            self.assertEqual(ledger['cbbd:120']['day_applicability'], 'other_date')
+            self.assertEqual(ledger['cbbd:120']['provider_event_id'], 'midnight-provider')
+            self.assertFalse(ledger['cbbd:120']['paper_eligible'])
+            self.assertEqual(ledger['cbbd:120']['result_state'], 'final')
+            self.assertEqual(len(ledger['cbbd:120']['official_source_evidence']), 1)
+            self.assertEqual(ledger['cbbd:123']['scope_state'], 'eligible')
+            self.assertEqual(ledger['cbbd:123']['result_state'], 'final')
+            self.assertEqual(ledger['cbbd:123']['teams'][1]['name'], 'Duke')
+            self.assertIsNone(ledger['cbbd:123']['observation']['known_before_tminus10'])
+            self.assertIsNone(ledger['cbbd:123']['observation']['source_identity_known_at'])
+            tomorrow = coverage.read_coverage(db, DAY + timedelta(days=1), at=as_of)
+            occurrence, = [row for row in tomorrow['occurrences'] if row.get('provider_event_id') == 'midnight-provider']
+            self.assertEqual(occurrence['occurrence_id'], ledger['cbbd:120']['occurrence_id'])
+            self.assertTrue(occurrence['paper_eligible'])
+            self.assertEqual(occurrence['eastern_game_date'], '2026-11-25')
+            self.assertEqual(coverage.read_reconciled_population(db, DAY, at=as_of),
+                             coverage.read_reconciled_population(db, DAY, at=as_of + timedelta(seconds=1)))
+
             midnight['games'][0]['scheduled_start'] = '2026-11-25T05:01:00Z'
             with self.assertRaisesRegex(ValueError, 'official_game_cross_date_identity_unverified'):
                 public_export.attach_corroborations(db, json.dumps(midnight).encode())

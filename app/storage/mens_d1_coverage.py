@@ -409,6 +409,7 @@ def _provider_results(db, providers, *, at):
     for provider in providers.values():
         identity = provider.pop('outcome_id', None)
         roots = []
+        labels = {team['canonical_id']: team for team in provider['teams'] if team['canonical_id']}
         while identity and identity in index and len(roots) < 8:
             row = index[identity]
             item = _value(row, index)
@@ -420,8 +421,11 @@ def _provider_results(db, providers, *, at):
                     observed_role = source.get(role)
                     roles[role] = (provider[role] if not observed_role or
                                    observed_role == provider['native_role_witness'][role] else observed_role)
-                scores = [dict(role=role, canonical_id=roles[role], score=result.get(role + '_score'))
-                          for role in roles]
+                scores = []
+                for role, canonical in roles.items():
+                    team = labels.get(canonical, {})
+                    scores.append(dict(role=role, canonical_id=canonical, id=team.get('id') or canonical,
+                                       name=team.get('name'), score=result.get(role + '_score')))
                 roots.append(dict(id=identity, source=result['source'], status='final' if result['final'] else 'unresolved',
                     published_at=result.get('published_at'), observed_at=result.get('observed_at'),
                     recorded_at=clock(row['recorded_at']), receipt_sha256=result.get('receipt_sha256'),
@@ -543,23 +547,26 @@ def _daily_source(db):
     return primary, (cbbd, sports_reference)
 
 
-def _official_corroborations(db, slate, at):
+def _official_corroborations(db, slates, at):
     evidence = {}
-    for result in db.execute("""SELECT id,recorded_at,facts FROM public.mens_d1_binding
-        WHERE schedule_revision_id=%s AND recorded_at<=%s AND facts->>'kind'=%s
-        ORDER BY recorded_at,id""", (slate['id'], at, OFFICIAL_CORROBORATION_VERSION)):
+    for result in db.execute("""SELECT id,schedule_revision_id,recorded_at,facts FROM public.mens_d1_binding
+        WHERE schedule_revision_id=ANY(%s) AND recorded_at<=%s AND facts->>'kind'=%s
+          AND (facts->>'observed_at')::timestamptz<=%s
+        ORDER BY recorded_at,id""", ([slate['id'] for slate in slates], at, OFFICIAL_CORROBORATION_VERSION, at)):
         facts = result['facts']
         evidence.setdefault(facts['source_game_id'], []).append(dict(facts, id=result['id'],
-            schedule_revision_id=slate['id'], recorded_at=clock(result['recorded_at'])))
+            schedule_revision_id=result['schedule_revision_id'], recorded_at=clock(result['recorded_at'])))
     return evidence
 
 
 def read_coverage(db, game_date, *, at=None):
+    from .mens_d1_occurrences import occurrence_ledger
+
     day, at = source_date(game_date), at or utc()
     slates = schedule_revisions(db, day, at=at, source=None)
     source, _ = _daily_source(db)
     slate_source = slates[0]['source'] if slates else source['source']
-    providers = _providers(db, day, at, neighbors=bool(slates))
+    providers = _providers(db, day, at, neighbors=True)
     _provider_results(db, providers, at=at)
     games = _bindings(slates[0], slates[1:], providers) if slates else []
     population = _population(slates[0], games, providers) if slates else None
@@ -568,7 +575,7 @@ def read_coverage(db, game_date, *, at=None):
                            (population['evidence_id'], at)).fetchone()
         population['binding_revision_id'] = saved['id'] if saved else None
     result_rows = _result_rows(db, day, at, source=None)
-    official = _official_corroborations(db, slates[0], at) if slates else {}
+    official = _official_corroborations(db, slates, at) if slates else {}
     eligible_pairs = {_pair(game['teams'], 'canonical_id') for game in games if game['scope_state'] == 'eligible'}
     corroborated_pairs = set()
     date_conflicts = 0
@@ -617,13 +624,14 @@ def read_coverage(db, game_date, *, at=None):
     from app.collection.mens_d1_public_export import PARSER_VERSION as EXPORT_PARSER
     source_mode = ('retrospective_public_export' if slates and slates[0]['parser_version'] == EXPORT_PARSER
                    else 'daily_source')
+    occurrences = occurrence_ledger(db, day, at, providers)
     return dict(date=str(day), scope=SCOPE, timezone=EASTERN.key, as_of=clock(at.astimezone(EASTERN)),
         source=slate_source, source_state=state, source_state_reason=reason, population=population,
         source_url=source_url, source_mode=source_mode,
         expected_games=population['expected_games'] if population else None,
         population_revision=population['revision'] if population else None,
         membership_version=population['membership_version'] if population else None,
-        games=games, provider_only=provider_only, result_only=result_only,
+        games=games, provider_only=provider_only, result_only=result_only, occurrences=occurrences,
         source_observed_at=population['observed_at'] if population else None,
         source_receipt_id=slates[0]['receipt_id'] if slates else None,
         source_revisions=[_reference(revision, {}) for revision in slates],
@@ -648,6 +656,14 @@ def read_coverage(db, game_date, *, at=None):
             provider_matches=matches['matched'] + matches['no_market'] if slates else None,
             provider_only=len(provider_only), matches=dict(matches), results=dict(results)),
         provider_requests=0)
+
+
+def read_reconciled_population(db, game_date, *, at=None):
+    from .mens_d1_occurrences import reconciled_population
+
+    day, at = source_date(game_date), at or utc()
+    providers = _providers(db, day, at, neighbors=True)
+    return reconciled_population(db, day, at, providers)
 
 
 def read_status(db, *, at=None):

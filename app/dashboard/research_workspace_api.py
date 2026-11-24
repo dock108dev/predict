@@ -31,6 +31,7 @@ def _identity(value):
 
 def mount(app):
     gate = asyncio.Semaphore(2)
+    dated_export = asyncio.Lock()
     jobs = {}
     active = None
 
@@ -69,6 +70,14 @@ def mount(app):
         identity = _identity(request.match_info["run_id"])
         value = await work(workspace.run_detail, identity, export=bool(query))
         return _response(value, filename=f'predict-research-{value["run"]["date"]}-{identity[:12]}.json' if query else None)
+
+    async def offers(request):
+        if request.query:
+            raise PublicRequestError("The saved offer export takes no filters.")
+        identity = _identity(request.match_info["run_id"])
+        async with dated_export:
+            value = await work(workspace.offer_export, identity, timeout=None)
+        return _response(value, filename=f'predict-mens-d1-offers-{value["date"]}-{identity[:12]}.json')
 
     async def replay(request):
         nonlocal active
@@ -152,6 +161,7 @@ def mount(app):
     app.router.add_post(BASE + "/runs", replay)
     app.router.add_get(BASE + "/mens-d1-jobs/{job_id}", replay_status)
     app.router.add_get(BASE + "/runs/{run_id}", run)
+    app.router.add_get(BASE + "/runs/{run_id}/offers", offers)
     app.router.add_get(BASE + "/runs/{run_id}/tickets/{ticket_id}", ticket)
     app.router.add_get(BASE + "/runs/{run_id}/evidence/{game_id}", evidence)
     app.on_cleanup.append(drain_jobs)

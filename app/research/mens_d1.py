@@ -10,15 +10,20 @@ SCOPE_VERSION = "mens-d1-vs-d1-1"
 DAILY = "mens-d1-daily"
 RECOVERY = "retrospective_mens_d1_recovery"
 DAILY_DESIGNATION = "mens_d1_daily"
+RECONCILED = "mens_d1_reconciled_occurrences"
 RETAINED = "mens_d1_retained_provider_snapshot"
 ORIGINAL_RUN = "85dd517e0f454701f281c0ada636607d738f6ed5538a2801dc8ad00f69ed40bb"
+
+
+def in_paper_cohort(row):
+    return row["scope_state"] == "eligible" and row.get("paper_eligible", True)
 
 
 def template(parent):
     return dict(parent, id=DAILY, version=DAILY, supersedes=parent["version"],
                 title="Men’s D1 daily T−10 opportunities", designation=DAILY_DESIGNATION,
                 question="Which paper opportunities qualify for verified men’s D1 versus D1 games on this Eastern date?",
-                registration="A verified dated slate and reviewed participant bindings are required.",
+                registration="Dated occurrence evidence establishes which games can be examined. The full slate may be unknown.",
                 policy=dict(parent["policy"], scope=SCOPE, scope_version=SCOPE_VERSION, defer_results=True))
 
 
@@ -104,13 +109,10 @@ def replay_retained(db, day, policy, population, original):
 
 
 def daily_population(db, day):
-    from app.storage.mens_d1_coverage import read_population
+    from app.storage.mens_d1_coverage import read_reconciled_population
 
-    value = read_population(db, date.fromisoformat(day))
-    if value is None:
-        return None
-    kind = "verified_daily_schedule" if value.get("expected_games") is not None else "observed_daily_schedule"
-    return dict(value, kind=kind)
+    value = read_reconciled_population(db, date.fromisoformat(day))
+    return dict(value, kind="reconciled_occurrences") if value and value["games"] else None
 
 
 def retained_provider_population(db, day):
@@ -143,7 +145,7 @@ def daily_recovery(db, day, population):
         return {}
     prior = {game["game_id"]: game for game in record["games"] if game["status"] == "reconstructed"}
     providers = [row["provider_event_id"] for row in population["games"]
-                 if row["scope_state"] == "eligible" and row.get("provider_event_id")]
+                 if in_paper_cohort(row) and row.get("provider_event_id")]
     checkpoints = {}
     for row in db.execute("""SELECT id,schedule_id FROM public.ev_experiment_game
         WHERE provider='sportsgameodds' AND source_event_id=ANY(%s) AND id=ANY(%s) AND late_id IS NULL""",

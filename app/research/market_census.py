@@ -300,7 +300,7 @@ def _offers(snapshot, by_source, reference, *, at, game_id, minimum):
         quote = record["quote"]
         native = quote["source"]
         provider_book = source_bookmaker(record)
-        odd, line = native["native_outcome_id"], native.get("native_line")
+        odd, line = native.get("native_outcome_id"), native.get("native_line")
         exact = by_source.get(_key(provider_book, odd, line)) or {}
         try:
             identity = exact_bet_identity(record, event_identity=game_id)
@@ -313,15 +313,23 @@ def _offers(snapshot, by_source, reference, *, at, game_id, minimum):
             disposition = reason or "ev_unavailable"
         else:
             disposition = "below_minimum_ev" if Fraction(ev) < minimum or Fraction(ev) <= 0 else "screen_passed"
-        reference_gap = reference.explain(record, disposition) if disposition in REFERENCE_EXCLUSIONS else None
+        reference_gap = reference.explain(record, disposition) if reference and disposition in REFERENCE_EXCLUSIONS else None
         result.append(dict(offer_index=index, row_id=exact.get("row_id"), exact_bet_id=identity.get("id"),
             bookmaker_id=provider_book, odd_id=odd, venue=quote["venue"], family=record["market_identity"]["family"],
             period=record["market_identity"]["period"], outcome=identity.get("outcome") or exact.get("outcome"),
             line=_line(line), price_american=(quote.get("original") or {}).get("value"),
             price_state=exact.get("state", quote.get("state")), price_reason=exact.get("reason"),
-            source_at=quote.get("times", {}).get("source_at"), evaluated=ev is not None,
+            source_at=quote.get("times", {}).get("source_at"), received_at=quote.get("times", {}).get("received_at"),
+            source_market_key=native.get("native_market_id"), venue_contract_id=native.get("venue_contract_id"), evaluated=ev is not None,
             screen_ev=ev, fair_probability=screen.get("probability"), disposition=disposition, reference_gap=reference_gap))
     return result
+
+
+def offer_rows(checkpoint, *, game_id, minimum, at):
+    """Export the offered prices and screens from one frozen paper input."""
+    snapshot = checkpoint["snapshot"]
+    normalized = {(row["bookmaker_id"], row["odd_id"], row["line"]): row for row in _normalized_rows(snapshot)}
+    return _offers(snapshot, normalized, None, at=at, game_id=game_id, minimum=Fraction(minimum))
 
 
 def from_checkpoint(checkpoint, checkpoint_id, *, include_rows=True, minimum="1/25"):
