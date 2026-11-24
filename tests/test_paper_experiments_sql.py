@@ -169,6 +169,11 @@ class CorrectedRecoverySQL(ResearchWorkspaceFixture):
                 corrected = workspace.correct_mens_d1_recovery(db)
                 with patch.object(mens_d1, "replay_retained", side_effect=AssertionError("unchanged run repriced")):
                     self.assertEqual(workspace.correct_mens_d1_recovery(db), corrected)
+                    zone = db.execute("SELECT current_setting('TimeZone') AS zone").fetchone()["zone"]
+                    for alternate_zone in ("America/New_York", "UTC"):
+                        db.execute("SELECT set_config('TimeZone',%s,false)", (alternate_zone,))
+                        self.assertEqual(workspace.correct_mens_d1_recovery(db)["run"]["id"], corrected["run"]["id"])
+                    db.execute("SELECT set_config('TimeZone',%s,false)", (zone,))
             coverage = corrected["run"]["coverage"]
             self.assertEqual(coverage["captured_games"], 1)
             self.assertIsNone(coverage["expected_games"])

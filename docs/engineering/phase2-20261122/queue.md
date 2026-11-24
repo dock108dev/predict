@@ -5,12 +5,29 @@
 The November 24, 2026 [implementation assignment](../mens-d1-daily-coverage-20261124.md)
 starts from main `4cc9f745c193b3ef03a2fac1a589f510f1a4a566` and the deployed
 Research workspace. The collector schedules daily imports and the Data view
-accounts for retained games, captures, and results by date. The November 23
-scope correction and November 24 retained-provider snapshot were reproduced
-against a private copy of production.
+accounts for retained games, captures, and results by date. The feature shipped
+in `0e26f88bac69f0e7984a2dbeba46712a0ce3e9db` through
+[main CI](https://github.com/dock108dev/predict/actions/runs/45432360098/attempts/2).
+The signed-in walkthrough verified the stored evidence, date selection,
+variant selection, exports and reload.
+
+At 11:09 AM Eastern on November 24, retained evidence showed 33 eligible games
+on November 23 (6 frozen, 20 reconstructed and 7 missing) and 77 on November 24
+(3 frozen and 74 pending). November 23's corrected run contains 76 Best and
+114 All venues tickets. November 24's retained snapshot contains 8 and 12.
+Middle Tennessee–Southern Illinois is the eligible November 23 game with no
+retained provider final, though Southern Illinois independently reported the
+result. The assignment records dates, excluded and missed games, setup, and
+verification. Local evidence includes a 115-row game reconciliation and signed-in
+screenshots under `.local/mens-d1-20261124`.
+
+- [November 23 in Data](https://predict.dock108.dev/data?evidence=mens-d1&scope=mens-d1&date=2026-11-23)
+- [November 24 in Data](https://predict.dock108.dev/data?evidence=mens-d1&scope=mens-d1&date=2026-11-24)
+
 Sports Reference ingestion is disabled pending permission for private hosted
 use and verified Firecrawl account/access. Both dates' source-declared
-denominators and cross-source matches remain open.
+denominators and cross-source matches remain open. Firecrawl recorded zero
+requests, credits and incremental cost.
 
 The phase 2 completion entries below are historical. Their former landing-page
 and 128 MiB allocation observations do not override the current Research landing

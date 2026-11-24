@@ -146,3 +146,94 @@ cross-source reconciliation remain unavailable for both dates.
 - [November 23 men’s D1 coverage](https://predict.dock108.dev/data?evidence=mens-d1&scope=mens-d1&date=2026-11-23)
 - [November 24 men’s D1 coverage](https://predict.dock108.dev/data?evidence=mens-d1&scope=mens-d1&date=2026-11-24)
 - [Original November 23 opportunity run](https://predict.dock108.dev/research?section=experiments&run=85dd517e0f454701f281c0ada636607d738f6ed5538a2801dc8ad00f69ed40bb)
+
+### Retained November 23 evidence
+
+In the restored production database, the corrected original population
+contained 33 season-verified games, one excluded game and zero games with
+unverified membership. The corrected variants still produced 76 tickets and
+$4,497.26 in Best venue, and 114 tickets and $5,985.33 in All venues. All
+venues comprises 22 tickets from six original captures and 92 from 20 raw
+reconstructions. Best venue comprises 14 and 62 tickets, respectively. The
+retrospective calculations inherited the original explicit fee assumptions. Each
+ticket's economic fields and evidence matched the corresponding original ticket.
+
+Seven eligible games in the original population had no eligible retained
+T−10 response.
+
+| Game | Reason retained by the capture owner |
+| --- | --- |
+| St. Bonaventure at Appalachian State | Discovered after the pre-target baseline |
+| Northern Iowa at Davidson | Discovered after the pre-target baseline |
+| Georgia Southern at Northern Kentucky | Capture window missed |
+| Central Arkansas at North Florida | Capture window missed |
+| Texas A&M–Corpus Christi at Wichita State | Capture window missed |
+| Denver at Kansas | Capture window missed |
+| Stephen F. Austin at Utah Valley | Capture window missed |
+
+Retained SGO evidence contained 32 finals for these 33 eligible games. Middle
+Tennessee–Southern Illinois is the game without a retained SGO final.
+Southern Illinois independently reported the 77–76 Middle Tennessee win, and
+VCU independently reported Providence's 72–66 overtime win. These checks did
+not enter either result into a new source ledger. San José State's 88–79 result
+against UC San Diego was listed as November 24 in the Eastern SGO view, and the
+school described the game as Monday night in California.
+[Southern Illinois recap](https://siusalukis.com/news/2026/11/23/mens-basketball-southern-falls-to-middle-tennessee-in-77-76-heartbreaker)
+· [VCU recap](https://vcuathletics.com/news/2026/11/24/mens-basketball-rams-drop-overtime-heartbreaker-to-providence.aspx)
+· [San José State recap](https://sjsuspartans.com/news/2026/11/24/masons-31-points-leads-spartans-past-uc-san-diego-to-close-out-acrisure-series).
+
+### Production reconciliation, November 24 at 11:09 AM Eastern
+
+The private release installed `0e26f88bac69f0e7984a2dbeba46712a0ce3e9db` in
+web, collector and archive. The [main CI run](https://github.com/dock108dev/predict/actions/runs/45432360098/attempts/2)
+passed after the backed-up additive migration. The first attempt passed the
+focused checks and published the images, then stopped before server handoff
+under the existing CI timing guard. The guarded maintenance step retained a
+234,777,180-byte PostgreSQL backup, verified its contents list, and validated
+every packaged migration checksum before appending migration 118.
+
+| Evidence | November 23 | November 24 |
+| --- | ---: | ---: |
+| Sports Reference returned men’s games, eligible slate, matches, disagreements and finals | Unverified | Unverified |
+| Retained odds-provider men’s games | 34 | 81 |
+| NCAA D1 versus D1 within the retained provider records | 33 | 77 |
+| Excluded within those records | 1 | 4 |
+| Unverified membership within those records | 0 | 0 |
+| Eligible frozen T−10 captures | 6 | 3 |
+| Eligible raw T−10 reconstructions | 20 | 0 in saved snapshot |
+| Eligible games without frozen/reconstructed coverage | 7 elapsed | 74 pending |
+| Eligible original task refusals | 19, all reconstructed | 0 as of observation |
+| Eligible provider-observed finals | 32 | 1 |
+| Eligible provider results pending or unresolved | 1 without a final | 76 pending |
+| Evaluated offers | 2,916 | 357 |
+| Best venue | 76 tickets / $4,497.26 | 8 tickets / $569.73 |
+| All venues | 114 tickets / $5,985.33 | 12 tickets / $775.88 |
+
+One Monday reconstruction had an original missed disposition. The other 19
+had original refusals. The original capture ledger therefore shows eight misses
+and 19 refusals, while the corrected paper run has seven games with missing price
+evidence. The November 24 saved snapshot is a paper analysis of retained
+provider records at that time. It leaves the schedule denominator unverified.
+Vermont State Randolph–Stonehill, Penn State Berks–Navy, Bloomsburg–Wagner
+and Emerson–Quinnipiac were excluded from the retained November 24 scope.
+
+The corrected Monday calculation recomputed both variants in 103.5 seconds
+on production. Repeating it reopened the same run in 0.37 seconds. Every
+economic and witness field matched the original eligible ticket. Original
+T−10 response bytes were retrieved for the Long Beach State–FIU reconstruction.
+The exact retained SGO final responses for VCU–Providence and UC San Diego–San
+José State were retrieved and verified by their original receipt hashes. No
+Sports Reference receipt or cross-source conflict assessment is available.
+
+- [Corrected November 23 run](https://predict.dock108.dev/research?section=experiments&scope=mens-d1&date=2026-11-23&run=db29fca80c85b7f9c7c7ca3a4efcee7eae593513b71a73b88103d31b1186349f)
+- [November 24 retained-provider snapshot](https://predict.dock108.dev/research?section=experiments&scope=mens-d1&date=2026-11-24&run=f86e9ad57e5ec5a545a1e4adfcb45e13bba210dbe3fbea7baf2b981f2bd13758)
+
+The collector persisted the November 24 afternoon and evening schedule
+reconciliation jobs and the November 25 5:30 AM Eastern result import for the
+November 24 slate. These jobs have zero Sports Reference dispatches and stay
+subject to the source's disabled state. The operating forecast included 87
+protected late tasks across sports, of which 81 were college basketball.
+Research had 365,450,530 bytes of unreserved headroom against its 512 MiB
+allocation. SQL usage was 972,774,423 bytes against its 4 GiB cap. The host
+volume showed 20,294,918,144 free bytes. Scheduled job rows and observed source
+requests are separate evidence.

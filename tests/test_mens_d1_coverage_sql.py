@@ -81,7 +81,11 @@ class MensD1CoverageSQL(LatestBoardFixture):
             state = coverage.read_status(db, at=restart)
             self.assertEqual(state['credits']['held'], 1)
             self.assertEqual(state['credits']['unconfirmed_dispatches'], 1)
-            self.assertIsNotNone(state['next_run_at'])
+            self.assertGreater(stamp(state['next_run_at']), restart)
+            after_result_due = restart + timedelta(hours=2)
+            status_with_overdue = coverage.read_status(db, at=after_result_due)
+            self.assertGreater(stamp(status_with_overdue['next_run_at']), after_result_due)
+            self.assertGreater(status_with_overdue['overdue_jobs'], 0)
             self.assertIn('results_unresolved_followup', {row['purpose'] for row in state['jobs']
                 if row['game_date'] == str(DAY)})
             self.assertIsNone(jobs.claim(db, restart + timedelta(minutes=20), approved))

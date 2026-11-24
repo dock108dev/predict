@@ -70,7 +70,8 @@ async function refreshDailyCoverage(){
   const words=raw=>raw==null?'':String(raw).replaceAll('_',' ');
   facts($('mens-d1-source'),[
    ['Sports Reference',words(value.state)],['Source status reason',words(value.reason)||'—'],
-   ['Next eligible run',clock(value.next_run_at)],['Last successful source read',clock(value.last_success_at)],
+   ['Next scheduled job',clock(value.next_run_at)],['Past due within job window',value.overdue_jobs],
+   ['Last successful source read',clock(value.last_success_at)],
    ['Recorded requests',credits.requests],['Unconfirmed dispatches',credits.unconfirmed_dispatches],
    ['Confirmed credits',credits.confirmed],['Unconfirmed credit exposure',credits.held],
    ['Source cost (USD)',credits.cost_usd],['Daily source evidence retained',bytes(storage.source_bytes)],

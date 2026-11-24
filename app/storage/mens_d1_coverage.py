@@ -542,8 +542,9 @@ def read_status(db, *, at=None):
         source_reserved_bytes=usage.get('daily_coverage_reserved_bytes', 0),
         headroom_bytes=max(0, TOTAL_BYTE_CAP - usage['total'] - usage['reserved']),
         sql_bytes=sql_usage(db), sql_cap_bytes=SQL_BYTE_CAP, disk=disk_capacity(ROOT / '.local/postgres'))
-    planned = sum(row['state'] == 'pending' and row['expires_at'] > at
-                  and row['next_attempt_at'] <= at + timedelta(days=1) for row in jobs)
+    pending = [row['next_attempt_at'] for row in jobs
+               if row['state'] == 'pending' and row['expires_at'] > at]
+    planned = sum(due <= at + timedelta(days=1) for due in pending)
     from app.collection.mens_d1_source import DOCUMENTED_BASIC_SCRAPE_CREDITS, MAX_FIRECRAWL_RESPONSE_BYTES
     from app.collection.mens_d1_jobs import MAX_STORAGE_RESERVATION
     capture = db.execute("""SELECT count(*) AS all_sports,
@@ -561,11 +562,11 @@ def read_status(db, *, at=None):
         COALESCE(sum(charged_credits),0) AS charged,
         COALESCE(sum(reserved_credits) FILTER(WHERE charged_credits IS NULL),0) AS held
         FROM public.mens_d1_attempt WHERE source=%s""", (SOURCE,)).fetchone()
-    next_run = min((row['next_attempt_at'] for row in jobs if row['state'] == 'pending'
-                    and row['expires_at'] > at), default=None)
+    next_run = min((due for due in pending if due > at), default=None)
+    overdue = sum(due <= at for due in pending)
     last_success = max((row['last_success_at'] for row in jobs if row['last_success_at']), default=None)
     return dict(source=SOURCE, state=source['state'], reason=source['reason'], checked_at=clock(source['checked_at']),
-        next_run_at=clock(next_run), last_success_at=clock(last_success),
+        next_run_at=clock(next_run), overdue_jobs=overdue, last_success_at=clock(last_success),
         jobs=[{k: str(v) if type(v) is date else clock(v) if isinstance(v, datetime) else v
                for k, v in job.items()} for job in jobs],
         credits=dict(confirmed=totals['charged'], held=totals['held'], requests=totals['requests'],

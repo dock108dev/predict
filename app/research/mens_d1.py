@@ -74,7 +74,7 @@ def retained_population(db, original):
         rows.append(dict(game_id=game["game_id"], provider_event_id=event["source_event_id"], title=event["title"],
                          scope_state=state, scope_reason=reason, teams=teams))
     basis = dict(kind="retained_original_run", original_run_id=original["id"], source="sportsgameodds",
-                 observed_at=original["observed_at"].isoformat(), membership_version=membership.version,
+                 observed_at=experiment.clock(original["observed_at"]), membership_version=membership.version,
                  games=rows)
     return dict(basis, revision=hashed(basis))
 
