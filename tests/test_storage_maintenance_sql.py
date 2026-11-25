@@ -669,17 +669,25 @@ class WorkingPartitionUpgradeSQL(LatestBoardFixture):
 
     @classmethod
     def setUpClass(cls):
-        from hashlib import sha256
         from pathlib import Path
+        from uuid import uuid4
+        from psycopg import sql
         from app.storage.store import Store
-        def legacy(store):
-            with store.db.transaction():
-                store.db.execute('CREATE TABLE schema_migration(version text PRIMARY KEY,sha256 text NOT NULL)')
-                for path in sorted((Path(__file__).resolve().parents[1]/'app/storage/migrations').glob('*.sql')):
-                    if path.name>='063_':break
-                    store.db.execute(path.read_text())
-                    store.db.execute('INSERT INTO schema_migration VALUES(%s,%s)',(path.name,sha256(path.read_bytes()).hexdigest()))
-        with patch.object(Store,'migrate',legacy):super().setUpClass()
+
+        # This case seeds pre-partition data on purpose. The shared template
+        # validates the full installed manifest and cannot represent that schema.
+        cls.name = 'prediction_arb_partition_upgrade_' + uuid4().hex[:10]
+        with cls.connect('prediction_arb') as db:
+            directory = Path(db.execute('SHOW data_directory').fetchone()['data_directory']).resolve()
+            assert directory.parent.parent == Path('/tmp').resolve()
+            assert directory.parent.name.startswith('predict-pg-')
+            db.execute(sql.SQL('CREATE DATABASE {} TEMPLATE template0').format(sql.Identifier(cls.name)))
+        try:
+            with cls.connect() as db:
+                Store(db).migrate(through='062_acquisition_evidence_partitions.sql')
+        except BaseException:
+            cls.tearDownClass()
+            raise
 
     async def test_exact_populated_cutover_preserves_pins_triggers_foreign_keys_and_atomic_refusal(self):
         from psycopg.errors import DependentObjectsStillExist,RaiseException

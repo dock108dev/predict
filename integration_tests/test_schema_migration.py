@@ -1,12 +1,13 @@
 """Migration and logical restore on the disposable PostgreSQL runner."""
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 from hashlib import sha256
 import os
 from pathlib import Path
 import subprocess
 from threading import Barrier
+import time
 from uuid import uuid4
 
 from psycopg import sql
@@ -66,6 +67,36 @@ def test_concurrent_fresh_migrations_share_the_committed_history(disposable_sock
             calls = [pool.submit(migrate), pool.submit(migrate)]
             first, second = (call.result() for call in calls)
         assert first == second == packaged_ledger()
+
+
+def test_migration_waits_for_advisory_lock_past_ordinary_lock_budget(disposable_socket):
+    with empty_database() as name, ThreadPoolExecutor(max_workers=1) as pool, store.connect(name) as owner:
+        started = Future()
+
+        def migrate():
+            with store.connect(name) as db:
+                db.execute("SET lock_timeout = '250ms'")
+                started.set_result(db.info.backend_pid)
+                store.Store(db).migrate()
+                return ledger(db), db.execute('SHOW lock_timeout').fetchone()['lock_timeout']
+
+        with owner.transaction():
+            owner.execute('SELECT pg_advisory_xact_lock(120012)')
+            waiting = pool.submit(migrate)
+            pid = started.result(timeout=5)
+            deadline = time.monotonic() + 5
+            while not owner.execute(
+                "SELECT 1 FROM pg_locks WHERE pid=%s AND locktype='advisory' AND NOT granted", (pid,)
+            ).fetchone():
+                if waiting.done():
+                    waiting.result()
+                assert time.monotonic() < deadline, 'Migration did not wait on the advisory lock'
+                time.sleep(0.01)
+            owner.execute('SELECT pg_sleep(0.5)')
+
+        applied, lock_timeout = waiting.result(timeout=30)
+        assert applied == packaged_ledger()
+        assert lock_timeout == '250ms'
 
 
 def test_refuses_a_gapped_or_newer_ledger_before_pending_migrations(disposable_socket):

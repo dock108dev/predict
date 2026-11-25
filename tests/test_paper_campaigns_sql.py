@@ -140,7 +140,14 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 with patch.object(queue, 'utc', return_value=self.at), patch.object(workspace, '_publish', deny_second):
                     assert campaigns.tick(db) is None
                 assert db.execute('SELECT count(*) n FROM public.research_workspace_run').fetchone()['n'] == 0
-                assert campaigns.view(db, campaign['id'])['days'][0]['state'] == 'failed'
+                current = campaigns.view(db, campaign['id'])['days'][0]
+                assert current['state'] == 'failed'
+                assert current['error'] == campaigns.REPLAY_FAILED
+                legacy = 'OperationalError: synthetic path and token'
+                db.execute("UPDATE public.paper_campaign_day SET last_error=%s WHERE state='failed'", (legacy,))
+                assert campaigns.view(db, campaign['id'])['days'][0]['error'] == campaigns.REPLAY_FAILED
+                assert db.execute("SELECT last_error FROM public.paper_campaign_day WHERE state='failed'"
+                                  ).fetchone()['last_error'] == legacy
                 self.advance(db, stamp('2026-11-23T18:10:00Z'))
                 with self.connect() as restarted, patch.object(queue, 'utc', return_value=self.at):
                     primary = campaigns.tick(restarted)

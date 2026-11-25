@@ -4,9 +4,6 @@ x-runtime: &runtime
   environment: &runtime-environment
     PREDICT_DB_SOCKET: /run/predict-postgres
     PREDICT_DATABASE_CAP_GIB: '4'
-  volumes:
-    - ./state:/predict/.local
-    - ./socket:/run/predict-postgres:ro
   security_opt:
     - no-new-privileges:true
   cap_drop: [ALL]
@@ -53,6 +50,19 @@ services:
     <<: *runtime
     image: ${PREDICT_WEB_IMAGE:-${PREDICT_IMAGE:-}}
     ports: ['127.0.0.1:8784:8784']
+    environment:
+      <<: *runtime-environment
+      PREDICT_DB_ROLE: ${PREDICT_WEB_DB_ROLE:-prediction_arb}
+      PREDICT_DB_PASSWORD_FILE: /run/predict-db-password
+    volumes:
+      - ./state:/predict/.local
+      - ./socket:/run/predict-postgres:ro
+      - type: bind
+        source: ${PREDICT_WEB_DB_SECRET:-/dev/null}
+        target: /run/predict-db-password
+        read_only: true
+        bind:
+          create_host_path: false
     networks: [web]
     tmpfs: [/tmp, '/predict/evidence:uid=10001,gid=10001,mode=0700']
     healthcheck:
@@ -70,11 +80,19 @@ services:
     command: [python, -m, app.collection.data_runtime, --current-config, /predict/.local/predict-current-config.json]
     environment:
       <<: *runtime-environment
+      PREDICT_DB_ROLE: ${PREDICT_COLLECTOR_DB_ROLE:-prediction_arb}
+      PREDICT_DB_PASSWORD_FILE: /run/predict-db-password
       PREDICT_SECRET_DIRECTORY: /run/predict-secrets
       PREDICT_ODDS_ARCHIVE_CAPTURE: ${PREDICT_ODDS_ARCHIVE_CAPTURE:-0}
     volumes:
       - ./state:/predict/.local
       - ./socket:/run/predict-postgres:ro
+      - type: bind
+        source: ${PREDICT_COLLECTOR_DB_SECRET:-/dev/null}
+        target: /run/predict-db-password
+        read_only: true
+        bind:
+          create_host_path: false
       - ./provider-secrets:/run/predict-secrets:ro
     networks: [collector]
     stop_grace_period: 2m
@@ -94,10 +112,18 @@ services:
     network_mode: none
     environment:
       <<: *runtime-environment
+      PREDICT_DB_ROLE: ${PREDICT_ARCHIVE_DB_ROLE:-prediction_arb}
+      PREDICT_DB_PASSWORD_FILE: /run/predict-db-password
       PREDICT_ODDS_ARCHIVE_ROOT: /archive
       PREDICT_ODDS_ARCHIVE_ID: ${PREDICT_ODDS_ARCHIVE_ID:-}
     volumes:
       - ./socket:/run/predict-postgres:ro
+      - type: bind
+        source: ${PREDICT_ARCHIVE_DB_SECRET:-/dev/null}
+        target: /run/predict-db-password
+        read_only: true
+        bind:
+          create_host_path: false
       - type: bind
         source: ${PREDICT_ODDS_ARCHIVE_MOUNT:-/srv/predict/odds-archive}
         target: /archive

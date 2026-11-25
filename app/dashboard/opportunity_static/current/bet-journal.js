@@ -302,7 +302,8 @@ $('confirm-delete').onclick=async()=>{
     const response=await fetch('/api/bet-journal/'+encodeURIComponent(target.id),{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:target.revision})}),data=await response.json();
     if(response.status===409)throw Error('This record changed in another session. Close and Refresh before deleting it.');
     if(!response.ok)throw Error(data.error||'The bet could not be deleted.');
-    if(editing===target)$('editor').close();if(packet?.entries?.length===1)offset=Math.max(0,offset-100);sequence++;await load();
+    if(editing===target){returnFocus=$('results');$('editor').close();}
+    if(packet?.entries?.length===1)offset=Math.max(0,offset-100);sequence++;await load();
   }catch(e){if(editing===target)$('edit-status').textContent=e.message||'Could not delete. Your record is preserved.';}
   finally{if(editing===target)lockEditor(false);}
 };

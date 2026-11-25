@@ -13,8 +13,208 @@ from app.storage.pregame_cohorts import capture, select
 from app.storage.store import stamp
 
 
+def arbs(db, query, *, at):
+    from app.storage.pregame_arbs import read_cohort
+
+    # These fixtures own cohort rows. The ordinary SportsGameOdds selector
+    # reads acquisition snapshots and has a separate disposable-SQL contract.
+    return read_cohort(db, dict(provider="sportsgameodds", reference_scope="selected", **query), at=at)
+
+
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class PregameCohortsSQL(PregameFixture):
+    async def test_committed_sgo_receipt_recovers_monitor_after_projection_timeout(self):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        from unittest.mock import AsyncMock
+        from psycopg.errors import QueryCanceled
+        from app.collection.current_database import (
+            DatabaseIngressSink,
+            DatabasePipeline,
+        )
+        from app.collection.current_policy import DEFAULT
+        from app.collection.current_service import CurrentService
+        from app.collection.local_ownership import LocalOwnership
+        from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+        from app.dashboard.current_state import CurrentStore
+        from app.storage import pregame_cohorts
+
+        def offers(db):
+            return db.execute("""SELECT o.contract_id,o.revision,o.source_at,o.received_at
+                FROM public.current_offer_storage o JOIN public.current_contract c ON c.id=o.contract_id
+                JOIN public.current_event e ON e.id=c.event_id
+                WHERE e.provider='sportsgameodds' ORDER BY o.contract_id""").fetchall()
+
+        def revision(db):
+            return db.execute(
+                "SELECT revision FROM pregame_monitor.current_pregame_revision"
+            ).fetchone()["revision"]
+
+        def restore_baseline(initialized):
+            with self.connect() as db:
+                db.execute("UPDATE pregame_monitor.current_pregame_revision SET baseline_initialized=%s", (initialized,))
+
+        def monitor(db):
+            with db.transaction():
+                select(db, "monitor")
+                return board.read(db, {}, at=stamp(AT))
+
+        def cancel_sql(db, *_args, **_kwargs):
+            with db.transaction():
+                db.execute("SET LOCAL statement_timeout='20ms'")
+                try:
+                    db.execute("SELECT pg_sleep(1)")
+                except QueryCanceled as exc:
+                    self.assertEqual(exc.sqlstate, "57014")
+                    raise
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = dict(
+                DEFAULT,
+                aggregate_provider="sportsgameodds",
+                sports=["NBA"],
+                families=["spread"],
+                direct_novig_enabled=False,
+            )
+            service = CurrentService(
+                config,
+                directory=root / "state",
+                ownership=LocalOwnership(root / "owner"),
+                database_mode=True,
+            )
+            service.dispatch = True
+            service.store = CurrentStore(service)
+            service.sink = DatabaseIngressSink(service.store, service.config)
+            requester = AsyncMock()
+            worker = SportsGameOddsWorker(
+                service,
+                transport=SimpleNamespace(request=requester),
+                ledger_path=root / "ledger",
+                study_path=root / "study",
+                now=lambda: stamp(AT),
+            )
+            worker.collection_run = dict(id="monitor-timeout-recovery", kind="monitor")
+            incoming = parse(page())
+            with self.connect() as db:
+                db.execute("TRUNCATE public.pregame_cohort_work")
+                # The one-time adoption of old rows cannot stand in for recovery.
+                initialized = db.execute("SELECT baseline_initialized FROM pregame_monitor.current_pregame_revision").fetchone()["baseline_initialized"]
+                self.addCleanup(restore_baseline, initialized)
+                db.execute(
+                    "UPDATE pregame_monitor.current_pregame_revision SET baseline_initialized=true"
+                )
+                before = revision(db)
+            self.enterContext(
+                patch(
+                    "app.collection.current_database.connect", side_effect=self.connect
+                )
+            )
+            self.enterContext(
+                patch("app.collection.current_database.utc", return_value=AT)
+            )
+            self.enterContext(patch("app.storage.current_rows.utc", return_value=AT))
+            self.enterContext(
+                patch("app.storage.current_pregame.utc", return_value=stamp(AT))
+            )
+            self.enterContext(
+                patch("app.storage.odds_archive.enabled", return_value=False)
+            )
+
+            with patch.object(
+                pregame_cohorts, "capture", side_effect=cancel_sql
+            ) as failed_capture:
+                await worker._publish(incoming)
+            failed_capture.assert_called_once()
+            self.assertEqual(service.sink.metrics["admitted_observations"], 1)
+            self.assertEqual(service.sink.metrics["rejected_observations"], 0)
+            self.assertEqual(service.sink.metrics.get("transaction_retries", 0), 0)
+            self.assertEqual(
+                service.sink.metrics["cohort_projection"]["reason"],
+                "cohort_projection_failed",
+            )
+            with self.connect() as db:
+                committed = offers(db)
+                self.assertTrue(committed)
+                self.assertEqual(monitor(db)["rows"], [])
+                self.assertEqual(revision(db), before)
+                self.assertEqual(
+                    db.execute(
+                        "SELECT last_error,snapshot IS NOT NULL staged FROM public.pregame_cohort_work"
+                    ).fetchall(),
+                    [dict(last_error="cohort_projection_failed", staged=True)],
+                )
+                receipts = db.execute(
+                    "SELECT provider,league,received_at,admitted_at FROM public.delivery_clock"
+                    " WHERE provider='sportsgameodds' AND received_at=%s",
+                    (AT,),
+                ).fetchall()
+                self.assertEqual(len(receipts), 1)
+
+            # A later Live page can replace the shared current quote. It cannot
+            # stand in for the failed Monitor page when the collector restarts.
+            from app.collection.sportsgameodds_adapter import parse_page
+
+            live_at = (stamp(AT) + timedelta(minutes=1)).isoformat()
+            live_raw = page()
+            for odd in live_raw["data"][0]["odds"].values():
+                for book, quote in odd["byBookmaker"].items():
+                    quote["lastUpdatedAt"] = live_at
+                    if book == "prophetx":
+                        quote["odds"] = "+180" if odd["sideID"] == "home" else "-170"
+            worker.collection_run = dict(id="live-after-monitor-timeout", kind="live")
+            with patch("app.collection.current_database.utc", return_value=live_at):
+                await worker._publish(
+                    parse_page(json.dumps(live_raw).encode(), live_at)
+                )
+            with self.connect() as db:
+                newest = offers(db)
+                self.assertNotEqual(newest, committed)
+                live_prices = db.execute(
+                    "SELECT payload#>>'{posted,value}' price FROM pregame_live.current_pregame_price"
+                ).fetchall()
+                self.assertIn(dict(price="+180"), live_prices)
+
+            # A fresh pipeline gets all recovery inputs from PostgreSQL. It
+            # never constructs or replays a SportsGameOdds request.
+            restarted = DatabasePipeline(SimpleNamespace(config=service.config))
+            await restarted.start()
+            try:
+                self.assertEqual(
+                    restarted.cohort_projection, dict(completed=1, pending=[])
+                )
+                restarted.recover_cohorts()
+                with self.connect() as db:
+                    rows = monitor(db)["rows"]
+                    self.assertTrue(rows)
+                    self.assertEqual(
+                        {row["collection"]["run_id"] for row in rows},
+                        {"monitor-timeout-recovery"},
+                    )
+                    self.assertIn("+120", {row["posted"]["value"] for row in rows})
+                    self.assertNotIn("+180", {row["posted"]["value"] for row in rows})
+                    self.assertEqual(offers(db), newest)
+                    self.assertEqual(revision(db), before + 1)
+                    self.assertEqual(
+                        db.execute(
+                            "SELECT id FROM public.pregame_cohort_work"
+                        ).fetchall(),
+                        [],
+                    )
+                    self.assertEqual(
+                        db.execute(
+                            "SELECT provider,league,received_at,admitted_at FROM public.delivery_clock"
+                            " WHERE provider='sportsgameodds' AND received_at=%s",
+                            (AT,),
+                        ).fetchall(),
+                        receipts,
+                    )
+                requester.assert_not_called()
+                self.assertEqual(worker.metrics["requests"], 0)
+            finally:
+                await restarted.close()
+                await service.store.close()
+
     async def test_reference_scope_covers_eligible_ev_and_reference_free_arb_prices(
         self,
     ):
@@ -62,7 +262,7 @@ class PregameCohortsSQL(PregameFixture):
             self.assertNotEqual(missing["cursor"], before["cursor"])
 
     async def test_public_positive_changes_keep_cross_transaction_filter_cache(self):
-        from app.storage.pregame_arbs import read as arbs, ordered_pairs
+        from app.storage.pregame_arbs import ordered_pairs
 
         heavy = []
 
@@ -204,8 +404,6 @@ class PregameCohortsSQL(PregameFixture):
             self.assertEqual(expired["rows"], [])
 
     async def test_lookahead_window_entry_invalidates_empty_cached_view(self):
-        from app.storage.pregame_arbs import read as arbs
-
         with self.connect() as db:
             self.seed_quoted_cohort(db)
             with db.transaction():
@@ -220,8 +418,6 @@ class PregameCohortsSQL(PregameFixture):
                 self.assertNotEqual(first["cursor"], later["cursor"])
 
     async def test_age_filter_expires_warm_arb_cache_and_schedules_board_refresh(self):
-        from app.storage.pregame_arbs import read as arbs
-
         with self.connect() as db:
             self.seed_quoted_cohort(db)
             with db.transaction():
@@ -561,8 +757,6 @@ class PregameCohortsSQL(PregameFixture):
         return data
 
     def monitor_reads(self, db):
-        from app.storage.pregame_arbs import read as arbs
-
         with db.transaction():
             select(db, "monitor")
             return (

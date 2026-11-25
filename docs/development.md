@@ -2,8 +2,7 @@
 
 Run commands from the repository root. Python 3.14 and Node 24 match primary
 CI. The package supports Python 3.11 and later. Some native sources use macOS
-Keychain. Linux can run the portable tests and the container deployment.
-If you use nvm, run `nvm use` to select the project's Node version.
+Keychain. On a machine with nvm, run `nvm use` to select the version in `.nvmrc`.
 
 ## Install tools
 
@@ -15,9 +14,22 @@ python3.14 -m venv .venv
 .venv/bin/python -m pip check
 ```
 
-The CI lock includes runtime, stream, test, and build dependencies. The
+The CI lock includes runtime, stream, test and build dependencies. The
 [README](../README.md) uses a smaller installation for ordinary operation.
-For PostgreSQL and browser prerequisites, see [CI](CI.md).
+Install both locks to run browser tests. On Ubuntu 24.04, install Chromium with
+`--with-deps` to match the extended browser job.
+
+```sh
+.venv/bin/python -m pip install --require-hashes -r requirements-ci.txt -r requirements-browser.txt
+.venv/bin/python -m playwright install chromium
+```
+
+For the focused release checks, install the checksum-pinned workflow and secret
+validators on Apple Silicon macOS or x86-64 Linux.
+
+```sh
+.venv/bin/python scripts/ci/install_tools.py
+```
 
 ## Ordinary app and background data
 
@@ -25,28 +37,36 @@ Follow the [README quickstart](../README.md#requirements-and-quickstart) to
 start the web app without starting a collector. Use `--role app` or
 `--role data` with the launcher to manage each process independently.
 Stopping the web app leaves collection and shared calculations running.
-Stopping data ends acquisition. Restarting either role preserves the collector's
-explicit pauses and accounting holds. [Operation](configuration.md#start-and-stop) ·
+Open Research at `/research`, with Data and Settings at `/data` and `/settings`.
+Settings controls acquisition. A successful Stop confirms collector cleanup.
+Restarting either role preserves explicit pauses and accounting holds.
+[Operation](configuration.md#start-and-stop) ·
 [Runtime contract](data-app-runtime-contract.md)
+
+The ordinary database launcher selects tools for the existing cluster's
+`PG_VERSION`. Set `PREDICT_PG_BIN` to a matching installation if needed.
+A cluster major upgrade requires a data migration. Test scripts create their own
+clusters.
 
 ## Frozen replay
 
-Use [Saved odds](configuration.md#saved-odds) to inspect an available capture.
-Saved offers preserve their recorded prices, fee terms, and before-fee
-payouts. A tie that pays $0.50 is a different outcome from a stake refund.
-Computing full EV requires probabilities for those outcomes.
-[Calculation basis](benchmark-ev.md)
-
-**Saved odds** reads authentic local archives or retained captures. Missing
-archives remain unavailable. Production Practice navigation and synthetic replay
-datasets are retired; disposable synthetic development fixtures remain separate.
+Open saved capture and quote bookmarks in Data. For a dated paper run, use
+Research → Experiments to save a definition, replay retained inputs, inspect
+published results or export frozen evidence. Saved offers preserve recorded
+prices, fee terms and before-fee payouts. Missing archives remain unavailable.
+Synthetic replay fixtures belong to development tests.
+[Workspace guide](personal-data-workspace.md) · [Calculation basis](benchmark-ev.md)
 
 ## Focused checks
 
 Start with `.venv/bin/python scripts/ci/affected.py --plan` to see the complete
 working-change plan and its routing/fallback reasons. Omit `--plan` to execute,
-or use `--full` for all registered behavior lanes. See the
-[selection contract and limits](CI.md#selecting-local-cases).
+or use `--full` for all registered behavior lanes. For the focused personal
+release checks, use `.venv/bin/python scripts/ci/fast_checks.py --plan` and omit
+`--plan` to execute the local checks. Add `--paths` followed by sample changed
+paths when checking routing. The local selector commands execute validation with
+fixtures. Push and deployment use the hosted release workflow.
+[CI checks and local reproduction](CI.md#local-reproduction)
 
 Choose the checks that exercise the changed behavior. CI's portable manifest
 and disposable database harness separate ordinary tests from historical tools
@@ -56,48 +76,62 @@ ordinary project database.
 ```sh
 .venv/bin/python -m ruff check app tests scripts/ci browser_tests
 .venv/bin/python -m ruff format --check scripts/ci browser_tests tests/test_ci_*.py tests/ci_support.py
+.venv/bin/python scripts/ci/validate_contract.py
 .venv/bin/python scripts/ci/docs.py
 .venv/bin/python -m pytest -q tests/test_ev09_asset_delivery.py
-node tests/test_f07_desk_ui.cjs
 git diff --check
 ```
 
 | Change | Focused tests |
 | --- | --- |
-| Current boards, filters, exact prices and failure recovery | `browser_tests/test_pregame_current.py`, `browser_tests/test_pregame_games_arbs.py`, `tests/test_pregame_arbs.py` |
+| Workbench campaign save, retained replay, grading and export | `browser_tests/test_paper_campaign_integration.py` through the disposable SQL harness |
+| Workbench dated offers export and its digest | `tests/test_research_offer_export_api.py` |
+| Data markets, filters, grouping and exact offer evidence | `browser_tests/test_personal_data_workspace.py`, `tests/test_data_workspace_sql.py` |
 | Current PostgreSQL admission, game grouping, arb expiry and recovery | `tests/test_current_pregame_sql.py`, `tests/test_pregame_board_views_sql.py`, `tests/test_fee_pricing_sql.py` |
 | Private local snapshot transfer and target guards | `tests/test_dev_snapshot.py` |
-| Saved desk rendering, selection, and refresh | `tests/test_f07_desk_ui.cjs`, `browser_tests/test_ranked_opportunities.py`, `browser_tests/test_ranked_desk_journey.py` |
+| Retained desk rendering and selection | `tests/test_f07_desk_ui.cjs`, `browser_tests/test_ranked_desk_journey.py` |
 | Snapshot math and evidence | `tests/test_snapshot_display.py`, `tests/test_snapshot_benchmark.py`, `tests/test_comparison_snapshot_sql.py` |
-| Source lifecycle and acquisition | `tests/test_current_service.py`, `tests/test_ordinary_native_transport.py`, `tests/test_data_runtime_unit.py` |
-| SportsGameOdds scheduling, discovery and cursor recovery | `tests/test_sportsgameodds_worker.py`, `tests/test_sportsgameodds_discovery.py` |
+| Source lifecycle and Stop | `tests/test_current_service.py`, `tests/test_data_runtime_unit.py` |
+| SportsGameOdds admission, reference retention and Monitor recovery | `tests/test_sportsgameodds_ingress_sql.py`, `tests/test_sportsgameodds_reference_sql.py`, `tests/test_pregame_cohorts_sql.py` |
 | Scanner policy, settlement, and fees | `tests/test_scanner_kalshi.py`, `tests/test_scanner_polymarket.py`, `tests/test_scanner_native.py` |
 | Failure handling and launcher security | `tests/test_abend_handling.py`, `tests/test_security_hardening.py`, `tests/test_dashboard_security.py` |
 
 For fixture-generating Node tests, set `PYTHON="$PWD/.venv/bin/python"` if
 your test interpreter differs. The portable runner sets it itself.
 
-The SQL harness creates and tears down a disposable socket-only PostgreSQL
-cluster. Primary SQL checks use PostgreSQL 16. If needed, pass
+The SQL harness creates and tears down a disposable socket-only PostgreSQL 16
+cluster. Run it as an ordinary user. If needed, set `PG_CONFIG` or pass
 `--pg-config /path/to/postgresql@16/bin/pg_config` to select tools.
 Select specific modules with `--tests`, or use the registered suite with no
 selection. Use a fresh report directory for each run.
 
 ```sh
 .venv/bin/python scripts/ci/postgres.py --report-dir "$(mktemp -d)" \
-  --tests tests/test_comparison_snapshot_sql.py
+  --tests browser_tests/test_paper_campaign_integration.py
 ```
 
 Use `--da-separation` when checking app and collector isolation, per-game
-result reuse, or publication of observations while financial results are
-unavailable. Fixtures make zero provider requests.
-`PATH="$PWD/.venv/bin:$PATH" sh scripts/check-ci` runs the portable manifest.
-[CI checks and reports](CI.md)
+result reuse, or publication while financial results are unavailable.
+Fixtures make zero provider requests.
 
-The ordinary database launcher selects tools for the existing cluster's
-`PG_VERSION`. Set `PREDICT_PG_BIN` to a matching installation if needed.
-A cluster major upgrade requires a data migration. The SQL harness uses
-separate state.
+## Extended checks
+
+The manual Full validation workflow uses Ubuntu 24.04, Python 3.14, Node 24,
+Poppler, Chromium and PostgreSQL 16. Run the descriptor-relative security
+regression on Linux. It skips on macOS. Use fresh output directories to preserve
+results from earlier attempts.
+[Extended workflow](CI.md#optional-extended-checks)
+
+```sh
+PATH="$PWD/.venv/bin:$PATH" sh scripts/check-ci --output "$(mktemp -d)"
+.venv/bin/python -m pytest -q tests/test_ci_*.py
+.venv/bin/python scripts/ci/package_smoke.py --report-dir "$(mktemp -d)"
+```
+
+The portable runner uses the registered Python and client suites. The package
+smoke builds and installs a fresh wheel in a temporary directory outside the
+checkout and loads the bundled November 23 audit input with database access and
+decision application disabled for that loader check.
 
 ## Synthetic preview
 
@@ -114,27 +148,22 @@ tests exercise persistence.
 
 The authored frontend is under `app/dashboard/opportunity_static/current/`.
 
-- `pregame.html`, `pregame.js` and `pregame.css` provide Opportunities, Browse odds
-  and game detail. `pregame-arbs.html` and `pregame-arbs.js` provide price Arbitrage.
-  `pregame-math.js` renders calculation disclosures; `pregame-ranking.js` is generated.
-- `bet-journal.html`, `bet-journal.js`, `bet-journal-defaults.js`,
-  `bet-journal-actions.js` and `bet-journal.css` provide My Bets and the opportunity
-  log. Editable stake suggestions stay separate from recorded trade cashflows;
-  the server calculates book fees when a stake-only report is saved.
-- `desk.html` and `desk.js` provide research/live and replay views. Its polling,
-  cards, quote display, drawer and inspection modules retain captured evidence,
-  revision-bound details and hypothetical sizing.
-- Pages that share desk styling load `desk.css` before `desk-components.css`.
-  The first defines fonts, chrome and base styles. The second adds the
-  toolbar, inspection, card and matrix rules in cascade order.
-- `snapshot-controller.js`, `snapshot-views.js`, `snapshot-live.js`,
-  `snapshot-drawer.js`, and `ui-common.js` supply the stored results view.
-- `scanner-controller.js`, `scanner-client.js`, `scanner-style.css`, and
-  `scanner-shell.html` supply Scanner. The ticket, arrival, and summary modules
-  own their respective reads and controls. [Scanner API](scanner-client-contract.md)
-- Raw Odds and Coverage have their own authored HTML, CSS, and JavaScript entry
-  points. Admin uses `admin.html` and `admin.js`. Its Database tab uses bounded
-  read-only transactions and shows schema and paged stored values.
+- Research starts with `research-workspace.html` and `research-workspace.js`.
+  It owns the Workbench, campaign forms, saved runs and paper results.
+- Data starts with `data.html`, `data-workbench.js` and `data.js`. It owns
+  market filters, exact offers and the evidence views reached by saved bookmarks.
+- Settings starts with `settings.html` and `settings.js`. It owns the operating
+  status and protects the source and fee controls through their API owners.
+- `workspace-nav.js` and `workbench-shell.css` provide shared navigation and
+  layout. `app/dashboard/workspace_routes.py` owns the page mounts and legacy
+  bookmark mapping.
+
+The retained desk, pregame, journal, stored and Scanner modules still have
+compatibility and fixture coverage. `pregame-math.js` owns its disclosures and
+`pregame-ranking.js` remains generated. Retained desk pages load `desk.css` before
+`desk-components.css` to preserve the cascade. The journal API owns recorded
+fills and correction history. [Scanner API](scanner-client-contract.md) ·
+[Journal](bet-journal.md)
 
 After editing an authored input to the stored or Scanner bundles, regenerate
 the tracked assets. The generator handles a closed set of named imports.

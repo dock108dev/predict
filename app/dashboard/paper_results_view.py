@@ -37,7 +37,7 @@ def read(db, run_id, *, variant, version_id, status_only):
     stale = bool(current and (state.get("pending") or state.get("error")))
     if state.get("error"):
         status = "failed"
-        reason = state["error"]
+        reason = state["error"] if state["error"] in ("writer_busy", "protected_tminus10_capture_due") else "paper_result_processing_failed"
     elif state.get("pending"):
         status = "update_pending" if current else "collecting"
         reason = "Retained evidence is queued for automatic grading."

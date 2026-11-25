@@ -2,6 +2,7 @@
 from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal
+from app.fees.public_reasons import exception_reason
 from .odds_http import BudgetStop
 from .native_payload import RESPONSE_CAP_REASONS
 
@@ -59,19 +60,23 @@ async def collect(discovery, series_id, event_id, ceiling):
             return
         try:
             response=await client.get(endpoints_for(discovery.session)['kalshi']['rest']+path,params)
-            if response.status_code!=200:raise ValueError('fee_metadata_http_'+str(response.status_code))
+            if response.status_code!=200:raise ValueError('fee_metadata_http_status')
             responses.append(response.json())
         except (ValueError,TimeoutError,aiohttp.ClientError,BudgetStop) as exc:
             if isinstance(exc,BudgetStop) and str(exc) not in RESPONSE_CAP_REASONS and 'kalshi' not in discovery.source_stops:raise
+            reason = (str(exc) if isinstance(exc, BudgetStop) and str(exc) in RESPONSE_CAP_REASONS else
+                      exception_reason(__name__, 'native_fee_metadata_query', exc, fallback='fee_metadata_query_failed'))
             discovery.session.emit('kalshi',dict(type='native_fee_metadata',event_id=event_id,
-                series_id=series_id,status='query_failed',path=path,reason=str(exc),qualification='UNKNOWN'))
+                series_id=series_id,status='query_failed',path=path,reason=reason,qualification='UNKNOWN'))
             return
     at=datetime.now(timezone.utc).isoformat()
     try:
         bound=context(responses[0]['series'],responses[1],responses[2],series_id,event_id,at)
         status='scoped_current_terms_bound';reason=None
     except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
-        bound=None;status='unbound';reason=str(exc)
+        bound = None
+        status = 'unbound'
+        reason = exception_reason(__name__, 'native_fee_metadata_binding', exc)
     discovery.session.emit('kalshi',dict(type='native_fee_metadata',event_id=event_id,
         series_id=series_id,status=status,reason=reason,observations=responses,context=bound,
         observed_at=at,qualification='CONDITIONAL; account precision, applicable rounding and mandatory charges remain independent',

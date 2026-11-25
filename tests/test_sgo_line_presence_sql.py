@@ -18,8 +18,9 @@ class LinePresenceSQL(PregameFixture):
         from app.storage.sportsgameodds_reference import upsert_rows
 
         with self.connect() as db:
-            self.ingest(db, page())
-            initial = prepare_page(parse(page()))
+            original = page()
+            self.ingest(db, original)
+            initial = prepare_page(parse(original))
             observe(db, initial)
             old = next(r for r in initial if r['bookmaker_id'] == 'prophetx'
                        and r['facts']['side'] == 'home')
@@ -95,9 +96,10 @@ class LinePresenceSQL(PregameFixture):
 
     async def test_complete_scope_grace_recovery_and_other_book_preservation(self):
         with self.connect() as db:
-            self.ingest(db, page())
+            original = page()
+            self.ingest(db, original)
             self.process(db)
-            rows = prepare_page(parse(page()))
+            rows = prepare_page(parse(original))
             observe(db, rows, include_alternates=True)
             target = next(r for r in rows if r["bookmaker_id"] == "prophetx")
             old = target["id"]

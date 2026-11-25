@@ -7,10 +7,39 @@ from fractions import Fraction as F
 from app.comparison import current_pregame as math
 from app.comparison.fee_mode import mode_for_fee
 from app.comparison.cashflows import exact_wire as wire
+from app.diagnostics import failure
+from app.fees.public_reasons import REASONS as FEE_REASONS
 from app.storage.store import hashed, stamp
 
 VERSION = "first-observed-24h-vs-tminus10-screen-ev-1"
 IDENTITY_VERSION = "exact-event-book-outcome-settlement-bet-1"
+
+
+OFFER_REASONS = frozenset("""
+    acquisition_route_outside_primary_venue_scope experiment_canonical_role_review_conflict
+    experiment_future_offer_input experiment_exact_line_required
+    experiment_fee_mode_input_mismatch experiment_screen_cashflow_reproduction_mismatch
+    experiment_probability_invalid price_withdrawn posted_price_invalid posted_line_settlement_unestablished
+    reference_exact_pair_unavailable reference_two_trusted_books_required
+    coherent_reference_exact_pair_unavailable coherent_reference_policy_unsupported
+    reference_line_settlement_unsupported reference_outcome_identity_conflict
+    reference_scoring_scope_conflict reference_unavailable
+    recorded_probability_policy_mismatch fee_cashflows_unavailable fee_comparison_basis_invalid
+    unsupported_cashflow_states_or_commitment sizing_inputs_incomplete calculation_unavailable
+    unit_fee_schedule_unverified unit_fill_below_minimum unit_order_constraints_unverified
+    unit_fee_evidence_missing
+""".split()) | FEE_REASONS
+
+
+def public_offer_reason(reason):
+    return reason if reason is None or isinstance(reason, str) and reason in OFFER_REASONS else "calculation_unavailable"
+
+
+def _calculation_error(operation, error):
+    reason = public_offer_reason(str(error))
+    if reason == "calculation_unavailable":
+        failure(__name__, operation, error)
+    return reason
 
 
 def exact_bet_identity(record, event_identity=None):
@@ -451,7 +480,7 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at, calculatio
                     try:
                         pair.append(function(record, inputs, at=at))
                     except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
-                        pair.append(dict(reason=str(exc), probability=None, probabilities=None))
+                        pair.append(dict(reason=_calculation_error("checkpoint_reference", exc), probability=None, probabilities=None))
                 cached[key] = pair
             screen, coherent = cached[key]
             if record["quote"]["state"] != "available":
@@ -468,7 +497,7 @@ def build_snapshot(db, page, *, request_scope, dispatch_at, known_at, calculatio
                                      fee, at=at, game_key=game_key)
             payload["coherent_probability"] = coherent
         except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
-            reason = str(exc) or "calculation_unavailable"
+            reason = _calculation_error("checkpoint_offer", exc)
         offers.append(dict(record=record, calculation_payload=payload, price_payload=price_payload, fee_input=fee,
                            screen_reference=screen, coherent_reference=coherent,
                            main=_role(record), reason=reason))

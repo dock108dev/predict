@@ -163,6 +163,26 @@ class AffectedSelection(unittest.TestCase):
         self.assertTrue(selected["fallback"])
         self.assertTrue(any("tests/test_added.py" in c for c in selected["commands"]))
 
+    def test_sgo_changes_include_both_sql_contracts(self):
+        for path in (
+            "app/collection/sportsgameodds_worker.py",
+            "app/storage/sportsgameodds_reference.py",
+        ):
+            with self.subTest(path=path):
+                self.write(path, "")
+                selected = self.module.plan(self.root, [path])
+                self.assertFalse(selected["fallback"])
+                sql = next(c for c in selected["commands"] if "--tests" in c)
+                self.assertIn("tests/test_sportsgameodds_ingress_sql.py", sql)
+                self.assertIn("tests/test_sportsgameodds_reference_sql.py", sql)
+
+    def test_registered_dated_export_runs_in_the_portable_lane(self):
+        root = Path(__file__).resolve().parents[1]
+        path = "tests/test_research_offer_export_api.py"
+        selected = self.module.plan(root, [path])
+        self.assertFalse(selected["fallback"])
+        self.assertEqual(selected["commands"][0][1:], ["-m", "pytest", "-q", path])
+
     def test_missing_stale_or_corrupt_diagnostic_data_cannot_change_selection(self):
         from unittest.mock import patch
 

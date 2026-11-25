@@ -46,10 +46,23 @@ def socket_directory():
     return directory
 
 
+def credentials(user):
+    configured = os.environ.get('PREDICT_DB_ROLE')
+    if configured != user or user == 'prediction_arb':
+        return {}
+    file = os.environ.get('PREDICT_DB_PASSWORD_FILE')
+    password = Path(file).read_text(encoding='utf-8').rstrip('\r\n') if file else os.environ.get('PREDICT_DB_PASSWORD')
+    return dict(password=password) if password else {}
+
+
 def connect(database='prediction_arb'):
     if not database.startswith('prediction_arb'): raise ValueError('dedicated project databases only')
     from .payload_codec import payload_row
-    return psycopg.connect(host=socket_directory(),port=55432,user='prediction_arb',
+    from .database_roles import BOOTSTRAP, ROLES
+    user = os.environ.get('PREDICT_DB_ROLE') or BOOTSTRAP
+    if user not in (BOOTSTRAP, *ROLES):
+        raise ValueError('invalid dedicated project database role')
+    return psycopg.connect(host=socket_directory(),port=55432,user=user, **credentials(user),
         dbname=database,autocommit=True,row_factory=payload_row,connect_timeout=5,
         options='-c statement_timeout=30000 -c lock_timeout=5000')
 
@@ -88,25 +101,61 @@ class Store:
     def __init__(self, connection):
         self.db=connection;self.tree_cache=OrderedDict();self.tree_cache_bytes=0;self.precompiled={};self.precompiled_written=None
 
-    def migrate(self, *, through=None):
-        migrations=sorted((Path(__file__).parent/'migrations').glob('*.sql'))
-        if through is not None and through not in {p.name for p in migrations}:
-            raise ValueError('unknown migration boundary')
+    def _migration_status(self, *, allow_missing=False):
+        migrations = sorted((Path(__file__).parent/'migrations').glob('*.sql'))
         if not migrations:
             raise ValueError('no packaged migrations found')
+        if allow_missing and not self.db.execute(
+            "SELECT to_regclass('public.schema_migration') IS NOT NULL AS present"
+        ).fetchone()['present']:
+            return migrations, 0
+        applied = self.db.execute(
+            'SELECT version,sha256 FROM public.schema_migration ORDER BY version'
+        ).fetchall()
+        for index, row in enumerate(applied):
+            version = row['version']
+            if index >= len(migrations) or migrations[index].name != version:
+                raise ValueError(f'applied migration is outside the packaged history: {version}')
+            if sha256(migrations[index].read_bytes()).hexdigest() != row['sha256']:
+                raise ValueError(f'applied migration changed: {version}')
+        return migrations, len(applied)
+
+    def pending_migrations(self):
+        migrations, applied = self._migration_status(allow_missing=True)
+        return len(migrations) - applied
+
+    def require_current_schema(self):
+        if self.pending_migrations():
+            raise ValueError('database_schema_maintenance_required')
+
+    def ensure_runtime_schema(self):
+        from .database_roles import BOOTSTRAP
+
+        if self.db.info.user == BOOTSTRAP:
+            # Compatibility for the single-user development socket.
+            self.migrate()
+        else:
+            self.require_current_schema()
+
+    def migrate(self, *, through=None):
+        from .database_roles import RUNTIME
+
+        if self.db.info.user in RUNTIME:
+            raise ValueError('database_migration_requires_migrator')
         with self.db.transaction():
+            # Let the statement budget bound the wait for a full migration.
+            # Restore the ordinary lock budget before touching schema tables.
+            lock_timeout = self.db.execute('SHOW lock_timeout').fetchone()['lock_timeout']
+            self.db.execute('SET LOCAL lock_timeout = 0')
             self.db.execute('SELECT pg_advisory_xact_lock(120012)')
+            self.db.execute("SELECT set_config('lock_timeout',%s,true)", (lock_timeout,))
             self.db.execute('CREATE TABLE IF NOT EXISTS public.schema_migration(version text PRIMARY KEY, sha256 text NOT NULL)')
-            applied = self.db.execute('SELECT version,sha256 FROM public.schema_migration ORDER BY version').fetchall()
-            for index, row in enumerate(applied):
-                version = row['version']
-                if index >= len(migrations) or migrations[index].name != version:
-                    raise ValueError(f'applied migration is outside the packaged history: {version}')
-                if sha256(migrations[index].read_bytes()).hexdigest() != row['sha256']:
-                    raise ValueError(f'applied migration changed: {version}')
+            migrations, applied = self._migration_status()
+            if through is not None and through not in {path.name for path in migrations}:
+                raise ValueError('unknown migration boundary')
             # An explicit offline upgrade can commit bounded stages and release
             # old files between copies. The default remains one atomic update.
-            for path in migrations[len(applied):]:
+            for path in migrations[applied:]:
                 if through is not None and path.name > through:
                     break
                 body = path.read_bytes()

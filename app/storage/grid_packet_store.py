@@ -50,7 +50,8 @@ class PacketStore:
     @classmethod
     def from_connection(cls,db):
         schema=db.execute('SELECT current_schemas(false) AS names').fetchone()['names']
-        return cls(db.info.get_parameters(),retained='retained' in schema)
+        from .store import credentials
+        return cls(dict(db.info.get_parameters(), **credentials(db.info.user)), retained='retained' in schema)
     @contextmanager
     def connection(self):
         with psycopg.connect(**dict(self.parameters,connect_timeout=5),autocommit=True,row_factory=payload_row) as db:

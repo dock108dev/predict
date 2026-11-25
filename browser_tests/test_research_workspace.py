@@ -21,13 +21,29 @@ def test_daily_research_keeps_current_and_saved_versions_independent():
     day = "2026-11-24"
     older, latest = "a" * 64, "b" * 64
     late = "2026-11-24T20:00:00Z"
-    runs = [dict(id=run_id, summary={"title": "Men’s D1"}, observed_at=late)
-            for run_id in (latest, older)]
-    template = {"version": "mens-d1-daily", "title": "Daily paper run", "policy": {"scope": "mens-d1"}}
-    summary = dict(population=dict(provider_known_games=4, revision="dated-slate", source_eligible_games=4,
-                                   source_returned_mens_games=4, source_eligible_known_before_tminus10=4),
-                   capture=dict(current_frozen=2, current_denominator=4), markets={}, reference={},
-                   trade=dict(variants={}), results=dict(denominator=4, states=dict(pending=4)))
+    runs = [
+        dict(id=run_id, summary={"title": "Men’s D1"}, observed_at=late)
+        for run_id in (latest, older)
+    ]
+    template = {
+        "version": "mens-d1-daily",
+        "title": "Daily paper run",
+        "policy": {"scope": "mens-d1"},
+    }
+    summary = dict(
+        population=dict(
+            provider_known_games=4,
+            revision="dated-slate",
+            source_eligible_games=4,
+            source_returned_mens_games=4,
+            source_eligible_known_before_tminus10=4,
+        ),
+        capture=dict(current_frozen=2, current_denominator=4),
+        markets={},
+        reference={},
+        trade=dict(variants={}),
+        results=dict(denominator=4, states=dict(pending=4)),
+    )
     coverage_reads, errors = [], []
 
     def serve(route):
@@ -36,54 +52,91 @@ def test_daily_research_keeps_current_and_saved_versions_independent():
         if url.path == "/api/workspace/mens-d1":
             run = query.get("run", [None])[0]
             coverage_reads.append(run)
-            value = dict(date=day, as_of=late, source_state="active", population_revision="dated-slate",
-                         coverage_summary=summary, runs=runs, analysis_run=runs[0],
-                         run=next((candidate for candidate in runs if candidate["id"] == run), None),
-                         facets={}, offer_counts={}, games=[], missing_items=[])
+            value = dict(
+                date=day,
+                as_of=late,
+                source_state="active",
+                population_revision="dated-slate",
+                coverage_summary=summary,
+                runs=runs,
+                analysis_run=runs[0],
+                run=next(
+                    (candidate for candidate in runs if candidate["id"] == run), None
+                ),
+                facets={},
+                offer_counts={},
+                games=[],
+                missing_items=[],
+            )
             route.fulfill(json=value)
         elif url.path == "/api/research/workspace":
             route.fulfill(json=dict(mens_d1_template=template))
         elif url.path.startswith("/api/research/workspace/runs/"):
             run = url.path.rsplit("/", 1)[1]
-            value = dict(run=dict(id=run, date=day, title="Saved daily paper run", created_at=late),
-                         definition=template, report={}, findings=[])
+            value = dict(
+                run=dict(
+                    id=run, date=day, title="Saved daily paper run", created_at=late
+                ),
+                definition=template,
+                report={},
+                findings=[],
+            )
             if run == latest:
-                value["comparison"] = dict(prior_run_id=older, games=dict(before=3, after=4, delta=1))
+                value["comparison"] = dict(
+                    prior_run_id=older, games=dict(before=3, after=4, delta=1)
+                )
             route.fulfill(json=value)
         elif url.path == "/api/workspace/status":
             route.fulfill(json={})
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
         elif url.path in ("/data", "/research"):
-            route.fulfill(path=ASSETS / ("data.html" if url.path == "/data" else "research-workspace.html"))
+            route.fulfill(
+                path=ASSETS
+                / ("data.html" if url.path == "/data" else "research-workspace.html")
+            )
         else:
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
-        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        browser = runtime.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
         page = browser.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(f"{base}/data?evidence=mens-d1&scope=mens-d1&date={day}")
         current = page.get_by_role("link", name="Current evidence", exact=True)
         expect(current).to_have_attribute("aria-current", "true")
         assert "run=" not in page.url
-        page.get_by_role("link", name="Open current analysis in Research", exact=True).click()
+        page.get_by_role(
+            "link", name="Open current analysis in Research", exact=True
+        ).click()
         expect(current).to_have_attribute("aria-current", "true")
-        expect(page.get_by_role("button", name="Save run from retained schedule")).to_be_enabled()
+        expect(
+            page.get_by_role("button", name="Save run from retained schedule")
+        ).to_be_enabled()
         assert coverage_reads == [None, None]
-        versions = page.locator("details").filter(has_text="Saved experiment versions for this date")
+        versions = page.locator("details").filter(
+            has_text="Saved experiment versions for this date"
+        )
         versions.locator("summary").click()
         versions.locator(f'a[href*="run={latest}"]').click()
         expect(page.get_by_text("Changes from the previous saved run")).to_be_visible()
         page.get_by_role("link", name=f"Open prior run · {older[:12]}").click()
-        expect(page.get_by_role("link", name="Best venue only")).to_have_attribute("aria-current", "true")
+        expect(page.get_by_role("link", name="Best venue only")).to_have_attribute(
+            "aria-current", "true"
+        )
         assert f"run={older}" in page.url
         page.get_by_role("link", name="All qualifying venues").click()
         page.reload()
-        expect(page.get_by_role("link", name="All qualifying venues")).to_have_attribute("aria-current", "true")
+        expect(
+            page.get_by_role("link", name="All qualifying venues")
+        ).to_have_attribute("aria-current", "true")
         assert f"run={older}" in page.url
         page.go_back()
-        expect(page.get_by_role("link", name="Best venue only")).to_have_attribute("aria-current", "true")
+        expect(page.get_by_role("link", name="Best venue only")).to_have_attribute(
+            "aria-current", "true"
+        )
         current.click()
         expect(current).to_have_attribute("aria-current", "true")
         assert "run=" not in page.url
@@ -102,8 +155,10 @@ def research_http_fixture(serve):
                 url="http://" + handler.headers["Host"] + handler.path,
                 method=handler.command,
             )
-            if handler.command == 'POST':
-                self.request.post_data_json = json.loads(handler.rfile.read(int(handler.headers.get('Content-Length',0))))
+            if handler.command == "POST":
+                self.request.post_data_json = json.loads(
+                    handler.rfile.read(int(handler.headers.get("Content-Length", 0)))
+                )
 
         def fulfill(self, *, json=None, path=None, status=200, headers=None):
             import json as json_module

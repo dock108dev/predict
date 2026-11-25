@@ -127,9 +127,7 @@ def test_exact_checkpoint_comparison_context_and_captured_download(
         expect(dialog.locator(".experiment-plot")).to_contain_text(
             "Offered decimal price"
         )
-        expect(dialog).to_contain_text(
-            "Reference only: offered-price observations"
-        )
+        expect(dialog).to_contain_text("Reference only: offered-price observations")
         dialog.locator('[data-context="reference-fd-1"]').click()
         expect(dialog).to_contain_text("fanduel-early--3")
         expect(dialog).to_contain_text("fanduel-late--3")

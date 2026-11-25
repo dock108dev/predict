@@ -6,6 +6,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 from app.fees.evidence import applies, earliest_end
+from app.fees.public_reasons import exception_reason, public_fee_result
 from .current_dependencies import digest, instant
 from .net_costs import wire
 
@@ -137,8 +138,8 @@ def reviewed_fee(q, *, at, event, group, review=None, verified_live=False):
             formula=formula,
             meaning='Conditional trade-fee benchmark; not calibrated full net EV, an executable fill or covered arbitrage.')
     except (OSError,ValueError,KeyError,TypeError,ArithmeticError) as exc:
-        metric['reason']=str(exc)
-    return metric
+        metric['reason'] = exception_reason(__name__, 'reviewed_fee_evidence', exc)
+    return public_fee_result(metric)
 
 
 def attach(result, q, *, at, event, group, review=None, verified_live=False):
@@ -167,7 +168,7 @@ def attach(result, q, *, at, event, group, review=None, verified_live=False):
                         scenario_net_usd=wire(p-risk),selected_decisive_probability=wire(p),
                         reference_revision=gross['reference_revision'])
         except (ValueError,KeyError,TypeError,ArithmeticError) as exc:
-            metric.update(available=False,reason=str(exc))
+            metric.update(available=False, reason=exception_reason(__name__, 'reviewed_fee_benchmark', exc))
     else:
         return result
     result['conditional_trade_benchmark']=metric

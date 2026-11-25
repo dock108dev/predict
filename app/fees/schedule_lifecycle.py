@@ -7,6 +7,7 @@ from pathlib import Path
 from psycopg.types.json import Jsonb
 
 from app.storage.store import hashed, stamp
+from .public_reasons import public_reason_fields
 
 VENUE = 'prophetx'
 SOURCE_URL = 'https://www.prophetx.co/lobby/t-c/trading-fees'
@@ -161,5 +162,5 @@ def summary(state, at):
             else 'expired' if verified else 'awaiting_verification',
         terms=terms, last_verified_at=verified['verified_at'] if verified else None,
         review_before=verified['review_before'] if verified else None,
-        refresh=(state or {}).get('last_attempt'), next_refresh_at=(state or {}).get('next_attempt_at'),
-        next_change=next_change, review_required=review)
+        refresh=public_reason_fields((state or {}).get('last_attempt'), 'error'), next_refresh_at=(state or {}).get('next_attempt_at'),
+        next_change=next_change, review_required=public_reason_fields(review, 'reason'))

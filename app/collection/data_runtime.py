@@ -99,7 +99,7 @@ class DataRuntime:
             from app.storage.storage_maintenance import maintain
             self.startup_maintenance = await asyncio.to_thread(maintain, self.lock_connection)
             self.resource_guard()
-            Store(self.lock_connection).migrate()
+            Store(self.lock_connection).ensure_runtime_schema()
             self.paused_sources, self.global_stopped = self.state.retained_controls()
             if self.service is None:
                 self.service = CurrentService(config=load(self.config_path), config_loader=lambda: load(self.config_path),
@@ -310,13 +310,23 @@ class DataRuntime:
 
     async def control(self, action, body):
         if action == 'stop' and body == {}:
+            persistence_error = 'stop_persistence_unconfirmed'
+            if persistence_error in self.service.cleanup_errors:self.service.cleanup_errors.remove(persistence_error)
             self.global_stopped = self.service.globally_stopped = True
             self.service.dispatch=False
             self.service.ingress.revoke()
-            await self.persist_control('stopping')
-            finite_clean = await self.withdraw(self.service.close(), wait_daily=True)
-            if not finite_clean:
-                raise SelectionError(409,'cleanup_safety_unresolved','The finite operation has not confirmed transport cleanup.')
+            persisted = False
+            try:
+                await self.persist_control('stopping')
+                persisted = True
+            except Exception as exc:
+                failure(__name__, 'data_runtime_stop_persistence', exc)
+            clean = await self.withdraw(self.service.close(), wait_daily=True) and self.service.cleanup_complete
+            if not persisted:self.service.cleanup_errors.append(persistence_error)
+            if not clean:
+                raise SelectionError(409, 'cleanup_safety_unresolved', 'Acquisition is withdrawn. Retry Stop to confirm cleanup.')
+            if not persisted:
+                raise SelectionError(409, persistence_error, 'Acquisition is withdrawn. Retry Stop to confirm it is saved.')
         elif action == 'pause' and set(body) == {'source'} and body['source'] in ('kalshi', 'polymarket_us', 'the_odds_api', 'sportsgameodds'):
             venue = body['source']
             if venue not in self.service.workers:
@@ -363,12 +373,19 @@ class DataRuntime:
         operations=[ordinary]
         if finite and self.selected_fees:operations.append(self.selected_fees.stop())
         if wait_daily and self.daily_coverage:operations.append(self.daily_coverage.wait_idle())
+        if wait_daily:
+            # A full Stop retries both shutdown owners and can supersede
+            # their previous command-level error. Each operation is checked below.
+            self.service.cleanup_errors = [code for code in self.service.cleanup_errors
+                if code not in ('source_cleanup_unresolved', 'selected_fee_cleanup_unresolved')]
         results=await asyncio.gather(*operations,return_exceptions=True)
-        if isinstance(results[0],BaseException):
-            self.service.cleanup_errors.append('source_cleanup_unresolved')
-        clean=not isinstance(results[0],BaseException) and all(value is True for value in results[1:])
-        if not clean:self.service.cleanup_errors.append('selected_fee_cleanup_unresolved')
-        return clean
+        failures = {
+            'source_cleanup_unresolved': isinstance(results[0], BaseException),
+            'selected_fee_cleanup_unresolved': any(value is not True for value in results[1:]),
+        }
+        for code, failed in failures.items():
+            if failed and code not in self.service.cleanup_errors:self.service.cleanup_errors.append(code)
+        return not any(failures.values())
 
     async def close(self):
         self.stopping.set()
@@ -418,6 +435,13 @@ class DataRuntime:
         if self.account_projection is not None:
             await attempt('data_runtime_account_projection_close',self.account_projection.close)
             self.account_projection=None
+        if isinstance(self.service, CurrentService) and not self.service.cleanup_complete:
+            # A failed terminal shutdown must not grant another data process
+            # authority while this process still owns source resources. A retry
+            # can release both authorities, or process exit releases them.
+            self.failed = True
+            if errors:raise errors[0]
+            raise RuntimeError('data_runtime_source_cleanup_unresolved')
         if self.lock_connection is not None:
             await attempt('data_runtime_database_close', self.lock_connection.close)
             self.lock_connection = None

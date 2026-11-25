@@ -22,9 +22,12 @@ class CurrentRouteRetirement(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(value['provider_requests'], 0)
             self.assertEqual((await client.get('/api/admin/status')).status, 200)
             self.assertEqual((await client.get('/')).status, 200)
-            page = await client.get('/current/coverage')
+            redirect = await client.get('/current/coverage', allow_redirects=False)
+            self.assertEqual(redirect.status, 302)
+            self.assertEqual(redirect.headers['Location'], '/settings#storage')
+            page = await client.get('/settings')
             self.assertEqual(page.status, 200)
-            self.assertIn('Coverage', await page.text())
+            self.assertIn('id="storage"', await page.text())
             for asset in ('coverage.js','coverage.css','coverage-model.js','coverage-view.js'):
                 self.assertEqual((await client.get('/current/assets/'+asset)).status, 200, asset)
 

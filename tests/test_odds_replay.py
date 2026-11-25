@@ -7,11 +7,16 @@ import pytest
 
 from app.dashboard.local_security import PublicRequestError
 from app.dashboard.replay_api import load
+from app.fees.public_reasons import UNAVAILABLE
 from app.storage import odds_replay
 from app.storage.comparison_snapshot import pack, unpack
 from app.comparison.inspection_math import starting_fee_terms
 from app.comparison.inspection_settlement import settlement_terms
 from tests.replay_fixture import write_archives
+
+
+VETTED_REPLAY_REASON = 'synthetic_account_terms_unavailable'
+RAW_REPLAY_REASON = 'Legacy failure reading /private/synthetic-fee-evidence.json'
 
 
 @pytest.fixture
@@ -38,9 +43,25 @@ def test_saved_prices_show_prefee_payoff_and_withhold_after_fee_payoff(saved_arc
     assert load(dict(query, dataset='preview', profit='7.44'))['total'] == 0
 
 
-def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archives):
+@pytest.mark.parametrize(
+    ('stored_reason', 'expected_reason'),
+    [(VETTED_REPLAY_REASON, VETTED_REPLAY_REASON), (RAW_REPLAY_REASON, UNAVAILABLE)],
+    ids=['vetted-reason-preserved', 'unknown-reason-redacted'],
+)
+def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archives, stored_reason, expected_reason):
     query = dict(dataset='frozen', view='ev', basis='before', group='offer')
-    with patch('app.storage.odds_replay.connect', side_effect=AssertionError('live data connection')):
+    path = odds_replay.DIRECTORY / 'frozen.sqlite3'
+    offer_id = 'practice-offer-0'
+    if stored_reason != VETTED_REPLAY_REASON:
+        with closing(sqlite3.connect(path)) as db, db:
+            (payload,) = db.execute('SELECT payload FROM detail WHERE id=?', (offer_id,)).fetchone()
+            saved = unpack(payload)
+            saved['row']['trade_fee']['reason'] = stored_reason
+            db.execute('UPDATE detail SET payload=? WHERE id=?', (pack(saved), offer_id))
+    before = path.read_bytes()
+    with (
+            patch('app.dashboard.replay_api.connect', side_effect=AssertionError('live replay connection')),
+            patch('app.storage.odds_replay.connect', side_effect=AssertionError('live data connection'))):
         page = load(query)
         assert page['replay']['synthetic'] is False
         assert page['coverage'] == dict(offers=6, current=6, before=6, reviewed=0, conservative=0, sportsbooks=6,
@@ -52,7 +73,7 @@ def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archive
         assert all(group['offers'][0]['value'] is None for group in modeled['rows'])
         reviewed = load(dict(query, basis='reviewed'))
         assert all(group['score'] is None for group in reviewed['rows'])
-        offer = next(group['offers'][0] for group in page['rows'] if group['offers'][0]['id'] == 'practice-offer-0')
+        offer = next(group['offers'][0] for group in page['rows'] if group['offers'][0]['id'] == offer_id)
         assert offer['value'] == '10'
         assert offer['fair_reference'] == dict(books=['fanduel'], method='single')
         selection = dict(query, id=offer['id'], result_id=offer['evidence_result_id'])
@@ -61,7 +82,13 @@ def test_replay_detail_is_revision_bound_and_never_reads_live_data(saved_archive
         assert detail['inspection']['starting_fee_terms']['scope']
         assert 'fictional' not in str(detail['inspection']['starting_fee_terms']).lower()
         assert detail['inspection']['assumed_scenario']['available'] is False
-        assert detail['inspection']['trade_fee']['reason'] == 'synthetic_account_terms_unavailable'
+        assert detail['row']['trade_fee']['reason'] == expected_reason
+        assert detail['inspection']['trade_fee']['reason'] == expected_reason
+        assert RAW_REPLAY_REASON not in str(detail)
+        with odds_replay.open_archive(path) as db:
+            payload = db.execute('SELECT payload FROM detail WHERE id=?', (offer['id'],)).fetchone()[0]
+        assert unpack(payload)['row']['trade_fee']['reason'] == stored_reason
+        assert path.read_bytes() == before
         with pytest.raises(PublicRequestError, match='revision changed'):
             load(dict(selection, dataset='preview'), details=True)
 
@@ -179,16 +206,23 @@ def test_retired_replay_datasets_fail_at_html_and_api_boundaries_without_sql(tmp
                 app, journal=Journal(tmp_path / 'journal.sqlite3'), monitor=False)):
             app = create_app(owner=owner(), sessions={}, current_provider=provider)
         async with TestClient(TestServer(app)) as client:
-            with patch('app.dashboard.replay_api.connect', side_effect=AssertionError('SQL read')):
+            with (
+                    patch('app.dashboard.replay_api.connect', side_effect=AssertionError('SQL read')),
+                    patch.object(odds_replay, 'open_archive', side_effect=AssertionError('archive read'))):
                 for dataset in ('practice', 'synthetic', 'demo', 'unknown'):
-                    for path in ('/replay', '/api/odds-replay', '/api/odds-replay/details'):
-                        response = await client.get(path, params={'dataset': dataset})
+                    for path in ('/replay', '/data', '/api/odds-replay', '/api/odds-replay/details'):
+                        response = await client.get(path, params={'dataset': dataset}, allow_redirects=False)
                         assert response.status == 422, (path, dataset, await response.text())
-            # Authentic archive/retained shells remain accessible.
-            for dataset in (*odds_replay.DATASETS, 'retained'):
-                response = await client.get('/replay', params={'dataset': dataset})
-                assert response.status == 200
-                assert 'desk.js' in await response.text()
+                        assert await response.json() == {'error': 'Unknown replay dataset'}
+                # Supported bookmarks load the current Data shell with their capture identity.
+                for dataset in (*odds_replay.DATASETS, 'retained'):
+                    selection = dict(dataset=dataset, result_id='saved-capture', game_key='saved-game')
+                    response = await client.get('/replay', params=selection)
+                    assert response.status == 200
+                    assert response.history[0].status == 302
+                    assert response.url.path == '/data'
+                    assert dict(response.url.query) == selection
+                    assert 'data.js' in await response.text()
 
     asyncio.run(journey())
 

@@ -36,7 +36,295 @@ def select(db, kind):
     )
 
 
-def capture(db, run, event_ids, at, *, observed=None):
+def collection_witnesses(records, references):
+    from .current_rows import contract_id
+
+    return dict(
+        offers={
+            contract_id(r): [
+                r["quote"]["original"],
+                r["quote"]["times"].get("source_at"),
+            ]
+            for r in records
+        },
+        references={r["id"]: r["revision"] for r in references},
+    )
+
+
+def enqueue(
+    db, run, event_ids, at, *, received_at, receipt_sha256, records, references, frames
+):
+    """Retain the page's original scope and exact normalized witnesses at admission."""
+    if run.get("kind") not in ("monitor", "live"):
+        raise ValueError("Collection cohort required")
+    key = hashed([run.get("id"), received_at, receipt_sha256, sorted(event_ids)])
+    db.execute(
+        """INSERT INTO public.pregame_cohort_work
+           (id,observed_at,expires_at,received_at,receipt_sha256,collection_run,event_ids,witnesses)
+           VALUES(%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(id) DO NOTHING""",
+        (
+            key,
+            at,
+            max(stamp(frame["expires_at"]) for frame in frames),
+            received_at,
+            receipt_sha256,
+            Jsonb(run),
+            sorted(event_ids),
+            Jsonb(collection_witnesses(records, references)),
+        ),
+    )
+    return key
+
+
+def staged_table(table):
+    return sql.SQL(
+        "jsonb_populate_recordset(NULL::{}, (SELECT snapshot->%s FROM public.pregame_cohort_work WHERE id=%s))"
+    ).format(sql.Identifier("public", table))
+
+
+def staged_inputs(db, key, event_ids):
+    events = [
+        row["id"]
+        for row in db.execute(
+            sql.SQL("SELECT id FROM {} WHERE native_event_id=ANY(%s)").format(
+                staged_table("current_event")
+            ),
+            ("current_event", key, event_ids),
+        )
+    ]
+    cids = [
+        row["id"]
+        for row in db.execute(
+            sql.SQL("SELECT id FROM {} WHERE event_id=ANY(%s)").format(
+                staged_table("current_contract")
+            ),
+            ("current_contract", key, events),
+        )
+    ]
+    return (
+        events,
+        event_ids,
+        {
+            "current_event": ("id=ANY(%s)", events),
+            "current_contract": ("id=ANY(%s)", cids),
+            "current_offer_storage": ("contract_id=ANY(%s)", cids),
+            "current_sgo_reference": ("event_id=ANY(%s)", event_ids),
+            "sgo_line_presence": ("event_id=ANY(%s)", event_ids),
+            "current_pregame_price": ("contract_id=ANY(%s)", cids),
+        },
+    )
+
+
+def seal(db, key):
+    """Stage typed inputs before another collection mode can change public rows."""
+    work = db.execute(
+        """SELECT collection_run,event_ids,observed_at,witnesses
+        FROM public.pregame_cohort_work WHERE id=%s AND snapshot IS NULL""",
+        (key,),
+    ).fetchone()
+    if work is None:
+        return True
+    pending = db.execute(
+        """SELECT 1 FROM public.current_pregame_work
+        WHERE provider='sportsgameodds' AND native_event_id=ANY(%s) LIMIT 1""",
+        (work["event_ids"],),
+    ).fetchone()
+    if pending:
+        return False
+    _, _, conditions = inputs(
+        db,
+        work["collection_run"],
+        work["event_ids"],
+        work["observed_at"],
+        work["witnesses"],
+    )
+    fields, parameters = [], []
+    for table, (condition, keys) in conditions.items():
+        fields.extend(
+            (
+                sql.Literal(table),
+                sql.SQL(
+                    "(SELECT COALESCE(jsonb_agg(to_jsonb(p)), '[]'::jsonb) FROM {} p WHERE {})"
+                ).format(sql.Identifier("public", table), sql.SQL(condition)),
+            )
+        )
+        parameters.append(keys)
+    db.execute(
+        sql.SQL(
+            "UPDATE public.pregame_cohort_work SET snapshot=jsonb_build_object({}) WHERE id=%s"
+        ).format(sql.SQL(",").join(fields)),
+        (*parameters, key),
+    )
+    return True
+
+
+def project(db, key, *, at, retry=False):
+    """Publish only staged observations, atomically completing the work."""
+    from .current_pregame import process
+    from .current_rows import LOCK
+
+    at = stamp(at)
+    with db.transaction():
+        db.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK,))
+        work = db.execute(
+            """SELECT collection_run,event_ids,observed_at,expires_at,received_at,receipt_sha256,snapshot IS NOT NULL staged
+            FROM public.pregame_cohort_work WHERE id=%s FOR UPDATE""",
+            (key,),
+        ).fetchone()
+        if work is None:
+            return "complete"
+        if work["expires_at"] <= at:
+            db.execute("DELETE FROM public.pregame_cohort_work WHERE id=%s", (key,))
+            return "expired"
+        if not work["staged"]:
+            if not retry:
+                return "current_calculation_pending"
+            current_receipt = db.execute(
+                """SELECT count(*) count FROM public.current_sgo_event_frame
+                WHERE event_id=ANY(%s) AND facts->>'receipt_sha256'=%s AND facts->>'received_at'=%s""",
+                (work["event_ids"], work["receipt_sha256"], work["received_at"]),
+            ).fetchone()["count"]
+            if current_receipt != len(work["event_ids"]):
+                return "cohort_receipt_superseded_before_staging"
+            keys = ["sportsgameodds:" + event for event in work["event_ids"]]
+            process(db, keys=keys, limit=len(keys), at=work["observed_at"])
+            if not seal(db, key):
+                return "current_calculation_pending"
+        schema = SCHEMAS[work["collection_run"]["kind"]]
+        # An old projection must never replace a newer observation of the
+        # same event in this mode. Other modes use independent staged facts.
+        active = db.execute(
+            sql.SQL("""SELECT e.native_event_id FROM {} e
+            LEFT JOIN {} c ON c.id=e.id
+            WHERE e.scheduled_start::timestamptz>%s
+                AND (c.cohort_observed_at IS NULL OR c.cohort_observed_at<=%s)""").format(
+                staged_table("current_event"), sql.Identifier(schema, "current_event")
+            ),
+            ("current_event", key, at, work["observed_at"]),
+        ).fetchall()
+        capture(
+            db,
+            work["collection_run"],
+            [event["native_event_id"] for event in active],
+            work["observed_at"],
+            snapshot_key=key,
+            recovered_at=at,
+        )
+        db.execute("DELETE FROM public.pregame_cohort_work WHERE id=%s", (key,))
+    return "complete"
+
+
+def attempt_projection(db, key, *, at, retry=False):
+    from app.diagnostics import failure, failure_details
+
+    try:
+        reason = project(db, key, at=at, retry=retry)
+        if reason in ("complete", "expired"):
+            return dict(state=reason)
+        details = None
+    except Exception as exc:
+        failure(__name__, "pregame_cohort_projection", exc)
+        reason = "cohort_projection_failed"
+        details = failure_details(exc)
+    db.execute(
+        """UPDATE public.pregame_cohort_work SET
+          retry_after=clock_timestamp()+interval '15 seconds', last_error=%s WHERE id=%s""",
+        (reason, key),
+    )
+    return dict(state="pending", reason=reason, diagnostics=details)
+
+
+def recover(db, *, at, include_deferred=False, limit=8):
+    """Retry independent receipts using only local SQL and original source clocks."""
+    ids = db.execute(
+        """SELECT id FROM public.pregame_cohort_work
+        WHERE %s OR retry_after IS NULL OR retry_after<=clock_timestamp()
+        ORDER BY retry_after NULLS FIRST,observed_at,id LIMIT %s""",
+        (include_deferred, limit),
+    ).fetchall()
+    return [attempt_projection(db, job["id"], at=at, retry=True) for job in ids]
+
+
+def inputs(db, run, event_ids, at, witnesses):
+    events = [
+        r["id"]
+        for r in db.execute(
+            """SELECT id FROM public.current_event e WHERE provider='sportsgameodds' AND native_event_id=ANY(%s)
+        AND scheduled_start::timestamptz>%s
+        AND (%s::timestamptz IS NULL OR scheduled_start::timestamptz>=%s)
+        AND (%s::timestamptz IS NULL OR scheduled_start::timestamptz<=%s)
+        AND NOT EXISTS(SELECT 1 FROM public.current_pregame_work w WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)""",
+            (
+                event_ids,
+                at,
+                run.get("scope_start_at"),
+                run.get("scope_start_at"),
+                run.get("scope_end_at"),
+                run.get("scope_end_at"),
+            ),
+        )
+    ]
+    event_ids = [
+        r["native_event_id"]
+        for r in db.execute(
+            "SELECT native_event_id FROM public.current_event WHERE id=ANY(%s)",
+            (events,),
+        )
+    ]
+    cids = [
+        r["id"]
+        for r in db.execute(
+            "SELECT id FROM public.current_contract WHERE event_id=ANY(%s)",
+            (events,),
+        )
+    ]
+    if witnesses is not None:
+        offers = witnesses["offers"]
+        cids = [cid for cid in cids if cid in offers]
+        # Out-of-order source rejection must not relabel a newer public
+        # quote, observed only by another mode, as this capture's input.
+        admitted = []
+        for row in db.execute(
+            "SELECT contract_id,record FROM public.current_pregame_price WHERE contract_id=ANY(%s)",
+            (cids,),
+        ):
+            actual = row["record"]["quote"]
+            if [actual["original"], actual["times"].get("source_at")] == offers[
+                row["contract_id"]
+            ]:
+                admitted.append(row["contract_id"])
+        cids = admitted
+    refs = [
+        r["id"]
+        for r in db.execute(
+            "SELECT id FROM public.current_sgo_reference WHERE event_id=ANY(%s)",
+            (event_ids,),
+        )
+    ]
+    if witnesses is not None:
+        witnessed = witnesses["references"]
+        refs = [
+            r["id"]
+            for r in db.execute(
+                "SELECT id,revision FROM public.current_sgo_reference WHERE id=ANY(%s)",
+                (refs,),
+            )
+            if witnessed.get(r["id"]) == r["revision"]
+        ]
+    conditions = {
+        "current_event": ("id=ANY(%s)", events),
+        "current_contract": ("id=ANY(%s)", cids),
+        "current_offer_storage": ("contract_id=ANY(%s)", cids),
+        "current_sgo_reference": ("id=ANY(%s)", refs),
+        "sgo_line_presence": ("event_id=ANY(%s)", event_ids),
+        "current_pregame_price": ("contract_id=ANY(%s)", cids),
+    }
+    return events, event_ids, conditions
+
+
+def capture(
+    db, run, event_ids, at, *, observed=None, snapshot_key=None, recovered_at=None
+):
     """Snapshot every admitted page, including unchanged quotes, after calculation.
 
     The transaction contains inputs and calculations from one committed page.
@@ -51,89 +339,22 @@ def capture(db, run, event_ids, at, *, observed=None):
     event_ids = sorted(set(event_ids))
     if not event_ids:
         return
+    witnesses = (
+        collection_witnesses(observed["records"], observed["references"])
+        if observed is not None
+        else None
+    )
     with db.transaction():
         # Serialize whole snapshot replacement with the source/calculation owner.
         from .current_rows import LOCK
 
         db.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK,))
-        events = [
-            r["id"]
-            for r in db.execute(
-                """SELECT id FROM public.current_event e WHERE provider='sportsgameodds' AND native_event_id=ANY(%s)
-            AND scheduled_start::timestamptz>%s
-            AND (%s::timestamptz IS NULL OR scheduled_start::timestamptz>=%s)
-            AND (%s::timestamptz IS NULL OR scheduled_start::timestamptz<=%s)
-            AND NOT EXISTS(SELECT 1 FROM public.current_pregame_work w WHERE w.provider=e.provider AND w.native_event_id=e.native_event_id)""",
-                (
-                    event_ids,
-                    at,
-                    run.get("scope_start_at"),
-                    run.get("scope_start_at"),
-                    run.get("scope_end_at"),
-                    run.get("scope_end_at"),
-                ),
-            )
-        ]
-        event_ids = [
-            r["native_event_id"]
-            for r in db.execute(
-                "SELECT native_event_id FROM public.current_event WHERE id=ANY(%s)",
-                (events,),
-            )
-        ]
+        if snapshot_key is None:
+            events, event_ids, conditions = inputs(db, run, event_ids, at, witnesses)
+        else:
+            events, event_ids, conditions = staged_inputs(db, snapshot_key, event_ids)
         if not events:
             return
-        cids = [
-            r["id"]
-            for r in db.execute(
-                "SELECT id FROM public.current_contract WHERE event_id=ANY(%s)",
-                (events,),
-            )
-        ]
-        if observed is not None:
-            from .current_rows import contract_id
-
-            observed_records = {contract_id(r): r for r in observed["records"]}
-            cids = [cid for cid in cids if cid in observed_records]
-            # Out-of-order source rejection must not relabel a newer public
-            # quote, observed only by another mode, as this capture's input.
-            admitted = []
-            for row in db.execute(
-                "SELECT contract_id,record FROM public.current_pregame_price WHERE contract_id=ANY(%s)",
-                (cids,),
-            ):
-                actual = row["record"]["quote"]
-                witnessed = observed_records[row["contract_id"]]["quote"]
-                if actual["original"] == witnessed["original"] and actual["times"].get(
-                    "source_at"
-                ) == witnessed["times"].get("source_at"):
-                    admitted.append(row["contract_id"])
-            cids = admitted
-        refs = [
-            r["id"]
-            for r in db.execute(
-                "SELECT id FROM public.current_sgo_reference WHERE event_id=ANY(%s)",
-                (event_ids,),
-            )
-        ]
-        if observed is not None:
-            witnessed = {r["id"]: r["revision"] for r in observed["references"]}
-            refs = [
-                r["id"]
-                for r in db.execute(
-                    "SELECT id,revision FROM public.current_sgo_reference WHERE id=ANY(%s)",
-                    (refs,),
-                )
-                if witnessed.get(r["id"]) == r["revision"]
-            ]
-        conditions = {
-            "current_event": ("id=ANY(%s)", events),
-            "current_contract": ("id=ANY(%s)", cids),
-            "current_offer_storage": ("contract_id=ANY(%s)", cids),
-            "current_sgo_reference": ("id=ANY(%s)", refs),
-            "sgo_line_presence": ("event_id=ANY(%s)", event_ids),
-            "current_pregame_price": ("contract_id=ANY(%s)", cids),
-        }
         for table, (condition, current) in conditions.items():
             target = sql.Identifier(schema, table)
             columns = [
@@ -157,11 +378,15 @@ def capture(db, run, event_ids, at, *, observed=None):
                     + " ON CONFLICT({}) DO UPDATE SET {}"
                 ).format(
                     target,
-                    sql.Identifier("public", table),
+                    staged_table(table)
+                    if snapshot_key is not None
+                    else sql.Identifier("public", table),
                     sql.Identifier(key),
                     assignments,
                 ),
-                (at, current),
+                (at, table, snapshot_key, current)
+                if snapshot_key is not None
+                else (at, current),
             )
         metadata = dict(
             kind=kind,
@@ -183,12 +408,12 @@ def capture(db, run, event_ids, at, *, observed=None):
         for name in (schema, "pregame_combined"):
             db.execute(
                 sql.SQL(
-                    "UPDATE {}.current_pregame_revision SET revision=revision+1,committed_at=%s WHERE singleton"
+                    "UPDATE {}.current_pregame_revision SET revision=revision+1,committed_at=GREATEST(committed_at,%s) WHERE singleton"
                 ).format(sql.Identifier(name)),
                 (at,),
             )
-        prune(db, schema, at)
-        prune(db, "pregame_combined", at)
+        prune(db, schema, recovered_at or at)
+        prune(db, "pregame_combined", recovered_at or at)
 
 
 def key_for(table):
@@ -256,6 +481,7 @@ def combine(db, events, event_ids):
 def derive(db, schema, cids, at, metadata):
     """Compute EV from this capture's reference witnesses, never public leftovers."""
     from app.comparison import current_pregame as math
+    from app.comparison.acquisition import calculation as acquisition_calculation, offer_input
     from app.collection.sportsgameodds_current_rows import source_bookmaker
     from .current_pregame import numeric
     from . import odds_archive
@@ -351,7 +577,11 @@ def derive(db, schema, cids, at, metadata):
             )
             # The admitted price already contains the qualified fee cashflows.
             # Only probability-dependent values and line status can change.
+            acquisition = (acquisition_calculation(row["record"], reference)
+                           if offer_input(row["record"]).get("pull_id") else None)
             payload = math.revalue_reference(original, reference, at=at)
+            if acquisition is not None:
+                payload["acquisition"] = acquisition
             payload["main"] = math.main_line(row["record"], reference)
             payload.update(
                 sportsbook_event_ids=list(observations),

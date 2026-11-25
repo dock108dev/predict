@@ -4,6 +4,7 @@ from fractions import Fraction
 from app.comparison.cashflows import exact_wire
 from app.comparison.sgo_reference import BEST_BOOKS, BEST_VERSION, NAMED_VERSION, VERSION
 from app.comparison.snapshot_fee_outcome import outcome
+from app.fees.public_reasons import public_fee_result
 from app.storage.store import stamp
 
 
@@ -103,6 +104,33 @@ def retained_novig_fee(row, captured_at):
 
 def visible_row(row):
     """Remove legacy financial derivatives while preserving exact venue terms."""
+    replacements = {}
+    for field in ('trade_fee', 'conditional_trade_benchmark', 'conservative_trade_benchmark'):
+        if field in row:
+            original = row[field]
+            fee = public_fee_result(original)
+            if fee is not original:
+                reason = original.get('reason')
+                if isinstance(reason, str) and reason != fee.get('reason'):
+                    replacements[reason] = fee['reason']
+                row = dict(row, **{field: fee})
+    if replacements:
+        # Retained rows also denormalized the same fee reason beside the
+        # calculation. Project the duplicates without rewriting the saved row.
+        def reasons(values):
+            if isinstance(values, str):
+                return replacements.get(values, values)
+            if isinstance(values, (list, tuple)):
+                return [replacements.get(value, value) if isinstance(value, str) else value for value in values]
+            return values
+
+        if (math := row.get('math')) and 'missing' in math:
+            row = dict(row, math=dict(math, missing=reasons(math['missing'])))
+        if status := row.get('metric_status'):
+            row = dict(row, metric_status={
+                metric: dict(value, reasons=reasons(value['reasons'])) if 'reasons' in value else value
+                for metric, value in status.items()
+            })
     if not excluded_reference(row):
         authority = row.get('current_authority') or {}
         if 'exact_pinnacle_reference' not in authority and 'exact_pinnacle_reference_current' not in row:

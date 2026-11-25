@@ -11,6 +11,16 @@ from app.storage.store import stamp
 from app.storage import current_pregame as board
 
 
+def read_cohort_arbs(db, query, *, at):
+    from app.storage.pregame_arbs import read_cohort
+
+    # These fixtures exercise the working cohort and its cache/expiry guards.
+    # Ordinary SportsGameOdds reads instead require a completed frozen pull.
+    return read_cohort(
+        db, dict(provider="sportsgameodds", reference_scope="selected", **query), at=at
+    )
+
+
 def test_late_financial_inputs_require_the_same_complete_price_witness():
     from copy import deepcopy
     from types import SimpleNamespace
@@ -121,7 +131,7 @@ def test_late_hydration_keeps_newer_negative_native_alias_before_profit_bound():
             side_effect=AssertionError("newest price cannot pass pre-fee test"),
         ),
     ):
-        packet = arbs.read(db, {}, at=stamp(AT))
+        packet = read_cohort_arbs(db, {}, at=stamp(AT))
     assert packet["rows"] == [] and packet["evaluated_pairs"] == 1
     assert fetched == ["newer"]
 
@@ -335,14 +345,14 @@ class PregameBoardViewsSQL(PregameFixture):
             self.process(db)
             arbs._PAIR_CACHE.clear()
             clear_views()
-            arbs.read(db, dict(league="NBA"), at=stamp(AT))
+            read_cohort_arbs(db, dict(league="NBA"), at=stamp(AT))
             self.assertFalse(arbs._SCAN_CACHE)  # narrow first never seeds a wider scan
             expected = []
             for query in filters:
                 clear_views()
-                expected.append(arbs.read(db, query, at=stamp(AT)))
+                expected.append(read_cohort_arbs(db, query, at=stamp(AT)))
             clear_views()
-            full = arbs.read(db, {}, at=stamp(AT))
+            full = read_cohort_arbs(db, {}, at=stamp(AT))
             self.assertTrue(full["rows"])
             self.assertGreater(full["excluded_pairs"], 0)
             with patch.object(
@@ -352,7 +362,7 @@ class PregameBoardViewsSQL(PregameFixture):
             ):
                 for query, packet in zip(filters, expected):
                     with self.subTest(query=query):
-                        self.assertEqual(arbs.read(db, query, at=stamp(AT)), packet)
+                        self.assertEqual(read_cohort_arbs(db, query, at=stamp(AT)), packet)
 
     async def test_paired_amount_research_uses_both_owners_without_writes(self):
         from app.storage import pregame_arbs as arbs
@@ -364,7 +374,7 @@ class PregameBoardViewsSQL(PregameFixture):
             self.process(db)
             arbs._CACHE.clear()
             arbs._SCAN_CACHE.clear()
-            pairs = arbs.read(db, {}, at=stamp(AT))["rows"]
+            pairs = read_cohort_arbs(db, {}, at=stamp(AT))["rows"]
             self.assertTrue(pairs)
             pair = pairs[0]
             before = list(
@@ -415,29 +425,29 @@ class PregameBoardViewsSQL(PregameFixture):
             arbs._SCAN_CACHE.clear()
             with db.transaction():
                 select(db, "monitor")
-                full = arbs.read(db, {}, at=stamp(AT))
+                full = read_cohort_arbs(db, {}, at=stamp(AT))
                 self.assertTrue(full["rows"])
                 self.assertEqual(
-                    arbs.read(
+                    read_cohort_arbs(
                         db, dict(_scope_seconds="1800", sort="start"), at=stamp(AT)
                     )["rows"],
                     [],
                 )
                 self.assertEqual(
-                    arbs.read(
+                    read_cohort_arbs(
                         db,
                         dict(search="unmatched fixture", sort="newest"),
                         at=stamp(AT),
                     )["rows"],
                     [],
                 )
-                aged = arbs.read(db, dict(max_age_minutes="2"), at=stamp(AT))
+                aged = read_cohort_arbs(db, dict(max_age_minutes="2"), at=stamp(AT))
                 self.assertTrue(aged["rows"])
-                projected = arbs.read(
+                projected = read_cohort_arbs(
                     db, dict(max_age_minutes="2", sort="oldest"), at=stamp(AT)
                 )
                 self.assertEqual(projected["total"], aged["total"])
-                expired = arbs.read(
+                expired = read_cohort_arbs(
                     db,
                     dict(max_age_minutes="2", sort="start"),
                     at=stamp(aged["refresh_at"]) + timedelta(microseconds=1),
@@ -446,13 +456,13 @@ class PregameBoardViewsSQL(PregameFixture):
             with db.transaction():
                 select(db, "live")
                 self.assertEqual(
-                    arbs.read(db, dict(sort="newest"), at=stamp(AT))["rows"], []
+                    read_cohort_arbs(db, dict(sort="newest"), at=stamp(AT))["rows"], []
                 )
             db.execute("""UPDATE public.current_offer_storage SET
                 facts=jsonb_set(facts,'{state}','"unavailable"'),revision=revision||'-withdrawn'""")
             with db.transaction():
                 select(db, "monitor")
-                withdrawn = arbs.read(db, dict(sort="newest"), at=stamp(AT))
+                withdrawn = read_cohort_arbs(db, dict(sort="newest"), at=stamp(AT))
                 self.assertNotEqual(withdrawn["cursor"], full["cursor"])
                 self.assertEqual(withdrawn["rows"], [])
 
@@ -683,7 +693,6 @@ class PregameBoardViewsSQL(PregameFixture):
     async def test_fee_qualified_arbs_survive_missing_sportsbook_reference(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule
-        from app.storage.pregame_arbs import read as arb_read
 
         data = page()
         for odd in data["data"][0]["odds"].values():
@@ -704,7 +713,7 @@ class PregameBoardViewsSQL(PregameFixture):
             before = list(
                 db.execute("SELECT * FROM current_pregame_price ORDER BY contract_id")
             )
-            pairs = arb_read(db, {}, at=stamp(AT))
+            pairs = read_cohort_arbs(db, {}, at=stamp(AT))
             self.assertEqual(pairs["total"], 2)
             for pair in pairs["rows"]:
                 self.assertEqual(pair["category"], "market_market")
@@ -727,12 +736,11 @@ class PregameBoardViewsSQL(PregameFixture):
             db.execute(
                 "UPDATE current_offer_storage SET facts=jsonb_set(facts,'{state}','\"unavailable\"'::jsonb),revision=revision||'-withdrawn'"
             )
-            self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            self.assertEqual(read_cohort_arbs(db, {}, at=stamp(AT))["total"], 0)
 
     async def test_profit_bound_keeps_latest_and_tied_cross_event_aliases(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule
-        from app.storage.pregame_arbs import read as arb_read
         from psycopg.types.json import Jsonb
 
         data = page()
@@ -745,7 +753,7 @@ class PregameBoardViewsSQL(PregameFixture):
             pricing.write(db, "prophetx", [rule("prophetx")])
             self.ingest(db, data)
             self.process(db)
-            self.assertGreater(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            self.assertGreater(read_cohort_arbs(db, {}, at=stamp(AT))["total"], 0)
             db.execute("""UPDATE current_pregame_price SET payload=jsonb_set(
                 payload,'{sportsbook_event_ids}','["event","alias"]')""")
             # Newer unprofitable evidence wins over an older attractive alias.
@@ -766,7 +774,7 @@ class PregameBoardViewsSQL(PregameFixture):
                 ),
             )
             self.process(db)
-            self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            self.assertEqual(read_cohort_arbs(db, {}, at=stamp(AT))["total"], 0)
             original = db.execute(
                 "SELECT facts->>'source_at' AS original_clock FROM sgo_quote_revision WHERE event_id='event' AND bookmaker_id='fanduel' LIMIT 1"
             ).fetchone()["original_clock"]
@@ -776,10 +784,10 @@ class PregameBoardViewsSQL(PregameFixture):
                 (Jsonb(original),),
             )
             self.process(db)
-            self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            self.assertEqual(read_cohort_arbs(db, {}, at=stamp(AT))["total"], 0)
             db.execute("DELETE FROM sgo_quote_revision WHERE event_id='alias'")
             self.process(db)
-            self.assertGreater(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            self.assertGreater(read_cohort_arbs(db, {}, at=stamp(AT))["total"], 0)
 
     async def test_book_quote_fetch_filters_exact_numeric_lines_before_json_decode(
         self,
@@ -941,7 +949,6 @@ class PregameBoardViewsSQL(PregameFixture):
     async def test_pending_reference_job_suppresses_pairs_before_recalculation(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule
-        from app.storage.pregame_arbs import read as arb_read
 
         data = page()
         for odd in data["data"][0]["odds"].values():
@@ -956,14 +963,14 @@ class PregameBoardViewsSQL(PregameFixture):
             # Its pending job must suppress pairs even with no price-source job.
             db.execute("""UPDATE current_pregame_price SET payload=jsonb_set(
                 payload,'{sportsbook_event_ids}','["pending-reference-event"]'::jsonb)""")
-            before = arb_read(db, {}, at=stamp(AT))
+            before = read_cohort_arbs(db, {}, at=stamp(AT))
             self.assertGreater(before["total"], 0)
             db.execute(
                 "SELECT pregame_enqueue('sportsgameodds','pending-reference-event')"
             )
-            self.assertEqual(arb_read(db, {}, at=stamp(AT))["total"], 0)
+            self.assertEqual(read_cohort_arbs(db, {}, at=stamp(AT))["total"], 0)
             self.process(db)
-            restored = arb_read(db, {}, at=stamp(AT))
+            restored = read_cohort_arbs(db, {}, at=stamp(AT))
             self.assertEqual(restored["rows"], before["rows"])
 
     async def test_browse_and_exact_comparison_keep_authentic_prices_without_ev(self):
@@ -1036,7 +1043,6 @@ class PregameBoardViewsSQL(PregameFixture):
     async def test_market_to_book_arbs_use_actual_opposing_price_without_book_ev(self):
         from app.fees import pricing
         from tests.test_fee_pricing import rule
-        from app.storage.pregame_arbs import read as arb_read
 
         data = page()
         for odd in data["data"][0]["odds"].values():
@@ -1046,7 +1052,7 @@ class PregameBoardViewsSQL(PregameFixture):
             pricing.write(db, "prophetx", [rule("prophetx")])
             self.ingest(db, data)
             self.process(db)
-            pairs = arb_read(db, {"category": "market_book"}, at=stamp(AT))
+            pairs = read_cohort_arbs(db, {"category": "market_book"}, at=stamp(AT))
             self.assertGreater(pairs["total"], 0)
             for pair in pairs["rows"]:
                 self.assertEqual(pair["category"], "market_book")
@@ -1064,7 +1070,6 @@ class PregameBoardViewsSQL(PregameFixture):
     ):
         from app.fees import pricing
         from tests.test_fee_pricing import rule
-        from app.storage.pregame_arbs import read as arb_read
 
         at = stamp(AT)
         deadline = at + timedelta(seconds=30)
@@ -1079,12 +1084,12 @@ class PregameBoardViewsSQL(PregameFixture):
                 )
             self.ingest(db, data)
             self.process(db)
-            first = arb_read(db, {}, at=at)
+            first = read_cohort_arbs(db, {}, at=at)
             self.assertEqual(first["total"], 2)
             self.assertEqual(stamp(first["refresh_at"]), deadline)
-            self.assertEqual(arb_read(db, {}, at=at)["rows"], first["rows"])
+            self.assertEqual(read_cohort_arbs(db, {}, at=at)["rows"], first["rows"])
             # No write or sportsbook EV change occurs while the clock advances.
-            expired = arb_read(db, {}, at=deadline)
+            expired = read_cohort_arbs(db, {}, at=deadline)
             self.assertEqual(expired["total"], 0)
             changed = board.read(
                 db, {"updates": "1", "after": first["cursor"]}, at=deadline

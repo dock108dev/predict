@@ -109,6 +109,12 @@ def compatibility_middleware():
     @web.middleware
     async def compatibility(request, handler):
         if request.method in ('GET', 'HEAD'):
+            dataset = request.query.get('dataset')
+            if dataset is not None and request.path.rstrip('/') in ('/replay', '/data'):
+                from app.storage.odds_replay import DATASETS
+
+                if dataset not in (*DATASETS, 'retained'):
+                    raise PublicRequestError('Unknown replay dataset')
             target = destination(request)
             if target == 'retired':
                 return web.Response(status=410, content_type='text/html', headers=HEADERS, text='''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Predict · Retired page</title><link rel="stylesheet" href="/view/current/pregame.css"><script type="module" src="/view/current/workspace-nav.js"></script></head><body><header class="masthead"><a class="brand" href="/research">PREDICT</a><nav aria-label="Main" data-workspace-nav></nav></header><main class="board-wrap"><h1>This page is retired</h1><p><a href="/research">Open Research</a> or <a href="/data">open Data</a>.</p></main></body></html>''')

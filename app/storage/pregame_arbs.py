@@ -399,7 +399,11 @@ def read(db, query, *, at=None, can_continue=None):
         from .market_snapshot_arbs import read as snapshot_read
 
         return snapshot_read(db, query, at=at, can_continue=can_continue)
+    return read_cohort(db, query, at=at, can_continue=can_continue)
 
+
+def read_cohort(db, query, *, at, can_continue=None):
+    """Read exact cohort-bound prices for a supported historical provider."""
     def checkpoint():
         if can_continue is not None and not can_continue():
             raise TimeoutError("arbitrage_read_cancelled")

@@ -8,16 +8,23 @@ from unittest.mock import patch
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
+import pytest
 
 from app.dashboard.request_guard import dashboard_guard
 from app.dashboard.research_workspace_api import BASE, mount
 from app.storage.store import hashed
 
 
-def test_dated_offer_export_streams_partial_body_and_preserves_canonical_digest():
+@pytest.mark.parametrize(
+    "sizing", [None, dict(sizing_mode="fixed_profit", target_profit_usd="10")],
+    ids=["legacy", "fixed-profit"],
+)
+def test_dated_offer_export_streams_partial_body_and_preserves_canonical_digest(sizing):
     run = "a" * 64
     fields = dict(date="2026-11-24", as_of="2026-11-24T23:51:46Z", minimum_ev="1/25",
                   report_revision="b" * 64, run_id=run, orders_submitted=0, provider_requests=0)
+    if sizing is not None:
+        fields["sizing"] = sizing
     games = [dict(game_id="one", offers=[]), dict(game_id="two", offers=[dict(line="-3/2")])]
     started, release = Event(), Event()
     statements = []
@@ -35,9 +42,10 @@ def test_dated_offer_export_streams_partial_body_and_preserves_canonical_digest(
         def execute(self, statement):
             statements.append(statement)
 
-    def read_game(_db, game, minimum, selected):
+    def read_game(_db, game, minimum, selected, *, sizing):
         assert minimum == fields["minimum_ev"]
         assert selected == {}
+        assert sizing == fields.get("sizing")
         if game["game_id"] == "two":
             started.set()
             assert release.wait(5)

@@ -723,9 +723,11 @@ class SportsGameOddsAtomicIngress(LatestBoardFixture):
             worker = SportsGameOddsWorker(service, transport=socket, now=lambda: self.at)
             worker.state = AsyncMock()
             collector = GuardedPageCollector(ledger, 'fixture', socket, controls=worker.controls, account_usage=usage)
-            worker.collector = SimpleNamespace(fetch=lambda params, key: collector.fetch(params, key, now=self.at))
+            worker.collector = SimpleNamespace(fetch=lambda params, key: collector.fetch(
+                params, key, now=self.at, pull_id=worker.collector.pull_id))
             params = worker.params(league='NBA', starts_after=received_at)
-            with patch('app.collection.current_database.connect', side_effect=self.connect), \
+            with patch('app.storage.store.connect', side_effect=self.connect), \
+                    patch('app.collection.current_database.connect', side_effect=self.connect), \
                     patch('app.collection.current_database.utc', return_value=received_at), \
                     patch('app.storage.sportsgameodds_reference.upsert_frames', side_effect=timeout_after_first_frame):
                 admitted = await worker._fetch(params)

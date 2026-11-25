@@ -8,36 +8,36 @@ running with independent Win $10 and Kelly views. November 23 is graded,
 November 24 is partially graded, November 25 is collecting and November
 26–29 are scheduled. Both historical sizing modes reconcile across trades,
 daily and weekly totals, and exports. This release completes the Workbench
-and fixed-profit implementation entries below.
+and fixed-profit implementation. Production also exercised a separate $7.50
+experiment and its $7.75 revision through the same signed-in form.
 [Closeout and production links](../workbench-win10-beta-closeout-20261125.md) ·
 [Required release CI](https://github.com/dock108dev/predict/actions/runs/45552224802)
 
-## Active assignment: Workbench + Win $10 + Kelly comparison
+The [Workbench assignment](../workbench-win10-beta-20261124.md) and
+[fixed-profit sizing amendment](../fixed-profit-sizing-amendment-20261124.md)
+record the delivered scope, including reusable creation, scheduled replay,
+shared retained inputs for the fresh 1/40 Kelly comparison, post-sizing EV
+and venue selection, and daily and weekly results.
 
-**Owner's highest priority:** reusable creation directly in Experiments. The
-normal Create → configure dates/sizing/optional comparison/EV → Save and run
-flow must drive replay, scheduling and results without engineering intervention.
-A one-off backfill or backend-only feature is insufficient; prove a second
-independent configuration through the same UI before calling this complete.
+## Open operating follow-through
 
-The [consolidated owner assignment](../workbench-win10-beta-20261124.md) governs
-the ongoing beta work: unbranded flat-trade Workbench, UI-configurable Win $10
-with a November 23–29 replay and 1/40 Kelly comparison on shared evidence,
-automatic daily/weekly operation/results, explicit target rounding and complete
-information/evidence. Build on committed Workbench revision `f9b86c4` and verify
-both modes through the signed-in production UI. Validate their newly calculated
-results against the retained inputs. Historical result preservation is outside
-release acceptance.
-
-## Owner amendment: Win $10 sizing for a new experiment version
-
-Add [fixed-profit sizing](../fixed-profit-sizing-amendment-20261124.md) to the
-Workbench beta assignment. The owner wants each winning paper bet to target
-$10 profit, with stake based on the odds and losses equal to committed stake.
-Publish a November 23–29 definition with UI configuration, explicit fee/grid
-rounding and automatic replays/results. Calculate the Kelly comparison using
-the same retained evidence.
-Implementation is pending; the lead's ongoing Workbench source edits remain intact.
+- **Men’s D1 slate.** The collector and Research/Data owners should reconcile
+  retained schedule sources, Eastern dates, aliases, and unresolved matchups.
+  November 23 and 24 have 33 and 77 provider-known eligible games respectively.
+  Keep the complete expected counts unknown until independent evidence supports
+  them. See the [reconciliation record](../mens-d1-reconciliation-live-windows-20261124.md).
+- **Comparable T−10 capacity.** At the next naturally comparable 25-member
+  production cluster, the collector owner should compare planned and persisted
+  members before deadline against the physical request and credit receipts.
+  The repaired collector has verified smaller live clusters. Keep the original
+  25-member shortfall and its separate reconstruction evidence visible.
+- **Finals and corrections.** The collector and Workbench owners should follow
+  normal prior-day results and corrections into both sizing versions. The
+  November 25 closeout still showed partial November 24 grades. November 29
+  finals enter the November 30 5:30 a.m. Eastern run, with corrections at
+  12:30 p.m. and a December 1 follow-up for unresolved games. Confirm each
+  published revision against its retained result and preserve earlier grades.
+  See the [scheduled collection and results jobs](https://predict.dock108.dev/settings#mens-d1-jobs).
 
 ## Delivered: unbranded Workbench presentation
 
@@ -53,31 +53,11 @@ the final deployment. [Workbench closeout](../predict-first-beta-closeout-202611
 The [beta closeout](../predict-first-beta-closeout-20261124.md) records application
 revision `825cf29`, migrations 122/123, passing required CI, signed-in production
 verification and the restarted campaign's automatic grade. Local HEAD `348675f`
-is a documentation follow-up. The original assignment below is retained as
-history; the Workbench presentation is the next selected implementation.
-
-The owner requested the [first-beta lead assignment](../predict-first-beta-20261124.md):
-implement the audited November 23 fixes, reusable issue resolution in the UI,
-derived census summaries and provenance/freshness comparisons; deploy and
-verify the private beta with the existing November 23–29 paper campaign running.
-Finish engineering before owner review. Future dates remain in progress;
-Sunday's finals must continue through the November 30 collection and corrections.
-Accept supported historical/source limitations without altering frozen runs or
-claiming complete captures. This entry assigns work; implementation is pending.
-
-## Planned: November 23 data resolution and issue closure
-
-The owner requested an audit and resolution plan, including accepted gaps,
-exclusions and legitimately unavailable lines. The
-[November 23 plan](../nov23-data-resolution-plan-20261124.md) records the
-10:21 PM Eastern read-only production audit and all 46 proposed occurrence
-dispositions. No application or production data changed for this audit.
-Next implementation: fix on-date scope counters and stale market summaries,
-separate original capture failure from usable reconstructed evidence, and add
-versioned issue closure through the UI. Preserve seven historical T−10 gaps,
-method-ineligible reference offers and bounded venue-inventory limitations.
-Follow with separately versioned quote-freshness analysis and prospective
-capture verification; no-line conclusions require affirmative scoped evidence.
+is a documentation follow-up. The [first-beta assignment](../predict-first-beta-20261124.md)
+records the delivered issue resolution, census and provenance work. The
+[November 23 audit](../nov23-data-resolution-plan-20261124.md) retains the original
+findings and proposed dispositions. The installed evidence preserves seven
+historical T−10 gaps and the limits on reference offers and venue inventory.
 
 ## Deployed: November 23–29 daily and weekly paper experiment
 
@@ -109,8 +89,8 @@ passed after guarded backup and migration. The production worker published all
 12 saved runs and the original hashes matched. The November 23 review graded
 76 Best and 114 All tickets across 33 retained finals, with seven historical
 missing captures visible. Back, reload, versioned exports, and the frozen trade
-calculation and original receipts passed on production. The next operating
-observation is the November 25 5:30 AM Eastern prior-day collection.
+calculation and original receipts passed on production. The current finals
+follow-through is tracked above.
 
 ## Men’s D1 reconciliation and live-window verification
 
@@ -146,18 +126,13 @@ is tied to future capture and finals observations, source coverage and the
 next naturally comparable 25-member production load. See the lead assignment
 for the evidence ledger, exports and exact limits.
 
-At 1:19 PM Eastern, CBBD remained active. Monday had 32 source-eligible rows,
-27 exact provider matches and five schedule conflicts, versus 33 provider-known
+At the November 24 1:19 p.m. Eastern observation, CBBD remained active. Monday
+had 32 source-eligible rows, 27 exact provider matches and five schedule conflicts, versus 33 provider-known
 eligible games. Tuesday had 77 source-eligible rows, 73 matches, three schedule
 conflicts and one source-only row, versus 77 provider-known eligible games.
 Both complete expected populations remained unknown. Current Tuesday had six
 eligible frozen captures and 71 upcoming; its original saved snapshot still
-had three. Both larger batch sizes remained unmeasured in production.
-
-The existing capture observers were confirmed armed for 2:51:10 and 6:51:10 PM
-Eastern. Their actual evidence, rather than another controlled replay, is the
-required next live check. Tomorrow's finals observation is pending rather than
-an additional overnight completion gate for this milestone.
+had three. Both later clusters were still upcoming at that observation.
 
 ## CBBD source activated, November 24 at 1:14 PM Eastern
 
@@ -199,7 +174,7 @@ coverage slice remains reviewable.
 The [assignment and operating record](../mens-d1-coverage-completion-20261124.md#operating-loop-continuation)
 has stage timings, account evidence and result boundaries.
 
-## Next continuation: capture throughput and recurring slate ingestion
+## Historical starting point for capture and slate work
 
 This section preserves the state at the start of the operating-loop assignment.
 
@@ -269,7 +244,7 @@ disabled with zero Firecrawl requests, charges or holds. Current research
 unreserved headroom is 364,754,617 bytes (347.9 MiB). The prior implementation
 and its 11:09 AM observation below remain historical evidence.
 
-## Active follow-on: men’s D1 daily coverage
+## Deployed: men’s D1 daily coverage
 
 The November 24, 2026 [implementation assignment](../mens-d1-daily-coverage-20261124.md)
 starts from main `4cc9f745c193b3ef03a2fac1a589f510f1a4a566` and the deployed
@@ -583,9 +558,9 @@ remains deferred. Private screenshots, exports, normal-CI artifacts and installe
 journey receipts are in `.local/personal-workspace-20261122/`.
 
 
-## Private research beta
+## Historical private research beta launch
 
-The November 23–29 NCAAB paper campaign is running on the deployed private beta.
-November 23 is reconciled and graded, November 24 is partially graded, and
-November 25–29 remain scheduled. Future protected captures, finals and score
-corrections remain operating observations. See the [first-beta closeout](../predict-first-beta-closeout-20261124.md).
+At the first-beta closeout, the November 23–29 NCAAB paper campaign was running.
+November 23 was reconciled and graded, November 24 was partially graded, and
+November 25–29 were scheduled. See the
+[first-beta closeout](../predict-first-beta-closeout-20261124.md).

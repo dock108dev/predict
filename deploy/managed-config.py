@@ -29,6 +29,32 @@ def mount(service, target):
     return item.get("type"), item.get("source"), bool(item.get("read_only"))
 
 
+def database_profile(compose, root):
+    applications = ("web", "collector", "archive")
+    services = compose["services"]
+    environments = [services[role].get("environment", {}) for role in applications]
+    roles = tuple(env.get("PREDICT_DB_ROLE", "prediction_arb") for env in environments)
+    expected = tuple("predict_" + role for role in applications)
+    if roles not in (("prediction_arb",) * 3, expected):
+        raise ValueError("Configure all three dedicated PostgreSQL roles together")
+    split = roles == expected
+    for role, env in zip(applications, environments, strict=True):
+        target = "/run/predict-db-password"
+        if env.get("PREDICT_DB_PASSWORD") or env.get("PREDICT_DB_PASSWORD_FILE") not in (None, target):
+            raise ValueError("Compose runtime credentials must use their private file")
+        if not split and target not in {vol.get("target") for vol in services[role].get("volumes", [])}:
+            # Accept the previous legacy layout during a managed update.
+            continue
+        source = str(Path(root).resolve() / ("postgres-" + role)) if split else "/dev/null"
+        if mount(services[role], target) != ("bind", source, True):
+            raise ValueError("Unexpected PostgreSQL credential mount for " + role)
+        if split:
+            info = Path(source).lstat()
+            if not (stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o400 and info.st_uid == 10001):
+                raise ValueError("Expected a private PostgreSQL credential file for " + role)
+    return "split" if split else "legacy"
+
+
 def validate_compose(candidate, previous, root):
     """A release may change code/configuration, never select a new owner store."""
     root = str(Path(root).resolve())
@@ -36,6 +62,7 @@ def validate_compose(candidate, previous, root):
     old = previous.get("services", {})
     if candidate.get("name") != "predict" or set(services) != {"db", "web", "collector", "archive"}:
         raise ValueError("The host must remain the dedicated Predict Compose project")
+    database_profile(candidate, root)
     if services["db"].get("network_mode") != "none":
         raise ValueError("PostgreSQL must remain network isolated")
     if services["db"].get("ports"):
@@ -143,6 +170,8 @@ def main():
     if action == "validate-compose":
         candidate, previous, root = args
         validate_compose(json.loads(Path(candidate).read_text()), json.loads(Path(previous).read_text()), root)
+    elif action == "database-profile":
+        print(database_profile(json.loads(Path(args[0]).read_text()), args[1]))
     elif action == "stage-caddy":
         stage_caddy(*args)
     elif action == "install":

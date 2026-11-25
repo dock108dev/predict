@@ -825,7 +825,18 @@ def backfill_prophetx(db, *, at):
                 continue
             event = dict(context, event_id=event_id, starts_at=frame['starts_at'], received_at=frame['received_at'],
                          aliases=members[0]['facts']['aliases'])
-            page = Page((event,), tuple(row['facts'] for row in members), None, frame['receipt_sha256'])
+            # Preserve a recorded pull only when every projected quote binds
+            # to that same acquisition and its exact retained frame receipt.
+            witness = members[0]['facts'].get('acquisition')
+            membership = {}
+            if (isinstance(witness, dict)
+                    and witness.get('receipt_sha256') == frame['receipt_sha256']
+                    and witness.get('received_at') == frame['received_at']
+                    and all(member['facts'].get('acquisition') == witness for member in members)):
+                membership = dict(pull_id=witness.get('pull_id'), attempt_id=witness.get('attempt_id'),
+                                  received_at=witness['received_at'])
+            page = Page((event,), tuple(row['facts'] for row in members), None,
+                        frame['receipt_sha256'], **membership)
             projected, _ = current_rows(page, page.receipt_sha256)
             refs = {row['id']: row for row in members}
             links.update((contract_id(record), offer_quote_link(record, refs)) for record in projected)

@@ -419,7 +419,7 @@ export function renderCampaign(root,data,{edit=false,daily,weekly,dayHref,portfo
       dateCell.append(history);
     }
     const description=day.error && day.replay_state!=='replaying'
-      ? `Replay failed · ${day.error}` : statusText(day);
+      ? 'Replay failed. The next scheduled check will retry.' : statusText(day);
     const financials=day.analysis?summaryRows(day.analysis.summary):Array(headers.length).fill(day.result_state==='no_usable_capture'?'Unavailable':'Pending');
     return [dateCell,description,day.next_check_at?time(day.next_check_at):'—',
       day.captures?`${c.captured||0} / ${c.reconstructed||0} / ${(c.missed||0)+(c.failed||0)+(c.refused||0)+(c.no_task||0)} / ${(c.pending||0)+(c.claimed||0)}`:'Awaiting evidence', ...financials];

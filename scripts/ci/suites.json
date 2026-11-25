@@ -615,6 +615,8 @@
   {
     "name": "ordinary-fee-coverage",
     "tests": [
+      "tests/test_fee_mode.py",
+      "tests/test_fee_mode_experiments.py",
       "tests/test_f04_kalshi_public.py",
       "tests/test_f05_polymarket_public.py",
       "tests/test_f06_prophetx_retail.py",
@@ -705,6 +707,11 @@
   {
     "name": "phase2-research",
     "tests": [
+      "tests/test_acquisition_membership.py",
+      "tests/test_mens_d1_coverage_api.py",
+      "tests/test_mens_d1_daily_jobs.py",
+      "tests/test_mens_d1_source.py",
+      "tests/test_research_offer_export_api.py",
       "tests/test_paper_experiments.py",
       "tests/test_paper_results.py",
       "tests/test_paper_campaigns.py",
@@ -722,6 +729,19 @@
       "tests/test_experiment_api.py",
       "tests/test_experiment_acquisition.py",
       "tests/test_discovery_checkpoint_policy.py"
+    ]
+  },
+  {
+    "name": "workspace-data-and-settings",
+    "tests": [
+      "tests/test_catalog_admission.py",
+      "tests/test_data_workspace_client.py",
+      "tests/test_market_snapshot_presentation.py",
+      "tests/test_market_workspace_client.py",
+      "tests/test_workspace_capture_client.py",
+      "tests/test_workspace_fee_mode_api.py",
+      "tests/test_workspace_sessions.py",
+      "tests/test_workspace_settings_accounting.py"
     ]
   }
 ]

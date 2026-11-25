@@ -2,6 +2,7 @@
 from fractions import Fraction as F
 import json
 from app.fees.evidence import applies
+from app.fees.public_reasons import exception_reason, public_fee_result
 from .conditional_benchmark import basis
 from .current_dependencies import instant
 from .cashflows import exact_wire as wire
@@ -130,8 +131,8 @@ def prophetx_public_fee(row, *, at, review=None, quantity=None, fills=None, phas
             assumptions=assumptions, evidence=evidence, policy=policy, details=details,
             source_times=row['times'], full_state_net_ev=False, execution_qualified=False)
     except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
-        result['reason'] = str(exc)
-    return result
+        result['reason'] = exception_reason(__name__, 'prophetx_fee_evidence', exc)
+    return public_fee_result(result)
 
 
 def fee_model(row, *, at, review=None):
@@ -160,7 +161,7 @@ def metric(row, *, at, review=None):
             result.update(expected_trade_fee_usd=wire(fee),scenario_net_usd=wire(ev),
                 return_percent=wire(100*ev/F(result['normalization_risk_usd'])),selected_decisive_probability=wire(p))
     except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
-        return dict(available=False, reason=str(exc))
+        return dict(available=False, reason=exception_reason(__name__, 'conservative_fee_benchmark', exc))
     if result['reason']=='conditional_fee_review_expired_or_not_effective':
         result.pop('evidence',None)
     return result
@@ -197,5 +198,5 @@ def kalshi_public_fee(row, *, at, review, quantity='1'):
             details=dict(rounding_trace=selected['rounding_trace'],resolved_terms=selected['resolved_terms'],
                          membership='unverified',scenarios=scenarios))
     except (OSError,ValueError,KeyError,TypeError,ArithmeticError) as exc:
-        result['reason']=str(exc)
-    return result
+        result['reason'] = exception_reason(__name__, 'kalshi_fee_evidence', exc)
+    return public_fee_result(result)

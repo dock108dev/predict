@@ -66,7 +66,12 @@ def maintain(db, *, compact=True, collecting=False, yield_requested=None):
     settings = {}
     capture_lock=False
     try:
+        from .database_roles import COLLECTOR
+
+        vacuum_allowed = db.info.user != COLLECTOR
         result = dict(before_bytes=sql_usage(db), rewrites=[], deferred=[])
+        if (compact or collecting) and not vacuum_allowed and result['before_bytes'] >= PRESSURE_BYTES:
+            result['deferred'].append(dict(table='storage', reason='vacuum_requires_migration_role'))
         def source_waiting():
             if collecting and yield_requested is not None and yield_requested():
                 result.update(state='busy', reason='source_admission_active', after_bytes=sql_usage(db))
@@ -129,7 +134,7 @@ def maintain(db, *, compact=True, collecting=False, yield_requested=None):
         if has_metadata:
             from . import native_market_metadata
             result['native_metadata_pruned'] = native_market_metadata.prune(db)
-        if collecting and result['before_bytes'] >= PRESSURE_BYTES:
+        if vacuum_allowed and collecting and result['before_bytes'] >= PRESSURE_BYTES:
             # Full-scope native replacement can consume the remaining runway
             # before the server's default minute autovacuum wake-up. Recycle
             # dead working pages in place; no live evidence is deleted and no
@@ -143,7 +148,7 @@ def maintain(db, *, compact=True, collecting=False, yield_requested=None):
         # visibility. Reserve the publication lock only for an eligible FULL
         # rewrite; no-op scans must not withhold already-admitted games.
         result['capture_lock_acquired']=False
-        if compact and sql_usage(db) >= PRESSURE_BYTES:
+        if vacuum_allowed and compact and sql_usage(db) >= PRESSURE_BYTES:
             rewrite_started=monotonic()
             ext = db.execute("SELECT n.nspname AS schema FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pgstattuple'").fetchone()
             if ext:

@@ -47,6 +47,7 @@ class ModeFixture:
             schema="predict-activity-mode-1",
             mode="monitor" if expired else self.mode,
             requested_mode=self.mode,
+            effective_mode="monitor",
             revision=self.revision,
             settings=deepcopy(self.settings),
             last_activity_at=iso(self.last) if self.last else None,
@@ -131,12 +132,15 @@ class ModeFixture:
                 return
             if url.path.endswith("/updates"):
                 await route.fulfill(
-                    json=dict(changed=False, activity_mode=self.status())
+                    json=dict(
+                        changed=q.get("after") not in (None, str(self.revision)),
+                        activity_mode=self.status(),
+                    )
                 )
                 return
             self.reads.append((url.path, q))
             kind = q.get("data_type") or (
-                "all" if q.get("browse") == "1" else self.status()["mode"]
+                "all" if q.get("browse") == "1" else self.status()["effective_mode"]
             )
             rows = self.rows(kind)
             if q.get("max_age_minutes"):
@@ -202,6 +206,75 @@ class ModeFixture:
             )
 
 
+def test_settings_can_retry_stop_after_watchdog_revokes_dispatch():
+    from playwright.async_api import async_playwright, expect
+
+    async def journey():
+        mode = ModeFixture(owner=True)
+        requests = []
+        status = dict(
+            dispatch_enabled=False,
+            cleanup_complete=False,
+            cleanup_errors=["source_publication_cleanup_failed"],
+            config={"enabled": True},
+            service_state="blocked",
+            recovery={"reason": "cleanup_safety_unresolved"},
+            data_runtime={"healthy": True},
+        )
+
+        async def serve(route):
+            path = urlparse(route.request.url).path
+            if path == "/settings":
+                await route.fulfill(path=ASSETS / "settings.html")
+            elif path == "/api/admin/status":
+                await route.fulfill(json=status)
+            elif path == "/api/admin/current":
+                requests.append(route.request.post_data_json)
+                if len(requests) == 1:
+                    await route.fulfill(
+                        status=409,
+                        json={
+                            "reason": "Acquisition is withdrawn. Retry Stop to confirm cleanup."
+                        },
+                    )
+                else:
+                    status.update(
+                        cleanup_complete=True,
+                        cleanup_errors=[],
+                        service_state="stopped",
+                        recovery={},
+                    )
+                    await route.fulfill(json=status)
+            elif path.startswith("/api/") and path != "/api/admin/activity-mode":
+                await route.fulfill(status=503, json={"error": "fixture_not_available"})
+            else:
+                await mode.serve(route)
+
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch()
+            page = await browser.new_page()
+            await page.route("**/*", serve)
+            await page.goto("https://predict.fixture/settings")
+            retry = page.get_by_role("button", name="Retry Stop")
+            await expect(retry).to_be_visible()
+            await expect(page.locator("#collection-state")).to_contain_text(
+                "Stop cleanup unconfirmed"
+            )
+            async with page.expect_response("**/api/admin/current") as failed:
+                await retry.click()
+            assert (await failed.value).status == 409
+            await expect(retry).to_be_enabled()
+            await retry.click()
+            await expect(page.locator("#control-result")).to_have_text(
+                "Collection stopped. Stored data remains available."
+            )
+            await expect(retry).to_have_count(0)
+            assert requests == [{"action": "stop"}, {"action": "stop"}]
+            await browser.close()
+
+    asyncio.run(journey())
+
+
 @pytest.mark.parametrize("path", ["/", "/browse-odds", "/arbs"])
 def test_public_modes_are_read_only_and_settings_require_owner(path):
     from playwright.async_api import async_playwright, expect
@@ -230,13 +303,13 @@ def test_public_modes_are_read_only_and_settings_require_owner(path):
                 page.get_by_role("link", name="Sign in through Admin")
             ).to_be_visible()
             await expect(
-                page.get_by_role("switch", name="Live mode", exact=True)
+                page.get_by_role("button", name="Save settings", exact=True)
             ).to_be_disabled()
             await expect(
-                page.get_by_label("Monitor refresh (minutes)", exact=True)
+                page.get_by_label("Discovery interval (minutes)", exact=True)
             ).to_be_disabled()
             await expect(
-                page.get_by_label("Monitor timing offset (minutes)", exact=True)
+                page.get_by_label("Discovery timing offset (minutes)", exact=True)
             ).to_be_disabled()
             assert state.authorizations == 1 and not state.writes
             await expect(
@@ -254,7 +327,7 @@ def test_public_modes_are_read_only_and_settings_require_owner(path):
 
 
 @pytest.mark.parametrize("width", [1280, 390])
-def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock(width):
+def test_owner_discovery_settings_survive_passive_refresh(width):
     from playwright.async_api import async_playwright, expect
 
     async def journey():
@@ -268,7 +341,7 @@ def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock(width)
             await page.route("**/*", state.serve)
             await page.goto("https://predict.fixture/")
             await page.locator(".mode-badge").click()
-            field = page.get_by_label("Monitor refresh (minutes)", exact=True)
+            field = page.get_by_label("Discovery interval (minutes)", exact=True)
             await expect(field).to_be_enabled()
             save = page.get_by_role("button", name="Save settings", exact=True)
             await expect(save).to_be_visible()
@@ -297,70 +370,29 @@ def test_owner_settings_activity_and_passive_idle_fallback_use_fake_clock(width)
                 live_window_seconds=3600,
                 inactivity_seconds=900,
             )
-            await page.get_by_role("switch", name="Live mode", exact=True).check()
-            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
-            assert state.status()["mode"] == "live"
-            assert not [
-                request for request in state.writes if request[0].endswith("/activity")
+            assert state.writes == [
+                (
+                    "/api/admin/activity-mode",
+                    {
+                        "settings": {
+                            "monitor_interval_seconds": 2700,
+                            "monitor_phase_seconds": 1200,
+                            "monitor_horizon_seconds": 86400,
+                        }
+                    },
+                )
             ]
             state.now += 15001
             await page.clock.fast_forward(15001)
-            assert not [
-                request for request in state.writes if request[0].endswith("/activity")
-            ]
-            async with page.expect_response(
-                lambda response: response.url.endswith("/activity")
-            ):
-                await page.mouse.move(15, 15)
-            assert (
-                len(
-                    [
-                        request
-                        for request in state.writes
-                        if request[0].endswith("/activity")
-                    ]
-                )
-                == 1
-            )
+            await expect(field).to_have_value("45")
             await page.mouse.move(20, 20)
-            assert (
-                len(
-                    [
-                        request
-                        for request in state.writes
-                        if request[0].endswith("/activity")
-                    ]
-                )
-                == 1
-            )
-            # Same-tab navigation re-verifies authorization; it does not itself renew Live.
-            await page.goto("https://predict.fixture/browse-odds")
-            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
-            assert state.authorizations >= 2
-            activity_count = len(
-                [
-                    request
-                    for request in state.writes
-                    if request[0].endswith("/activity")
-                ]
-            )
-            state.now += 900001
-            await page.clock.fast_forward(900001)
+            # Same-tab navigation re-verifies permission through a read.
+            async with page.expect_response("**/api/admin/activity-mode"):
+                await page.goto("https://predict.fixture/browse-odds")
             await expect(page.locator(".mode-badge")).to_have_text("Settings")
-            await page.mouse.move(25, 25)
-            assert (
-                len(
-                    [
-                        request
-                        for request in state.writes
-                        if request[0].endswith("/activity")
-                    ]
-                )
-                == activity_count
-            )
-            assert not [body for _, body in state.writes if body.get("mode") == "live"][
-                1:
-            ]
+            assert state.authorizations >= 2
+            assert len(state.writes) == 1
+            assert state.status()["mode"] == "monitor"
             await browser.close()
 
     asyncio.run(journey())
@@ -397,22 +429,20 @@ def test_cohort_age_order_controls_and_browse_combined_default():
             prior_reads = len(state.reads)
             state.mode, state.last = "live", state.now
             state.revision += 1
-            await page.clock.fast_forward(501)
+            async with page.expect_response(
+                lambda response: (
+                    "bet_id=" in response.url and "data_type=monitor" in response.url
+                )
+            ):
+                await page.clock.fast_forward(501)
             await expect(
-                page.locator('#results .row-open[data-quote-id="live-quote"]')
+                page.locator('#results .row-open[data-quote-id="monitor-quote"]')
             ).to_have_count(1)
-            await expect(page.locator("#results .posted .math-trigger")).to_have_text(
-                "38.46%"
-            )
-            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
+            await expect(page.locator(".mode-badge")).to_have_text("Settings")
             await expect(
                 page.locator(".exchange-prices tbody td").nth(1)
             ).to_contain_text("45.45%")
             await expect(page.locator(".exchange-prices")).not_to_contain_text("38.46%")
-            assert any(
-                q.get("bet_id") and q.get("data_type") == "monitor"
-                for _, q in state.reads[prior_reads:]
-            )
             assert all(
                 q.get("data_type") == "monitor"
                 for _, q in state.reads[prior_reads:]
@@ -421,6 +451,20 @@ def test_cohort_age_order_controls_and_browse_combined_default():
             await expect(page.locator(".collection-badge")).to_have_count(0)
             await page.get_by_role("button", name="Close comparison").tap()
             await page.locator("#board-advanced > summary").tap()
+            await page.locator("#data-type").select_option("live")
+            await expect(
+                page.locator('#results .row-open[data-quote-id="live-quote"]')
+            ).to_have_count(1)
+            await expect(page.locator("#results .posted .math-trigger")).to_have_text(
+                "38.46%"
+            )
+            await page.locator(".row-open").tap()
+            await expect(page.locator(".comparison-status")).to_contain_text("complete")
+            await expect(
+                page.locator(".exchange-prices tbody td").nth(1)
+            ).to_contain_text("38.46%")
+            assert state.reads[-1][1]["data_type"] == "live"
+            await page.get_by_role("button", name="Close comparison").tap()
             await page.locator("#data-type").select_option("all")
             await expect(page.locator(".ticket")).to_have_count(2)
             await page.locator("#order").select_option("newest")
@@ -452,121 +496,114 @@ def test_cohort_age_order_controls_and_browse_combined_default():
     asyncio.run(journey())
 
 
-def test_short_idle_window_reports_activity_before_its_deadline():
+@pytest.mark.parametrize("gesture", ["pointer", "wheel-and-scroll"])
+def test_passive_input_does_not_renew_legacy_live_or_change_monitor_evidence(gesture):
     from playwright.async_api import async_playwright, expect
 
     async def journey():
-        state = ModeFixture(owner=True)
+        state = ModeFixture(owner=True, mode="live")
         state.settings["inactivity_seconds"] = 1
+        original_activity = state.status()["last_activity_at"]
+        monitor = state.rows("monitor")[0]
+        requests = []
+        viewport = (
+            {"width": 390, "height": 360}
+            if gesture == "wheel-and-scroll"
+            else {"width": 900, "height": 600}
+        )
         async with async_playwright() as pw:
             browser = await pw.chromium.launch()
-            page = await browser.new_page()
+            page = await browser.new_page(viewport=viewport)
             await page.clock.install(
                 time=datetime.fromtimestamp(CLOCK / 1000, timezone.utc)
             )
+            page.on("request", lambda request: requests.append(request))
             await page.route("**/*", state.serve)
             await page.goto("https://predict.fixture/")
+            row = page.locator('.ticket[data-quote-id="monitor-quote"]')
+            await expect(row.locator(".posted .math-trigger")).to_have_text("45.45%")
             await page.locator(".mode-badge").click()
-            toggle = page.get_by_role("switch", name="Live mode", exact=True)
-            await expect(toggle).to_be_enabled()
-            await toggle.check()
-            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
-            for step in range(4):
+            await expect(
+                page.get_by_role("button", name="Save settings")
+            ).to_be_enabled()
+            assert state.status()["mode"] == "live"
+            assert state.authorizations == 1
+
+            body = page.locator(".mode-settings-body")
+            event_type = "pointermove" if gesture == "pointer" else "wheel"
+            if gesture == "wheel-and-scroll":
+                assert await body.evaluate(
+                    "body => body.scrollHeight > body.clientHeight"
+                )
+                await body.hover(position={"x": 40, "y": 80})
+            await page.evaluate(
+                """type => {
+                window.inputTrust = [];
+                document.addEventListener(type, event => inputTrust.push(event.isTrusted), true);
+            }""",
+                event_type,
+            )
+            for step in range(3):
                 state.now += 400
                 await page.clock.fast_forward(400)
-                async with page.expect_response(
-                    lambda response: response.url.endswith("/activity")
-                ):
+                if gesture == "pointer":
                     await page.mouse.move(15 + step * 10, 15)
-            assert state.status()["mode"] == "live"
-            assert (
-                len(
-                    [
-                        request
-                        for request in state.writes
-                        if request[0].endswith("/activity")
-                    ]
-                )
-                == 4
-            )
-            await browser.close()
-
-    asyncio.run(journey())
-
-
-def test_stationary_wheel_renews_live_but_programmatic_scroll_does_not():
-    from playwright.async_api import async_playwright, expect
-
-    async def journey():
-        state = ModeFixture(owner=True)
-        state.settings["inactivity_seconds"] = 1
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch()
-            page = await browser.new_page(viewport={"width": 900, "height": 600})
-            await page.clock.install(
-                time=datetime.fromtimestamp(CLOCK / 1000, timezone.utc)
-            )
-            await page.route("**/*", state.serve)
-            await page.goto("https://predict.fixture/")
-            await page.locator(".mode-badge").click()
-            toggle = page.get_by_role("switch", name="Live mode", exact=True)
-            await expect(toggle).to_be_enabled()
-            await toggle.check()
-            await expect(page.locator(".mode-badge")).to_have_text("Live · Settings")
-            await page.evaluate("""() => {
-                window.activityInputs=[];
-                for(const type of ['pointermove','pointerdown','keydown','wheel'])
-                    document.addEventListener(type,event=>window.activityInputs.push(
-                        {type,trusted:event.isTrusted}),true);
-            }""")
-            # Keep the pointer at its current position: wheel scrolling alone
-            # must keep an actively reading owner Live beyond the first deadline.
-            for _ in range(3):
-                state.now += 400
-                await page.clock.fast_forward(400)
-                async with page.expect_response(
-                    lambda response: response.url.endswith("/activity"), timeout=5000
-                ):
+                else:
                     await page.mouse.wheel(0, 120)
-            await expect(page.locator(".mode-settings-body")).not_to_have_js_property(
-                "scrollTop", 0
-            )
-            assert state.status()["mode"] == "live"
-            inputs = await page.evaluate("window.activityInputs")
-            assert inputs == [{"type": "wheel", "trusted": True}] * 3
-            activity_count = len(
-                [
-                    request
-                    for request in state.writes
-                    if request[0].endswith("/activity")
-                ]
-            )
-            assert activity_count == 3
-            last_activity = state.last
-            state.now += 400
-            await page.clock.fast_forward(400)
-            await page.evaluate("""() => {
-                const body=document.querySelector('.mode-settings-body');
-                body.scrollTop=0;
-                body.dispatchEvent(new WheelEvent('wheel',{bubbles:true,deltaY:120}));
-            }""")
-            await page.clock.run_for(1)
-            assert state.last == last_activity
-            assert (
-                len(
-                    [
-                        request
-                        for request in state.writes
-                        if request[0].endswith("/activity")
-                    ]
+                await page.wait_for_function(
+                    "count => inputTrust.length >= count", arg=step + 1
                 )
-                == activity_count
-            )
-            state.now += 1001
-            await page.clock.fast_forward(1001)
+            assert await page.evaluate("inputTrust") == [True] * 3
+            if gesture == "wheel-and-scroll":
+                await expect(body).not_to_have_js_property("scrollTop", 0)
+                await body.evaluate("""body => {
+                    body.scrollTop = 0;
+                    body.dispatchEvent(new WheelEvent('wheel', {bubbles: true, deltaY: 120}));
+                }""")
+                await expect(body).to_have_js_property("scrollTop", 0)
+                assert await page.evaluate("inputTrust") == [True, True, True, False]
+
+            async with page.expect_response("**/api/pregame/updates?*") as polled:
+                await page.clock.fast_forward(501)
+            packet = await (await polled.value).json()
+            activity = packet["activity_mode"]
+            assert activity["requested_mode"] == "live"
+            assert activity["mode"] == activity["effective_mode"] == "monitor"
+            assert activity["reason"] == "inactivity"
+            assert activity["last_activity_at"] == original_activity
+            assert activity["revision"] == 1
             await expect(page.locator(".mode-badge")).to_have_text("Settings")
-            assert state.status()["reason"] == "inactivity"
-            assert state.last == last_activity
+
+            await page.get_by_role("button", name="Close collection settings").click()
+            await row.locator(".row-open").click()
+            comparison = page.locator("#comparison")
+            await expect(comparison.locator(".comparison-status")).to_contain_text(
+                "complete"
+            )
+            await expect(comparison.locator(".exchange-prices")).to_contain_text(
+                "45.45%"
+            )
+            evidence = comparison.locator(".calculation-evidence")
+            await evidence.get_by_text("Fee and calculation details").click()
+            source_time = evidence.locator('dt:text-is("Source timestamp") + dd')
+            await expect(source_time).to_have_text(monitor["times"]["source_at"])
+            assert state.reads[-1][1]["data_type"] == "monitor"
+            assert state.writes == []
+
+            passive_apis = {
+                "/api/appearance",
+                "/api/admin/activity-mode",
+                "/api/pregame",
+                "/api/pregame/updates",
+            }
+            assert requests
+            for request in requests:
+                address = urlparse(request.url)
+                assert (address.netloc, request.method) == ("predict.fixture", "GET"), (
+                    request.url
+                )
+                if address.path.startswith("/api/"):
+                    assert address.path in passive_apis, request.url
             await browser.close()
 
     asyncio.run(journey())
@@ -603,14 +640,15 @@ def test_monitor_wall_clock_phase_display_configuration_and_zero_offset(width):
             await page.route("**/*", state.serve)
             await page.goto("https://predict.fixture/")
             await page.locator(".mode-badge").click()
-            phase = page.get_by_label("Monitor timing offset (minutes)", exact=True)
+            phase = page.get_by_label("Discovery timing offset (minutes)", exact=True)
             await expect(phase).to_be_enabled()
             await expect(phase).to_have_value("20")
             await expect(
-                page.get_by_label("Monitor timing offset slider", exact=True)
+                page.get_by_label("Discovery timing offset slider", exact=True)
             ).to_have_value("20")
-            await expect(page.locator(".mode-summary")).to_have_text(
-                "Monitor · starts at :20 and :50 each hour"
+            summary = page.locator(".mode-summary:not(#mode-acquisition-policy)")
+            await expect(summary).to_have_text(
+                "24/7 discovery · starts at :20 and :50 each hour"
             )
             next_start = page.locator("#mode-monitor-schedule")
             await expect(next_start).to_contain_text("7:50 AM EST")
@@ -639,8 +677,8 @@ def test_monitor_wall_clock_phase_display_configuration_and_zero_offset(width):
             await expect(page.locator(".mode-message")).to_contain_text("saved")
             assert state.settings["monitor_phase_seconds"] == 300
             assert state.settings["monitor_interval_seconds"] == 1800
-            await expect(page.locator(".mode-summary")).to_have_text(
-                "Monitor · starts at :05 and :35 each hour"
+            await expect(summary).to_have_text(
+                "24/7 discovery · starts at :05 and :35 each hour"
             )
             await expect(next_start).to_contain_text("7:35 AM EST")
             await phase.fill("0")
@@ -650,8 +688,8 @@ def test_monitor_wall_clock_phase_display_configuration_and_zero_offset(width):
                 await save.click()
             await expect(phase).to_have_value("0")
             assert state.settings["monitor_phase_seconds"] == 0
-            await expect(page.locator(".mode-summary")).to_have_text(
-                "Monitor · starts at :00 and :30 each hour"
+            await expect(summary).to_have_text(
+                "24/7 discovery · starts at :00 and :30 each hour"
             )
             await expect(next_start).to_contain_text("8:00 AM EST")
             assert len(state.writes) == 2

@@ -4,6 +4,7 @@ from functools import lru_cache
 
 from app.collection.public_contracts import load
 from app.fees.engine import Registry, calculate
+from app.fees.public_reasons import exception_reason, public_reason
 from .current_dependencies import instant
 
 from .cashflows import exact_wire as wire
@@ -135,7 +136,7 @@ def public_fee(row, *, at, phase, review, quantity='1'):
                         'Personal tiers and overrides require separate account evidence.',
                     ])
     except (OSError, ValueError, TypeError, KeyError, ArithmeticError) as exc:
-        return dict(available=False, reason=str(exc))
+        return dict(available=False, reason=exception_reason(__name__, 'polymarket_fee_evidence', exc))
 
 
 def nba_completed_game_rule(row, identity, predicate, source_scope):
@@ -160,7 +161,7 @@ def nba_completed_game_rule(row, identity, predicate, source_scope):
 def conservative_metric(row, fee, witnesses, phase, *, source_scope=None):
     """Decisive-only after-fee EV on an exact and phase-aligned reference frame."""
     if not fee.get('available'):
-        return dict(available=False, reason=fee.get('reason'))
+        return dict(available=False, reason=public_reason(fee.get('reason')))
     ref = row.get('reference_calculation') or {}
     benchmark = row.get('snapshot_benchmark') or {}
     identity = benchmark.get('selected_identity') or {}

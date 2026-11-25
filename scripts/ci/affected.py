@@ -25,6 +25,20 @@ SQL = [
     "tests/test_sgo_native_catalog_sql.py",
     "tests/test_broad_native_matrix_sql.py",
 ]
+SGO_SQL = [
+    "tests/test_sportsgameodds_ingress_sql.py",
+    "tests/test_sportsgameodds_reference_sql.py",
+]
+WORKSPACE_SQL = [
+    "tests/test_data_workspace_sql.py",
+    "tests/test_fee_mode_sql.py",
+    "tests/test_mens_d1_coverage_sql.py",
+    "tests/test_paper_campaigns_sql.py",
+    "tests/test_paper_experiments_sql.py",
+]
+SELECTABLE_SQL = set(SQL + SGO_SQL + WORKSPACE_SQL) | {
+    "tests/test_database_roles_sql.py"
+}
 BOARD_BROWSER = [
     "browser_tests/test_pregame_current.py",
     "browser_tests/test_pregame_games_arbs.py",
@@ -96,7 +110,7 @@ def plan(root, paths, *, full=False):
     consumers = imported_test_helpers(root, paths)
     if consumers:
         # Known shared fixture consumers; unfamiliar dependencies broaden safely.
-        known = set(SQL + BOARD_BROWSER + by_name["personal-bet-journal"])
+        known = SELECTABLE_SQL | set(BOARD_BROWSER + by_name["personal-bet-journal"])
         if consumers - known:
             broad = True
             reasons.append(
@@ -105,7 +119,7 @@ def plan(root, paths, *, full=False):
             )
         else:
             unit.update(consumers & portable)
-            sql.update(consumers & set(SQL))
+            sql.update(consumers & SELECTABLE_SQL)
             browser.update(consumers & set(BOARD_BROWSER))
             reasons.append(
                 "Include inspected test-helper consumers: "
@@ -130,6 +144,8 @@ def plan(root, paths, *, full=False):
             reasons.append(f"Deleted/renamed input {path}: dependency reach uncertain")
         elif path in portable:
             unit.add(path)
+            if path == "tests/test_mens_d1_coverage_api.py":
+                sql.add(path + "::MensD1CoverageSQL")
             reasons.append(f"Changed portable test {path}")
         elif path in policy["quality"] or (
             path.startswith("tests/test_ci_") and p.suffix == ".py"
@@ -144,7 +160,7 @@ def plan(root, paths, *, full=False):
         elif path.startswith("browser_tests/test_") and p.suffix == ".py":
             browser.add(path)
             reasons.append(f"Changed browser test {path}")
-        elif path in SQL:
+        elif path in SELECTABLE_SQL:
             sql.add(path)
             reasons.append(f"Changed SQL test {path}")
         elif (
@@ -187,6 +203,7 @@ def plan(root, paths, *, full=False):
             unit.update(by_name["sportsgameodds"])
             unit.update(by_name["personal-bet-journal"])
             sql.update(SQL)
+            sql.update(SGO_SQL)
             browser.update(BOARD_BROWSER)
             reasons.append(f"SGO admission and downstream consumers: {path}")
         else:

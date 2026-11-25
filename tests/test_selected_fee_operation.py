@@ -296,10 +296,12 @@ class StopOwnerTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(action=action):
                 revoked=asyncio.Event();finish=asyncio.Event();worker=SimpleNamespace(closed=False)
                 service=SimpleNamespace(workers={'kalshi':worker},dispatch=True,globally_stopped=False,ingress=SimpleNamespace(revoke=Mock()),
-                    paused_sources=set(),cleanup_errors=[],source_state=Mock())
+                    paused_sources=set(),cleanup_errors=[],cleanup_complete=False,source_state=Mock())
                 async def ordinary(*args):
                     worker.closed=True
-                    if action=='stop':service.dispatch=False
+                    if action=='stop':
+                        service.dispatch=False
+                        service.cleanup_complete=True
                     revoked.set()
                 async def finite():await finish.wait();return True
                 service.close=ordinary;service.pause=ordinary

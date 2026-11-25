@@ -319,7 +319,7 @@ def _normalized_rows(snapshot):
 
 
 def _offers(snapshot, by_source, reference, *, at, game_id, minimum):
-    from .ev_movement import exact_bet_identity, offer_measurements
+    from .ev_movement import exact_bet_identity, offer_measurements, public_offer_reason
 
     result = []
     for index, offer in enumerate(snapshot.get("offers", ())):
@@ -334,8 +334,8 @@ def _offers(snapshot, by_source, reference, *, at, game_id, minimum):
             screen = offer_measurements(offer, offer_index=index, captured_at=at)["screen"]
         except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
             identity = {}
-            screen = dict(ev=None, probability=None, reason=str(exc) if isinstance(exc, ValueError) else "sizing_inputs_incomplete")
-        ev, reason = screen["ev"], screen.get("reason")
+            screen = dict(ev=None, probability=None, reason=public_offer_reason(str(exc)) if isinstance(exc, ValueError) else "sizing_inputs_incomplete")
+        ev, reason = screen["ev"], public_offer_reason(screen.get("reason"))
         if ev is None:
             disposition = reason or "ev_unavailable"
         else:

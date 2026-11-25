@@ -222,7 +222,9 @@ async def refresh_product(key, state, retrieve, *, clock=now, allowed=lambda: Tr
             evidence['failed_request'] = dict(url=url, retrieved_at=None)
             outcome, reason = 'failed', 'fee_retrieval_failed'
     except (ValueError, KeyError, TypeError, UnicodeError) as exc:
-        outcome, reason = 'review_required', str(exc) or 'fee_approval_unparseable'
+        from app.fees.public_reasons import APPROVAL_UNPARSEABLE, exception_reason
+        outcome = 'review_required'
+        reason = exception_reason(__name__, 'public_product_fee_evidence', exc, fallback=APPROVAL_UNPARSEABLE)
         state.setdefault('review_required', dict(approval=approval_id, reason=reason,
             detected_at=clock(), retrieval=evidence))
     else:

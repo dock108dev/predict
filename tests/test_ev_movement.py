@@ -332,3 +332,13 @@ def test_missing_original_preserves_compact_request_proof(monkeypatch):
     assert result["retrieval"]["basis"] == "frozen_normalized_checkpoint"
     assert "normalized_rows" not in result
     assert result["orders_submitted"] == result["provider_requests"] == 0
+
+
+def test_dated_offer_export_projects_private_legacy_calculation_errors():
+    private = "synthetic secret from /private/fee-evidence"
+    legacy = offer("180", reason=private)
+    authored = offer("180", reason="fee_applicability_unavailable")
+    checkpoint = {"snapshot": {"offers": [legacy, authored]}}
+    rows = market_census.offer_rows(checkpoint, game_id="fixture", minimum="1/25", at="2026-11-19T23:50:00Z")
+    assert [row["disposition"] for row in rows] == ["calculation_unavailable", "fee_applicability_unavailable"]
+    assert legacy["reason"] == private

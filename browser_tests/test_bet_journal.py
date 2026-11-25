@@ -373,7 +373,7 @@ def test_editor_defaults_and_delete_recovery(width, tmp_path):
         ),
     ]
     state = dict(deleted=False, failure=True, entry=None)
-    deletes, errors = [], []
+    deletes, errors, pending_reload = [], [], []
 
     def serve(route):
         request, url = route.request, urlparse(route.request.url)
@@ -390,7 +390,10 @@ def test_editor_defaults_and_delete_recovery(width, tmp_path):
             else:
                 route.fulfill(json=dict(entry=state["entry"], history=[]))
         elif url.path == "/api/bet-journal":
-            entries = [] if state["deleted"] else [state["entry"]]
+            if state["deleted"]:
+                pending_reload.append(route)
+                return
+            entries = [state["entry"]]
             route.fulfill(
                 json=dict(entries=entries, total=len(entries), summary={}, monitor={})
             )
@@ -450,8 +453,18 @@ def test_editor_defaults_and_delete_recovery(width, tmp_path):
         expect(page.locator('[name="stake-0"]')).to_have_value("37")
         expect(page.locator("#editor")).to_be_visible()
         state["failure"] = False
-        page.get_by_role("button", name="Delete permanently", exact=True).click()
+        with page.expect_request(
+            lambda request: urlparse(request.url).path == "/api/bet-journal"
+        ):
+            page.get_by_role("button", name="Delete permanently", exact=True).click()
         expect(page.locator("#editor")).not_to_be_visible()
+        # Hold the list response so the old edit trigger is still present
+        # when the dialog restores focus. The reload removes that trigger.
+        expect(page.locator(".journal-entry")).to_have_count(1)
+        expect(page.locator("#results")).to_be_focused()
+        pending_reload.pop().fulfill(
+            json=dict(entries=[], total=0, summary={}, monitor={})
+        )
         expect(page.locator(".journal-entry")).to_have_count(0)
         expect(page.locator("#results")).to_be_focused()
         assert deletes == [dict(revision=3), dict(revision=3)]

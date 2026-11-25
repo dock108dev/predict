@@ -505,12 +505,20 @@ class CurrentStore:
         return dict(released=True)
 
     async def revoke_source_publication(self):
-        self._source_stopping=True;self._revoke_economic()
-        await self.admission.close()
-        self._clear_current_body();self._details_cache=None
-        await self.temporal.close()
-        self.encoded_bodies.close()
-        await self.comparison_jobs.close()
+        from app.diagnostics import failure
+
+        self._source_stopping=True
+        self._details_cache=None
+        errors = []
+        for close in (self._revoke_economic, self.admission.close, self._clear_current_body,
+                      self.temporal.close, self.encoded_bodies.close, self.comparison_jobs.close):
+            try:
+                result = close()
+                if asyncio.iscoroutine(result):await result
+            except (Exception, asyncio.CancelledError) as exc:
+                failure(__name__, 'source_publication_revocation', exc)
+                errors.append(exc)
+        if errors:raise errors[0]
 
     async def close(self):
         if self.closed:return

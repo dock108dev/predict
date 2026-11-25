@@ -193,6 +193,14 @@ from app.comparison.native_scoring_scope import source_rules
 rules=source_rules()
 for native_type in ('KXNBAGAME', 'KXNHLGAME', 'KXNHLSPREAD', 'KXNHLTOTAL'):
     assert any(r['native_type']==native_type and r['evidence_available'] for r in rules), native_type
+from unittest.mock import patch
+from app.research import apply_nov23_audit
+with (
+    patch.object(apply_nov23_audit, 'connect', side_effect=AssertionError('Unexpected database access')),
+    patch.object(apply_nov23_audit, 'apply_audit', side_effect=AssertionError('Unexpected audit application')),
+):
+    plan = apply_nov23_audit.audit()
+    assert plan['date'] == '2026-11-23' and len(plan['run_report_revision']) == 64 and plan['issues']
 import asyncio, aiohttp
 from aiohttp import web
 from types import SimpleNamespace
@@ -257,18 +265,31 @@ async def smoke():
                     state=await response.json()
                     assert state['error']=='database_unavailable',(path,state)
                     assert state['provider_requests']==0,(path,state)
-            for path in ('/opportunities', '/browse-odds', '/game?game_key=smoke'):
+            for path, script in (
+                ('/research', 'research-workspace.js'),
+                ('/data', 'data-workbench.js'),
+                ('/settings', 'settings.js'),
+            ):
                 async with client.get(url+path) as response:
                     assert response.status==200,(path,response.status)
                     html = await response.text()
-                    assert ('/view/current/pregame.js' if path.split('?')[0] in ('/opportunities','/ev','/browse-odds','/game') else '/view/current/desk.js') in html
-                    assert '/view/current/predict-icon.png' in html
-            for path in ('/replay?dataset=practice', '/api/odds-replay?dataset=practice', '/api/odds-replay/details?dataset=synthetic'):
+                    assert 'data-workspace-nav' in html and ('/view/current/'+script) in html, path
+                async with client.get(url+'/view/current/'+script) as response:
+                    assert response.status==200,(script,response.status)
+                    assert 'javascript' in response.content_type, script
+            for path, destination in (
+                ('/', '/research'),
+                ('/opportunities', '/data?calculation_status=positive'),
+                ('/browse-odds', '/data'),
+                ('/game?game_key=smoke', '/data?game_key=smoke'),
+                ('/replay?dataset=frozen', '/data?dataset=frozen'),
+            ):
+                async with client.get(url+path, allow_redirects=False) as response:
+                    assert response.status==302 and response.headers['Location']==destination, (path,response.status)
+            for path in ('/replay?dataset=practice', '/data?dataset=synthetic',
+                         '/api/odds-replay?dataset=practice', '/api/odds-replay/details?dataset=synthetic'):
                 async with client.get(url+path) as response:
                     assert response.status==422,(path,response.status)
-            async with client.get(url+'/') as response:
-                assert response.status==200
-                assert '/view/current/research.js' in await response.text()
             assert (root/'static/saved-state.js').is_file()
             assert (root/'historical/e5_static/index.html').is_file()
             from app.dashboard.saved_preview import fixed

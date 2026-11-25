@@ -291,10 +291,38 @@ def release_host(tmp_path):
         unhealthy_reused="",
         cleanup_failure=False,
         fast=False,
+        split_roles=False,
     ):
         import os
 
         config = configuration()
+        if split_roles:
+            for role in ROLES:
+                service = config["services"][role]
+                service.setdefault("environment", {}).update(
+                    PREDICT_DB_ROLE="predict_" + role,
+                    PREDICT_DB_PASSWORD_FILE="/run/predict-db-password",
+                )
+                service["volumes"].append(
+                    dict(
+                        type="bind",
+                        source=str(tmp_path / ("postgres-" + role)),
+                        target="/run/predict-db-password",
+                        read_only=True,
+                    )
+                )
+            # In the unprivileged fake host, skip only the real UID/mode check.
+            # PostgreSQL role names and mount isolation still use the validator.
+            managed = payload / "managed-config.py"
+            managed.write_text(
+                managed.read_text()
+                .replace("info = Path(source).lstat()", "info = Path(__file__).stat()")
+                .replace(
+                    "stat.S_IMODE(info.st_mode) == 0o400 and info.st_uid == 10001",
+                    "True",
+                )
+            )
+            (tmp_path / "postgres-roles.env").touch()
         if bad_managed:
             config["services"]["db"]["volumes"][0]["source"] = "new-database"
         (tmp_path / "candidate-compose.json").write_text(json.dumps(config))
@@ -440,6 +468,21 @@ def test_archive_settings_change_does_not_recreate_web(release_host):
         "collector",
         "archive",
     ]
+    assert installed.read_text() == image_env(previous)
+
+
+def test_split_database_profile_does_not_activate_an_unconfigured_archive(release_host):
+    previous, _, installed, image_env, run = release_host
+    (installed.parent / "archive.env").unlink()
+    result, commands = run(changed=set(), split_roles=True)
+    assert result.returncode == 0, result.stderr
+    probes = [
+        line for line in commands if line.endswith("python -m app.storage verify-role")
+    ]
+    assert [line.split()[-5] for line in probes] == ["web", "collector"]
+    assert all("--env-file postgres-roles.env" in line for line in probes)
+    assert not any(" up " in line and line.endswith(" archive") for line in commands)
+    assert (installed.parent / "applied-postgres-roles-env").is_file()
     assert installed.read_text() == image_env(previous)
 
 

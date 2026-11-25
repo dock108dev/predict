@@ -11,7 +11,7 @@ CADDY_DIRECTORY=/etc/caddy
 
 compose() {
     PREDICT_WEB_IMAGE="${images[0]}" PREDICT_COLLECTOR_IMAGE="${images[1]}" PREDICT_ARCHIVE_IMAGE="${images[2]}" \
-        docker compose --env-file "$compose_env" --project-directory "$release_root" \
+        docker compose --env-file "$compose_env" --env-file "$roles_env" --project-directory "$release_root" \
         -f "$compose_file" --profile collection --profile archive "$@"
 }
 
@@ -101,16 +101,42 @@ files = {p.name: sha256(p.read_bytes()).hexdigest()
          for p in Path("app/storage/migrations").glob("*.sql")}
 with connect() as db:
     exists = db.execute("SELECT to_regclass(%s) AS ledger", ("public.schema_migration",)).fetchone()["ledger"]
-    rows = db.execute("SELECT version, sha256 FROM schema_migration").fetchall() if exists else []
-if not files or any(files.get(row["version"]) != row["sha256"] for row in rows):
+    rows = db.execute("SELECT version, sha256 FROM public.schema_migration ORDER BY version").fetchall() if exists else []
+if not files or list(sorted(files))[:len(rows)] != [row["version"] for row in rows] or any(
+    files[row["version"]] != row["sha256"] for row in rows
+):
     raise SystemExit("Applied migrations do not match the release")
 print(len(files) - len(rows))
 '
 }
 
+migrate_database() {
+    if (( split_roles )); then
+        local secret="$release_root/postgres-migrator"
+        if [[ ! -f $secret || -L $secret ]] || [[ $(stat -c '%a:%u' "$secret") != '400:10001' ]]; then
+            echo 'A private migration credential must be prepared before schema maintenance.' >&2
+            return 1
+        fi
+        compose run --rm --no-deps -T \
+            -e PREDICT_DB_ROLE=predict_migrator -e PREDICT_DB_PASSWORD= \
+            -e PREDICT_DB_PASSWORD_FILE=/run/predict-migrator \
+            --volume "$secret:/run/predict-migrator:ro" web python -m app.storage migrate
+    else
+        compose run --rm --no-deps -T web python -m app.storage migrate
+    fi
+}
+
+verify_socket_roles() {
+    local role
+    for role in "${roles[@]}"; do
+        [[ $role != archive || -f archive.env ]] || continue
+        compose run --rm --no-deps -T "$role" python -m app.storage verify-role || return 1
+    done
+}
+
 needs_rollout() {
     local index=$1
-    if (( host_changed || pending > 0 || (index != 0 && archive_changed) )) \
+    if (( host_changed || pending > 0 || (roles_changed || (index != 0 && archive_changed)) )) \
         || [[ ${images[$index]} != "${previous[$index]}" ]]; then
         return 0
     fi
@@ -153,11 +179,13 @@ release() {
     local header registry_user registry_token index extra label pending backup
     local host_changed=0 archive_was_running='' collector_was_running='' registry_config staging
     local archive_settings archive_changed=0 archive_rollout=0 unhealthy_service='unknown' fast_release=0
+    local split_roles=0 profile roles_settings roles_changed=0
     local services=() previous=('' '' '') images=() inputs=('' '' '') db_flags=(--wait)
     local health_services=(db web)
     local release_root=$PWD compose_file="$PWD/compose.yml"
-    local compose_env=/dev/null
+    local compose_env=/dev/null roles_env=/dev/null
     [[ ! -f archive.env ]] || compose_env=archive.env
+    [[ ! -f postgres-roles.env ]] || roles_env=postgres-roles.env
 
     IFS= read -r -t 10 header
     IFS= read -r -t 10 registry_user
@@ -177,6 +205,12 @@ release() {
     archive_settings=$(sha256sum < "$compose_env")
     if [[ -f applied-archive-env && $archive_settings != $(<applied-archive-env) ]]; then
         archive_changed=1
+    fi
+    roles_settings=$(sha256sum < "$roles_env")
+    if [[ -f applied-postgres-roles-env ]]; then
+        [[ $roles_settings == $(<applied-postgres-roles-env) ]] || roles_changed=1
+    elif [[ -f postgres-roles.env ]]; then
+        roles_changed=1
     fi
     registry_config=$(mktemp -d)
     staging=$(mktemp -d "$release_root/.release.XXXXXXXX")
@@ -201,6 +235,8 @@ release() {
         echo 'Managed host configuration validation failed; no services or installed configuration changed.' >&2
         return 1
     fi
+    profile=$(python3 -I "$staging/managed-config.py" database-profile "$staging/candidate-compose.json" "$release_root") || return 1
+    [[ $profile != split ]] || split_roles=1
     if (( fast_release )); then
         if ! pending=$(migration_count) || [[ ! $pending =~ ^[0-9]+$ ]]; then
             echo 'Fast release could not verify the existing schema; current services unchanged.' >&2
@@ -228,6 +264,14 @@ release() {
         return 1
     fi
 
+    if (( split_roles && (host_changed || archive_changed || roles_changed || ${#previous[0]} == 0) )); then
+        if ! verify_socket_roles; then
+            echo 'Database role authentication check failed. Inspect the split socket and role files before rollout.' >&2
+            resume_previous
+            return 1
+        fi
+    fi
+
     if (( pending > 0 )); then
         archive_was_running=${archive_was_running:-$(compose ps --status running --quiet archive)}
         compose stop web collector
@@ -238,7 +282,7 @@ release() {
             resume_previous
             return 1
         fi
-        if ! compose run --rm --no-deps -T web python -m app.storage migrate; then
+        if ! migrate_database; then
             resume_previous
             return 1
         fi
@@ -280,6 +324,8 @@ release() {
     cp compose.yml applied-compose.yml
     printf '%s\n' "$archive_settings" > applied-archive-env.tmp
     mv applied-archive-env.tmp applied-archive-env
+    printf '%s\n' "$roles_settings" > applied-postgres-roles-env.tmp
+    mv applied-postgres-roles-env.tmp applied-postgres-roles-env
     echo 'Verified images, managed host configuration and all configured service health.'
     if ! cleanup_images; then
         echo 'Maintenance warning: obsolete-image cleanup failed; the verified release remains installed.' >&2

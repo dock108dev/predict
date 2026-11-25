@@ -161,6 +161,7 @@ class SGOScopeSQL(LatestBoardFixture):
     async def test_prophet_exchange_saved_quote_reaches_retail_desk_with_fee(self):
         from app.storage.store import stamp as fixture_stamp
         self.enterContext(patch('app.storage.current_pregame.utc',return_value=fixture_stamp(AT)))
+        from dataclasses import replace
         from datetime import timedelta
         from app.collection.current_policy import DEFAULT
         from app.collection.runtime_status import read_runtime
@@ -190,7 +191,9 @@ class SGOScopeSQL(LatestBoardFixture):
                         book: dict(books[book], spread='1.5')
                         for book in ('fanduel', 'draftkings')})
         event['odds'][away['oddID']] = away
-        page = parse(raw)
+        # The offer and both reference pairs came from one authored pull.
+        page = replace(parse(raw), pull_id='prophetx-fee-fixture-pull',
+                       attempt_id='prophetx-fee-fixture-attempt', request_scope={}, received_at=AT)
         record, = current_rows(page, page.receipt_sha256)[0]
         assert record['quote']['venue'] == 'prophetx'
         assert record['comparison_source_metadata']['provider_bookmaker_id'] == 'prophetexchange'
@@ -252,9 +255,13 @@ class SGOScopeSQL(LatestBoardFixture):
                     assert current['provider_requests']==0
                     item,=current['rows']
                     assert item['id']==key
+                    assert item['reference'] is not None, db.execute(
+                        'SELECT reason FROM current_pregame_calculation WHERE contract_id=%s', (key,)
+                    ).fetchone()
                     assert item['reference']['book']=='fanduel'
                     assert item['reference']['trusted_book_count']==2
                     assert set(item['reference']['candidate_probabilities'])=={'fanduel','draftkings'}
+                    assert item['acquisition']['pull_id']=='prophetx-fee-fixture-pull'
                     assert item['fee']['entry_usd']=='0'
                     assert item['raw']['net_ev'] is not None
                     # Simulate the admission owner's Monitor page capture;

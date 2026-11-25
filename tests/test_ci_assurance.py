@@ -588,9 +588,8 @@ class QualityFirstWorkflowTests(unittest.TestCase):
         import re
 
         root = Path(__file__).resolve().parents[1]
-        candidate = (root / ".github/workflows/ci.yml").read_text()
-        # Required job IDs are independent of local selection. Changing fanout
-        # must retain the existing readiness obligations.
+        candidate = (root / ".github/workflows/full-validation.yml").read_text()
+        # The manual extended workflow retains all four readiness obligations.
         self.assertEqual(
             load("gate").REQUIRED, ("offline", "quality", "postgres", "browser")
         )
@@ -608,8 +607,7 @@ class QualityFirstWorkflowTests(unittest.TestCase):
         self.assertIn("      full_diagnostics:", dispatch)
         self.assertIn("        type: boolean", dispatch)
         self.assertIn("        default: false", dispatch)
-        # Passing changes still run the full lanes; do not install local routing
-        # as an unqualified omission policy in hosted CI.
+        # A passing quality job enables all the extended behavior lanes.
         self.assertIn("run: sh scripts/check-ci", candidate)
         self.assertIn("python -m pytest -q browser_tests ", candidate)
         self.assertIn("uses: ./.github/workflows/storage.yml", candidate)

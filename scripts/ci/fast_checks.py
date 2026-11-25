@@ -36,6 +36,13 @@ SQL_WORKSPACE = SQL_CORE | {
     "tests/test_market_snapshot_arbs_sql.py",
     "tests/test_research_catalog_sql.py",
 }
+SQL_SGO = {
+    "tests/test_sportsgameodds_ingress_sql.py",
+    "tests/test_sportsgameodds_reference_sql.py",
+}
+SQL_DATABASE_ROLES = "tests/test_database_roles_sql.py"
+SQL_MONITOR = "tests/test_pregame_cohorts_sql.py"
+OFFER_EXPORT = "tests/test_research_offer_export_api.py"
 DOMAINS = {
     "collection": {
         "tests/test_sportsgameodds_adapter.py",
@@ -89,8 +96,13 @@ DOMAINS = {
 def plan(root, paths):
     pure, sql, scopes, notes = set(CORE), set(), set(), []
     for path in paths:
-        if Path(path).is_absolute() or ".." in Path(path).parts:
+        candidate = Path(path)
+        if candidate.is_absolute() or ".." in candidate.parts:
             raise ValueError("Changed paths must remain inside the checkout")
+        if path.startswith("docs/") or (
+            len(candidate.parts) == 1 and candidate.suffix == ".md"
+        ):
+            continue
         if path.startswith(("deploy/", ".github/", "scripts/ci/")) or path in (
             "Dockerfile",
             ".dockerignore",
@@ -106,10 +118,30 @@ def plan(root, paths):
         if path.startswith("app/collection/"):
             scopes.add("collection")
             sql.add("tests/test_experiment_acquisition_sql.py")
+        if path in (
+            "app/collection/current_service.py",
+            "app/collection/data_runtime.py",
+            "app/dashboard/current_state.py",
+            "tests/test_data_runtime_unit.py",
+        ):
+            pure.add("tests/test_data_runtime_unit.py")
+        if path in (
+            "app/storage/database_roles.py",
+            "app/storage/store.py",
+            "deploy/compose.yml",
+            "deploy/managed-config.py",
+            "deploy/release.sh",
+            SQL_DATABASE_ROLES,
+        ):
+            scopes.add("deploy")
+            sql.add(SQL_DATABASE_ROLES)
         if path.startswith(("app/research/", "app/storage/")):
             scopes.add("research")
             sql.update(SQL_CORE)
-        if path.startswith("app/research/paper") or path == "app/dashboard/paper_api.py":
+        if (
+            path.startswith("app/research/paper")
+            or path == "app/dashboard/paper_api.py"
+        ):
             sql.add("tests/test_paper_experiments_sql.py")
         if path.startswith(
             (
@@ -143,50 +175,144 @@ def plan(root, paths):
         if path in ("app/research/recovery.py", "tests/test_t10_recovery.py"):
             pure.add("tests/test_t10_recovery.py")
             sql.add("tests/test_t10_recovery.py::RecoverySQL")
-        if "mens_d1" in path or "mens-d1" in path:
-            pure.update({"tests/test_mens_d1_source.py", "tests/test_mens_d1_daily_jobs.py",
-                         "tests/test_mens_d1_coverage_api.py::test_coverage_reads_and_downloads_do_not_dispatch"})
-            sql.update({"tests/test_mens_d1_coverage_sql.py",
-                        "tests/test_mens_d1_coverage_api.py::MensD1CoverageSQL",
-                        "tests/test_paper_experiments_sql.py"})
-        if "market_census" in path or "issue_dispositions" in path or "nov23_audit" in path:
-            pure.add("tests/test_market_census.py::test_no_provider_odds_requires_affirmative_exact_return")
-            sql.update({"tests/test_market_census.py::MarketCensusSQL",
-                        "tests/test_mens_d1_coverage_api.py::MensD1CoverageSQL"})
-        if path in ("app/collection/sportsgameodds_adapter.py", "app/collection/sportsgameodds_worker.py"):
-            pure.update({
-                "tests/test_sportsgameodds_discovery.py::test_discovery_retains_unique_members_through_mixed_overlaps",
-                "tests/test_sportsgameodds_worker.py::test_exact_id_refresh_retains_omissions_and_excludes_unrequested_members",
-            })
+        if path.startswith(("app/", "tests/")) and (
+            "mens_d1" in candidate.name or "mens-d1" in candidate.name
+        ):
+            pure.update(
+                {
+                    "tests/test_mens_d1_source.py",
+                    "tests/test_mens_d1_daily_jobs.py",
+                    "tests/test_mens_d1_coverage_api.py::test_coverage_reads_and_downloads_do_not_dispatch",
+                }
+            )
+            sql.update(
+                {
+                    "tests/test_mens_d1_coverage_sql.py",
+                    "tests/test_mens_d1_coverage_api.py::MensD1CoverageSQL",
+                    "tests/test_paper_experiments_sql.py",
+                }
+            )
+        if path.startswith(("app/", "tests/")) and any(
+            topic in candidate.name
+            for topic in ("market_census", "issue_dispositions", "nov23_audit")
+        ):
+            pure.add(
+                "tests/test_market_census.py::test_no_provider_odds_requires_affirmative_exact_return"
+            )
+            sql.update(
+                {
+                    "tests/test_market_census.py::MarketCensusSQL",
+                    "tests/test_mens_d1_coverage_api.py::MensD1CoverageSQL",
+                }
+            )
+        if path in (
+            "app/dashboard/research_workspace_api.py",
+            "app/research/workspace.py",
+            "app/research/market_census.py",
+            "app/storage/store.py",
+            OFFER_EXPORT,
+        ):
+            pure.add(OFFER_EXPORT)
+        if (
+            path.startswith(
+                ("app/collection/sportsgameodds_", "app/storage/sportsgameodds_")
+            )
+            or (
+                path.startswith("app/storage/migrations/")
+                and "_sportsgameodds_" in candidate.name
+            )
+            or path
+            in (
+                "app/collection/current_database.py",
+                "app/comparison/reference_scope.py",
+                *SQL_SGO,
+            )
+        ):
+            sql.update(SQL_SGO)
+        if path.startswith("app/storage/pregame_cohort") or path in (
+            "app/collection/current_database.py",
+            "app/collection/current_ingress.py",
+            "app/storage/migrations/124_pregame_projection_recovery.sql",
+            SQL_MONITOR,
+        ):
+            sql.add(SQL_MONITOR)
+        if path in (
+            "app/collection/sportsgameodds_adapter.py",
+            "app/collection/sportsgameodds_worker.py",
+        ):
+            pure.update(
+                {
+                    "tests/test_sportsgameodds_discovery.py::test_discovery_retains_unique_members_through_mixed_overlaps",
+                    "tests/test_sportsgameodds_worker.py::test_exact_id_refresh_retains_omissions_and_excludes_unrequested_members",
+                }
+            )
         if path.startswith(("app/fees/", "app/comparison/", "app/settlement")):
             scopes.add("fees")
+        if path == "app/fees/public_reasons.py":
+            pure.update(
+                {"tests/test_public_fee_schedule.py", "tests/test_paper_campaigns.py"}
+            )
         if path.startswith("app/dashboard/"):
             scopes.add("dashboard")
-        if path in ("tests/latest_board_fixture.py", "tests/pregame_fixture.py", "tests/test_sql_fixture_template.py"):
+        if path in (
+            "tests/latest_board_fixture.py",
+            "tests/pregame_fixture.py",
+            "tests/test_sql_fixture_template.py",
+        ):
             # Preserve the complete workspace SQL selection when its shared
             # database setup changes; template reuse never narrows checks.
             sql.update(SQL_WORKSPACE)
             sql.add("tests/test_sql_fixture_template.py")
         if path == "app/dashboard/multi_game_server.py":
-            pure.add(
-                "tests/test_ev09_asset_delivery.py::Assets"
-            )
+            pure.add("tests/test_ev09_asset_delivery.py::Assets")
         if path in ("app/storage/research_catalog.py", "app/dashboard/research_api.py"):
-            sql.update({"tests/test_data_workspace_sql.py", "tests/test_research_catalog_sql.py"})
-        if path in ("app/storage/market_board.py", "app/storage/acquisition_snapshot.py",
-                    "app/dashboard/research_api.py", "tests/test_market_board_sql.py"):
+            sql.update(
+                {
+                    "tests/test_data_workspace_sql.py",
+                    "tests/test_research_catalog_sql.py",
+                }
+            )
+        if path in (
+            "app/storage/market_board.py",
+            "app/storage/acquisition_snapshot.py",
+            "app/dashboard/research_api.py",
+            "tests/test_market_board_sql.py",
+        ):
             sql.add("tests/test_market_board_sql.py")
-        if path in ("app/storage/market_snapshot_arbs.py", "app/comparison/pregame_arbs.py",
-                    "app/storage/pregame_arbs.py", "tests/test_market_snapshot_arbs_sql.py"):
+        if path in (
+            "app/storage/market_snapshot_arbs.py",
+            "app/comparison/pregame_arbs.py",
+            "app/storage/pregame_arbs.py",
+            "tests/test_market_snapshot_arbs_sql.py",
+        ):
             sql.add("tests/test_market_snapshot_arbs_sql.py")
-        if path in ("app/comparison/fee_mode.py", "app/comparison/current_pregame.py", "app/storage/current_pregame.py", "app/storage/current_pregame_read.py"):
+        if path in (
+            "app/comparison/fee_mode.py",
+            "app/comparison/current_pregame.py",
+            "app/storage/current_pregame.py",
+            "app/storage/current_pregame_read.py",
+        ):
             sql.update({"tests/test_fee_mode_sql.py", "tests/test_fee_pricing_sql.py"})
         if path in ("app/comparison/fee_mode.py", "app/research/experiment.py"):
-            sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_fee_mode_transition_appends_policy_without_rewriting_old_evidence")
-        if path in ("app/research/experiment.py", "app/collection/experiment_acquisition.py", "app/comparison/reference_scope.py"):
-            sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests")
-        if path in ("app/research/experiment.py", "app/collection/experiment_acquisition.py", "app/storage/acquisition_snapshot.py"):
-            sql.add("tests/test_ev_experiment_sql.py::ExperimentSQL::test_late_pull_manifest_spends_its_own_reserved_bytes")
+            sql.add(
+                "tests/test_ev_experiment_sql.py::ExperimentSQL::test_fee_mode_transition_appends_policy_without_rewriting_old_evidence"
+            )
+        if path in (
+            "app/research/experiment.py",
+            "app/collection/experiment_acquisition.py",
+            "app/comparison/reference_scope.py",
+        ):
+            sql.add(
+                "tests/test_ev_experiment_sql.py::ExperimentSQL::test_reference_scope_transition_preserves_old_policy_and_declared_checkpoint_requests"
+            )
+        if path in (
+            "app/research/experiment.py",
+            "app/collection/experiment_acquisition.py",
+            "app/storage/acquisition_snapshot.py",
+        ):
+            sql.add(
+                "tests/test_ev_experiment_sql.py::ExperimentSQL::test_late_pull_manifest_spends_its_own_reserved_bytes"
+            )
         if path == "app/dashboard/workspace_routes.py" or path.startswith(
             "app/dashboard/opportunity_static/current/"
         ):
@@ -287,16 +413,18 @@ def changed_paths(root):
     else:
         base = "HEAD^" if event_path else "HEAD"
     raw = subprocess.check_output(
-        ["git", "diff", "--name-only", "--no-renames", base, "HEAD", "--"],
+        ["git", "diff", "--name-only", "--no-renames", "-z", base, "HEAD", "--"],
         cwd=root,
-        text=True,
     )
     if not event_path:
         raw += subprocess.check_output(
-            ["git", "diff", "--name-only", "HEAD", "--"], cwd=root, text=True
+            ["git", "diff", "--name-only", "--no-renames", "-z", "HEAD", "--"],
+            cwd=root,
         )
-    return sorted(set(raw.splitlines()))
-
+        raw += subprocess.check_output(
+            ["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=root
+        )
+    return sorted({os.fsdecode(path) for path in raw.split(b"\0") if path})
 
 
 def run_checks(commands, *, root=ROOT):
@@ -317,8 +445,12 @@ def run_checks(commands, *, root=ROOT):
         except (OSError, subprocess.SubprocessError) as exc:
             code = 1
             error = str(exc)
-        result = dict(name=name, status="PASS" if code == 0 else "FAIL",
-                      seconds=round(time.monotonic() - before, 3), returncode=code)
+        result = dict(
+            name=name,
+            status="PASS" if code == 0 else "FAIL",
+            seconds=round(time.monotonic() - before, 3),
+            returncode=code,
+        )
         if error is not None:
             result["error"] = error
         return result

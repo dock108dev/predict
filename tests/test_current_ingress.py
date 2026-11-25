@@ -206,7 +206,11 @@ class OwnedIngress(IsolatedAsyncioTestCase):
         from unittest.mock import AsyncMock, Mock
         from app.collection.data_runtime import DataRuntime
         persisted=asyncio.Event();release=asyncio.Event()
-        service=SimpleNamespace(dispatch=True,globally_stopped=False,ingress=Mock(),cleanup_errors=[],close=AsyncMock())
+        service=SimpleNamespace(dispatch=True,globally_stopped=False,ingress=Mock(),
+                                cleanup_errors=[],cleanup_complete=False)
+        async def close():
+            service.cleanup_complete=True
+        service.close=AsyncMock(side_effect=close)
         runtime=DataRuntime(service=service)
         async def persistence(*args):
             persisted.set();await release.wait()
@@ -218,6 +222,8 @@ class OwnedIngress(IsolatedAsyncioTestCase):
             service.ingress.revoke.assert_called_once()
         finally:
             release.set();await task
+        service.close.assert_awaited_once()
+        self.assertTrue(service.cleanup_complete)
 
 class CursorLifetime(IsolatedAsyncioTestCase):
     async def test_row_factory_does_not_retain_its_cursor_or_result_buffer(self):

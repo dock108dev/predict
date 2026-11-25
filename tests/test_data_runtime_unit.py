@@ -157,6 +157,71 @@ class AppLifecycle(IsolatedRuntimeClient):
 
 
 class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
+    async def test_watchdog_publication_failure_requires_confirmed_stop_retry(self):
+        import asyncio
+        from app.collection.data_runtime import DataRuntime
+        from app.dashboard.current_state import SelectionError
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            service = CurrentService(config=dict(DEFAULT, aggregate_enabled=False),
+                directory=root/'state', ownership=LocalOwnership(root/'owner'), worker_factory=FakeWorker)
+            store = CurrentStore(service)
+            runtime = DataRuntime(service=service)
+            runtime.persist_control = unittest.mock.AsyncMock()
+            release_client = asyncio.Event()
+            await service.start(store)
+            service.config['cleanup_seconds'] = .02
+            worker = service.workers['kalshi']
+            close_client = worker.close
+
+            async def pending_client():
+                await release_client.wait()
+                await close_client()
+
+            worker.close = pending_client
+            admission_close = store.admission.close
+            try:
+                with patch.object(store.admission, 'close', side_effect=OSError('CONTROLLED publication secret')):
+                    service.config['rss_bytes'] = 1
+                    await asyncio.wait_for(asyncio.shield(service.watchdog), timeout=2)
+                    self.assertFalse(service.dispatch)
+                    self.assertTrue(store._source_stopping)
+                    self.assertTrue(store.comparison_jobs.closed)
+                    self.assertTrue(all(task.done() for task in service.tasks.values()))
+                    self.assertEqual(service.workers['polymarket_us'].close_count, 1)
+                    self.assertIn('source_publication_cleanup_failed', service.cleanup_errors)
+                    self.assertFalse(service.client_cleanup_tasks['kalshi'].done())
+                    with self.assertRaises(SelectionError) as result:
+                        await runtime.control('stop', {})
+                    self.assertEqual(result.exception.body['error'], 'cleanup_safety_unresolved')
+                    self.assertNotIn('secret', str(service.cleanup_errors))
+                    self.assertTrue(runtime.global_stopped)
+                    self.assertFalse(service.cleanup_complete)
+                    with self.assertRaisesRegex(ValueError, 'owns native acquisition'):
+                        LocalOwnership(root/'owner').acquire('competitor')
+
+                # A healed publication path alone still cannot release a live client.
+                self.assertIs(store.admission.close.__func__, admission_close.__func__)
+                with self.assertRaises(SelectionError):
+                    await runtime.control('stop', {})
+                self.assertEqual(service.cleanup_errors, ['client_cleanup_timeout'])
+                self.assertIsNotNone(service.ownership.file)
+                release_client.set()
+                await runtime.control('stop', {})
+                self.assertTrue(service.cleanup_complete)
+                self.assertFalse(service.dispatch)
+                self.assertIsNone(service.ownership.file)
+                self.assertEqual([w.close_count for w in service.workers.values()], [1, 1])
+                self.assertTrue(all(t.done() for t in service.client_cleanup_tasks.values()))
+                rival = LocalOwnership(root/'owner')
+                rival.acquire('after-confirmed-close')
+                rival.release()
+            finally:
+                release_client.set()
+                await store.close()
+                service.ownership.release()
+
     async def test_stop_revokes_running_workers_despite_existing_cleanup_issue(self):
         from app.collection.data_runtime import DataRuntime
         from app.dashboard.current_state import SelectionError
@@ -177,10 +242,98 @@ class PersistedStopGates(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(service.dispatch)
                 self.assertTrue(all(worker.closed for worker in service.workers.values()))
                 self.assertTrue(all(task.done() for task in service.tasks.values()))
+                self.assertEqual(service.cleanup_errors, ['earlier_source_cleanup_unresolved'])
                 runtime.persist_control.assert_awaited_with('stopping')
             finally:
                 await store.close()
                 service.ownership.release()
+
+    async def test_stop_retries_timed_out_pause_cleanup_and_keeps_pause_choice(self):
+        import asyncio
+        from app.collection.data_runtime import DataRuntime
+        from app.dashboard.current_state import SelectionError
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            service = CurrentService(config=dict(DEFAULT, aggregate_enabled=False),
+                directory=root/'state', ownership=LocalOwnership(root/'owner'), worker_factory=FakeWorker)
+            store = CurrentStore(service)
+            runtime = DataRuntime(service=service)
+            runtime.persist_control = unittest.mock.AsyncMock()
+            release_client = asyncio.Event()
+            await service.start(store)
+            service.config['cleanup_seconds'] = .02
+            worker = service.workers['kalshi']
+            close_client = worker.close
+
+            async def pending_client():
+                await release_client.wait()
+                await close_client()
+
+            worker.close = pending_client
+            try:
+                with self.assertRaises(SelectionError) as pause:
+                    await runtime.control('pause', {'source': 'kalshi'})
+                self.assertEqual(pause.exception.body['error'], 'cleanup_safety_unresolved')
+                self.assertEqual(set(service.cleanup_errors), {'client_cleanup_timeout', 'kalshi:cleanup_failure'})
+                self.assertEqual(runtime.paused_sources, {'kalshi'})
+                self.assertTrue(service.dispatch)
+
+                with self.assertRaises(SelectionError) as stop:
+                    await runtime.control('stop', {})
+                self.assertEqual(stop.exception.body['error'], 'cleanup_safety_unresolved')
+                self.assertFalse(service.dispatch)
+                self.assertIsNotNone(service.ownership.file)
+                self.assertEqual(service.workers['polymarket_us'].close_count, 1)
+
+                release_client.set()
+                await runtime.control('stop', {})
+                self.assertTrue(service.cleanup_complete)
+                self.assertEqual(service.cleanup_errors, [])
+                self.assertEqual(worker.close_count, 1)
+                self.assertIsNone(service.ownership.file)
+                self.assertTrue(runtime.global_stopped)
+                self.assertEqual(runtime.paused_sources, {'kalshi'})
+                self.assertEqual(service.paused_sources, {'kalshi'})
+            finally:
+                release_client.set()
+                await store.close()
+                service.ownership.release()
+
+    async def test_terminal_close_keeps_runtime_authorities_until_source_resources_close(self):
+        import asyncio
+        from app.collection.data_runtime import DataRuntime
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            service = CurrentService(config=dict(DEFAULT, aggregate_enabled=False),
+                directory=root/'state', ownership=LocalOwnership(root/'source'), worker_factory=FakeWorker)
+            runtime = DataRuntime(service=service, owner=LocalOwnership(root/'runtime'))
+            runtime.owner.acquire('terminal-close-fixture')
+            runtime.lock_connection = connection = Mock()
+            runtime.persist_control = unittest.mock.AsyncMock()
+            runtime.store = CurrentStore(service)
+            await service.start(runtime.store)
+            service.config['cleanup_seconds'] = .001
+            release = asyncio.Event()
+            service.workers['kalshi'].close = release.wait
+            try:
+                with self.assertRaisesRegex(RuntimeError, 'data_runtime_source_cleanup_unresolved'):
+                    await runtime.close()
+                self.assertFalse(service.dispatch)
+                self.assertIsNotNone(service.ownership.file)
+                self.assertIsNotNone(runtime.owner.file)
+                connection.close.assert_not_called()
+                release.set()
+                await runtime.close()
+                self.assertTrue(service.cleanup_complete)
+                self.assertIsNone(service.ownership.file)
+                self.assertIsNone(runtime.owner.file)
+                connection.close.assert_called_once()
+            finally:
+                release.set()
+                service.ownership.release()
+                runtime.owner.release()
 
     async def test_source_pause_survives_new_service(self):
         FakeWorker.starts = []

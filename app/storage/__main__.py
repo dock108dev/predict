@@ -1,6 +1,7 @@
 """python -m app.storage --help"""
 import argparse
 import json
+from . import database_roles
 from .store import Store, connect, open_retained
 from .workflow import import_default
 
@@ -9,17 +10,40 @@ def main():
     p=argparse.ArgumentParser(description='Dedicated local historical storage; no venue/network capture')
     p.add_argument('--database',default='prediction_arb')
     commands=p.add_subparsers(dest='command',required=True)
-    for name in ('migrate','ingest-default','replay'): commands.add_parser(name)
+    for name in ('migrate','migration-status','roles-enable','roles-rollback','verify-role','maintain','ingest-default','replay'): commands.add_parser(name)
     q=commands.add_parser('query'); q.add_argument('--session'); q.add_argument('--limit',type=int,default=100)
     for name in ('export','import'): commands.add_parser(name).add_argument('path')
     h=commands.add_parser('history'); h.add_argument('session'); h.add_argument('candidate')
     r=commands.add_parser('recover'); r.add_argument('session')
     args=p.parse_args()
     with connect(args.database) as db:
-        if args.command != 'migrate':
+        if args.command not in ('migrate','migration-status','roles-enable','roles-rollback','verify-role','maintain'):
             open_retained(db)
         s=Store(db)
-        if args.command=='migrate': s.migrate(); result={'migration':'applied'}
+        if args.command == 'migration-status':
+            print(s.pending_migrations())
+            return
+        if args.command == 'migrate':
+            if db.info.user == database_roles.MIGRATOR:
+                database_roles.migrate(db)
+            else:
+                s.migrate()
+            result = {'migration': 'applied'}
+        elif args.command == 'roles-enable':
+            database_roles.enable(db)
+            result = {'roles': 'provisioned'}
+        elif args.command == 'roles-rollback':
+            database_roles.rollback(db)
+            result = {'roles': 'legacy'}
+        elif args.command == 'verify-role':
+            result = {'role': database_roles.verify_socket_login(db)}
+        elif args.command == 'maintain':
+            from .storage_maintenance import maintain
+
+            if db.info.user not in (database_roles.BOOTSTRAP, database_roles.MIGRATOR):
+                raise ValueError('storage_maintenance_requires_migrator')
+            s.require_current_schema()
+            result = maintain(db)
         elif args.command=='ingest-default': result=import_default(s)
         elif args.command=='query':
             if not 1<=args.limit<=1000: p.error('--limit must be 1..1000')

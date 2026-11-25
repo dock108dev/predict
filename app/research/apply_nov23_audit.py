@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from collections import Counter
-from pathlib import Path
+from importlib.resources import files
 import json
 
 from app.dashboard.mens_d1_coverage_api import coverage_view
@@ -16,7 +16,7 @@ ACTOR = "engineering:november-23-audit"
 
 
 def audit():
-    return json.loads(Path(__file__).with_name("nov23_audit.json").read_text())
+    return json.loads(files(__package__).joinpath("nov23_audit.json").read_text(encoding="utf-8"))
 
 
 def decision(item, game=None):

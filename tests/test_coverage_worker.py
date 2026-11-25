@@ -71,20 +71,38 @@ async def exercise(tmp_path,mode):
 def test_pressure_grace_keeps_stop_deadline_and_child_ownership(tmp_path,mode):
     async def exercise_pressure():
         from app.collection.background_work import BACKGROUND
-        launch=asyncio.create_subprocess_exec;children=[];started=time.monotonic()
-        code='import time; time.sleep(.06); print(\'{"published": true}\')' if mode=='transient' else 'import time; time.sleep(30)'
+        launch = asyncio.create_subprocess_exec
+        children = []
+        polls = 0
+        code = 'import sys; sys.stdin.read(1); print(\'{"published": true}\')'
+
         async def start(*args,**kwargs):
-            p=await launch(sys.executable,'-c',code,**kwargs);children.append(p);return p
-        pressure=lambda:mode!='transient' or time.monotonic()-started<.04
-        stop=lambda:mode=='stop_during_pressure' and bool(children) and time.monotonic()-started>.02
+            child = await launch(sys.executable, '-c', code, stdin=asyncio.subprocess.PIPE, **kwargs)
+            children.append(child)
+            return child
+
+        def pressure():
+            nonlocal polls
+            polls += 1
+            if mode == 'transient' and polls == 2:
+                children[0].stdin.write(b'\n')
+            return mode != 'transient' or polls == 1
+
+        stop = lambda: mode == 'stop_during_pressure' and polls > 0
+        # The transient case checks resumption after pressure actually enters
+        # the worker loop. The persistent case keeps the short deadline.
+        deadline = 5 if mode == 'transient' else .3
         with patch.object(worker.asyncio,'create_subprocess_exec',side_effect=start), \
-                patch.object(worker,'MAX_SECONDS',.3), \
+                patch.object(worker,'MAX_SECONDS',deadline), \
                 patch.object(BACKGROUND,'critical_acquisition_pressure',side_effect=pressure):
             if mode=='persistent':
                 with pytest.raises(ValueError,match='coverage_worker_deadline'):await worker.run(stop,root=tmp_path)
             else:
                 result=await worker.run(stop,root=tmp_path)
                 assert result.get('published') is (mode=='transient')
+                if mode == 'transient' and hasattr(signal, 'SIGSTOP'):
+                    assert result['worker_pauses'] == 1
+        assert polls
         assert children and all(p.returncode is not None for p in children)
     asyncio.run(exercise_pressure())
 

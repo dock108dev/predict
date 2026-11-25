@@ -143,7 +143,7 @@ def validate_sgo_page(row):
 
 
 class DatabaseIngressSink:
-    """Direct synchronous SQL publication; no durable feed or retry queue."""
+    """Commit source rows before attempting their recoverable local projections."""
     acknowledgment='saved-current-row-transaction'
     def __init__(self,store,config,*,process_normalization=False):
         from app.dashboard.session_projection import SessionProjection
@@ -441,6 +441,7 @@ class DatabaseIngressSink:
                 require_disk_space(Path(__file__).resolve().parents[2]/'.local/postgres')
                 if sql_usage(db)>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
                 rows=CurrentRowStore(db)
+                cohort_key = None
                 from app.storage.scanner_publication import transaction as published_transaction
                 with published_transaction(db):
                     if sgo_links is not None:
@@ -533,6 +534,11 @@ class DatabaseIngressSink:
                     if sgo_links is not None:
                         from app.storage.delivery_clocks import sgo_admitted
                         sgo_admitted(db, set(row['event_scopes'].values()), row['received_at'])
+                        if row.get('collection_run'):
+                            from app.storage.pregame_cohorts import enqueue
+                            cohort_key = enqueue(db, row['collection_run'], row['event_scopes'], now,
+                                received_at=row['received_at'], receipt_sha256=row['receipt_sha256'], records=records,
+                                references=row['sgo_reference_rows'], frames=row['sgo_event_frames'])
                     from app.storage import odds_archive
                     if odds_archive.enabled():
                         with odds_archive.capture(db) as archive:
@@ -566,21 +572,14 @@ class DatabaseIngressSink:
                                 archive.append((feed, odds_archive.source_status, (feed,state,now), {}))
                             if sgo_links is not None:
                                 archive.append(('sportsgameodds', odds_archive.sgo_page, (row,), {}))
+                    if cohort_key is not None:
+                        phase('cohort_stage')
+                        self.stage_cohort(db, cohort_key, row['event_scopes'], now)
+                    if revoked is not None and revoked.is_set():raise asyncio.CancelledError()
                     phase('commit_observation')
-                from app.storage.current_pregame import process
-                calculation_keys = sorted({r['quote']['source']['provider']+':'+r['quote']['source']['native_event_id']
-                    for r in records if 'quote' in r} | {r['source']['provider']+':'+r['source']['native_event_id']
-                    for r in records if 'quote' not in r and 'source' in r})
-                if sgo_links is not None:
-                    calculation_keys.extend('sportsgameodds:'+event for event in row['event_scopes'])
-                if calculation_keys:
-                    phase('current_calculation')
-                    self.metrics['current_calculations'] = process(db,keys=calculation_keys,limit=len(set(calculation_keys)))
-                    self.metrics['recent_current_calculations'] = (self.metrics.get('recent_current_calculations', []) + self.metrics['current_calculations'])[-32:]
-                if sgo_links is not None and row.get('collection_run'):
-                    from app.storage.pregame_cohorts import capture as capture_cohort
-                    capture_cohort(db, row['collection_run'], row['event_scopes'], now,
-                                   observed=dict(records=records,references=row['sgo_reference_rows']))
+                # Nothing below this boundary can undo or reject the admitted
+                # receipt. Both calculation and cohort work were staged in SQL.
+                self.project_committed(db, row, records, sgo_links, cohort_key, now, phase)
             if row['type']=='coverage_inventory':
                 self.metrics['catalog_storage_turnover']=dict(at=utc(),source=row['source'],generation=row['generation'],reasons=catalog_turnover)
             if material_rows is not None:
@@ -600,6 +599,51 @@ class DatabaseIngressSink:
             self.error=type(exc).__name__;self.error_details=failure_details(exc);self.metrics['rejected_observations']+=1
             raise
 
+    def stage_cohort(self, db, key, events, now):
+        from app.diagnostics import failure
+        from app.storage.current_pregame import process
+        from app.storage.pregame_cohorts import seal
+        from app.storage.store import stamp
+
+        try:
+            with db.transaction():
+                # The source transaction holds the same current-row lock used
+                # by calculation. Keep optional staging SQL within the existing
+                # contention budget while that transaction owns Stop authority.
+                setting = db.execute("SELECT current_setting('statement_timeout') value").fetchone()['value']
+                budget = db.execute("SELECT current_setting('lock_timeout') value").fetchone()['value']
+                if budget != '0':
+                    db.execute("SELECT set_config('statement_timeout',%s,true)", (budget,))
+                keys = ['sportsgameodds:'+event for event in sorted(events)]
+                process(db, keys=keys, limit=len(keys), at=stamp(now))
+                seal(db, key)
+                db.execute("SELECT set_config('statement_timeout',%s,true)", (setting,))
+        except Exception as exc:
+            failure(__name__, 'current_ingress_cohort_stage', exc)
+
+    def project_committed(self, db, row, records, sgo_links, cohort_key, now, phase):
+        from app.diagnostics import failure, failure_details
+        from app.storage.current_pregame import process
+        from app.storage.pregame_cohorts import attempt_projection
+
+        try:
+            sources = [record['quote']['source'] if 'quote' in record else record.get('source')
+                       for record in records]
+            keys = {source['provider']+':'+source['native_event_id'] for source in sources if source}
+            if sgo_links is not None:keys.update('sportsgameodds:'+event for event in row['event_scopes'])
+            if keys and cohort_key is None:
+                phase('current_calculation')
+                recent = process(db, keys=sorted(keys), limit=len(keys))
+                self.metrics['current_calculations'] = recent
+                self.metrics['recent_current_calculations'] = (self.metrics.get('recent_current_calculations', []) + recent)[-32:]
+            if cohort_key is not None:
+                phase('cohort_projection')
+                self.metrics['cohort_projection'] = attempt_projection(db, cohort_key, at=now)
+        except Exception as exc:
+            failure(__name__, 'current_ingress_post_commit_projection', exc)
+            self.metrics['cohort_projection' if cohort_key else 'post_commit_calculation'] = dict(
+                state='pending', reason='local_projection_failed', diagnostics=failure_details(exc))
+
 
 class DatabasePipeline:
     """Current-row startup, expiry and Stop for the independent data owner."""
@@ -608,12 +652,13 @@ class DatabasePipeline:
         self.error=None;self.error_details=None;self.wake=asyncio.Event();self.used=None;self.maintenance=None
         self.maintenance_failures=0;self.maintenance_last_success_at=None
         self.last_compaction_check=0
+        self.cohort_projection=None
     async def start(self):
         from app.storage.current_rows import CurrentRowStore
         from .current_policy import aggregate_scope, native_scope, native_markets
         try:
             with connect() as db:
-                Store(db).migrate();rows=CurrentRowStore(db)
+                Store(db).ensure_runtime_schema();rows=CurrentRowStore(db)
                 with db.transaction():
                     # Process restart reconciles committed current facts. Exact
                     # runtime/result bindings invalidate old selection authority;
@@ -625,15 +670,35 @@ class DatabasePipeline:
                     rows.expire()
                 from app.storage.pregame_cohorts import bootstrap
                 bootstrap(db)
+            await asyncio.to_thread(self.recover_cohorts, startup=True)
             self.error=None
             self.task=asyncio.create_task(self.run_maintenance(),name='predict-current-expiry')
         except Exception as exc:
             from app.diagnostics import failure_details
             self.error=type(exc).__name__;self.error_details=failure_details(exc)
             raise
+
+    def recover_cohorts(self, *, startup=False):
+        from app.diagnostics import failure, failure_details
+        from app.storage.pregame_cohorts import recover
+
+        try:
+            with connect() as db:
+                outcomes = recover(db, at=utc(), include_deferred=startup)
+            if outcomes:
+                self.cohort_projection = dict(completed=sum(item['state']=='complete' for item in outcomes),
+                    pending=[item for item in outcomes if item['state']=='pending'])
+                expired = sum(item['state']=='expired' for item in outcomes)
+                if expired:self.cohort_projection['expired'] = expired
+        except Exception as exc:
+            failure(__name__, 'pregame_cohort_recovery', exc)
+            self.cohort_projection = dict(completed=0, pending=[dict(state='pending',
+                reason='cohort_projection_failed', diagnostics=failure_details(exc))])
+
     def tick(self):
         # Deliberately no journal, diagnostic, cursor, snapshot or publication path.
         if not self.closed:
+            self.recover_cohorts()
             from app.storage.current_rows import CurrentRowStore
             with connect() as db:
                 # Expiry contention must not starve independent committed
@@ -685,6 +750,7 @@ class DatabasePipeline:
             failure_owner='ingress' if ingress else 'maintenance' if self.error else None,
             ingress_failure=getattr(self.service.sink,'error_details',None) if ingress else None,
             maintenance_failure=self.error_details,maintenance_failures=self.maintenance_failures,
+            cohort_projection=self.cohort_projection,
             maintenance_last_success_at=self.maintenance_last_success_at,
             maintenance=self.maintenance,backlog_bytes=0,imported_records=0,
             pending_calculations=0,busy=False,sql_byte_cap=SQL_BYTE_CAP,sql_bytes=used,

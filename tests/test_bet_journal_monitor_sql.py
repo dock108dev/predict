@@ -71,6 +71,7 @@ def journal_history(journal):
 class JournalMonitorSQL(PregameFixture):
     async def test_source_sample_persists_in_independent_real_personal_journal(self):
         from app.dashboard.bet_journal import Journal as DurableJournal
+        from tests.test_market_snapshot_arbs_sql import SnapshotArbsSQL
 
         with self.connect() as db:
             from app.fees import pricing
@@ -79,10 +80,11 @@ class JournalMonitorSQL(PregameFixture):
             pricing.write(db, "novig", [rule("novig")])
             pricing.write(db, "prophetx", [rule("prophetx")])
             data = page()
-            for odd in data["data"][0]["odds"].values():
-                odd["byBookmaker"]["novig"] = dict(
-                    odd["byBookmaker"]["prophetx"], odds="+125"
-                )
+            # The journal reads current arbs from completed acquisition scopes
+            # and closing-price samples from working rows. Seed both from one
+            # authored page through the production builders.
+            db.execute("TRUNCATE public.market_pull CASCADE")
+            pull, _ = SnapshotArbsSQL.capture(self, db, data=data)
             self.ingest(db, data)
             self.process(db)
             picked = next(
@@ -97,9 +99,13 @@ class JournalMonitorSQL(PregameFixture):
             first = monitor.sample(journal=journal, connector=self.connect, at=AT)
             self.assertEqual(first["ev"], 0)
             self.assertGreater(first["arbs"], 0)
+            self.assertEqual(first["provider_requests"], 0)
             self.assertEqual(journal.list(kind="ev")["total"], 1)
             self.assertEqual(journal.get(saved)["entry"]["decision"], "saved")
+            self.assertEqual(journal.get(saved)["entry"]["snapshot"], picked)
             for row in journal.list(kind="arb")["entries"]:
+                self.assertEqual(row["snapshot"]["pull_id"], pull)
+                self.assertEqual(row["snapshot"]["acquisition"]["pull_id"], pull)
                 self.assertTrue(
                     all(
                         leg["venue"] in ("novig", "prophetx", "kalshi", "polymarket_us")
@@ -115,6 +121,7 @@ class JournalMonitorSQL(PregameFixture):
             # another discovery or another quote.
             reopened = DurableJournal(path)
             monitor.sample(journal=reopened, connector=self.connect, at=AT)
+            self.assertEqual(reopened.get(saved)["entry"]["snapshot"], picked)
             with reopened.database() as db:
                 self.assertEqual(
                     db.execute("SELECT count(*) FROM entries").fetchone()[0], entries

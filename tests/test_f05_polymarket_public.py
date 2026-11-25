@@ -397,4 +397,4 @@ def test_in_game_fee_keeps_documented_price_limits_in_current_denominator(price,
     inputs = inputs_for(row)
     counts = census(project(live.prices(inputs, SETTINGS), inputs), [])
     assert counts['total']['current'] == 1 and counts['total']['covered'] == int(covered)
-    assert counts['missing_reasons'] == ({} if covered else {'PMUS documented price range .01 through .99': 1})
+    assert counts['missing_reasons'] == ({} if covered else {'polymarket_documented_price_outside_range': 1})

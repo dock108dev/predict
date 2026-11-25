@@ -85,8 +85,11 @@ function render(s){
   const delayed=(s.sources||[]).flatMap(p=>Object.entries(p.status||{}).filter(([,v])=>v.state!=='available').map(([venue,v])=>name(venue)+': '+availability(v)));
   const healthy=s.data_runtime?.healthy!==false;
   const running=healthy&&s.dispatch_enabled;
-  $('update-state').textContent=running?'Running':!healthy?'Data service unavailable':s.config?.enabled===false?'Collection disabled in configuration':'Stopped';
-  document.querySelector('[data-action="stop"]').hidden=!running;
+  const retryStop=healthy&&!running&&Boolean(s.cleanup_errors?.length);
+  $('update-state').textContent=running?'Running':!healthy?'Data service unavailable':retryStop?'Stop cleanup unconfirmed':s.config?.enabled===false?'Collection disabled in configuration':'Stopped';
+  const stop=document.querySelector('[data-action="stop"]');
+  stop.hidden=!running&&!retryStop;
+  stop.textContent=retryStop?'Retry Stop':'Stop';
   document.querySelector('[data-action="recover"]').hidden=running||!healthy;
   const q=s.quota;
   const sgo=s.config?.aggregate_provider==='sportsgameodds' ? (s.sources||[]).find(p=>p.provider==='sportsgameodds') : null;

@@ -197,3 +197,34 @@ def test_pmus_posted_order_honors_evidenced_fractional_quantity_grid():
         fills=[dict(price='0.60',quantity='160.565')],grid=grid)
     assert off_grid['entry_fees'] is None
     assert 'grid' in ' '.join(off_grid['unsupported'])
+
+
+def test_notification_and_saved_fee_reasons_use_safe_owner_projection(caplog, monkeypatch):
+    from app.comparison.conditional_benchmark import reviewed_fee
+    from app.dashboard.product_finance import visible_row
+    from app.fees import product_schedules
+    from app.fees.public_reasons import UNAVAILABLE
+
+    private = 'synthetic credential in /private/fee-evidence.json'
+
+    def read_failed(*_args, **_kwargs):
+        raise OSError(private)
+
+    monkeypatch.setattr('app.comparison.conditional_benchmark.basis', read_failed)
+    current = reviewed_fee(dict(venue='kalshi'), at=AT, event={}, group={})
+    assert current == dict(available=False, reason=UNAVAILABLE)
+    assert 'reviewed_fee_evidence failed (OSError)' in caplog.text
+    assert private not in caplog.text
+
+    legacy = {'last_attempt': {'state': 'failed', 'error': private},
+              'review_required': {'reason': private}}
+    admin = product_schedules.summary('kalshi:exchange', legacy, AT)
+    assert admin['refresh']['error'] == admin['review_required']['reason'] == UNAVAILABLE
+    assert legacy['last_attempt']['error'] == legacy['review_required']['reason'] == private
+
+    captured = {'trade_fee': {'available': False, 'reason': private},
+                'conditional_trade_benchmark': {'available': False, 'reason': 'conditional_fee_evidence_invalid'}}
+    rendered = visible_row(captured)
+    assert rendered['trade_fee']['reason'] == UNAVAILABLE
+    assert rendered['conditional_trade_benchmark'] == captured['conditional_trade_benchmark']
+    assert captured['trade_fee']['reason'] == private

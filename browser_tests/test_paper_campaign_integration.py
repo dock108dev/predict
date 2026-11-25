@@ -1,14 +1,17 @@
 """Exercise authoring, the real API, retained repricing and grading with controlled quotes."""
 
+import json
 import os
 import re
 from contextlib import ExitStack
 from copy import deepcopy
 from fractions import Fraction as F
-from urllib.parse import parse_qs, urlsplit
+from pathlib import Path
 from unittest import skipUnless
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
+import psycopg
 from aiohttp import web
 from aiohttp.test_utils import TestServer
 from playwright.async_api import async_playwright, expect
@@ -17,8 +20,10 @@ from app.comparison import current_pregame, fee_mode
 from app.dashboard.request_guard import dashboard_guard
 from app.dashboard.research_workspace_api import BASE, mount
 from app.research import experiment, paper_campaigns
+from app.storage import database_roles
 from app.storage import paper_result_queue as queue
-from app.storage.store import hashed, stamp
+from app.storage.payload_codec import payload_row
+from app.storage.store import connect, hashed, stamp
 from browser_tests.test_pregame_current import ASSETS
 from tests.test_paper_experiments import priced
 from tests.test_paper_experiments_sql import ResearchWorkspaceFixture, SOCKET
@@ -118,6 +123,10 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 )
                 assert capture["state"] == "captured"
             self.advance(db, stamp(f"{day}T23:00:00Z"))
+            database_roles.enable(db)
+
+        def connect_web():
+            return connect(self.name)
 
         app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
         mount(app)
@@ -136,9 +145,12 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
         self.addAsyncCleanup(server.close)
         with ExitStack() as stack:
             stack.enter_context(
+                patch.dict(os.environ, {"PREDICT_DB_ROLE": database_roles.WEB})
+            )
+            stack.enter_context(
                 patch(
                     "app.dashboard.research_workspace_api.connect",
-                    side_effect=self.connect,
+                    side_effect=connect_web,
                 )
             )
             stack.enter_context(
@@ -191,7 +203,8 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
 
                 # Publication precedes the fixture's final. A different connection
                 # processes the sport input and the same saved run after the final.
-                with self.connect() as db:
+                with connect_web() as db:
+                    assert db.info.user == database_roles.WEB
                     run = paper_campaigns.tick(db)
                     assert run, db.execute(
                         "SELECT state,last_error FROM public.paper_campaign_day"
@@ -200,7 +213,16 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     assert pending, db.execute(
                         "SELECT last_error FROM public.paper_result_job"
                     ).fetchall()
+                with self.connect() as db:
                     self.advance(db, stamp(f"{day}T23:10:00Z"))
+                with psycopg.connect(
+                    host=SOCKET,
+                    port=55432,
+                    user=database_roles.COLLECTOR,
+                    dbname=self.name,
+                    autocommit=True,
+                    row_factory=payload_row,
+                ) as db:
                     result = dict(
                         event_id="control",
                         league="NCAAB",
@@ -222,7 +244,7 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                         experiment.observe_outcomes(db, [result], at=self.at)["matched"]
                         == 1
                     )
-                with self.connect() as restarted:
+                with connect_web() as restarted:
                     queue.dispatch(restarted)
                     graded = queue.process_one(restarted)
                     assert graded and graded != pending
@@ -232,6 +254,9 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     page.get_by_role("heading", name="Daily results", exact=True)
                 ).to_be_visible()
                 await page.get_by_role("link", name=day, exact=True).click()
+                await page.get_by_role(
+                    "link", name="All qualifying venues", exact=True
+                ).click()
                 await expect(
                     page.locator(".result-ledger-table tbody tr")
                 ).to_have_count(1)
@@ -248,18 +273,25 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert F(ticket["return_exact_usd"]) == 10
                 assert F(ticket["pnl_exact_usd"]) == F("7.50")
                 assert data["summary"]["roi"] == "3"
-                assert (
-                    await (
-                        await page.request.get(
-                            str(server.make_url(report["links"]["trades"]))
-                        )
-                    ).json()
-                )["rows"] == [ticket]
-                offers = await (
-                    await page.request.get(
-                        str(server.make_url(f"{BASE}/runs/{run}/offers"))
-                    )
-                ).json()
+                async with page.expect_download() as trade_file:
+                    await page.get_by_role("link", name="Export trade rows").click()
+                trades = json.loads(
+                    Path(await (await trade_file.value).path()).read_text()
+                )
+                assert trades["version"]["id"] == graded
+                assert trades["variant"] == "all_venues"
+                assert trades["rows"] == [ticket]
+
+                await page.get_by_text("Sizing exclusions", exact=True).click()
+                async with page.expect_download() as offer_file:
+                    await page.get_by_role(
+                        "link", name="Export dated offer ledger"
+                    ).click()
+                offers = json.loads(
+                    Path(await (await offer_file.value).path()).read_text()
+                )
+                digest = offers.pop("evidence_sha256")
+                assert digest == hashed(offers)
                 qualified, excluded = offers["games"][0]["offers"]
                 assert F(offers["sizing"]["target_profit_usd"]) == F("7.51")
                 assert (

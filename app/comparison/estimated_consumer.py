@@ -9,6 +9,7 @@ from fractions import Fraction
 import json
 
 from app.fees.engine import Registry, calculate, generic_fee
+from app.fees.public_reasons import exception_reason
 from .costs import CostRule, UnitSpec
 from .source_inputs import observation
 from .current_dependencies import digest, references, instant, encoded
@@ -293,7 +294,9 @@ def consume(q, profiles, *, at, native_quantity, fills=None, extra_funding=(), h
                 acquisition=sum(Fraction(f['price'])*n for f,n in zip(fills,amounts))
                 if any(f['role']!='taker' for f in fills):raise ValueError('estimate_taker_fill_required')
     except (ValueError,KeyError,TypeError,ArithmeticError) as error:
-        reasons['fee'].append(str(error));reasons['payout'].append(str(error))
+        reason = exception_reason(__name__, 'estimate_fill_inputs', error)
+        reasons['fee'].append(reason)
+        reasons['payout'].append(reason)
     receipts={s:None for s in STATES};payout_basis={s:'unknown_actual' for s in STATES};payout_details={}
     if payout.get('available') and unit is not None and acquisition is not None and not reasons['payout']:
         try:receipts,payout_basis,payout_details=_payouts(q,profiles,payout,quantity,unit,acquisition,at,_inputs)
@@ -316,7 +319,8 @@ def consume(q, profiles, *, at, native_quantity, fills=None, extra_funding=(), h
         payout_basis={s:'provisional_assumption' for s in STATES};payout_details['state_override']='explicit_modeled_USD_cashflows'
     if fee.get('available') and unit is not None and not reasons['fee']:
         try:entry,refund,audit,chosen=_entry(q,fee,unit,fills,at)
-        except (ValueError,KeyError,TypeError,ArithmeticError) as error:reasons['fee'].append(str(error))
+        except (ValueError, KeyError, TypeError, ArithmeticError) as error:
+            reasons['fee'].append(exception_reason(__name__, 'estimate_entry_fee', error))
     # Commission is on consumed net gains; returned funded holds do not reduce
     # that base. Already-withheld charges are disclosed and never deducted twice.
     held=sum((Fraction(c.amount_usd) for c in extra_funding if c.kind=='refundable_hold'),Fraction(0))

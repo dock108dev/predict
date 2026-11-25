@@ -10,6 +10,7 @@ from psycopg.types.json import Jsonb
 
 from app.comparison.conditional_benchmark import basis as legacy_basis
 from app.storage.store import hashed, stamp
+from .public_reasons import public_reason_fields
 from .schedule_lifecycle import REVIEW_REQUIRED
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -201,5 +202,6 @@ def summary(key, state, at):
         review_basis=_review_basis(verified) or fallback.get('retrieval_method') or fallback.get('review_decision'), last_verified_at=verified.get('verified_at') or fallback['reviewed_at'],
         review_before=deadline, recheck_due_at=recheck, verification_scope=scope,
         standing_public_terms=standing, next_refresh_at=state.get('next_attempt_at'), next_action=action,
-        refresh=attempt, review_required=review, retrieval=verified.get('retrieval'),
+        refresh=public_reason_fields(attempt, 'error'),
+        review_required=public_reason_fields(review, 'reason'), retrieval=verified.get('retrieval'),
         direct_pdf=direct)

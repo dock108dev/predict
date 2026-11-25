@@ -14,6 +14,7 @@ from . import mens_d1, paper, paper_evidence, paper_results, records, workspace
 VERSION = 'ncaab-paper-campaign-1'
 SIZING_VERSION = 'ncaab-paper-campaign-2'
 QUALITY_VERSION = 'paper-quote-age-at-receipt-1'
+REPLAY_FAILED = 'paper_campaign_replay_failed'
 EASTERN = ZoneInfo('America/New_York')
 VARIANTS = paper_results.VARIANTS
 MODES = ('fixed_profit', 'kelly')
@@ -214,8 +215,7 @@ def tick(db):
     except Exception as exc:
         from app.diagnostics import failure
         failure(__name__, 'paper_campaign_day_failed', exc)
-        error = type(exc).__name__ + ': ' + str(exc)[:160]
-        _finish(db, job, lease_until, 'failed', job['run_id'], job['fingerprint'], error)
+        _finish(db, job, lease_until, 'failed', job['run_id'], job['fingerprint'], REPLAY_FAILED)
         return None
     return run_id
 
@@ -435,7 +435,7 @@ def view(db, identity, variant=None, mode=None):
         elif replay_state == 'scheduled' and game_date <= today:
             replay_state = 'replay_queued'
         entry = dict(date=str(game_date), run_id=run_id, run_ids=runs, state=day['state'],
-                     replay_state=replay_state, error=day['last_error'],
+                     replay_state=replay_state, error=REPLAY_FAILED if day['last_error'] else None,
                      next_check_at=max(day['next_check_at'], datetime.combine(game_date, time.min, EASTERN)).isoformat(),
                      checked_at=day['updated_at'].isoformat(), snapshots=snapshots,
                      retrospective=game_date <= row['created_at'].astimezone(EASTERN).date(),

@@ -54,7 +54,7 @@ class CurrentService:
         self.started = False
         self.closed = False
         self.closing = False
-        self._source_close_started = False
+        self._retryable_cleanup_errors = set()
         self.cleanup_complete = False
         self.cleanup_errors = []
         self.issues = []
@@ -413,9 +413,14 @@ class CurrentService:
 
     async def pause(self, venue):
         async with self._control_lock:
-            await self._pause(venue)
+            errors = []
+            try:
+                await self._pause(venue, errors)
+            finally:
+                self._retryable_cleanup_errors.update(errors)
+                self.cleanup_errors = list(dict.fromkeys([*self.cleanup_errors, *errors]))
 
-    async def _pause(self, venue):
+    async def _pause(self, venue, errors):
         if venue == 'sportsgameodds' and (worker := self.workers.get('public_sportsbook')):
             self.ingress.revoke(worker.ingress_source)
             worker.closed = True
@@ -426,7 +431,7 @@ class CurrentService:
             task=self.tasks['novig_native'];task.cancel()
             _, pending=await asyncio.wait({task},timeout=self.config['cleanup_seconds'])
             if pending or not await self.ingress.drain(self.config['cleanup_seconds'],'novig'):
-                self.cleanup_errors.append('novig_native:cleanup_timeout')
+                errors.append('novig_native:cleanup_timeout')
                 return
             await self.workers['novig_native'].close()
         if venue in ('novig','prophetx','the_odds_api') and 'novig_public' in self.workers:
@@ -434,7 +439,7 @@ class CurrentService:
             task=self.tasks['novig_public'];task.cancel()
             done,pending=await asyncio.wait({task},timeout=self.config['cleanup_seconds'])
             if pending:
-                self.cleanup_errors.append('novig_public:cleanup_timeout')
+                errors.append('novig_public:cleanup_timeout')
                 return
             await worker.close()
         if venue in ('novig','prophetx'):venue='the_odds_api'
@@ -446,85 +451,120 @@ class CurrentService:
         done,pending=await asyncio.wait({self.tasks[venue]},timeout=self.config['cleanup_seconds'])
         if pending:
             self.issue(venue,'cleanup','worker_cleanup_timeout')
-            self.cleanup_errors.append(venue+':cleanup_timeout')
+            errors.append(venue+':cleanup_timeout')
             return
-        if not await self.cleanup_clients([venue]):
-            if venue+':cleanup_failure' not in self.cleanup_errors:self.cleanup_errors.append(venue+':cleanup_failure')
+        if not await self.cleanup_clients([venue], errors=errors):
+            errors.append(venue+':cleanup_failure')
             self.issue(venue,'cleanup','source_cleanup_unresolved')
             return
         if not await self.ingress.drain(self.config['cleanup_seconds'],venue):
-            self.cleanup_errors.append(venue+':ingress_cleanup_timeout')
+            errors.append(venue+':ingress_cleanup_timeout')
             return
         if venue in ('the_odds_api','sportsgameodds'):
             await call(self, self.workers[venue].state, 'stopped', 'aggregate_paused', 'Shared aggregate acquisition paused. Persisted quota and next-due survive reopening.')
         else:await call(self, self.source_state, venue, 'stopped', 'Native source paused. This pause survives app and data restarts.')
 
-    async def cleanup_clients(self, venues):
-        # Cancellation-resistant closures must never keep the operator request
-        # waiting forever. Keep one closure per worker and retain ownership on
-        # timeout, even if that closure subsequently finishes.
+    async def cleanup_clients(self, venues, *, errors):
+        # Keep successful closes and let in-flight closes finish. Only a
+        # failed close gets a new attempt, and ownership stays held meanwhile.
         for venue in venues:
-            if venue not in self.client_cleanup_tasks:
+            previous = self.client_cleanup_tasks.get(venue)
+            if previous is None or previous.done() and (previous.cancelled() or previous.exception() is not None):
                 task=asyncio.create_task(self.workers[venue].close())
                 task.add_done_callback(lambda t: None if t.cancelled() else t.exception())
                 self.client_cleanup_tasks[venue]=task
         done,pending=await asyncio.wait({self.client_cleanup_tasks[v] for v in venues},timeout=self.config['cleanup_seconds']) if venues else (set(),set())
-        for task in pending:task.cancel()
-        if pending and 'client_cleanup_timeout' not in self.cleanup_errors:self.cleanup_errors.append('client_cleanup_timeout')
+        if pending and 'client_cleanup_timeout' not in errors:errors.append('client_cleanup_timeout')
         failed=any(not t.cancelled() and t.exception() is not None or t.cancelled() for t in done)
-        if failed and 'worker_cleanup_failure' not in self.cleanup_errors:self.cleanup_errors.append('worker_cleanup_failure')
+        if failed and 'worker_cleanup_failure' not in errors:errors.append('worker_cleanup_failure')
         return not pending and not failed
 
     async def close(self, *, storage_interval=False):
         async with self._control_lock:
             await self._close(storage_interval=storage_interval)
 
+    async def stop(self):
+        from app.dashboard.current_state import SelectionError
+        await self.close()
+        if not self.cleanup_complete:
+            raise SelectionError(409,'cleanup_safety_unresolved','Acquisition is withdrawn. Retry Stop to confirm cleanup.')
+
     async def _close(self, *, storage_interval=False):
         async with self._close_lock:
-            if self.closed or self._source_close_started: return
-            self._source_close_started=True
+            if self.closed: return
+            from app.diagnostics import failure
+            errors = []
+            # Full shutdown rechecks owned workers, clients and ingress after
+            # a pause or earlier shutdown. Other safety records still block it.
+            self.cleanup_errors = [e for e in self.cleanup_errors if e not in self._retryable_cleanup_errors]
+
+            async def attempt(code, action, *args):
+                try:
+                    result = action(*args)
+                    if asyncio.iscoroutine(result):result = await result
+                except (Exception, asyncio.CancelledError) as exc:
+                    errors.append(code)
+                    failure(__name__, code, exc)
+                    return False
+                if result is False:errors.append(code)
+                return result is not False
+
             self.dispatch=False;self.closing=True
-            self.ingress.revoke()
-            if self.database:self.database.closed=True
-            # Revocation precedes task cancellation and client/socket cleanup.
-            for worker in self.workers.values():
-                worker.closed=True
-                if hasattr(worker,'lifecycle'):worker.lifecycle.revoke()
-            if self.store:await self.store.revoke_source_publication()
-            current=asyncio.current_task()
-            tasks=[t for t in self.tasks.values() if t is not current]
-            if self.watchdog and self.watchdog is not current:tasks.append(self.watchdog)
-            for task in tasks:task.cancel()
-            # A planned database interval owns the drain off the request path.
-            # Revoke first, then allow in-flight SQL and native restore to finish.
-            timeout=max(60,self.config['cleanup_seconds']) if storage_interval else self.config['cleanup_seconds']
-            done,pending=await asyncio.wait(tasks,timeout=timeout) if tasks else (set(),set())
-            await self.cleanup_clients(list(self.workers))
-            # Cancelling a source revokes adoption, but its shielded ingress
-            # still owns SQL/catalog preparation until that work exits. Planned
-            # maintenance must allow the same drain window for those tasks.
-            drained=await self.ingress.drain(timeout)
-            if self.ingress.catalog_preparer is not None:await self.ingress.catalog_preparer.close()
-            # Closing the preparer joins the same owned job that exceeded the
-            # first observation window. Reconcile actual completion afterward.
-            if not drained and not await self.ingress.drain(timeout):self.cleanup_errors.append("ingress_cleanup_timeout")
-            if self.database and not await self.database.close():self.cleanup_errors.append('database_cleanup_timeout')
-            if getattr(self.sink,'normalizer',None) is not None:
-                from .bulk_checkpoint import owned_thread
-                await owned_thread(self.sink.close)
-            if any(not task.done() for task in pending):self.cleanup_errors.append('worker_cleanup_timeout')
-            self.cleanup_errors=list(dict.fromkeys(self.cleanup_errors))[:16]
-            for venue in (() if self.ingress.tasks else ('kalshi','polymarket_us','novig','prophetx')):
-                await call(self, self.source_state, venue, 'stopped' if not self.cleanup_errors else 'error', (self.stop_reason or 'Updates stopped. Reopen for a fresh runtime.') if not self.cleanup_errors else 'Native cleanup unresolved; ownership remains held.')
-            if self.store:
-                self.store.leases.clear();self.store.clients.clear()
-            self.cleanup_complete=not self.cleanup_errors
-            if self.cleanup_complete:
-                self.ownership.release()
-                self.closed=True
-            else:self.issue('service','cleanup','cleanup_safety_unresolved')
-            self.closing=False
-            self.observation('service','shutdown',dict(cleanup_complete=self.cleanup_complete,ownership_released=self.ownership.file is None))
+            try:
+                self.ingress.revoke()
+                if self.database:self.database.closed=True
+                # Revoke authority before asking any worker to exit.
+                for worker in self.workers.values():
+                    worker.closed=True
+                    if hasattr(worker,'lifecycle'):
+                        await attempt('worker_revocation_failed', worker.lifecycle.revoke)
+                if self.store:
+                    await attempt('source_publication_cleanup_failed', self.store.revoke_source_publication)
+                current=asyncio.current_task()
+                tasks=[t for t in (*self.tasks.values(), self.watchdog) if t is not None and t is not current and not t.done()]
+                for task in tasks:
+                    if not task.cancelling():task.cancel()
+                # Planned maintenance keeps the existing longer SQL drain.
+                timeout=max(60,self.config['cleanup_seconds']) if storage_interval else self.config['cleanup_seconds']
+                if tasks:await asyncio.wait(tasks,timeout=timeout)
+                await self.cleanup_clients(list(self.workers), errors=errors)
+                # Shielded ingress may outlive its source worker. Join it
+                # before shutting down the CPU executors it can still use.
+                if await attempt('ingress_cleanup_timeout', self.ingress.drain, timeout):
+                    if self.ingress.catalog_preparer is not None:
+                        await attempt('catalog_cleanup_failed', self.ingress.catalog_preparer.close)
+                    if getattr(self.sink,'normalizer',None) is not None:
+                        from .bulk_checkpoint import owned_thread
+                        await attempt('normalizer_cleanup_failed', owned_thread, self.sink.close)
+                if self.database:
+                    await attempt('database_cleanup_timeout', self.database.close)
+                if any(not task.done() for task in tasks):errors.append('worker_cleanup_timeout')
+                await self._confirm_shutdown(errors, attempt)
+            finally:
+                self.closing=False
+                self._retryable_cleanup_errors=set(errors)
+                self.cleanup_errors=list(dict.fromkeys([*self.cleanup_errors, *errors]))
+
+    async def _confirm_shutdown(self, errors, attempt):
+        self.cleanup_complete=False
+        if not self.ingress.tasks:
+            unresolved = bool(self.cleanup_errors or errors)
+            state = 'error' if unresolved else 'stopped'
+            reason = ('Native cleanup unresolved; ownership remains held.' if unresolved
+                      else self.stop_reason or 'Updates stopped. Reopen for a fresh runtime.')
+            for venue in ('kalshi','polymarket_us','novig','prophetx'):
+                await attempt('shutdown_status_failed', call, self, self.source_state, venue, state, reason)
+        if self.store:
+            self.store.leases.clear();self.store.clients.clear()
+        if not (self.cleanup_errors or errors):
+            await attempt('ownership_release_failed', self.ownership.release)
+            if self.ownership.file is not None:errors.append('ownership_release_failed')
+        self.cleanup_complete=not (self.cleanup_errors or errors)
+        if self.cleanup_complete:
+            self.closed=True
+        else:
+            self.issue('service','cleanup','cleanup_safety_unresolved')
+        self.observation('service','shutdown',dict(cleanup_complete=self.cleanup_complete,ownership_released=self.ownership.file is None))
 
     def status_accounting(self):
         """Read-only display facts, prepared away from the acquisition loop."""
@@ -649,7 +689,7 @@ class CurrentService:
             reason=self.recovery_reason()
             if reason:raise SelectionError(409,reason,'Recovery blocked after cleanup: '+reason.replace('_',' ')+'.')
             if candidate()[0]!=self.digest:raise SelectionError(409,'candidate_changed','Application changed during cleanup; reopen with the current candidate.')
-            self.runtime_id=str(uuid4());self.started=False;self.closed=False;self._source_close_started=False
+            self.runtime_id=str(uuid4());self.started=False;self.closed=False;self._retryable_cleanup_errors.clear()
             self.cleanup_complete=False;self.attempt=None;self.workers={};self.tasks={};self.client_cleanup_tasks={};self.watchdog=None
             self.states=self.initial_state()['source_status'];self.peak_rss=0;self.sampled_rss=None;self.stop_reason=None
             self.clock_wall,self.clock_mono=time.time(),__import__('app.collection.current_clock',fromlist=['continuous']).continuous()
