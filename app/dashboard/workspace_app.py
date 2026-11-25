@@ -7,7 +7,6 @@ from aiohttp import web
 from . import (
     activity_mode_api,
     admin_database,
-    appearance_api,
     current_pregame_api,
     raw_price_api,
     replay_api,
@@ -49,9 +48,8 @@ def create_app(provider, owner):
     )
     workspace_routes.mount(app, ROOT)
     workspace_sessions.mount(app, owner)
-    current_pregame_api.mount(app, board_only=True)
+    current_pregame_api.mount(app, health_only=True)
     activity_mode_api.mount(app, read_only=True)
-    appearance_api.mount(app)
     admin_database.mount(app)
     research_api.mount(app, campaigns_only=True)
     snapshot_api.mount(app, retained_only=True)

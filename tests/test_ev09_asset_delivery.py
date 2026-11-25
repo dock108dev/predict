@@ -82,7 +82,8 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                 self.assertIn('data-workspace-nav', html)
             for path in ('/api/scanner/client', '/api/scanner/summaries', '/api/bet-journal',
                          '/api/watchlists', '/api/signals', '/api/start', '/api/comparison-current',
-                         '/api/pregame/arbs'):
+                         '/api/pregame', '/api/pregame/updates', '/api/pregame/arbs',
+                         '/api/appearance'):
                 self.assertEqual((await client.get(path)).status, 404, path)
             response = await client.post('/api/start', json={})
             self.assertEqual(response.status, 403)

@@ -245,12 +245,12 @@ def mount(app, *, campaigns_only=False):
     if not campaigns_only:
         app.router.add_get(BASE, index)
         app.router.add_post(BASE + "/runs", replay)
+        app.router.add_get(BASE + "/mens-d1-jobs/{job_id}", replay_status)
     app.router.add_get(BASE + '/campaigns', campaigns)
     app.router.add_post(BASE + '/campaigns', campaigns)
     app.router.add_get(BASE + '/campaigns/{campaign_id}', campaign)
     app.router.add_get(BASE + '/campaigns/{campaign_id}/days/{game_date}', campaign_day)
     app.router.add_get(BASE + "/result-evidence/{result_id}", result_evidence)
-    app.router.add_get(BASE + "/mens-d1-jobs/{job_id}", replay_status)
     app.router.add_get(BASE + "/runs/{run_id}", run)
     app.router.add_get(BASE + "/runs/{run_id}/results", results)
     app.router.add_get(BASE + "/runs/{run_id}/offers", offers)
