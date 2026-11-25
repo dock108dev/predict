@@ -76,11 +76,11 @@ def mount(app, *, campaigns_only=False):
 
     async def campaign(request):
         query = request.query
-        if (set(query) - {'variant', 'mode', 'export'} or len(query) != len(set(query))
-                or query.get('export') not in (None, '1')):
+        if (set(query) - {'variant', 'mode', 'export', 'comparison'} or len(query) != len(set(query))
+                or query.get('export') not in (None, '1') or query.get('comparison') not in (None, '0')):
             raise PublicRequestError('Select an experiment sizing mode and portfolio.')
         value = await work(paper_campaigns.view, _identity(request.match_info['campaign_id']),
-                           query.get('variant'), mode=query.get('mode'))
+                           query.get('variant'), mode=query.get('mode'), include_comparison=query.get('comparison') != '0')
         name = f'predict-week-{value["config"]["start_date"]}-{value["mode"]}-{value["variant"]}.json'
         return _response(value, filename=name if query.get('export') else None)
 

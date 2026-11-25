@@ -38,8 +38,9 @@ bytes are shown separately from a stored normalized record.
 
 ## Experiments
 
-Experiments opens Win $10 directly. Select one Eastern date and one portfolio
-to see its results. The rules show the saved scope, capture timing,
+Experiments opens **Campaign to date** for Win $10. Choose a portfolio for the
+running totals and daily breakdown. Open a date or select **By day** to inspect
+one day's results. The rules show the saved scope, capture timing,
 reference and fee assumptions, EV threshold and sizing. Stake includes selected
 trades. Return, paper P/L and ROI use graded trades. ROI includes the graded
 stake denominator.

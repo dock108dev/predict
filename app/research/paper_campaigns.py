@@ -409,7 +409,7 @@ def sizing_run_detail(db, run, definition, report):
                                                      for v in report['policy']['portfolios']})
 
 
-def view(db, identity, variant=None, mode=None, *, game_date=None):
+def view(db, identity, variant=None, mode=None, *, game_date=None, include_comparison=True):
     if variant is not None and variant not in VARIANTS:
         raise workspace.SelectionError('Select Best venue or All qualifying venues.')
     if mode is not None and mode not in MODES:
@@ -428,14 +428,19 @@ def view(db, identity, variant=None, mode=None, *, game_date=None):
         AND (%s::date IS NULL OR game_date=%s) ORDER BY game_date''', (identity, game_date, game_date)))
     run_ids = {day['game_date']: _mode_runs(history.get(day['game_date'], []), day['run_id'], available_modes[0])
                for day in day_rows}
-    latest_reports = (_snapshot_reports(db, {run_id for runs in run_ids.values() for run_id in runs.values()})
-                      if config['version'] == SIZING_VERSION else {})
+    compare = include_comparison and config.get('kelly_comparison')
+    report_ids = {run for runs in run_ids.values() for key, run in runs.items() if key == mode or compare}
+    latest_reports = _snapshot_reports(db, report_ids) if config['version'] == SIZING_VERSION else {}
     edges = config['bucket_edges']
     comparison = Counter()
+    selected_tickets, selected_days, selected_stake = 0, 0, F()
     for day in day_rows:
         current_day = day['game_date']
+        in_window = current_day <= today or game_date is not None
         runs = run_ids[current_day]
         run_id = runs.get(mode)
+        if not include_comparison:
+            runs = {mode: run_id} if run_id else {}
         snapshots = [dict(id=r['id'], recorded_at=r['recorded_at'].isoformat())
                      for r in history.get(current_day, []) if r['mode'] == mode]
         replay_state = day['state']
@@ -449,7 +454,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None):
                      checked_at=day['updated_at'].isoformat(), snapshots=snapshots,
                      retrospective=current_day <= row['created_at'].astimezone(EASTERN).date(),
                      capture_state='scheduled' if day['state'] == 'scheduled' else 'awaiting_evidence')
-        if config.get('kelly_comparison'):
+        if compare:
             entry['comparison'] = sizing_comparison({m: latest_reports[r] for m, r in runs.items()},
                                                     F(edges[0]), variant)
             if entry['comparison'] is not None:
@@ -469,10 +474,14 @@ def view(db, identity, variant=None, mode=None, *, game_date=None):
                 complete = usable == len(source['games']) and all(
                     (game.get('coverage') or {}).get('incomplete') is False for game in source['games'])
                 entry['capture_state'] = 'retained' if complete else 'partial'
-                if game_date is not None:
-                    selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant)
-                    entry['selection'] = dict(tickets=len(selections), stake_usd=paper.money(sum(
-                        (F(ticket.get('cash_commitment_usd', ticket['stake_usd'])) for ticket in selections), F())))
+                selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant)
+                stake = sum((F(ticket.get('cash_commitment_usd', ticket['stake_usd']))
+                             for ticket in selections), F())
+                entry['selection'] = dict(tickets=len(selections), stake_usd=paper.money(stake), stake_exact_usd=str(stake))
+                if in_window:
+                    selected_tickets += len(selections)
+                    selected_stake += stake
+                    selected_days += 1
             else:
                 entry['capture_state'] = 'pending' if pending else 'missing'
             if not usable and not pending:
@@ -481,16 +490,20 @@ def view(db, identity, variant=None, mode=None, *, game_date=None):
                 entry['result_id'] = state['version']['id']
                 if usable and (not pending or report['portfolios']['all_venues']['tickets']):
                     tickets = analysis_tickets(document, report)
-                    all_tickets.extend(tickets)
-                    versions.append(entry['result_id'])
+                    if in_window:
+                        all_tickets.extend(tickets)
+                        versions.append(entry['result_id'])
                     entry['analysis'] = _window_analysis(tickets, edges, variant, inputs=entry['result_id'])
                     if config['version'] == SIZING_VERSION and not state['pending'] and not state['error']:
                         entry['result_state'] = paper_results.portfolio_status(report, variant)
         days.append(entry)
     return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
+                as_of=now.isoformat(),
+                selection=dict(tickets=selected_tickets, stake_usd=paper.money(selected_stake),
+                               stake_exact_usd=str(selected_stake)) if selected_days else None,
                 weekly=_window_analysis(all_tickets, edges, variant, inputs=versions) if versions else None,
                 comparison=dict(comparison) if comparison else None,
-                reported_days=sum('analysis' in d for d in days),provider_requests=0,orders_submitted=0)
+                reported_days=len(versions),provider_requests=0,orders_submitted=0)
 
 
 def daily(db, identity, game_date, variant=None):

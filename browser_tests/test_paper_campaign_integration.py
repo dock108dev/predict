@@ -257,6 +257,10 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await expect(
                     page.get_by_role("heading", name="Controlled $7.51 replay", exact=True)
                 ).to_be_visible()
+                await expect(page.get_by_role("heading", name="Campaign to date")).to_be_visible()
+                await expect(page.locator(".experiment-comparison table").first.get_by_role(
+                    "row", name="ROI")).to_contain_text("300.00% on $2.50 graded stake")
+                await page.get_by_role("link", name="By day", exact=True).click()
                 await page.get_by_label("Game date (Eastern)").select_option(day)
                 await page.get_by_label("Portfolio", exact=True).select_option("all_venues")
                 comparison=page.locator(".experiment-comparison table")

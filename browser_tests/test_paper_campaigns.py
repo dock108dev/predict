@@ -17,7 +17,7 @@ from browser_tests.test_pregame_current import ASSETS
 from tests.test_paper_campaigns import config, fixed_config, ticket
 
 
-def test_win10_results_show_only_fixed_profit_while_other_campaigns_can_compare():
+def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
     day = "2026-11-24"
     other, fixed_run, kelly_run, grade = (character * 64 for character in "abcd")
     config = configuration(fixed_config(name="Win $10 campaign"))
@@ -42,16 +42,37 @@ def test_win10_results_show_only_fixed_profit_while_other_campaigns_can_compare(
                 for mode, run in (("fixed_profit", fixed_run), ("kelly", kelly_run))
             }
             route.fulfill(json=dict(config=config, modes=records))
+        elif path.startswith(endpoint + "/"):
+            query = parse_qs(urlsplit(route.request.url).query)
+            assert query["comparison"] == ["0"]
+            mode, variant = query["mode"][0], query["variant"][0]
+            published = dict(date=day, run_id=fixed_run, result_state="graded", analysis=result,
+                             selection=dict(tickets=1, stake_usd="10.00"))
+            waiting = dict(date="2026-11-25", run_id="e" * 64, result_pending=True,
+                           selection=dict(tickets=1, stake_usd="20.00"))
+            route.fulfill(json=dict(mode=mode, as_of="2026-11-25T20:00:00Z",
+                days=[published, waiting, dict(date="2026-11-26", replay_state="scheduled")],
+                selection=dict(tickets=2, stake_usd="30.00"), weekly=result, variant=variant))
         else:
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
         browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
-        page = browser.new_page()
-        page.goto(f"{base}/experiments?date={day}")
-        table = page.locator(".experiment-comparison table")
+        page = browser.new_page(viewport={"width": 390, "height": 850})
+        page.goto(f"{base}/experiments")
+        table = page.locator(".experiment-comparison table").first
         headers = table.get_by_role("columnheader")
         expect(headers).to_have_text(["Paper results", "Win $10"])
+        expect(page.get_by_role("heading", name="Campaign to date")).to_be_visible()
+        expect(table.get_by_role("row", name=re.compile("^Selected trades"))).to_contain_text("2")
+        expect(table.get_by_role("row", name=re.compile("^Ungraded trades"))).to_contain_text("1")
+        expect(table.get_by_role("row", name=re.compile("^Stake"))).to_contain_text("$30.00")
+        expect(table.get_by_role("row", name=re.compile("^ROI"))).to_contain_text("on $10.00 graded stake")
+        expect(page.get_by_role("link", name="Nov 26, 2026")).to_have_count(0)
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        page.get_by_role("link", name="Nov 24, 2026").click()
+        expect(headers).to_have_text(["Paper results", "Win $10"])
+        expect(page.get_by_label("Game date (Eastern)")).to_have_value(day)
         expect(table.get_by_role("link", name="Inspect games and trades")).to_have_attribute(
             "href", re.compile(r"mode=fixed_profit&run=" + fixed_run)
         )

@@ -182,6 +182,14 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 assert future_day['state'] == 'scheduled' and not future_day['run_ids']
                 assert stamp(future_day['next_check_at']) == stamp('2026-11-24T00:00:00-05:00')
                 assert first_day['comparison']['jointly_qualifying_quotes'] == 1
+                pending = campaigns.view(db, campaign['id'], 'best_venue', mode='fixed_profit',
+                                         include_comparison=False)
+                assert pending['weekly'] is None and pending['reported_days'] == 0
+                assert pending['selection'] == pending['days'][0]['selection']
+                assert pending['selection']['tickets'] == 1
+                assert F(pending['selection']['stake_exact_usd']) > 0
+                assert pending['days'][0]['run_ids'] == {'fixed_profit': primary}
+                assert pending['comparison'] is None and 'comparison' not in pending['days'][0]
                 first = {mode: workspace.run_detail(db, run_id) for mode, run_id in pair.items()}
                 assert all(run['sizing_runs'] == pair for run in first.values())
                 assert len({run['report']['as_of'] for run in first.values()}) == 1
@@ -239,6 +247,8 @@ class CampaignSQL(ResearchWorkspaceFixture):
                     for field in ('stake_exact_usd', 'return_exact_usd', 'pnl_exact_usd'):
                         assert trade[field] == daily[field] == weekly[field]
                     assert F(weekly['roi']) == F(trade['pnl_exact_usd']) / F(trade['stake_exact_usd'])
+                    assert rollup['selection']['tickets'] == 1
+                    assert F(rollup['selection']['stake_exact_usd']) == F(trade['stake_exact_usd'])
                 assert observed_trade['fixed_profit']['id'] != observed_trade['kelly']['id']
                 assert observed_trade['fixed_profit']['frozen_quote_id'] == observed_trade['kelly']['frozen_quote_id']
                 fixed = observed_trade['fixed_profit']
