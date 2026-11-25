@@ -12,6 +12,33 @@ and fixed-profit implementation entries below.
 [Closeout and production links](../workbench-win10-beta-closeout-20261125.md) ·
 [Required release CI](https://github.com/dock108dev/predict/actions/runs/45552224802)
 
+## Active assignment: Workbench + Win $10 + Kelly comparison
+
+**Owner's highest priority:** reusable creation directly in Experiments. The
+normal Create → configure dates/sizing/optional comparison/EV → Save and run
+flow must drive replay, scheduling and results without engineering intervention.
+A one-off backfill or backend-only feature is insufficient; prove a second
+independent configuration through the same UI before calling this complete.
+
+The [consolidated owner assignment](../workbench-win10-beta-20261124.md) governs
+the ongoing beta work: unbranded flat-trade Workbench, UI-configurable Win $10
+with a November 23–29 replay and 1/40 Kelly comparison on shared evidence,
+automatic daily/weekly operation/results, explicit target rounding and complete
+information/evidence. Build on committed Workbench revision `f9b86c4` and verify
+both modes through the signed-in production UI. Validate their newly calculated
+results against the retained inputs. Historical result preservation is outside
+release acceptance.
+
+## Owner amendment: Win $10 sizing for a new experiment version
+
+Add [fixed-profit sizing](../fixed-profit-sizing-amendment-20261124.md) to the
+Workbench beta assignment. The owner wants each winning paper bet to target
+$10 profit, with stake based on the odds and losses equal to committed stake.
+Publish a November 23–29 definition with UI configuration, explicit fee/grid
+rounding and automatic replays/results. Calculate the Kelly comparison using
+the same retained evidence.
+Implementation is pending; the lead's ongoing Workbench source edits remain intact.
+
 ## Delivered: unbranded Workbench presentation
 
 Revision `b404e97` installs the unbranded Research, Data and Settings shell,
@@ -20,6 +47,176 @@ The November 23–29 Kelly campaign continues on its existing definition.
 The closeout records signed-in checks, pinned exports, immutable populations and
 the final deployment. [Workbench closeout](../predict-first-beta-closeout-20261124.md#workbench-release) ·
 [Required release CI](https://github.com/dock108dev/predict/actions/runs/45548444638)
+
+## Delivered: first research beta with the experiment running
+
+The [beta closeout](../predict-first-beta-closeout-20261124.md) records application
+revision `825cf29`, migrations 122/123, passing required CI, signed-in production
+verification and the restarted campaign's automatic grade. Local HEAD `348675f`
+is a documentation follow-up. The original assignment below is retained as
+history; the Workbench presentation is the next selected implementation.
+
+The owner requested the [first-beta lead assignment](../predict-first-beta-20261124.md):
+implement the audited November 23 fixes, reusable issue resolution in the UI,
+derived census summaries and provenance/freshness comparisons; deploy and
+verify the private beta with the existing November 23–29 paper campaign running.
+Finish engineering before owner review. Future dates remain in progress;
+Sunday's finals must continue through the November 30 collection and corrections.
+Accept supported historical/source limitations without altering frozen runs or
+claiming complete captures. This entry assigns work; implementation is pending.
+
+## Planned: November 23 data resolution and issue closure
+
+The owner requested an audit and resolution plan, including accepted gaps,
+exclusions and legitimately unavailable lines. The
+[November 23 plan](../nov23-data-resolution-plan-20261124.md) records the
+10:21 PM Eastern read-only production audit and all 46 proposed occurrence
+dispositions. No application or production data changed for this audit.
+Next implementation: fix on-date scope counters and stale market summaries,
+separate original capture failure from usable reconstructed evidence, and add
+versioned issue closure through the UI. Preserve seven historical T−10 gaps,
+method-ineligible reference offers and bounded venue-inventory limitations.
+Follow with separately versioned quote-freshness analysis and prospective
+capture verification; no-line conclusions require affirmative scoped evidence.
+
+## Deployed: November 23–29 daily and weekly paper experiment
+
+The [daily/weekly implementation and operating record](../ncaab-daily-weekly-20261124.md)
+is deployed on `3743a873012ed5676b5cb35d1e59a385935207ba` with required CI
+passing. The owner-facing UI created the actual men’s D1 schedule for November
+23–29, using 1/40 full Kelly, 4% minimum EV, both paper portfolios and continuous
+4/8/15/25% EV boundaries. Date range, sizing and EV analysis are configurable
+without CLI; changes create a new immutable version. November 23/24 published
+automatically, and November 25–29 are scheduled. Daily → game → trade → weekly
+navigation and the exact weekly export passed on production. All 12 original
+saved run hashes remain intact. November 23 selected tickets are fully graded;
+November 24 results remain partial. Future operating turns and historical
+full-slate/market coverage remain unproven; scheduling does not close those gaps.
+
+## Deployed: automatic experiment results
+
+The owner requires [automatic prior-day results and game/trade reports](../automatic-experiment-results-plan-20261124.md)
+for all paper-trading experiments, rather than a one-off November 23 grading
+screen. Retained score revisions should enqueue deterministic grading for every
+dependent saved run; new runs should grade against already-retained results.
+Version grades separately from frozen opportunity selections, and show the
+day → game → trade result flow by default without a manual replay.
+
+The shared worker and signed-in day/game/trade flow are deployed on
+`3e85b6a6e9dd4a4335b8c539717ab51804a9107d`.
+[Required CI](https://github.com/dock108dev/predict/actions/runs/45532782516/attempts/2)
+passed after guarded backup and migration. The production worker published all
+12 saved runs and the original hashes matched. The November 23 review graded
+76 Best and 114 All tickets across 33 retained finals, with seven historical
+missing captures visible. Back, reload, versioned exports, and the frozen trade
+calculation and original receipts passed on production. The next operating
+observation is the November 25 5:30 AM Eastern prior-day collection.
+
+## Men’s D1 reconciliation and live-window verification
+
+The [lead assignment](../mens-d1-reconciliation-live-windows-20261124.md)
+uses the newly authenticated CBBD results and slate to reconcile November 23/24,
+save separate current analyses, verify the 2:50 PM four-task and 6:50 PM
+25-task capture outcomes, and expose the exact remaining full-coverage gaps.
+Preparation made read-only production checks and documentation updates only.
+
+The reconciliation, original downloads and follow-up repairs are installed on
+`590a028` after [required CI](https://github.com/dock108dev/predict/actions/runs/45515797394).
+Production has separate current-evidence and saved-version navigation, dated
+game and offer exports, and a missing-item ledger. The first two signed-in
+saves are versioned and the earlier hashes still match. The occurrence ledger
+counts 33 eligible Monday and 77 eligible Tuesday games, with both complete
+denominators unknown. The Tuesday source-only Stanford–Colorado game remains
+date-disputed. See the lead assignment for the current live-check state.
+
+The 2:50 PM Eastern observer verified all four planned men’s D1 members in
+one physical request. All four returned and were visible in SQL before the
+existing deadline, with four confirmed object credits and no retry. The
+last persistence check was at +25.243 seconds. The independent 6:50 PM
+cross-sport batch returned all 25 in one request and published 14 before
+deadline. It published 12 of 22 eligible D1 checkpoints. The 11 misses remain
+in the original ledger while an exact-receipt recovery appends separate paper
+evidence for ten D1 games. The repaired runtime published four of four at
+7:20 PM and 14 of 14 at 7:50 PM, including 11 of 11 eligible D1 at 7:50.
+Independent SQL saw each before deadline. Repaired 25-member production
+capacity remains unmeasured. The final signed-in Tuesday run `e54dd0c2`
+contains 56 frozen, ten reconstructed and 11 pending of 77 eligible games.
+Its dated game export and 16,018-offer download verified. The remaining work
+is tied to future capture and finals observations, source coverage and the
+next naturally comparable 25-member production load. See the lead assignment
+for the evidence ledger, exports and exact limits.
+
+At 1:19 PM Eastern, CBBD remained active. Monday had 32 source-eligible rows,
+27 exact provider matches and five schedule conflicts, versus 33 provider-known
+eligible games. Tuesday had 77 source-eligible rows, 73 matches, three schedule
+conflicts and one source-only row, versus 77 provider-known eligible games.
+Both complete expected populations remained unknown. Current Tuesday had six
+eligible frozen captures and 71 upcoming; its original saved snapshot still
+had three. Both larger batch sizes remained unmeasured in production.
+
+The existing capture observers were confirmed armed for 2:51:10 and 6:51:10 PM
+Eastern. Their actual evidence, rather than another controlled replay, is the
+required next live check. Tomorrow's finals observation is pending rather than
+an additional overnight completion gate for this milestone.
+
+## CBBD source activated, November 24 at 1:14 PM Eastern
+
+The owner supplied an authorized shared CBBD/CFBD credential. It is installed
+in the collector's protected secret mount; the temporary local copy was removed.
+The live `/info` check verified the shared monthly allowance. The source is now
+active, with no application code change or service restart.
+
+The scheduled November 23 `results_corrections` job succeeded at 1:13 PM.
+A one-time November 24 `schedule_activation` job succeeded at 1:14 PM through
+the normal guarded scheduler, leaving recurring jobs unchanged. Retained
+responses contain 47 Monday rows (32 eligible, 13 excluded, 2 unresolved) and
+86 Tuesday rows (77 eligible, 9 excluded). Both original hashes verified.
+The source ledger records two metered calls, no held/unknown dispatches and no
+retries. Complete expected-slate coverage and larger live capture capacity
+remain unverified; neither is implied by credential activation.
+
+## Men’s D1 operating loop deployed
+
+Web, collector and archive run
+`3da369b5cdeaf34d50e8c784b3133af99cb69e38` after
+[required CI and deployment](https://github.com/dock108dev/predict/actions/runs/45451724362).
+The signed-in Data, Research and Settings walkthrough passed. The delivered
+coverage slice remains reviewable.
+
+- The controlled four- and 25-task clusters both completed within the existing
+  60-second window using one physical request each. In the pinned serial
+  baseline, 22 of 25 completed. Independent claims, original receipts and
+  account and storage guards remain in effect.
+- The 12:50 PM Eastern live batch persisted both games by +8.920 seconds
+  with one request and two object credits. The 2:50 and 6:50 PM windows
+  still need their own measured outcomes. Persistent, read-only observers cover the capture
+  windows and the next slate and prior-day finals turns.
+- Recurring CollegeBasketballData collection is wired into the existing
+  scheduler. Production is disabled until an authorized existing key is
+  available and its allowance check passes. The complete expected slate
+  remains unknown. Sports Reference remains disabled.
+
+The [assignment and operating record](../mens-d1-coverage-completion-20261124.md#operating-loop-continuation)
+has stage timings, account evidence and result boundaries.
+
+## Next continuation: capture throughput and recurring slate ingestion
+
+This section preserves the state at the start of the operating-loop assignment.
+
+The deployed coverage slice is available for owner review. A November 24
+12:28 PM Eastern read-only server check still forecasts 4 tasks at 2:50 PM
+(74.804 seconds of serial p95 service against the existing 60-second window),
+and 25 tasks at 6:50 PM (22 NCAAB, 467.523 seconds). These are conservative
+success-history estimates, not observed future misses. One and two tasks,
+respectively, lack dedicated storage reservations; fresh admission may still
+be possible under existing headroom and guards.
+
+Next engineering should address the full serial claim/acquisition/calculation/
+persistence path and establish recurring permitted slate/results ingestion.
+Public CBBD receipts currently supply retrospective evidence; the scheduled
+Sports Reference path remains disabled. No further accounting/UI expansion is
+required to review the delivered slice. See the continuation scope and stopping
+conditions at the end of the [assignment](../mens-d1-coverage-completion-20261124.md).
 
 ## Men’s D1 coverage slice deployed
 

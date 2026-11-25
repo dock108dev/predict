@@ -468,3 +468,256 @@ CSV, both original-response market censuses, replay verification and the
 - November 24 export contains 94 source and provider audit rows.
 - [November 23 coverage download](https://predict.dock108.dev/api/workspace/mens-d1?date=2026-11-23&run=db29fca80c85b7f9c7c7ca3a4efcee7eae593513b71a73b88103d31b1186349f&export=1)
 - [November 24 coverage download](https://predict.dock108.dev/api/workspace/mens-d1?date=2026-11-24&run=f86e9ad57e5ec5a545a1e4adfcb45e13bba210dbe3fbea7baf2b981f2bd13758&export=1)
+
+## Handoff review and focused continuation, November 24 at 12:28 PM Eastern
+
+The completed coverage slice is reviewable now. A live read-only forecast
+refresh still flags the 2:50 PM four-task cluster at 74.804 seconds and the
+6:50 PM 25-task cluster at 467.523 seconds against the existing 60-second
+capture window. These estimates multiply successful historical service p95
+by task count; they identify risk rather than establish future failures.
+The latter cluster includes 22 NCAAB tasks. Tasks without dedicated storage
+reservations number one and two respectively; absence of a reservation alone
+does not establish that fresh admission will fail.
+
+Code review confirms `ExperimentAcquisition.tick` holds `worker.request_lock`
+through both `acquire` and `_finish`, with one claim processed per tick.
+Moving calculation before the SQL writer lock reduced one contention source
+but left the full capture serialized. The source worker can refresh bindings
+against retained public receipts; it does not yet implement recurring CBBD
+acquisition. The Firecrawl/Sports Reference worker remains source-disabled.
+
+Next scope:
+
+1. Measure current stages and shorten or safely pipeline/batch the demonstrated
+   capture bottleneck. Verify provider support and account restrictions first;
+   a requests-per-minute allowance does not establish safe concurrency. Preserve
+   exact event scope, independent claims, immutable raw receipts, storage and
+   account guards, uncertain-dispatch handling, Stop and the T−10 window.
+2. Finish recurring current-day slate, revisions and prior-day final ingestion
+   from a permitted configured source using the existing scheduler/evidence
+   model. Do not silently designate retrospective exports a daily feed or
+   claim complete populations without source evidence.
+3. Update the forecast from the resulting execution model and current stage
+   measurements; do not keep a hard-coded single-request model after changing
+   execution. Keep account, storage, source and time uncertainty explicit.
+4. Verify representative actual cluster sizes under controlled conditions,
+   deploy through required CI and check the signed-in flow. Arrange the next
+   relevant live cluster and daily job with durable evidence collection; mark
+   their outcomes pending until observed.
+
+No new numeric performance gate or arbitrary soak period is imposed. The
+60-second constraint is the existing experiment rule; cluster sizes come from
+the current task ledger. Earliest sufficient engineering closeout: preserved
+correctness/guards, representative controlled completion inside that existing
+window, required CI/deployment and production integration checks, plus a
+scheduled evidence path for unobserved live work. Actual busy-window completion
+is necessary to claim live capacity at that load, not to review the already
+delivered coverage UI. Do not wait until evening merely to review the slice or
+equate the 12:20 two-task success with a 25-task capacity demonstration.
+
+Preserve saved Monday/Tuesday runs and the completed market/reference audit.
+Do not broaden into new fair-probability methods, settlement, performance
+claims, further UI redesign or a new subscription. Record requests, object
+charges, dollar-cost availability, failures and remaining dependencies.
+
+## Operating-loop continuation
+
+### Credential activation and first authenticated collections
+
+November 24, 2026, 1:14 PM Eastern: the owner supplied an authorized key for
+the shared CBBD/CFBD allowance. The key was validated against the official
+`/info` endpoint, installed as the collector-owned mode-0600 secret in the
+existing production mount, and the temporary local copy removed. No app code,
+restart, account reset, source Stop or scheduled-job reset was needed.
+
+The initial account check reported a 1,000-call Free monthly allowance, all
+1,000 calls remaining, shared with CFB, resetting December 1 at 00:00 UTC.
+The official usage guide states that `/info` is unmetered:
+https://api.collegebasketballdata.com/usage-and-access
+
+The ordinary worker collected the already-due November 23 result corrections
+at 1:13:01 PM. A one-time `schedule_activation` job was queued through the
+existing guarded scheduler for November 24 and completed at 1:14:04 PM. The
+normal afternoon, evening and next-day final jobs retain their existing times.
+
+| Authenticated evidence | November 23 results | November 24 schedule |
+| --- | ---: | ---: |
+| Returned rows | 47 | 86 |
+| Season-eligible D1-versus-D1 rows | 32 | 77 |
+| Excluded rows | 13 | 9 |
+| Unresolved membership | 2 | 0 |
+| Original response hash verified | Yes | Yes |
+| Metered calls | 1 | 1 |
+
+At the read-only 1:14:27 PM check, both jobs had succeeded on their first
+attempt. The source was active with no blocked reason, two confirmed metered
+calls, no reserved/unknown dispatches and no retries. Dollar cost was not
+reported by the account. The two collections published new evidence revisions,
+not new paper runs. Complete expected-slate denominators remain unknown;
+existing schedule and membership conflicts stay visible. November 23's
+schedule evidence remains the retrospective public export, with authenticated
+results now available independently. Tuesday's current schedule evidence is
+the authenticated daily source. Larger live capture windows still await their
+armed observations.
+
+Private activation evidence is under `.local/cbbd-activation-20261124/`:
+`activation-evidence.json`, `first-status.json` and
+`account-after-activation.json`. These files contain account metadata and
+evidence identifiers, never the credential. Earlier missing-key observations
+below describe the pre-activation state.
+
+The 60-second T−10 window comes from the experiment definition. The four- and
+25-game cases come from the November 24 task ledger. The engineering check
+uses real collector and PostgreSQL clocks, retained provider objects, and
+simulated network delays. The separate production check needs a batch of the
+actual size before its capacity can be established.
+
+The 12:32 PM Eastern read-only refresh found all three application roles on
+`b25586946517674a49d1ee631d3a282e02f50abb` and all four services healthy. Both
+saved report hashes matched. November 24 then had five current provider-known
+captures and 72 upcoming across 77 eligible provider-known games. November 23
+still had six original frozen and 20 reconstructed captures in the saved
+report. Independent receipts contained 32 and 77 eligible rows respectively.
+Both complete expected slates remained unknown.
+
+### Clustered capture and accounting
+
+The old collector held one request lane through account admission, the paid
+call, receipt retention, snapshot computation, SQL publication and the
+derived early-to-late comparison. A pinned baseline replay of 25 retained
+pregame objects (22 NCAAB and three NBA) spent 9.60 seconds on account checks
+and 22.49 seconds on simulated event transport across 23 requests. Twenty-two
+tasks froze, one response arrived after the deadline and two did not dispatch.
+
+The new collector shares one exact-ID provider request among at most 25 due
+claims with the same window and request filters. There is still one provider
+request in flight and a paper capture still requires its exact event, claim,
+schedule, evidence and publication before the existing deadline. Every game
+has its own logical pull and checkpoint linked to the same original body,
+SHA-256 and physical attempt. The raw provider response retains complete
+returned membership, including omissions relative to the request. Missing
+members receive their own failure and never trigger a paid retry. The
+restart-safe comparison job reads frozen evidence after protected turns.
+SportsGameOdds documents exact ID lists, event-level pagination and billing
+by returned objects with a one-object minimum.
+[Events API](https://sportsgameodds.com/docs/endpoints/getEvents) ·
+[Batch documentation](https://sportsgameodds.com/docs/guides/data-batches) ·
+[Rate and object accounting](https://sportsgameodds.com/docs/info/rate-limiting)
+
+The four-game replay improved from four captures in 12.314 seconds with four
+requests to four captures in 6.278 seconds with one request. The 25-game
+controlled run froze all 25 by target +18.560 seconds and drained
+by +19.229 seconds. It used one physical event request, one account call and
+25 fixture object credits. The shared stages consumed 0.232 seconds for
+manifests, 3.137 for account allowance, 0.988 for simulated transport, 0.034
+for original retention and 0.109 for parse/accounting. Per-game median stages
+were 0.094 seconds for normalization/calculation, 0.153 for projection and
+compression, and 0.256 for SQL publication through the persistence check.
+The hardware and simulated transport make these controlled measurements.
+The live forecast learns from each fully published batch size, reports when
+that exact size is unmeasured, and shows ordinary competition, schedule and
+storage reservation evidence. Games without dedicated reservations can still
+be admitted against shared headroom.
+
+The regression checks exercise ordinary discovery yielding to the protected
+turn, storage pressure, missing members with a cursor, source Stop before
+dispatch, uncertain request exposure after restart, rescheduling and
+recovery from a shared original after only some members published. The
+replays used zero real provider requests, dollars or orders.
+
+### Recurring slate and sporting results
+
+The existing scheduler now plans CollegeBasketballData slate updates and
+prior-day finals with a keyed, structured `/games` feed. The worker checks the
+actual monthly allowance and reset through the provider's exempt `/info`
+endpoint before game collection. It preserves season-specific membership,
+source-only rows, schedule revisions, cancellations, results, source conflicts
+and raw receipt hashes. The publisher permits private retention and limits
+redistribution of raw data. Its published coverage limits leave the complete
+expected slate unknown. The saved public-export evidence remains historical.
+[Usage and access](https://api.collegebasketballdata.com/usage-and-access) ·
+[Terms](https://collegebasketballdata.com/terms) ·
+[Data availability](https://api.collegebasketballdata.com/data-availability)
+
+The production collector has no CBBD API credential in
+`provider-secrets/cbbd` (mounted as `/run/predict-secrets/cbbd`) or its runtime
+environment. A configured scheduler fixture exercised the authenticated request,
+allowance checks, repeated slate/result jobs and retained revisions. Live
+ingestion requires an authorized existing key and a successful allowance
+response. Sports Reference remains separately disabled. No new service or
+subscription was purchased.
+
+### Release and production inspection
+
+Revision `3da369b5cdeaf34d50e8c784b3133af99cb69e38` passed required
+[CI and deployment](https://github.com/dock108dev/predict/actions/runs/45451724362).
+Web, collector, archive and PostgreSQL reported healthy. The signed-in
+Settings panel showed the new batching forecast and the missing-key reason.
+Data displayed the independent source and the current and saved capture
+counts separately. Opening the saved November 24 run from Data, selecting
+All qualifying venues, and going Back showed both unchanged variants, with
+12 all-venues tickets and eight best-venue tickets. Required local checks
+passed 272 portable cases plus 30 subtests and 42 PostgreSQL cases plus three
+subtests. Two portable cases were skipped locally.
+
+At 12:47 PM Eastern the current forecast planned one event request at 12:50
+(two NCAAB tasks), one at 2:50 PM (four) and one at 6:50 PM (25 across sports,
+22 NCAAB). The latter two windows had one and two tasks without dedicated
+storage reservations. Their same-size production service times were
+unmeasured. Account evidence showed 50 requests/minute, 50,784 available
+objects, no active held objects and 99 interrupted objects still accounted
+for. Production observers are persistent, read-only host timers. They
+retain role revisions, task outcomes, dispatch and persistence clocks,
+receipt hash verification and credit accounting at 12:50, 2:50 and 6:50 PM,
+plus source job receipts or blocked state after the 1:30 PM slate and the
+following 5:30 AM finals turns. The observer files are private under
+`/srv/predict/operating-evidence/d1-20261124`.
+
+### First live batch on the new collector
+
+The 12:50–12:51 PM Eastern window completed both scheduled NCAAB tasks.
+A single account-guarded event request dispatched at 12:50:02.523 and its
+92,298-byte original response arrived at 12:50:03.232. Both requested IDs
+were returned with a cursor. Each logical pull verified the same original
+SHA-256 and retained its own member. The two SQL persistence checks
+completed at 12:50:04.280 and 12:50:08.920. The Settings forecast recorded
+one two-game sample with 8.209 seconds from the start of batch work to final
+persistence. The larger 2:50 PM and 6:50 PM batch sizes remained unmeasured.
+
+The turn used one scheduled SportsGameOdds event request and two confirmed
+object credits. Account checks are rate-exempt. There were no retries, real
+orders or provider requests from read-only verification. An incremental
+dollar charge is unavailable from the retained account evidence. Durable
+observations for the larger windows and both daily slots remain armed.
+
+At 12:51 PM, Tuesday's current provider-known eligible ledger had six frozen
+and 71 upcoming across 77. One of the two live NCAAB captures was outside
+D1-versus-D1 eligibility. The Tuesday snapshot still had its original three.
+Monday retained six frozen and 20 reconstructed eligible games in the
+corrected run. The original Monday run, corrected Monday report and Tuesday
+report all matched their earlier hashes. There were seven saved runs before
+and after. The source status remained disabled with zero CBBD network
+requests or charges. The four earlier CBBD receipt/attempt rows are offline
+imports.
+
+The live receipt, role identities, CI artifacts and before/after
+reconciliation are under `.local/mens-d1-operating-loop-20261124`.
+Controlled timing and the pinned baseline are under
+`.local/mens-d1-20261124/operating-loop-replay`.
+
+### Reconciliation follow-through
+
+The [dated reconciliation and live-window record](mens-d1-reconciliation-live-windows-20261124.md)
+continues this operating record with the authenticated revisions, official
+citations, versioned paper replays, missing-item ledger, and the actual
+larger-window observations as each closes. The installed application moved to
+`590a0284cc309fb6a48ca479de66735293c3989b` through the
+[required release run](https://github.com/dock108dev/predict/actions/runs/45515797394).
+The new occurrence ledger preserves the original operational snapshots above.
+On November 24 the 2:50 PM window published four of four. At 6:50 PM the
+provider returned all 25, and 14 reached durable publication before deadline.
+The repaired 7:50 PM batch published all 14 by +39.308 seconds. The failed
+6:50 attempts and official observability remain separate from ten later
+paper reconstructions of the retained original response. The final Tuesday
+report and exports verified through signed-in Research and Data.

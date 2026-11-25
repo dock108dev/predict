@@ -42,11 +42,39 @@ paper replays and EV comparisons make zero provider requests.
 
 ## Verification and production
 
-Pending deployment and signed-in schedule creation. Local checks cover exact
-Kelly scale, fractional EV boundaries, best-venue reselection at higher cutoffs,
-seven-day registration, idempotent publication and immutable parent definitions.
-The browser flow exercises form creation, dates, portfolio switching, the daily
-and weekly report, EV comparisons and creating a revised version at 390px.
+Deployed on `3743a873012ed5676b5cb35d1e59a385935207ba` after
+[required CI](https://github.com/dock108dev/predict/actions/runs/45537766319).
+The normal migration guard required a maintenance release: all checks passed,
+the existing release procedure backed up PostgreSQL, applied migration 121 and
+restarted the application and data roles. The first CI's guarded release then
+passed on retry. No source-credit or Stop configuration was changed.
+
+Created the actual schedule using the signed-in production form:
+[NCAAB · Nov 23–29 · 1/40 Kelly](https://predict.dock108.dev/research?section=experiments&campaign=93b8937a41703ce083609c50e52135019fe36bf082a1f32ecf5a00d54daffeda&variant=best_venue).
+The worker published November 23 and 24 without manual replay; November 23 is
+graded and November 24 is partially graded. November 25–29 remain scheduled.
+The 12 original saved payload/report/summary hashes matched the pre-change
+snapshot. The UI export independently reconciled exact daily, weekly and
+non-overlapping bucket totals, with one latest run per date and the baseline
+threshold matching its portfolio. Evidence is in `.local/ncaab-week-20261124/`.
+
+| November 23 portfolio | Tickets | Stake | Expected profit | Returned | Modeled P/L | ROI |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Best venue | 76 | $448.68 | $38.42 | $403.24 | −$45.44 | −10.13% |
+| All qualifying venues | 114 | $596.34 | $54.04 | $461.06 | −$135.28 | −22.69% |
+
+Local fast verification passed the portable and PostgreSQL suites, including
+21 PostgreSQL cases. Focused checks covered exact Kelly scale, fractional EV
+boundaries, best-venue reselection, seven-day registration, idempotent
+publication and immutable parent definitions. Two focused Chromium checks
+passed, including form creation at 390px and daily → game → trade navigation.
+The production walkthrough found a daily-return-link initialization error;
+moving portfolio selection before link construction and adding a regression
+fixed it before final verification. The signed-in production flow passed
+creation, revised-version configuration, portfolio switching, daily/game/trade
+calculations, return to week and the JSON export. East Carolina −14.5 shows
+Novig +669, $7.53 stake, $1.52 expected profit and −$7.53 modeled P/L, with the
+recorded 2.5% full-Kelly multiplier and original quote/result evidence.
 
 Future scheduled dates remain unobserved until their actual operating turns.
 Historical replay does not imply those prices or EV were successfully displayed
