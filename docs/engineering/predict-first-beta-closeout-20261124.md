@@ -89,8 +89,10 @@ The production campaign has one durable row per Eastern game date. As of
 published and partially graded, and November 25–29 were scheduled. Weekly
 totals count each latest daily snapshot once, and earlier snapshots and grade
 versions remain linked. The restarted worker claimed its due November 24
-check at 10:58:40 PM. The grader was healthy with zero undispatched grade
-inputs at the verification read.
+check at 10:58:40 PM and completed it at 11:04:14 PM, retaining the same
+selection snapshot. At 11:06:07 PM the grader published a new result version
+for that run with 66 retained finals and 331 graded All-venue trades. The day
+remained partially graded, and the previous grade version remained available.
 
 The next independent slate refresh is November 24 at 11:45 PM Eastern, ahead
 of the first known protected T−10 target at 11:50 PM for the November 25 slate.
