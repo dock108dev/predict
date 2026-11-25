@@ -14,8 +14,8 @@ inputs while keeping your place on the board.
 
 **Data** browses stored observations, odds pulls, sporting results, historical
 captures and PostgreSQL tables. You can carry a filtered selection to experiment
-creation. **Experiments** opens Win $10 and its Kelly comparison. New campaigns
-use the same paper results and evidence view.
+creation. **Experiments** opens Win $10. New campaigns use the same paper results
+and evidence view.
 
 Open **Collection controls** from the status area for Stop, Resume, source
 pauses, credit usage and retention. The status area shows the latest accepted

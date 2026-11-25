@@ -39,7 +39,7 @@ bytes are shown separately from a stored normalized record.
 ## Experiments
 
 Experiments opens Win $10 directly. Select one Eastern date and one portfolio
-to compare Win $10 and Kelly. The rules show the saved scope, capture timing,
+to see its results. The rules show the saved scope, capture timing,
 reference and fee assumptions, EV threshold and sizing. Stake includes selected
 trades. Return, paper P/L and ROI use graded trades. ROI includes the graded
 stake denominator.

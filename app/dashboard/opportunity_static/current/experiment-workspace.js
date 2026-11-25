@@ -5,6 +5,8 @@ import {renderResults} from './research-results.js';
 import {renderRun,renderSavedEvidence} from './research-run.js';
 
 const endpoint='/api/research/workspace';
+// The saved Win $10 campaign has a fixed-profit results page. Other campaigns use their own rules.
+const win10Campaign='521543a8363cd0a945e792726e387a23b2003e743fe7364945cd2ebfb5d65864';
 const root=byId('experiment-view');
 const status=byId('experiments-status');
 const source=byId('experiment-source');
@@ -72,7 +74,7 @@ function dayStatus(day) {
 
 function comparisonTable(data, context) {
   const {config,modes}=data;
-  const modeNames=configuredModes(config);
+  const modeNames=context.sizingModes;
   const cells=(tag, values)=>values.map(value=>{
     const cell=node(tag);
     if (value instanceof Node) cell.append(value);
@@ -114,7 +116,6 @@ function showDay(data, config, visible, context, change) {
   panel.classList.add('experiment-comparison');
   const scope=visible ? 'Men’s Division I vs. Division I' : 'Archived experiment';
   panel.append(node('p', scope+' · Paper · T−10 · EV ≥'+pct(config.minimum_ev),'workspace-caption'));
-  const sizes=configuredModes(config);
   const dates=campaignDays(config).map(value=>[value,displayDate.format(new Date(value+'T12:00:00Z'))]);
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
   const controls=node('div',undefined,'experiment-controls');
@@ -137,17 +138,19 @@ function showDay(data, config, visible, context, change) {
   panel.append(controls);
   const body=node('div');
   body.id='experiment-comparison-body';
-  paintDay(body,data,config,context,sizes);
+  paintDay(body,data,config,context);
   panel.append(body);
   return panel;
 }
 
-function paintDay(body,data,config,context,sizes=configuredModes(config)) {
+function paintDay(body,data,config,context) {
+  const {sizingModes}=context;
   const gameRules=node('details');
-  gameRules.append(node('summary','Experiment rules'),pairs(ruleSummary(config)));
+  const rules=context.campaign===win10Campaign ? {...config,kelly_comparison:false} : config;
+  gameRules.append(node('summary','Experiment rules'),pairs(ruleSummary(rules)));
   if (data) {
     body.replaceChildren(comparisonTable(data,context));
-    const days=Object.values(data.modes);
+    const days=sizingModes.map(mode=>data.modes[mode]);
     if (days.some(day=>day.capture_state==='partial')) {
       body.append(node('p','Partial T−10 coverage. Saved results reflect only the usable captures so far.','workspace-caption'));
     }
@@ -159,7 +162,7 @@ function paintDay(body,data,config,context,sizes=configuredModes(config)) {
     body.append(node('p','Stake includes every selected trade. Return, paper P/L and ROI use graded trades.','workspace-caption'));
     const history=node('details');
     history.append(node('summary','Saved snapshots'),node('p','Select a published snapshot to inspect its recorded selections and grade history.'));
-    for (const mode of sizes) {
+    for (const mode of sizingModes) {
       history.append(node('h3',sizingTitle(config,mode)));
       const snapshots=data.modes[mode].snapshots;
       if (!snapshots.length) history.append(node('p','No snapshot published yet.'));
@@ -174,9 +177,17 @@ function paintDay(body,data,config,context,sizes=configuredModes(config)) {
       }
     }
     const links=node('div',undefined,'workspace-links');
-    links.append(action('Export comparison',campaignAPI(context.campaign)+'/days/'+context.date+'?'+new URLSearchParams({
-      variant:context.variant,export:'1',
-    })));
+    const [day]=days;
+    if (context.campaign===win10Campaign) {
+      if (day.analysis && day.result_id) links.append(action('Export results',runAPI(day.run_id)+'/results?'+new URLSearchParams({
+        variant:context.variant,version:day.result_id,export:'report',
+      })));
+      else if (day.run_id) links.append(action('Export dated offer ledger',runAPI(day.run_id)+'/offers'));
+    } else {
+      links.append(action('Export comparison',campaignAPI(context.campaign)+'/days/'+context.date+'?'+new URLSearchParams({
+        variant:context.variant,export:'1',
+      })));
+    }
     if (context.visible) links.append(link('Edit as a new version',url({...context.base,view:'revise'})));
     body.append(gameRules,history,links);
   } else {
@@ -225,7 +236,7 @@ async function openDetail(mount,selected,query,context,version) {
   heading.tabIndex=-1;
   mount.replaceChildren(heading, resultRoot);
   if (query.get('snapshot')==='1' || (context.latestRun && context.latestRun!==id)) {
-    mount.insertBefore(node('p','Saved snapshot · selections are frozen. The comparison above uses the latest available snapshots.','workspace-notice'),resultRoot);
+    mount.insertBefore(node('p','Saved snapshot · selections are frozen. The results above use the latest available snapshots.','workspace-notice'),resultRoot);
   }
   const href=overrides=>url({...initial,...overrides});
   const paper=String(selected.report.policy.execution || '').startsWith('paper_only');
@@ -361,7 +372,8 @@ async function render({keepComparison=false}={}) {
       });
       return;
     }
-    const context={base,campaign:id,date,variant,config,experiments:campaigns,visible:Boolean(known)};
+    const sizingModes=id===win10Campaign ? ['fixed_profit'] : configuredModes(config);
+    const context={base,campaign:id,date,variant,config,sizingModes,experiments:campaigns,visible:Boolean(known)};
     let body=keepComparison && root.querySelector('#experiment-comparison-body');
     if (!body) {
       const heading=showDay(null,config,known,context,change);
@@ -376,7 +388,7 @@ async function render({keepComparison=false}={}) {
     const mode=query.get('mode');
     const oldDetail=(query.get('view')==='daily' && mode) || ledgerKeys.some(key=>query.has(key));
     if (!selected && oldDetail) {
-      const chosen=mode && data.modes[mode] ? mode : configuredModes(config)[0];
+      const chosen=mode && data.modes[mode] ? mode : sizingModes[0];
       const runId=data.modes[chosen]?.run_id;
       if (runId) selected=await readJSON(runAPI(runId));
     }

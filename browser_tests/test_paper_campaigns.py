@@ -9,12 +9,63 @@ from urllib.parse import parse_qs, urlsplit
 from playwright.sync_api import expect, sync_playwright
 
 from app.research.paper import money
-from app.research.paper_campaigns import analysis, configuration
+from app.research.paper_campaigns import WIN_10_CAMPAIGN, analysis, configuration
 from app.research.paper_results import _summary
 from browser_tests.test_paper_results import FIRST, report
 from browser_tests.test_research_workspace import research_http_fixture
 from browser_tests.test_pregame_current import ASSETS
-from tests.test_paper_campaigns import config, ticket
+from tests.test_paper_campaigns import config, fixed_config, ticket
+
+
+def test_win10_results_show_only_fixed_profit_while_other_campaigns_can_compare():
+    day = "2026-11-24"
+    other, fixed_run, kelly_run, grade = (character * 64 for character in "abcd")
+    config = configuration(fixed_config(name="Win $10 campaign"))
+    campaigns = [dict(config, id=WIN_10_CAMPAIGN), dict(config, id=other, name="Paired experiment")]
+    result = analysis([ticket("trade", ".08")], config["bucket_edges"], "best_venue")
+    endpoint = "/api/research/workspace/campaigns"
+
+    def serve(route):
+        path = urlsplit(route.request.url).path
+        if path == "/experiments":
+            route.fulfill(path=ASSETS / "experiment-workspace.html")
+        elif path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(path).name)
+        elif path == "/api/workspace/collection":
+            route.fulfill(json=dict(state="Collecting"))
+        elif path == endpoint:
+            route.fulfill(json=dict(campaigns=campaigns))
+        elif path.startswith(endpoint + "/") and "/days/" in path:
+            records = {
+                mode: dict(run_id=run, result_state="graded", result_id=grade,
+                           analysis=result, snapshots=[dict(id=run, recorded_at=f"{day}T23:00:00Z")])
+                for mode, run in (("fixed_profit", fixed_run), ("kelly", kelly_run))
+            }
+            route.fulfill(json=dict(config=config, modes=records))
+        else:
+            route.fulfill(status=404)
+
+    with research_http_fixture(serve) as base, sync_playwright() as runtime:
+        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page()
+        page.goto(f"{base}/experiments?date={day}")
+        table = page.locator(".experiment-comparison table")
+        headers = table.get_by_role("columnheader")
+        expect(headers).to_have_text(["Paper results", "Win $10"])
+        expect(table.get_by_role("link", name="Inspect games and trades")).to_have_attribute(
+            "href", re.compile(r"mode=fixed_profit&run=" + fixed_run)
+        )
+        page.get_by_text("Experiment rules", exact=True).click()
+        expect(page.get_by_text("Kelly comparison", exact=True)).to_have_count(0)
+        page.get_by_text("Saved snapshots", exact=True).click()
+        expect(page.locator(f'a[href*="run={kelly_run}"]')).to_have_count(0)
+        expect(page.get_by_role("link", name="Export results")).to_have_attribute(
+            "href", f"/api/research/workspace/runs/{fixed_run}/results?variant=best_venue&version={grade}&export=report"
+        )
+
+        page.get_by_label("Experiment", exact=True).select_option(other)
+        expect(headers).to_have_text(["Paper results", "Win $10", "Kelly"])
+        browser.close()
 
 
 def test_schedule_week_ev_comparisons_and_revision_form():
