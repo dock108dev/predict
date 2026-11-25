@@ -4,64 +4,82 @@
 <title>Data</title><link rel="icon" href="data:,">
 <link rel="stylesheet" href="/view/current/pregame.css"><link rel="stylesheet" href="/view/current/research.css">
 <link rel="stylesheet" href="/view/current/workbench-shell.css"><link rel="stylesheet" href="/view/current/research-workspace.css">
+<link rel="stylesheet" href="/view/current/admin-database.css"><link rel="stylesheet" href="/view/current/data-browser.css">
 <script type="module" src="/view/current/workspace-nav.js"></script>
 <script type="module" src="/view/current/data-workbench.js"></script>
 <script type="module" src="/view/current/data.js"></script>
 </head><body class="research-page workbench-page">
 <a class="skip" href="#data-main">Skip to Data</a>
-<header class="masthead"><nav aria-label="Main" data-workspace-nav><a href="/research">Research</a><a href="/data" aria-current="page">Data</a><a href="/settings">Settings</a></nav></header>
+<header class="masthead"><nav aria-label="Main" data-workspace-nav><a href="/">Dashboard</a><a href="/data" aria-current="page">Data</a><a href="/experiments">Experiments</a></nav></header>
 <main class="board-wrap" id="data-main">
 <div class="workspace-page-heading">
 <header class="board-heading"><h1>Data</h1></header>
 <nav class="workspace-sections" aria-label="Data sections">
 <a href="/data" data-evidence-view="observations" aria-current="page">Observations</a>
 <a href="/data?evidence=pulls" data-evidence-view="pulls">Odds pulls</a>
-<a href="/data?evidence=checkpoints" data-evidence-view="checkpoints">Historical captures</a>
-<a href="/data?evidence=populations" data-evidence-view="populations">Results &amp; populations</a>
+<a href="/data?evidence=checkpoints" data-evidence-view="checkpoints">Captures</a>
+<a href="/data?evidence=populations" data-evidence-view="populations">Results</a>
 <a href="/data?evidence=mens-d1&amp;scope=mens-d1" data-evidence-view="mens-d1">Men’s D1 coverage</a>
+<a href="/data?evidence=tables" data-evidence-view="tables">Tables</a>
 </nav>
+<a id="data-create-experiment" class="research-button" href="/experiments?view=create&amp;from=data">Create experiment from these filters</a>
 </div>
 <div id="data-observations">
 <form id="catalog-filters" class="catalog-filters data-filters">
-<label>Search<input id="search" name="search" type="search" placeholder="Team, event or source market" maxlength="150"></label>
+<label>Game<input id="search" name="search" type="search" placeholder="Team, event or market ID" maxlength="150"></label>
 <label>Sport<select id="sport" name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
 <label>Date (Eastern)<input id="date" name="date" type="date"></label>
 <label>Calculation<select id="calculation" name="calculation_status" aria-label="Calculation"><option value="">Every status</option><option value="positive">Positive EV</option><option value="negative">Negative</option><option value="zero">Zero</option><option value="unavailable">Unavailable</option><option value="reference_only">Reference prices only</option></select></label>
 <label>EV order<select id="sort" name="sort"><option value="ev_desc">Highest first</option><option value="ev_asc">Lowest first</option></select></label>
 <input id="view" name="view" type="hidden">
-<input id="provider" name="provider" type="hidden" value="sportsgameodds">
+<label>Source<input id="provider" name="provider" type="search" list="data-providers" placeholder="All retained sources" maxlength="100"></label>
+<datalist id="data-providers"><option value="sportsgameodds" label="SportsGameOdds"><option value="the_odds_api" label="The Odds API"><option value="kalshi" label="Kalshi"><option value="polymarket_us" label="Polymarket US"><option value="novig" label="Novig"><option value="prophetx" label="ProphetX"></datalist>
+<label>Venue or book<input id="book" name="original_bookmaker_id" type="search" placeholder="Any venue or bookmaker ID" maxlength="100" list="books"><datalist id="books">
+<option value="kalshi" label="Kalshi"><option value="polymarket" label="Polymarket US"><option value="novig" label="Novig"><option value="prophetexchange" label="ProphetX">
+<option value="fanduel" label="FanDuel"><option value="draftkings" label="DraftKings"><option value="betmgm" label="BetMGM"><option value="caesars" label="Caesars">
+<option value="betrivers" label="BetRivers"><option value="hardrockbet" label="Hard Rock Bet"><option value="bookmakereu" label="BookMaker"><option value="betonline" label="BetOnline"><option value="bovada" label="Bovada"><option value="williamhill" label="William Hill">
+</datalist></label>
+<label>Market<select id="family" name="family"><option value="">All markets</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></label>
 <details class="catalog-advanced"><summary>More filters</summary><div class="catalog-advanced-fields">
-<label>View<select id="data-view"><option value="">Market comparisons</option><option value="arbitrage">Arbitrage calculations</option><option value="history">Received evidence / legacy history</option></select></label>
+<label>View<select id="data-view"><option value="">Market comparisons</option><option value="history">All retained game observations</option></select></label>
 <label class="catalog-checkbox"><input id="alternates" name="include_alternates" type="checkbox" value="1">Include alternates</label>
 <label>Source scope<select id="reference-scope" name="reference_scope"><option value="selected">Selected sportsbook references</option><option value="all">All retained reference sources</option></select></label>
-<label>Original book<input id="book" name="original_bookmaker_id" type="search" placeholder="Any bookmaker ID" maxlength="100" list="books"><datalist id="books"></datalist></label>
-<label>Market<select id="family" name="family"><option value="">All markets</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></label>
 <label>Maximum source age (minutes)<input id="age" name="max_age_minutes" type="number" min="1" max="525600" step="1" placeholder="Any age"></label>
 </div></details>
-<div class="catalog-actions"><button id="apply" type="submit">Apply filters</button><button id="positive" type="button">Positive EV</button><button id="clear" type="button">Clear</button><button id="refresh" type="button">Refresh data</button></div>
+<div class="catalog-actions"><button id="apply" type="submit">Apply filters</button><button id="clear" type="button">Clear</button><button id="refresh" type="button">Refresh stored data</button></div>
 </form>
 <p id="reference-summary" class="research-muted"></p>
 <p id="fee-mode-summary" class="research-muted"></p><p id="catalog-status" role="status">Reading market comparisons…</p><p id="catalog-snapshot" class="research-muted"></p>
 <section id="catalog" aria-label="Market comparisons" aria-busy="true" tabindex="-1"><div class="catalog-scroll"><table class="catalog-table"><thead><tr><th>Game / start</th><th>Market / exact offer</th><th>Venue / odds</th><th>Screening EV</th><th>Capture / references</th><th>Offers</th></tr></thead><tbody id="catalog-rows"></tbody></table></div></section>
 <nav id="game-pagination" class="catalog-pagination" aria-label="Game pages"><button id="previous" disabled>Previous markets</button><span id="page"></span><button id="next" disabled>Next markets</button></nav>
 <section id="game-detail" hidden aria-labelledby="game-title"><div class="experiment-heading"><h2 id="game-title">Selected game</h2><button id="close-game" type="button">Back to games</button></div><div id="game-content"></div></section>
-<p class="research-muted">Refresh reads stored data. Browsing and exports make no provider requests. Each comparison keeps its acquisition identity. Previous captures and source evidence remain inspectable.</p>
+
 </div>
 <section id="data-pulls" class="workspace-panel" hidden aria-labelledby="pull-workbench-title">
-<h2 id="pull-workbench-title">College basketball odds pulls</h2>
-<p>Each view uses one acquisition attempt. The most recent attempt may be incomplete or failed. Frozen T−10 checkpoints and their paper eligibility are available under Historical captures.</p>
-<form id="pull-workbench-form" class="workspace-form">
-<label>Game date (Eastern)<input id="pull-day" type="date" required></label>
-<label>Acquisition attempt<select id="pull-choice"><option value="">Newest covering attempt</option></select></label>
-<label>Observations<select id="pull-filter"><option value="all">Every recorded status</option><option value="positive">Positive screening EV</option><option value="experiment">Screening EV ≥4%</option></select></label>
-<button type="submit">Read pull evidence</button>
+<h2 id="pull-workbench-title">Odds pulls</h2>
+<form id="pull-workbench-form" class="workspace-form data-browser-filters">
+<label>Game date (Eastern)<input name="date" type="date"></label>
+<label>Sport<select name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
+<label>Game<input name="search" type="search" placeholder="Team or event ID" maxlength="150"></label>
+<label>Source<select name="provider"><option value="">All odds sources</option><option value="sportsgameodds">SportsGameOdds</option></select></label>
+<label>Venue or book<input name="original_bookmaker_id" type="search" list="books" maxlength="100" placeholder="Any venue or bookmaker ID"></label>
+<label>Market<select name="family"><option value="">All markets</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></label>
+<div class="data-browser-actions"><button type="submit">Apply filters</button><button type="reset">Clear</button></div>
 </form>
-<p id="pull-status" role="status"></p><div id="pull-detail"></div><div id="pull-rows"></div>
+<p id="pull-status" role="status"></p>
+<div id="pull-detail"></div>
+<div id="pull-rows"></div>
 </section>
 <div id="data-checkpoints" hidden>
 <section id="experiment" class="workspace-panel" data-lazy aria-labelledby="experiment-heading" aria-busy="true">
 <div class="experiment-heading"><h2 id="experiment-heading">Frozen first-observation and T−10 checkpoints</h2><button id="experiment-refresh" type="button">Refresh comparisons</button></div>
 <p>These retained captures show the exact observations and missing evidence behind early-to-late comparisons. T−10 eligibility for a paper run also depends on its frozen experiment definition.</p>
+<form id="checkpoint-filters" class="workspace-form data-browser-filters">
+<label>Game date (Eastern)<input name="date" type="date"></label>
+<label>Sport<select name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
+<label>Game<input name="search" type="search" placeholder="Team or event ID" maxlength="150"></label>
+<div class="data-browser-actions"><button type="submit">Apply filters</button><button type="reset">Clear</button></div>
+</form>
 <div class="experiment-controls"><label><input id="experiment-context" type="checkbox" checked> All tracked games, including incomplete captures</label></div>
 <p id="experiment-status" role="status">Reading scheduled checkpoint evidence…</p><p id="experiment-policy" class="research-muted"></p>
 <div id="experiment-cases"></div><div id="experiment-games"></div>
@@ -70,8 +88,15 @@
 </section>
 </div>
 <section id="data-populations" class="workspace-panel" hidden aria-labelledby="populations-title">
-<h2 id="populations-title">Sporting results and declared populations</h2>
-<p>Open a declared population to inspect its frozen cases, sporting outcomes, exclusions and scoring evidence. Research findings and paper portfolio metrics are available on <a href="/research?section=results">Research Results</a>.</p>
+<h2 id="populations-title">Sporting results</h2>
+<form id="data-result-filters" class="workspace-form data-browser-filters">
+<label>Game date (Eastern)<input name="date" type="date"></label>
+<label>Sport<select name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
+<label>Game<input name="search" type="search" placeholder="Team or event ID" maxlength="150"></label>
+<label>Source<input name="provider" type="search" list="data-result-sources" placeholder="Any result source" maxlength="100"></label>
+<datalist id="data-result-sources"><option value="sportsgameodds" label="SportsGameOdds"><option value="college_basketball_data" label="CollegeBasketballData"><option value="sports_reference" label="Sports Reference"></datalist>
+<div class="data-browser-actions"><button type="submit">Apply filters</button><button type="reset">Clear</button></div>
+</form>
 <div id="data-sporting-results"></div>
 <section class="research-panels" aria-label="Retained population evidence">
 <details id="cohorts"><summary>Declared research populations and result evidence</summary><div id="cohort-content"></div></details>
@@ -79,8 +104,54 @@
 </section>
 </section>
 <section id="data-mens-d1" class="workspace-panel" hidden aria-label="Men’s Division I daily coverage"></section>
+    <section id="data-tables" class="workspace-panel db-browser" aria-labelledby="data-tables-title" hidden>
+      <div class="db-heading">
+        <div><h2 id="data-tables-title">Database tables</h2><p id="db-catalog-summary" class="desk-note">Read-only PostgreSQL</p></div>
+        <button id="db-refresh" type="button">Refresh catalog</button>
+      </div>
+      <div class="db-controls">
+        <div><label for="db-schema">Schema</label><select id="db-schema" disabled></select></div>
+        <div><label for="db-search">Search</label><input type="search" id="db-search" placeholder="Name or type" maxlength="128" disabled></div>
+        <div><label for="db-object">Database object</label><select id="db-object" disabled></select></div>
+      </div>
+      <div class="db-options">
+        <label class="db-storage"><input type="checkbox" id="db-views" disabled> Include views</label>
+        <label class="db-storage"><input type="checkbox" id="db-storage" disabled> Include partitions and sequences</label>
+        <p id="db-catalog-count" class="desk-note"></p>
+      </div>
+      <p id="db-status" class="desk-note" role="status"></p>
+      <section id="db-selection" aria-labelledby="db-object-title" hidden>
+        <div class="db-heading">
+          <div><h3 id="db-object-title"></h3><p id="db-object-kind" class="desk-note"></p></div>
+          <div class="db-actions" role="group" aria-label="Object view">
+            <button id="db-rows" type="button" aria-pressed="true">Rows</button>
+            <button id="db-structure" type="button" aria-pressed="false">Structure</button>
+          </div>
+        </div>
+        <div class="db-row-tools">
+          <p id="db-read-status" class="desk-note" role="status"></p>
+          <div id="db-paging" class="db-actions" role="group" aria-label="Row pages" hidden>
+            <button id="db-previous" type="button">Previous page</button>
+            <button id="db-next" type="button">Next page</button>
+          </div>
+        </div>
+        <div id="db-content"></div>
+      </section>
+      <dialog id="db-cell-dialog" aria-labelledby="db-cell-title">
+        <div class="db-heading">
+          <h3 id="db-cell-title"></h3>
+          <form method="dialog"><button type="submit" autofocus>Close</button></form>
+        </div>
+        <p id="db-cell-status" class="desk-note" role="status"></p>
+        <pre id="db-cell-value" tabindex="0"></pre>
+        <div class="db-actions" aria-label="Value pages">
+          <button id="db-cell-previous" type="button">Previous part</button>
+          <button id="db-cell-next" type="button">Next part</button>
+        </div>
+      </dialog>
+    </section>
+
 </main>
 <dialog id="input-detail" aria-labelledby="input-title"><div class="research-dialog-heading"><h2 id="input-title">Exact captured observation</h2><button id="close-detail" type="button">Close</button></div><div id="input-content"></div></dialog>
 <dialog id="experiment-detail" aria-labelledby="experiment-title"><div class="research-dialog-heading"><h2 id="experiment-title">Captured checkpoint comparison</h2><button id="experiment-close" type="button">Close comparison</button></div><div id="experiment-content"></div></dialog>
-<dialog id="arb-detail" aria-labelledby="arb-title"><div class="research-dialog-heading"><h2 id="arb-title">Stored arbitrage calculation</h2><button id="close-arb" type="button">Close</button></div><div id="arb-content"></div></dialog>
 </body></html>

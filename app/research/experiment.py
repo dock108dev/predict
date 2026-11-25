@@ -959,13 +959,26 @@ def _policy(db):
     return dict(_value(index[row["policy_id"]], index), id=row["policy_id"])
 
 
-def catalog(db, *, include_context=False, outcomes_only=False, limit=50, offset=0):
+def catalog(db, *, include_context=False, outcomes_only=False, limit=50, offset=0, filters=None):
     limit = max(1, min(100, int(limit)))
     offset = max(0, int(offset))
-    predicate = "outcome_id IS NOT NULL" if outcomes_only else "true" if include_context else "retained_cases>0"
-    total = db.execute("SELECT count(*) n FROM public.ev_experiment_game WHERE " + predicate).fetchone()["n"]
+    predicates = ["outcome_id IS NOT NULL" if outcomes_only else "true" if include_context else "retained_cases>0"]
+    filters = filters or {}
+    values = []
+    for key, column in (('sport', "event->>'league'"), ('provider', 'provider'), ('event_id', 'source_event_id')):
+        if filters.get(key):
+            predicates.append(column + '=%s')
+            values.append(filters[key])
+    if filters.get('date'):
+        predicates.append("((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date")
+        values.append(filters['date'])
+    if filters.get('search'):
+        predicates.append("(strpos(lower(event->>'title'), lower(%s))>0 OR strpos(lower(source_event_id), lower(%s))>0)")
+        values.extend([filters['search']] * 2)
+    predicate = ' AND '.join(predicates)
+    total = db.execute("SELECT count(*) n FROM public.ev_experiment_game WHERE " + predicate, values).fetchone()["n"]
     rows = list(db.execute("SELECT * FROM public.ev_experiment_game WHERE " + predicate +
-        " ORDER BY first_observed_at DESC,id LIMIT %s OFFSET %s", (limit, offset)))
+        " ORDER BY first_observed_at DESC,id LIMIT %s OFFSET %s", (*values, limit, offset)))
     if outcomes_only:
         return dict(games=[_game_summary(row, _revision(db, row)) for row in rows],
             total_games=total, offset=offset, limit=limit, next_offset=offset+limit if offset+limit<total else None,

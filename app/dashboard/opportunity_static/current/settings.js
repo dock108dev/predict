@@ -6,7 +6,7 @@ const known=value=>value===null||value===undefined?'Unavailable':String(value);
 const names={sportsgameodds:'SportsGameOdds',the_odds_api:'The Odds API',kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX'};
 const clock=value=>{if(!value)return 'Not reported';const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString(undefined,{timeZone:timezone()}):'Not reported';};
 const bytes=value=>value===null||value===undefined?'Unavailable':(Number(value)/1048576).toFixed(1)+' MiB';
-let current=null,mode=null,busy=false,refreshing=false,dirty=false,feeMode=null,feePending=false,feeRequested=false,feeNotice=null;
+let current=null,busy=false,refreshing=false,feeMode=null,feePending=false,feeRequested=false,feeNotice=null;
 async function request(path,options={}) {const response=await fetch(path,{cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(10000),...options});let value;try{value=await response.json();}catch{throw Error('Operating status is unavailable.');}if(!response.ok)throw Error(value.reason||value.error||'Operating control failed.');return value;}
 function facts(root,values){const grid=node('dl');grid.className='research-detail-grid';for(const [label,value]of values){grid.append(node('dt',label),node('dd',known(value)));}root.replaceChildren(grid);}
 function renderFeeMode(value){
@@ -23,11 +23,19 @@ function render() {
  else if(!running&&s.recovery?.reason)$('control-result').textContent='Resume is unavailable: '+String(s.recovery.reason).replaceAll('_',' ')+'.';
  const evidence=accountingEvidence(s);facts($('credits-state'),accountingFacts(s,clock));
  $('hold-details').hidden=!evidence.sportsgameodds.object_holds.length&&!evidence.sportsgameodds.interrupted_scans.length&&!evidence.the_odds_api.recovery_incident&&!evidence.the_odds_api.reserved_exposure&&!evidence.the_odds_api.uncertain_held_credits;$('hold-evidence').textContent=JSON.stringify(evidence,null,2);
- const paused=s.data_runtime?.paused_sources||[];$('source-rows').replaceChildren(...(s.sources||[]).filter(p=>p.provider==='sportsgameodds').map(p=>{const row=node('tr'),state=paused.includes(p.provider)?'Paused':p.worker_done?'Stopped':Object.values(p.status||{}).some(v=>v.state==='available')?'Available':'Waiting / unavailable';const td=node('td'),pause=node('button',paused.includes(p.provider)?'Paused':'Pause source');pause.type='button';pause.dataset.control='pause';pause.dataset.source=p.provider;pause.disabled=busy||!healthy||!running||paused.includes(p.provider);td.append(pause);for(const value of [names[p.provider]||p.provider,state,clock(p.last_valid_receipt_at||p.received_at||p.last_book_receipt_at)])row.append(node('td',value));row.append(td);return row;}));
+ const paused=s.data_runtime?.paused_sources||[];
+ const config=s.config||{};
+ const sourceConfigured=id=>paused.includes(id)||(id===(config.aggregate_provider||'sportsgameodds')
+  ?config.aggregate_enabled!==false:config['direct_'+id+'_enabled']!==false&&['kalshi','polymarket_us'].includes(id));
+ $('source-rows').replaceChildren(...(s.sources||[]).filter(p=>sourceConfigured(p.provider)).map(p=>{const row=node('tr'),state=paused.includes(p.provider)?'Paused':p.worker_done?'Stopped':Object.values(p.status||{}).some(v=>v.state==='available')?'Available':'Waiting / unavailable';const td=node('td'),pause=node('button',paused.includes(p.provider)?'Paused':'Pause source');pause.type='button';pause.dataset.control='pause';pause.dataset.source=p.provider;pause.disabled=busy||!healthy||!running||paused.includes(p.provider);td.append(pause);for(const value of [names[p.provider]||p.provider,state,clock(p.last_valid_receipt_at||p.received_at||p.last_book_receipt_at)])row.append(node('td',value));row.append(td);return row;}));
  $('collection-scope').textContent='Leagues: '+(s.config?.aggregate_sports||s.config?.sports||[]).join(', ')+'. Markets: '+(s.config?.families||[]).join(', ')+'.';
  $('operating-evidence').textContent=JSON.stringify({service:s.service_state,recovery:s.recovery,background:s.background_work,issues:s.issues,source_pauses:paused},null,2);
 }
-function renderMode(value){mode=value.activity_mode||value;if(!mode?.settings)return;facts($('collection-schedule'),[['Next discovery',clock(mode.next_monitor_at)],['Discovery schedule','24/7 · first full capture, then T−10']]);if(!dirty){$('discovery-interval').value=mode.settings.monitor_interval_seconds/60;$('discovery-phase').value=(mode.settings.monitor_phase_seconds??1200)/60;$('discovery-horizon').value=mode.settings.monitor_horizon_seconds===null?'':mode.settings.monitor_horizon_seconds/3600;}$('save-collection').disabled=busy;}
+function renderMode({settings, next_monitor_at}) {
+ if (!settings) return;
+ const interval = settings.monitor_interval_seconds / 60;
+ facts($('collection-schedule'), [['Next discovery', clock(next_monitor_at)], ['Discovery interval', interval + ' minutes']]);
+}
 function renderWorkspace(value){
  const {storage,reference_scope:referenceScope,readiness}=value;
  renderFeeMode(value.fee_mode);
@@ -130,7 +138,7 @@ async function refresh(){
  const results=await Promise.allSettled([request('/api/admin/status'),request('/api/admin/activity-mode'),request('/api/workspace/status')]);
  if(results[0].status==='fulfilled'){current=results[0].value;render();}
  else{current=null;for(const button of document.querySelectorAll('[data-control]'))button.disabled=true;}
- if(results[1].status==='fulfilled')renderMode(results[1].value);else $('save-collection').disabled=true;
+ if(results[1].status==='fulfilled')renderMode(results[1].value);
  if(results[2].status==='fulfilled')renderWorkspace(results[2].value);
  else{
   $('storage-state').textContent='Storage status is unavailable. Collection still enforces existing storage limits.';
@@ -149,6 +157,10 @@ $('include-fees').onchange=async()=>{
 };
 
 document.addEventListener('click',async event=>{const button=event.target.closest('[data-control]');if(!button||button.disabled||busy||!current)return;const action=button.dataset.control,body={action};if(action==='pause')body.source=button.dataset.source;if(action==='recover')Object.assign(body,{runtime_id:current.runtime_id,candidate_digest:current.candidate_digest});busy=true;render();try{current=await request('/api/admin/current',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});$('control-result').textContent=action==='stop'?'Collection stopped. Stored data remains available.':action==='pause'?'Source pause acknowledged and preserved across restarts.':'Collection resumed under its existing guards.';}catch(error){$('control-result').textContent=error.message;}finally{busy=false;render();}});
-$('collection-form').oninput=()=>{dirty=true;};$('collection-form').onsubmit=async event=>{event.preventDefault();if(busy||!mode)return;const settings={monitor_interval_seconds:Math.round(Number($('discovery-interval').value)*60),monitor_phase_seconds:Math.round(Number($('discovery-phase').value)*60),monitor_horizon_seconds:$('discovery-horizon').value===''?null:Math.round(Number($('discovery-horizon').value)*3600)};busy=true;$('save-collection').disabled=true;try{const value=await request('/api/admin/activity-mode',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({settings})});dirty=false;renderMode(value);$('configuration-result').textContent='Collection configuration saved.';}catch(error){$('configuration-result').textContent=error.message;}finally{busy=false;$('save-collection').disabled=false;}};
+for(const section of document.querySelectorAll('main > details[id]')){
+ const reveal=()=>{if(location.hash==='#'+section.id)section.open=true;};
+ window.addEventListener('hashchange',reveal);
+ reveal();
+}
 for(const zone of [...new Set(['UTC',Intl.DateTimeFormat().resolvedOptions().timeZone,...(Intl.supportedValuesOf?.('timeZone')||[])])].sort())$('timezone').append(new Option(zone.replaceAll('_',' '),zone));for(const key of ['theme','timezone']){$(key).value=readPreference(key);$(key).onchange=()=>{savePreference(key,$(key).value);applyTheme();};}$('display-form').onsubmit=event=>event.preventDefault();
 refresh();setInterval(()=>{if(!document.hidden)refresh();},15000);

@@ -131,6 +131,7 @@ async function load(){
  const current=new URLSearchParams(location.search);
  if(current.get('id')&&current.get('revision'))inspectExperiment(current.get('id'),current.get('revision'),current.get('case'),null,{updateURL:false});
  const query=new URLSearchParams({limit:'10',offset:String(pageOffset)});if($('experiment-context').checked)query.set('include_context','1');
+ for(const key of ['date','sport','search','event_id','provider'])if(current.get(key))query.set(key,current.get(key));
  try{const value=await get('/api/research/experiment?'+query);if(version===loadVersion)renderListing(value);}
  catch(error){if(version===loadVersion)$('experiment-status').textContent=`${listing?'Could not refresh. Displayed comparisons are last-known.':'Experiment evidence unavailable.'} ${error.message}`;}
  finally{if(version===loadVersion){busy=false;controls();}}

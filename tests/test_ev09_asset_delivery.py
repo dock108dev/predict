@@ -13,7 +13,8 @@ from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
 
 
-PUBLIC_DESK_PAGES = ("/research", "/data", "/settings")
+PUBLIC_DESK_PAGES = {"/": "Dashboard", "/data": "Data", "/experiments": "Experiments",
+                     "/settings": "Collection controls"}
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):
@@ -22,16 +23,16 @@ class Assets(unittest.IsolatedAsyncioTestCase):
         provider.database_mode = True
         return create_app(owner=owner(), sessions={}, current_provider=provider)
 
-    async def test_research_landing_preserves_selected_legacy_links(self):
+    async def test_home_and_legacy_links_preserve_saved_selections(self):
         async with TestClient(TestServer(self.app())) as client:
             for path, expected, values in (
-                ('/', '/research', {}),
+                ('/dashboard', '/', {}),
                 ('/?id=exact-existing-contract', '/data', {'id':['exact-existing-contract']}),
-                ('/experiments', '/research', {'section':['experiments']}),
+                ('/research?section=experiments&campaign=frozen&run=saved&trade=exact', '/experiments',
+                 {'campaign':['frozen'],'run':['saved'],'trade':['exact']}),
                 ('/experiments?context=1&offset=10', '/data', {'evidence':['checkpoints'],'context':['1'],'offset':['10']}),
                 ('/research?id=experiment-one&revision=revision-one', '/data', {'id':['experiment-one'],'revision':['revision-one'],'evidence':['checkpoints']}),
                 ('/game?game_key=combined%3Aevent%3Aone&game_capture=captured-one&line=exact-winner', '/data', {'game_key':['combined:event:one'],'game_capture':['captured-one'],'line':['exact-winner']}),
-                ('/arbs?game=one&capture=early', '/data', {'view':['arbitrage'],'game':['one'],'capture':['early']}),
                 ('/admin?section=inspection&bet=exact-bet', '/data', {'bet':['exact-bet']}),
                 ('/admin?section=sources', '/settings', {}),
                 ('/raw-odds?original_bookmaker_id=pinnacle', '/data', {'original_bookmaker_id':['pinnacle'],'reference_scope':['all']}),
@@ -52,10 +53,9 @@ class Assets(unittest.IsolatedAsyncioTestCase):
             for path, target in (
                 ('/view/current/research.html?id=game-one&revision=frozen', '/data'),
                 ('/view/current/pregame.html?game=canonical&bet=exact&capture=early', '/data'),
-                ('/view/current/pregame-arbs.html?game=canonical', '/data'),
                 ('/view/current/admin.html?section=usage', '/settings'),
                 ('/view/dashboard.html?capture=retained-one', '/data'),
-                ('/current/coverage', '/settings'),
+                ('/current/coverage', '/data'),
                 ('/admin/retained?capture=retained-one', '/data'),
             ):
                 response=await client.get(path,allow_redirects=False)
@@ -72,29 +72,31 @@ class Assets(unittest.IsolatedAsyncioTestCase):
     async def test_retired_bookmarks_have_working_workspace_navigation(self):
         app=self.app()
         async with TestClient(TestServer(app)) as client:
-            for path in ('/scanner','/my-bets','/about','/trading-fees','/view/current/scanner.html','/view/current/bet-journal.html'):
-                response=await client.get(path)
-                self.assertEqual(response.status,410,path)
-                html=await response.text()
-                self.assertIn('This page is retired',html)
-                self.assertIn('href="/data"',html)
-                self.assertIn('data-workspace-nav',html)
-            # The journal owns more than its retired HTML: retain APIs/sampler.
-            routes={route.resource.canonical for route in app.router.routes()}
-            self.assertIn('/api/bet-journal',routes)
-            self.assertIn('/api/bet-journal/{id}',routes)
-            self.assertGreaterEqual(len(app.cleanup_ctx),3)
+            for path in ('/arbs', '/scanner', '/my-bets', '/about', '/trading-fees',
+                         '/view/current/scanner.html', '/view/current/bet-journal.html'):
+                response = await client.get(path)
+                self.assertEqual(response.status, 410, path)
+                html = await response.text()
+                self.assertIn('This page is retired', html)
+                self.assertIn('href="/data"', html)
+                self.assertIn('data-workspace-nav', html)
+            for path in ('/api/scanner/client', '/api/scanner/summaries', '/api/bet-journal',
+                         '/api/watchlists', '/api/signals', '/api/start', '/api/comparison-current',
+                         '/api/pregame/arbs'):
+                self.assertEqual((await client.get(path)).status, 404, path)
+            response = await client.post('/api/start', json={})
+            self.assertEqual(response.status, 403)
 
-    async def test_workspace_titles_and_navigation_are_unbranded(self):
+    async def test_workspace_titles_and_navigation(self):
         async with TestClient(TestServer(self.app())) as client:
-            for path in PUBLIC_DESK_PAGES:
-                html=await (await client.get(path)).text()
-                title = path[1:].capitalize()
+            for path, title in PUBLIC_DESK_PAGES.items():
+                html = await (await client.get(path)).text()
                 self.assertIn(f"<title>{title}</title>", html)
-                self.assertIn('<link rel="icon" href="data:,">', html)
-                self.assertNotIn('predict-icon.png', html)
-                self.assertNotIn('class="brand"', html)
-                self.assertIn(f'<a href="{path}" aria-current="page">{title}</a>', html)
+                self.assertIn('data-workspace-nav', html)
+            navigation = await (await client.get('/view/current/workspace-nav.js')).text()
+            for title in ('Dashboard', 'Data', 'Experiments'):
+                self.assertIn(f"label:'{title}'", navigation)
+            self.assertNotIn("label:'Settings'", navigation)
             response = await client.get('/view/current/predict-icon.png')
             self.assertTrue((await response.read()).startswith(b"\x89PNG\r\n\x1a\n"))
 
@@ -118,8 +120,8 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                     source=await response.text()
                     imports=(re.findall(r"url\([\"\']([^\"\']+)[\"\']\)",source) if suffix=='.css' else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]",source))
                     pending.extend(urljoin(path,module) for module in imports)
-                self.assertTrue({'pregame.css','research.css','workbench-shell.css','workspace-nav.js',
-                                 'manrope.ttf','ibm-plex-sans.woff2'} <= {Path(path.split('?')[0]).name for path in seen},page)
+                self.assertTrue({'workbench-shell.css','workspace-nav.js', 'ibm-plex-sans.woff2'}
+                                <= {Path(path.split('?')[0]).name for path in seen}, page)
             self.assertEqual((await client.get('/current/assets/unknown.js')).status,404)
 
 

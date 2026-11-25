@@ -15,6 +15,7 @@ VERSION = 'ncaab-paper-campaign-1'
 SIZING_VERSION = 'ncaab-paper-campaign-2'
 QUALITY_VERSION = 'paper-quote-age-at-receipt-1'
 REPLAY_FAILED = 'paper_campaign_replay_failed'
+WIN_10_CAMPAIGN = '521543a8363cd0a945e792726e387a23b2003e743fe7364945cd2ebfb5d65864'
 EASTERN = ZoneInfo('America/New_York')
 VARIANTS = paper_results.VARIANTS
 MODES = ('fixed_profit', 'kelly')
@@ -89,7 +90,7 @@ def _initial_check(day, now):
     return max(now, datetime.combine(day, time.min, EASTERN))
 
 
-def create(db, body):
+def create(db, body, *, discoverable=True):
     if not isinstance(body, dict):
         raise workspace.SelectionError('Provide an experiment configuration.')
     ancestor = body.get('supersedes')
@@ -103,11 +104,13 @@ def create(db, body):
             if previous is None:
                 raise workspace.UnknownSelection('Unknown experiment to revise.')
             prior_config = previous['payload']
-            prior = {k: v for k, v in prior_config.items() if k != 'supersedes'}
+            prior = {k: v for k, v in prior_config.items() if k not in ('supersedes', 'discoverable')}
             if (config == prior or prior['version'] == VERSION
                     and config == dict(prior, version=SIZING_VERSION, sizing_mode='kelly', kelly_rule=paper.KELLY_RULE)):
                 return dict(id=ancestor, **prior_config)
             config['supersedes'] = ancestor
+        if discoverable:
+            config['discoverable'] = True
         identity = hashed(config)
         if db.execute('SELECT 1 FROM public.paper_campaign WHERE id=%s', (identity,)).fetchone():
             return dict(id=identity, **config)
@@ -162,11 +165,15 @@ def tick(db):
     today = now.astimezone(EASTERN).date()
     lease_until = now + timedelta(minutes=15)
     with db.transaction():
+        active_ids = [campaign['id'] for campaign in index(db, active_only=True)]
+        if not active_ids:
+            return
         job = db.execute('''SELECT d.*,c.payload config FROM public.paper_campaign_day d
             JOIN public.paper_campaign c ON c.id=d.campaign_id
             WHERE next_check_at<=%s AND (lease_until IS NULL OR lease_until<=%s) AND game_date<=%s
+              AND d.campaign_id=ANY(%s)
             ORDER BY (game_date >= %s) DESC,next_check_at,game_date
-            FOR UPDATE OF d SKIP LOCKED LIMIT 1''', (now, now, today, today-timedelta(days=2))).fetchone()
+            FOR UPDATE OF d SKIP LOCKED LIMIT 1''', (now, now, today, active_ids, today-timedelta(days=2))).fetchone()
         if job is None:
             return
         key = job['campaign_id'], job['game_date']
@@ -304,12 +311,13 @@ def _window_analysis(tickets, edges, variant, *, inputs):
     return dict(result, quality=quality(tickets, edges, variant, inputs=inputs))
 
 
-def _history(db, identity):
+def _history(db, identity, game_date=None):
     history = {}
     for run in db.execute('''SELECT r.id,r.game_date,r.recorded_at,d.payload->>'campaign_snapshot' snapshot,
         COALESCE(d.payload->>'sizing_mode','kelly') mode FROM public.research_workspace_run r
         JOIN public.research_workspace_definition d ON r.definition_version=d.version
-        WHERE d.payload->>'campaign_id'=%s ORDER BY r.recorded_at DESC,r.id''', (identity,)):
+        WHERE d.payload->>'campaign_id'=%s AND (%s::date IS NULL OR r.game_date=%s)
+        ORDER BY r.recorded_at DESC,r.id''', (identity, game_date, game_date)):
         history.setdefault(run['game_date'], []).append(run)
     return history
 
@@ -401,7 +409,7 @@ def sizing_run_detail(db, run, definition, report):
                                                      for v in report['policy']['portfolios']})
 
 
-def view(db, identity, variant=None, mode=None):
+def view(db, identity, variant=None, mode=None, *, game_date=None):
     if variant is not None and variant not in VARIANTS:
         raise workspace.SelectionError('Select Best venue or All qualifying venues.')
     if mode is not None and mode not in MODES:
@@ -415,8 +423,9 @@ def view(db, identity, variant=None, mode=None):
     variant = variant if variant in config['portfolios'] else config['portfolios'][0]
     now = queue.utc()
     today = now.astimezone(EASTERN).date()
-    history = _history(db, identity)
-    day_rows = list(db.execute('SELECT * FROM public.paper_campaign_day WHERE campaign_id=%s ORDER BY game_date', (identity,)))
+    history = _history(db, identity, game_date)
+    day_rows = list(db.execute('''SELECT * FROM public.paper_campaign_day WHERE campaign_id=%s
+        AND (%s::date IS NULL OR game_date=%s) ORDER BY game_date''', (identity, game_date, game_date)))
     run_ids = {day['game_date']: _mode_runs(history.get(day['game_date'], []), day['run_id'], available_modes[0])
                for day in day_rows}
     latest_reports = (_snapshot_reports(db, {run_id for runs in run_ids.values() for run_id in runs.values()})
@@ -424,21 +433,21 @@ def view(db, identity, variant=None, mode=None):
     edges = config['bucket_edges']
     comparison = Counter()
     for day in day_rows:
-        game_date = day['game_date']
-        runs = run_ids[game_date]
+        current_day = day['game_date']
+        runs = run_ids[current_day]
         run_id = runs.get(mode)
         snapshots = [dict(id=r['id'], recorded_at=r['recorded_at'].isoformat())
-                     for r in history.get(game_date, []) if r['mode'] == mode]
+                     for r in history.get(current_day, []) if r['mode'] == mode]
         replay_state = day['state']
         if day['lease_until'] and day['lease_until'] > now:
             replay_state = 'replaying'
-        elif replay_state == 'scheduled' and game_date <= today:
+        elif replay_state == 'scheduled' and current_day <= today:
             replay_state = 'replay_queued'
-        entry = dict(date=str(game_date), run_id=run_id, run_ids=runs, state=day['state'],
+        entry = dict(date=str(current_day), run_id=run_id, run_ids=runs, state=day['state'],
                      replay_state=replay_state, error=REPLAY_FAILED if day['last_error'] else None,
-                     next_check_at=max(day['next_check_at'], datetime.combine(game_date, time.min, EASTERN)).isoformat(),
+                     next_check_at=max(day['next_check_at'], datetime.combine(current_day, time.min, EASTERN)).isoformat(),
                      checked_at=day['updated_at'].isoformat(), snapshots=snapshots,
-                     retrospective=game_date <= row['created_at'].astimezone(EASTERN).date(),
+                     retrospective=current_day <= row['created_at'].astimezone(EASTERN).date(),
                      capture_state='scheduled' if day['state'] == 'scheduled' else 'awaiting_evidence')
         if config.get('kelly_comparison'):
             entry['comparison'] = sizing_comparison({m: latest_reports[r] for m, r in runs.items()},
@@ -448,7 +457,8 @@ def view(db, identity, variant=None, mode=None):
         if run_id:
             state = queue.read(db, run_id, include_history=False)
             report = (state or {}).get('report')
-            entry.update(result_state=(state or {}).get('state','collecting'), result_pending=(state or {}).get('pending',True))
+            entry.update(result_state=(state or {}).get('state','collecting'),
+                         result_pending=(state or {}).get('pending',True), result_error=bool((state or {}).get('error')))
             document = (dict(report=latest_reports[run_id]) if run_id in latest_reports else
                         workspace._run(db,run_id)['payload'])
             source = document['report']
@@ -459,6 +469,10 @@ def view(db, identity, variant=None, mode=None):
                 complete = usable == len(source['games']) and all(
                     (game.get('coverage') or {}).get('incomplete') is False for game in source['games'])
                 entry['capture_state'] = 'retained' if complete else 'partial'
+                if game_date is not None:
+                    selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant)
+                    entry['selection'] = dict(tickets=len(selections), stake_usd=paper.money(sum(
+                        (F(ticket.get('cash_commitment_usd', ticket['stake_usd'])) for ticket in selections), F())))
             else:
                 entry['capture_state'] = 'pending' if pending else 'missing'
             if not usable and not pending:
@@ -479,5 +493,26 @@ def view(db, identity, variant=None, mode=None):
                 reported_days=sum('analysis' in d for d in days),provider_requests=0,orders_submitted=0)
 
 
-def index(db):
-    return [dict(id=r['id'],**r['payload']) for r in db.execute('SELECT id,payload FROM public.paper_campaign ORDER BY created_at DESC,id')]
+def daily(db, identity, game_date, variant=None):
+    game_date = workspace.game_day(game_date)
+    primary = view(db, identity, variant, game_date=game_date)
+    if not primary['days']:
+        raise workspace.UnknownSelection('This game date is outside the saved experiment.')
+    days = {primary['mode']: primary['days'][0]}
+    for mode in primary['available_modes'][1:]:
+        comparison = view(db, identity, primary['variant'], mode, game_date=game_date)
+        days[mode] = comparison['days'][0]
+    return dict(id=identity, config=primary['config'], variant=primary['variant'], date=game_date,
+                modes=days, provider_requests=0, orders_submitted=0)
+
+
+def index(db, *, active_only=False):
+    campaigns = [dict(id=r['id'], **r['payload']) for r in db.execute(
+        'SELECT id,payload FROM public.paper_campaign ORDER BY created_at DESC,id')]
+    if not active_only:
+        return campaigns
+    visible = [campaign for campaign in campaigns
+               if campaign['id'] == WIN_10_CAMPAIGN or campaign.get('discoverable') is True]
+    superseded = {campaign.get('supersedes') for campaign in visible}
+    return sorted((campaign for campaign in visible if campaign['id'] not in superseded),
+                  key=lambda campaign: campaign['id'] != WIN_10_CAMPAIGN)

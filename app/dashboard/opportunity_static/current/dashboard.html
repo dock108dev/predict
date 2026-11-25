@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/view/current/pregame.css">
+  <link rel="stylesheet" href="/view/current/research.css">
+  <link rel="stylesheet" href="/view/current/workbench-shell.css">
+  <link rel="stylesheet" href="/view/current/dashboard.css">
+  <script type="module" src="/view/current/workspace-nav.js"></script>
+  <script type="module" src="/view/current/dashboard.js"></script>
+</head>
+<body class="research-page workbench-page">
+  <a class="skip" href="#dashboard-main">Skip to Dashboard</a>
+  <header class="masthead">
+    <nav aria-label="Main" data-workspace-nav>
+      <a href="/" aria-current="page">Dashboard</a><a href="/data">Data</a><a href="/experiments">Experiments</a>
+    </nav>
+  </header>
+  <main class="board-wrap" id="dashboard-main">
+    <header class="workspace-page-heading dashboard-heading">
+      <div class="board-heading"><h1>Dashboard</h1></div>
+      <button id="dashboard-reload" type="button">Reload saved prices</button>
+    </header>
+    <section aria-labelledby="dashboard-opportunities">
+      <h2 id="dashboard-opportunities">Current +EV opportunities</h2>
+      <p id="dashboard-status" role="status" aria-live="polite">Reading stored calculations…</p>
+      <p id="dashboard-notice" class="research-muted" hidden></p>
+      <div id="dashboard-table" class="dashboard-table-wrap" hidden>
+        <table class="catalog-table dashboard-table" role="table" aria-labelledby="dashboard-opportunities">
+          <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Game</th><th scope="col" role="columnheader">Bet</th><th scope="col" role="columnheader">Venue</th><th scope="col" role="columnheader">Posted odds</th><th scope="col" role="columnheader">Fair odds</th><th scope="col" role="columnheader" aria-sort="descending">EV</th><th scope="col" role="columnheader">Quote age</th></tr></thead>
+          <tbody id="dashboard-rows" role="rowgroup"></tbody>
+        </table>
+      </div>
+      <nav id="dashboard-pages" class="dashboard-pages" aria-label="Opportunity pages" hidden>
+        <button id="dashboard-previous" type="button">Previous</button>
+        <span id="dashboard-page" aria-live="polite"></span>
+        <button id="dashboard-next" type="button">Next</button>
+      </nav>
+    </section>
+  </main>
+  <dialog id="dashboard-inspector" class="dashboard-inspector" aria-labelledby="dashboard-inspector-title">
+    <div class="dashboard-inspector-head">
+      <h2 id="dashboard-inspector-title">Opportunity evidence</h2>
+      <form method="dialog"><button autofocus>Close</button></form>
+    </div>
+    <div id="dashboard-inspector-content"></div>
+  </dialog>
+</body>
+</html>

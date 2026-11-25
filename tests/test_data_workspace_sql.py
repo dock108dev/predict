@@ -268,6 +268,71 @@ class DataWorkspaceSQL(PregameFixture):
         with self.connect() as db:
             self.assertEqual(before, list(db.execute('SELECT * FROM current_pregame_calculation ORDER BY contract_id')))
 
+    async def test_data_pull_filters_preserve_exact_original_receipt_and_download(self):
+        from dataclasses import replace
+        from hashlib import sha256
+        import json
+        from tempfile import TemporaryDirectory
+
+        from app.collection import original_receipts
+        from app.collection.sportsgameodds_transport import PageResponse
+        from app.dashboard import data_browser
+        from tests.test_sportsgameodds_collector import PARAMS
+
+        source = page()
+        event = source['data'][0]
+        event['eventID'] = 'data-browser-authored-event'
+        original = PageResponse(200, json.dumps(source).encode(), AT, None)
+        digest = sha256(original.body).hexdigest()
+        scope = dict(PARAMS, bookmakerID='prophetx,fanduel,draftkings')
+        with self.connect() as db:
+            db.execute("""INSERT INTO public.market_pull(pull_id,requested_at,request_scope,state,details)
+                VALUES ('browser-pull',%s,%s,'complete',%s)""", (stamp(AT), Jsonb(scope),
+                Jsonb(dict(event=dict(title='Milwaukee Bucks at Orlando Magic',
+                    starts_at=event['status']['startsAt'], league='NBA')))))
+            db.execute("""INSERT INTO public.market_pull_scope(pull_id,event_id,family,state,coverage)
+                VALUES ('browser-pull',%s,'spread','complete','{}')""", (event['eventID'],))
+            db.execute("""INSERT INTO public.market_pull_receipt(pull_id,attempt_id,receipt_sha256,received_at,membership)
+                VALUES ('browser-pull','browser-attempt',%s,%s,%s)""",
+                (digest, stamp(AT), Jsonb(dict(event_ids=[event['eventID']]))))
+
+        app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+        data_browser.mount(app, self.connect)
+        base = '/api/research/data/'
+        with TemporaryDirectory() as temporary:
+            path = Path(temporary)
+            exact = original_receipts.capture(scope, original, root=path)
+            later = original_receipts.capture(scope, replace(original, received_at='2026-11-17T20:02:00Z'), root=path)
+            self.assertNotEqual(exact['id'], later['id'])
+            self.assertEqual(exact['receipt_sha256'], later['receipt_sha256'])
+            with patch.object(original_receipts, 'directory', return_value=path):
+                async with TestClient(TestServer(app)) as client:
+                    response = await client.get(base + 'pulls', params=dict(date='2026-11-17',
+                        sport='NBA', search='Orlando', event_id=event['eventID'],
+                        family='spread', original_bookmaker_id='prophetx'))
+                    self.assertEqual(response.status, 200, await response.text())
+                    pulls = await response.json()
+                    self.assertEqual([row['pull_id'] for row in pulls['rows']], ['browser-pull'])
+                    self.assertEqual(pulls['provider_requests'], 0)
+                    response = await client.get(base + 'pull', params=dict(pull='browser-pull'))
+                    self.assertEqual(response.status, 200, await response.text())
+                    self.assertEqual((await response.json())['receipts'][0]['original']['id'], exact['id'])
+                    response = await client.get(base + 'original', params=dict(id=exact['id'],
+                        family='spread', original_bookmaker_id='prophetx', search='Orlando'))
+                    self.assertEqual(response.status, 200, await response.text())
+                    records = await response.json()
+                    self.assertTrue(records['rows'])
+                    self.assertTrue(all(row['original_bookmaker_id'] == 'prophetx' and row['family'] == 'spread'
+                                        for row in records['rows']))
+                    response = await client.get(base + 'original', params=dict(id=exact['id'], download='1'))
+                    self.assertEqual(await response.read(), original.body)
+                    self.assertIn('attachment', response.headers['Content-Disposition'])
+                    self.assertEqual((await client.get(base + 'original', params=dict(id='../fixture'))).status, 422)
+        with self.connect() as db:
+            retained = db.execute("""SELECT attempt_id, receipt_sha256 FROM public.market_pull_receipt
+                WHERE pull_id='browser-pull'""").fetchall()
+            self.assertEqual(retained, [dict(attempt_id='browser-attempt', receipt_sha256=digest)])
+
     async def test_reference_book_prices_never_enter_numeric_trading_filters_or_exports(self):
         with self.connect() as db:
             self.ingest_linked(db, page())

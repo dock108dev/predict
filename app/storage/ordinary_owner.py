@@ -28,7 +28,6 @@ class OrdinaryOwner:
         # One turn seals observations then their optional finance. No legacy
         # observation/estimate owner runs alongside this ordinary projection.
         self.task = asyncio.create_task(self.run_ordinary(), name='predict-ordinary-comparison-owner')
-        self.coverage_task = asyncio.create_task(self.run_coverage(), name='predict-coverage-owner')
 
     async def close(self):
         self.closed = True

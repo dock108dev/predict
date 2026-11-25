@@ -209,10 +209,7 @@ async def smoke():
     owner=SimpleNamespace(close=close, session=None)
     from app.dashboard.current_state import CurrentStateProvider
     provider=CurrentStateProvider()
-    provider.database_mode = True  # Serve ordinary SQL-mode assets without starting SQL or sources.
-    provider.closed = False
-    provider.closing = False
-    provider.dispatch = False  # No acquisition is permitted by this smoke provider.
+    provider.database_mode = True
     app=app_module.create_app(owner=owner, sessions={},current_provider=provider)
     runner=web.AppRunner(app)
     await runner.setup()
@@ -221,53 +218,10 @@ async def smoke():
         await site.start()
         url='http://127.0.0.1:'+str(site._server.sockets[0].getsockname()[1])
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as client:
-            for path in ('/','/research','/opportunities','/odds','/ev','/arbs','/admin','/current/coverage','/api/scanner/client',
-                         '/api/scanner/summaries',
-                         '/current/assets/scanner.js','/current/assets/scanner.css',
-                         '/current/assets/comparison-board.js','/current/assets/board.js',
-                         '/current/assets/stored.js','/current/assets/stored.css','/current/assets/board-client.js',
-                         '/view/current/sora-400.ttf', '/view/current/sora-500.ttf',
-                         '/view/current/sora-600.ttf', '/view/current/sora-700.ttf',
-                         '/view/current/sora-LICENSE.txt',
-                         '/view/current/manrope.ttf','/view/current/ui-common.js',
-                         '/admin?section=database','/view/current/admin-database.js',
-                         '/view/current/admin-database.css',
-                         '/view/current/barlow-semi-condensed-600.ttf',
-                         '/view/current/pregame.js','/view/current/pregame.css','/view/current/pregame.html',
-                         '/view/current/board-filters.js','/view/current/interaction.css',
-                         '/view/current/research.js','/view/current/research.css',
-                         '/shared-state.js',
-                         '/view/current/mode-settings.js',
-                         '/view/current/desk.js','/view/current/desk.css','/view/current/desk-preferences.js',
-                         '/view/current/desk-components.css','/view/current/desk-polling.js','/view/current/desk-quote-display.js',
-                         '/view/current/desk-ticketboard.css','/view/current/desk-ticketboard.js',
-                         '/view/current/desk-bootstrap.js','/view/current/desk-drawer.js',
-                         '/view/current/desk-inspection.js',
-                         '/view/current/desk-stability.js',
-                         '/view/current/predict-icon.png',
-                         '/view/current/coverage-shell.js','/view/current/opportunity-cards.js',
-                         '/current/assets/board-contract.js','/current/assets/board-values.js'):
-                async with client.get(url+path) as response:
-                    assert response.status==200,(path,response.status)
-                    await response.read()
-            for path in ('/api/current', '/api/current/details',
-                         '/api/comparison',
-                         '/api/stored/games', '/api/stored/result', '/api/boards/history'):
-                async with client.get(url+path) as response:
-                    assert response.status==410,(path,response.status)
-                    state=await response.json()
-                    assert state['provider_requests']==0,(path,state)
-            # These routes are supported SQL reads, not retired transports.
-            # This installed-package smoke deliberately provisions no SQL owner.
-            for path in ('/api/coverage', '/api/boards/games'):
-                async with client.get(url+path) as response:
-                    assert response.status==503,(path,response.status)
-                    state=await response.json()
-                    assert state['error']=='database_unavailable',(path,state)
-                    assert state['provider_requests']==0,(path,state)
             for path, script in (
-                ('/research', 'research-workspace.js'),
+                ('/', 'dashboard.js'),
                 ('/data', 'data-workbench.js'),
+                ('/experiments', 'experiment-workspace.js'),
                 ('/settings', 'settings.js'),
             ):
                 async with client.get(url+path) as response:
@@ -278,27 +232,30 @@ async def smoke():
                     assert response.status==200,(script,response.status)
                     assert 'javascript' in response.content_type, script
             for path, destination in (
-                ('/', '/research'),
-                ('/opportunities', '/data?calculation_status=positive'),
+                ('/research', '/experiments'),
+                ('/research?section=experiments&campaign=exact', '/experiments?campaign=exact'),
+                ('/opportunities', '/'),
                 ('/browse-odds', '/data'),
                 ('/game?game_key=smoke', '/data?game_key=smoke'),
                 ('/replay?dataset=frozen', '/data?dataset=frozen'),
             ):
                 async with client.get(url+path, allow_redirects=False) as response:
                     assert response.status==302 and response.headers['Location']==destination, (path,response.status)
+            for path in ('/arbs', '/scanner', '/my-bets', '/api/current'):
+                async with client.get(url+path) as response:
+                    assert response.status==410,(path,response.status)
+            for path in ('/api/bet-journal', '/api/scanner/summaries', '/api/comparison-current'):
+                async with client.get(url+path) as response:
+                    assert response.status==404,(path,response.status)
             for path in ('/replay?dataset=practice', '/data?dataset=synthetic',
                          '/api/odds-replay?dataset=practice', '/api/odds-replay/details?dataset=synthetic'):
                 async with client.get(url+path) as response:
                     assert response.status==422,(path,response.status)
-            assert (root/'static/saved-state.js').is_file()
-            assert (root/'historical/e5_static/index.html').is_file()
             from app.dashboard.saved_preview import fixed
             assert fixed('0.40')=='0.4'
-            assert app[current_key].provider.__class__.__name__=='CurrentStateProvider'
     finally:
         await runner.cleanup()
 from app.dashboard import multi_game_server as app_module
-from app.dashboard.current_state import CURRENT_KEY as current_key
 asyncio.run(smoke())
 """
         environment = smoke_environment(root)

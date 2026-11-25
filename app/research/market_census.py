@@ -470,15 +470,19 @@ def read_summaries(db, checkpoint_ids):
 
 def campaign_checkpoints(db, now):
     """Prioritize already-published days of campaigns that are still running."""
-    from .paper_campaigns import EASTERN
+    from .paper_campaigns import EASTERN, index
 
     today = now.astimezone(EASTERN).date()
+    active = [campaign['id'] for campaign in index(db, active_only=True)
+              if campaign['end_date'] >= str(today)]
+    if not active:
+        return []
     rows = db.execute("""SELECT game->>'checkpoint_id' AS id, MIN(day.game_date) AS first_day
-        FROM public.paper_campaign_day day JOIN public.paper_campaign campaign ON campaign.id=day.campaign_id
+        FROM public.paper_campaign_day day
         JOIN public.research_workspace_run run ON run.id=day.run_id
         CROSS JOIN LATERAL jsonb_array_elements(run.payload#>'{report,games}') AS game
-        WHERE campaign.payload->>'end_date'>=%s AND game->>'checkpoint_id' IS NOT NULL
-        GROUP BY game->>'checkpoint_id' ORDER BY first_day,id""", (str(today),))
+        WHERE day.campaign_id=ANY(%s) AND game->>'checkpoint_id' IS NOT NULL
+        GROUP BY game->>'checkpoint_id' ORDER BY first_day,id""", (active,))
     return [row["id"] for row in rows]
 
 

@@ -100,7 +100,7 @@ def test_result_status_history_and_exact_variant_exports():
     asyncio.run(check())
 
 
-def test_direct_paper_game_and_trade_links_stay_on_research():
+def test_direct_paper_game_and_trade_links_open_experiments():
     async def check():
         root = Path(__file__).resolve().parents[1] / "app/dashboard"
         app = web.Application(middlewares=[compatibility_middleware()])
@@ -108,9 +108,12 @@ def test_direct_paper_game_and_trade_links_stay_on_research():
         query = "?section=experiments&run=paper-run&game=paper-game&trade=ticket&result=version"
         async with TestClient(TestServer(app)) as client:
             entered = await client.get("/research" + query, allow_redirects=False)
-            assert entered.status == 200 and "Skip to Research" in await entered.text()
+            destination = "/experiments" + query.replace("section=experiments&", "")
+            assert entered.status == 302 and entered.headers["Location"] == destination
+            followed = await client.get(destination)
+            assert followed.status == 200 and 'id="experiments-main"' in await followed.text()
             slash = await client.get("/research/" + query, allow_redirects=False)
-            assert slash.status == 302 and slash.headers["Location"] == "/research" + query
+            assert slash.status == 302 and slash.headers["Location"] == destination
             legacy = await client.get("/research?game=legacy-catalog-game", allow_redirects=False)
             assert legacy.status == 302
             assert legacy.headers["Location"] == "/data?game=legacy-catalog-game"

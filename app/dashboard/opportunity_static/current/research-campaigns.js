@@ -114,7 +114,13 @@ export function campaignList(values){
   return root;
 }
 
-function ruleSummary(config) {
+const evidenceRules = {
+  'Capture timing':'Final eligible retained observation at T−10 (ten minutes before the scheduled start)',
+  'Reference prices':'Exact-line reference inputs and probability recorded with each capture',
+  'Fee assumption':'Use the captured fee model. Retrospective reconstructions assume $0 fees.',
+};
+
+export function ruleSummary(config) {
   const fixed=config.sizing_mode==='fixed_profit';
   const kelly=config.kelly_multiplier!=null
     ? `${percent(config.kelly_multiplier)}% of full Kelly on a ${usd(config.reference_bankroll_usd)} reference bankroll` : null;
@@ -126,11 +132,11 @@ function ruleSummary(config) {
     'Minimum EV':`${percent(config.minimum_ev)}% unrounded, including after sizing`,
     'EV buckets':config.bucket_edges.map((minimum,i,edges)=>band({minimum,maximum:edges[i+1]})).join(', '),
     Portfolios:(config.portfolios || allPortfolios).map(portfolio=>titles[portfolio]).join(' and '),
-    Evidence:'Final eligible T−10 observation in the capture window, with exact-line reference probabilities',
+    ...evidenceRules,
   };
 }
 
-export function campaignForm(root,config=null,revision=null,variant='best_venue',context={}){
+export function campaignForm(root,config=null,revision=null,variant='best_venue',context={},options={}){
   const panel=card(config?'Revise experiment':'Create experiment');
   panel.append(node('p',config?'Saving changes creates a new version. Earlier reports remain available.':'Save a paper experiment to replay retained evidence and schedule upcoming game dates.'));
   const form=node('form',undefined,'campaign-form'), fields=node('div',undefined,'campaign-fields'), inputs={};
@@ -150,9 +156,20 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     reference_bankroll_usd:config.reference_bankroll_usd==null ? defaults.reference_bankroll_usd : rescale(config.reference_bankroll_usd,1n,1n),
     bucket_edges:config.bucket_edges.map(percent).join(', '),
   });
+  const handoff=options.dataFilters;
+  if (handoff) {
+    const date=handoff.get('date');
+    const useDate=(keys,fallback)=>keys.map(key=>handoff.get(key)).find(value=>value && /^\d{4}-\d{2}-\d{2}$/.test(value)) || fallback;
+    defaults.start_date=useDate(['start_date','date_from','date'], date || '');
+    defaults.end_date=useDate(['end_date','date_to','date'], date || '');
+    if (handoff.get('scope') !== 'mens-d1') defaults.scope='';
+  }
   function field(parent,key,title,{type='text',options}={}) {
-    const lab=node('label',title), input=node(options ? 'select' : 'input');
+    const lab=node('label'), caption=node('span',title), input=node(options ? 'select' : 'input');
     input.name=key;
+    caption.id='campaign-field-'+key;
+    input.setAttribute('aria-labelledby',caption.id);
+    lab.append(caption);
     if(options) input.append(...Object.entries(options).map(([value,text])=>new Option(text,value)));
     else input.type=type;
     if(type==='checkbox') {
@@ -170,9 +187,12 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     return input;
   }
   field(fields,'name','Experiment name');
-  field(fields,'scope','Game scope',{options:{'mens-d1':'Men’s NCAA Division I vs. Division I'}});
+  field(fields,'scope','Game scope',{options:{'':'Choose game scope','mens-d1':'Men’s NCAA Division I vs. Division I'}});
   field(fields,'start_date','First game date (Eastern)',{type:'date'});
   field(fields,'end_date','Last game date (Eastern)',{type:'date'});
+  const retained=node('fieldset',undefined,'campaign-fields campaign-evidence-rules');
+  retained.append(node('legend','Captured data and assumptions'), pairs(evidenceRules));
+  fields.append(retained);
   field(fields,'sizing_mode','Sizing method',{options:modes});
   const fixed=node('fieldset',undefined,'campaign-fields');
   fixed.append(node('legend','Fixed profit settings'));
@@ -198,6 +218,24 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   }
   portfolios.append(node('p','Best venue keeps one qualifying venue per exact bet. Different lines stay separate.'));
   fields.append(portfolios);
+  let acceptFilters;
+  if (handoff) {
+    const dataFilters={sport:'Sport',game:'Game',search:'Search',provider:'Source',source:'Source',venue:'Venue',
+      book:'Venue',original_bookmaker_id:'Venue',market:'Market',family:'Market',calculation_status:'Calculation',
+      pull:'Original pull',receipt:'Original raw response',event_id:'Source event',competition:'Competition',include_alternates:'Alternate lines',
+      reference_scope:'Reference scope',max_age_minutes:'Maximum quote age'};
+    if (handoff.has('scope') && handoff.get('scope') !== 'mens-d1') dataFilters.scope='Scope';
+    const unsupported=Object.entries(dataFilters).filter(([key])=>handoff.get(key));
+    if (unsupported.length) {
+      const disclosure=node('fieldset',undefined,'campaign-fields campaign-handoff');
+      disclosure.append(node('legend','Review filters from Data'),
+        node('p','These Data filters limit what you were browsing. The paper engine evaluates every supported market and venue in the experiment’s game scope and dates.'),
+        pairs(Object.fromEntries(unsupported.map(([key,title])=>[title,handoff.get(key)]))));
+      const acceptance=node('label','Use the experiment’s game scope and dates','campaign-check');
+      acceptFilters=node('input');acceptFilters.type='checkbox';acceptFilters.required=true;
+      acceptance.prepend(acceptFilters);disclosure.append(acceptance);fields.prepend(disclosure);
+    }
+  }
   function updateFields(){
     const isFixed=inputs.sizing_mode.value==='fixed_profit';
     fixed.hidden=fixed.disabled=!isFixed;
@@ -219,6 +257,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     const body=Object.fromEntries(Object.entries(inputs).filter(([,input])=>!input.closest('fieldset:disabled'))
       .map(([key,input])=>[key,input.type==='checkbox' ? input.checked : input.value.trim()]));
     if(!body.name)throw Error('Enter an experiment name.');
+    if(acceptFilters && !acceptFilters.checked)throw Error('Review which Data filters the experiment supports.');
     if(body.end_date<body.start_date)throw Error('Choose a last game date on or after the first.');
     if((Date.parse(body.end_date)-Date.parse(body.start_date))/86400000>=366)throw Error('Choose an experiment period of up to one year.');
     for(const key of ['minimum_ev','kelly_multiplier'])if(body[key]!=null)body[key]=decimalRate(body[key]);
@@ -262,11 +301,13 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
       }
       save.disabled=back.disabled=true;feedback.textContent='Saving experiment…';
       const value=await readJSON(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(reviewed)});
-      location.href=href(value.id,configuredPortfolio(reviewed,variant),{view:'weekly',mode:reviewed.sizing_mode});
+      location.href=options.afterSave ? options.afterSave(value,configuredPortfolio(reviewed,variant))
+        : href(value.id,configuredPortfolio(reviewed,variant),{view:'weekly',mode:reviewed.sizing_mode});
     }catch(error){feedback.textContent=error.message;save.disabled=back.disabled=false;}
   };
   form.append(fields,next,review,feedback);panel.append(form);
-  panel.append(revision?link('Back to experiment',href(revision,variant,{...context,view:'weekly'}))
+  panel.append(options.backHref ? link(revision?'Back to experiment':'Back to experiments',options.backHref)
+    : revision?link('Back to experiment',href(revision,variant,{...context,view:'weekly'}))
     :link('Back to experiments','/research?section=experiments'));
   root.append(panel);
 }

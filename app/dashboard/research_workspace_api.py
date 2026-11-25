@@ -32,7 +32,7 @@ def _identity(value):
     return value
 
 
-def mount(app):
+def mount(app, *, campaigns_only=False):
     gate = asyncio.Semaphore(2)
     dated_export = asyncio.Lock()
     jobs = {}
@@ -72,7 +72,7 @@ def mount(app):
         if request.method == 'POST':
             body = await read_json(request)
             return _response(await work(paper_campaigns.create, body, read_only=False))
-        return _response(dict(campaigns=await work(paper_campaigns.index)))
+        return _response(dict(campaigns=await work(paper_campaigns.index, active_only=True)))
 
     async def campaign(request):
         query = request.query
@@ -82,6 +82,16 @@ def mount(app):
         value = await work(paper_campaigns.view, _identity(request.match_info['campaign_id']),
                            query.get('variant'), mode=query.get('mode'))
         name = f'predict-week-{value["config"]["start_date"]}-{value["mode"]}-{value["variant"]}.json'
+        return _response(value, filename=name if query.get('export') else None)
+
+    async def campaign_day(request):
+        query = request.query
+        if (set(query) - {'variant', 'export'} or len(query) != len(set(query))
+                or query.get('export') not in (None, '1')):
+            raise PublicRequestError('Select an experiment portfolio.')
+        value = await work(paper_campaigns.daily, _identity(request.match_info['campaign_id']),
+                           request.match_info['game_date'], query.get('variant'))
+        name = f'predict-comparison-{value["date"]}-{value["variant"]}.json'
         return _response(value, filename=name if query.get('export') else None)
 
     async def run(request):
@@ -232,12 +242,14 @@ def mount(app):
         value = await work(workspace.game_evidence, identity, game, export=bool(query))
         return _response(value, filename=f"predict-checkpoint-{game[:12]}.json" if query else None)
 
-    app.router.add_get(BASE, index)
+    if not campaigns_only:
+        app.router.add_get(BASE, index)
+        app.router.add_post(BASE + "/runs", replay)
     app.router.add_get(BASE + '/campaigns', campaigns)
     app.router.add_post(BASE + '/campaigns', campaigns)
     app.router.add_get(BASE + '/campaigns/{campaign_id}', campaign)
+    app.router.add_get(BASE + '/campaigns/{campaign_id}/days/{game_date}', campaign_day)
     app.router.add_get(BASE + "/result-evidence/{result_id}", result_evidence)
-    app.router.add_post(BASE + "/runs", replay)
     app.router.add_get(BASE + "/mens-d1-jobs/{job_id}", replay_status)
     app.router.add_get(BASE + "/runs/{run_id}", run)
     app.router.add_get(BASE + "/runs/{run_id}/results", results)

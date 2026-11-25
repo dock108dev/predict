@@ -166,7 +166,7 @@ async def response(request, *, connector=None):
     return web.json_response(result, headers={"Cache-Control": "no-store"})
 
 
-def mount(app):
+def mount(app, *, board_only=False):
     async def health(request):
         def probe():
             with connect() as db, db.transaction():
@@ -186,6 +186,7 @@ def mount(app):
 
     app.router.add_get("/api/health", health)
     app.router.add_get("/api/pregame", response)
-    app.router.add_get("/api/pregame/arbs", response)
     app.router.add_get("/api/pregame/updates", response)
-    app.router.add_post("/api/pregame/research", response)
+    if not board_only:
+        app.router.add_get("/api/pregame/arbs", response)
+        app.router.add_post("/api/pregame/research", response)

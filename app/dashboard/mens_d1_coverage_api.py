@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 from aiohttp import web
 
 from app.owned_work import joined_thread
-from app.research import experiment, issue_dispositions, market_census, paper_evidence, workspace
+from app.research import experiment, issue_dispositions, market_census, paper_campaigns, paper_evidence, workspace
 from app.storage.store import connect, encoded, stamp
 from .local_security import HEADERS, PublicRequestError, read_json
 from .pipeline import serial
@@ -18,14 +18,21 @@ BASE = "/api/workspace/mens-d1"
 
 
 def _saved(db, day, run_id):
-    runs = list(db.execute("""SELECT r.id,r.game_date,r.definition_version,r.observed_at,r.summary,
+    retained = list(db.execute("""SELECT r.id,r.game_date,r.definition_version,r.observed_at,r.summary,
                r.supersedes,r.report_revision,
                d.payload->>'designation' designation,d.payload#>>'{policy,scope}' scope,
-               d.payload#>>'{policy,minimum_ev}' minimum_ev
+               d.payload#>>'{policy,minimum_ev}' minimum_ev,d.payload->>'campaign_id' campaign_id,
+               COALESCE(d.payload->>'sizing_mode','kelly') sizing_mode
         FROM public.research_workspace_run r JOIN public.research_workspace_definition d
         ON d.version=r.definition_version WHERE r.game_date=%s::date
         ORDER BY r.observed_at DESC,r.id""", (day,)))
-    selected = next((row for row in runs if row["id"] == run_id), None) if run_id else next(
+    campaigns = paper_campaigns.index(db, active_only=True)
+    primary_modes = {campaign['id']: paper_campaigns.modes(campaign)[0] for campaign in campaigns}
+    runs = [row for row in retained if primary_modes.get(row['campaign_id']) == row['sizing_mode']]
+    if campaigns:
+        featured_id = campaigns[0]['id']
+        runs.sort(key=lambda row: row['campaign_id'] != featured_id)
+    selected = next((row for row in retained if row["id"] == run_id), None) if run_id else next(
         (row for row in runs if row["scope"] == "mens-d1"), None)
     if run_id and selected is None:
         raise PublicRequestError("The saved run belongs to another game date or is unavailable.")
@@ -666,7 +673,7 @@ def _provider_result_receipt(db, identity):
     raise web.HTTPNotFound(reason="Original provider result response was not retained.")
 
 
-def mount(app):
+def mount(app, *, read_only=False):
     gate = asyncio.Semaphore(2)
 
     async def work(operation, *args, read_only=True):
@@ -769,7 +776,8 @@ def mount(app):
             "Content-Disposition":f'attachment; filename="predict-original-{metadata["receipt_sha256"]}.json"'})
 
     app.router.add_get(BASE, coverage)
-    app.router.add_post(BASE + "/issues", issue)
+    if not read_only:
+        app.router.add_post(BASE + "/issues", issue)
     app.router.add_get(BASE + "/market-census", market)
     app.router.add_get(BASE + "/status", status)
     app.router.add_get(BASE + "/receipts/{receipt_id}", receipt)

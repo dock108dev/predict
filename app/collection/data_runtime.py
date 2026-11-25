@@ -49,11 +49,11 @@ class DataRuntime:
             catalog_transfer=getattr(getattr(getattr(self.service,'ingress',None),'catalog_preparer',None),'metrics',None),
             startup_storage_maintenance=self.startup_maintenance)
         self.service.background_calculations = dict(
-            scanner='pending' if self.scanner is None else 'unavailable' if getattr(self.scanner, 'error', None) else 'stopped' if getattr(self.scanner, 'closed', False) else 'running',
+            scanner='retired' if self.scanner is None else 'unavailable' if getattr(self.scanner, 'error', None) else 'stopped' if getattr(self.scanner, 'closed', False) else 'running',
             scanner_error=None if self.scanner is None or not getattr(self.scanner, 'error', None) else 'background_scanner_unavailable',
             board='pending' if self.board is None else 'unavailable' if getattr(self.board, 'error', None) else 'running',
             board_error=None if self.board is None or not getattr(self.board, 'error', None) else 'background_board_unavailable',
-            coverage='pending' if self.board is None else 'unavailable'
+            coverage='retired' if self.board is None or not getattr(self.board, 'coverage_task', None) else 'unavailable'
                 if getattr(self.board,'coverage_error',None) else 'pending'
                 if not getattr(self.board,'last_coverage',None) or getattr(self.board,'last_coverage',{}).get('deferred') else 'running',
             coverage_error=None if self.board is None else getattr(self.board,'coverage_error',None),
@@ -124,15 +124,11 @@ class DataRuntime:
             BACKGROUND.acquisition_pressure=self.acquisition_pressure
             BACKGROUND.critical_acquisition_pressure=lambda:self.acquisition_pressure(critical=True)
             await self.persist_control()
-            if self.scanner_factory is None:
-                from app.dashboard.scanner_api import Scanner
-                self.scanner = Scanner(self.service, connector=self.connector, durable=True,
-                                       full_slate_worker=self.connector is connect)
-            else:
+            if self.scanner_factory:
                 self.scanner = self.scanner_factory(self.service)
-            result = self.scanner.start()
-            if inspect.isawaitable(result):
-                await result
+                result = self.scanner.start()
+                if inspect.isawaitable(result):
+                    await result
             if self.board_factory:
                 self.board = self.board_factory(self.service)
                 result = self.board.start()
@@ -172,7 +168,7 @@ class DataRuntime:
             restoration = metrics.get('restoration') or {}
             if not critical and restoration.get('stage') in (
                     'loading_saved_catalog', 'validating_saved_markets', 'admitting_saved_catalog'):
-                # The scanner and coverage processes can retry while the
+                # Coverage work can retry while the
                 # native source rebuilds its catalog. Ordinary odds delivery
                 # continues and the source keeps its existing guards.
                 task = getattr(self.service, 'tasks', {}).get(venue)

@@ -571,26 +571,31 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
     policy.minimum_ev && `EV ≥${pct(policy.minimum_ev)}`,
     navigation.mode==='fixed_profit' ? sizingTitle(navigation.config,navigation.mode)
       : policy.kelly_multiplier && `${policy.kelly_multiplier} full Kelly`];
-  title.append(node('h2', selected.run.title), node('p', context.filter(Boolean).join(' · '), 'workspace-caption'));
-  const controls = node('div', undefined, 'results-controls');
-  const dates = node('div', undefined, 'workspace-form result-date-control');
-  dates.append(dropdown('Game date (Eastern)', navigation.dates.map(day => [day, day]), selected.run.date, navigation.changeDate, 'game-date'));
-  const variantsNav = node('nav', undefined, 'workspace-variant');
-  variantsNav.setAttribute('aria-label', 'Paper portfolios');
-  for (const name of navigation.config.portfolios || Object.keys(variants)) {
-    const entry = focusKey(action(variants[name], navigation.href({variant:name})), 'portfolio-' + name);
-    if (name === navigation.variant) entry.setAttribute('aria-current', 'true');
-    variantsNav.append(entry);
-  }
-  if (navigation.weeklyHref) controls.append(workbenchPeriod(navigation.href({view:null}), navigation.weeklyHref, 'daily'));
-  const chosen=requestedTrade(portfolio?.tickets || [],navigation.params);
-  const sizing=workbenchSizing(navigation.config,navigation.sizingModes,navigation.mode,mode=>navigation.modeHref(mode,chosen));
-  if(sizing) controls.append(sizing);
-  controls.append(dates, variantsNav);
+  if (!navigation.embedded) title.append(node('h2', selected.run.title));
+  title.append(node('p', context.filter(Boolean).join(' · '), 'workspace-caption'));
   dayHeader.append(title, statusNotice(analysis, navigation.pinned, portfolio?.summary));
-  header.append(dayHeader, controls);
-  if (portfolio && usable) header.append(summaryView(portfolio.summary, report.games.length));
-  else {
+  header.append(dayHeader);
+  if (!navigation.embedded) {
+    const controls = node('div', undefined, 'results-controls');
+    const dates = node('div', undefined, 'workspace-form result-date-control');
+    dates.append(dropdown('Game date (Eastern)', navigation.dates.map(day => [day, day]), selected.run.date, navigation.changeDate, 'game-date'));
+    const variantsNav = node('nav', undefined, 'workspace-variant');
+    variantsNav.setAttribute('aria-label', 'Paper portfolios');
+    for (const name of navigation.config.portfolios || Object.keys(variants)) {
+      const entry = focusKey(action(variants[name], navigation.href({variant:name})), 'portfolio-' + name);
+      if (name === navigation.variant) entry.setAttribute('aria-current', 'true');
+      variantsNav.append(entry);
+    }
+    if (navigation.weeklyHref) controls.append(workbenchPeriod(navigation.href({view:null}), navigation.weeklyHref, 'daily'));
+    const chosen=requestedTrade(portfolio?.tickets || [],navigation.params);
+    const sizing=workbenchSizing(navigation.config,navigation.sizingModes,navigation.mode,mode=>navigation.modeHref(mode,chosen));
+    if (sizing) controls.append(sizing);
+    controls.append(dates, variantsNav);
+    header.append(controls);
+  }
+  if (portfolio && usable) {
+    if (!navigation.embedded) header.append(summaryView(portfolio.summary, report.games.length));
+  } else if (!navigation.embedded || !portfolio) {
     const original = selected.report.portfolios[navigation.variant];
     const originalUsable = selected.report.games?.some(game => captured({capture_status:game.status}));
     if (!portfolio && (originalUsable || original.count)) {
@@ -634,7 +639,7 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   }
   root.append(tools);
   if (exclusions) root.append(exclusions);
-  if (usable) {
+  if (usable && !navigation.embedded) {
     const comparison=selected.sizing_comparison?.[navigation.variant];
     if(comparison?.counts)root.append(sizingComparison(comparison,navigation));
     const quality = qualityComparison(analysis.quality);

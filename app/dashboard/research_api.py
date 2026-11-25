@@ -164,11 +164,13 @@ class CatalogReads(RawReads):
                 return dict(value, captured_at=frame['at'])
 
 
-def mount(app):
+def mount(app, *, campaigns_only=False):
+    from .data_browser import mount as mount_data_browser
     from .paper_api import mount as mount_paper
     from .research_workspace_api import mount as mount_workspace
+    mount_data_browser(app)
     mount_paper(app)
-    mount_workspace(app)
+    mount_workspace(app, campaigns_only=campaigns_only)
     reads = CatalogReads(connect)
     gate = asyncio.Semaphore(CATALOG_READ_CAPACITY)
 
@@ -255,6 +257,34 @@ def mount(app):
         validate(request.query)
         async with admission():
             value = await joined(reads.markets, dict(request.query))
+        return web.json_response(value, headers=HEADERS)
+
+    async def dashboard(request):
+        if set(request.query) - {'offset', 'limit'}:
+            raise PublicRequestError('Dashboard takes only page settings.')
+        validate(request.query)
+
+        def work():
+            from datetime import timedelta
+            from app.collection.activity_mode import DEFAULT_SETTINGS
+            from app.storage.market_board import dashboard as read_dashboard
+
+            with reads.connector() as db, db.transaction():
+                db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                db.execute("SET LOCAL statement_timeout='10s'")
+                db.execute("SET LOCAL jit='off'")
+                at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
+                mode = db.execute('SELECT settings FROM public.activity_mode WHERE singleton').fetchone()
+                settings = mode['settings'] if mode else DEFAULT_SETTINGS
+                horizon = settings['monitor_horizon_seconds']
+                until = at + timedelta(seconds=horizon) if horizon else datetime.max.replace(tzinfo=timezone.utc)
+                packet = read_dashboard(db, at=at, until=until, freshness_seconds=settings['monitor_interval_seconds'],
+                    offset=int(request.query.get('offset', 0)), limit=int(request.query.get('limit', 30)))
+                return dict(packet, schema='predict-dashboard-1', read_at=at.isoformat(),
+                    provider_requests=0, scheduled_calculations=0)
+
+        async with admission():
+            value = await joined(work)
         return web.json_response(value, headers=HEADERS)
 
     async def market(request):
@@ -344,7 +374,8 @@ def mount(app):
 
     async def experiment(request):
         query = dict(request.query)
-        if set(query)-{'id', 'revision', 'export', 'include_context', 'outcomes_only', 'limit', 'offset'} or any(
+        filters = {key: query[key] for key in ('date', 'sport', 'search', 'event_id', 'provider') if query.get(key)}
+        if set(query)-{'id', 'revision', 'export', 'include_context', 'outcomes_only', 'limit', 'offset'}-set(filters) or any(
                 len(value) > 256 for value in query.values()):
             raise PublicRequestError('Invalid checkpoint experiment selection.')
         if any(query.get(key) not in (None, '1') for key in ('export', 'include_context', 'outcomes_only')):
@@ -361,7 +392,9 @@ def mount(app):
                 raise ValueError()
         except ValueError:
             raise PublicRequestError('Invalid checkpoint experiment page.') from None
-        if identity and any(key in query for key in ('include_context', 'outcomes_only', 'limit', 'offset')):
+        if filters.get('date'):
+            validate({'date': filters['date']})
+        if identity and (filters or any(key in query for key in ('include_context', 'outcomes_only', 'limit', 'offset'))):
             raise PublicRequestError('Context filtering applies to the game list.')
 
         def work():
@@ -379,6 +412,8 @@ def mount(app):
                     options = dict(include_context=query.get('include_context') == '1', limit=limit, offset=offset)
                     if query.get('outcomes_only') == '1':
                         options['outcomes_only'] = True
+                    if filters:
+                        options['filters'] = filters
                     return owner.catalog(db, **options)
 
         try:
@@ -398,6 +433,7 @@ def mount(app):
         return web.json_response(serial(value), headers=HEADERS)
 
     app.router.add_get('/api/research/markets', markets)
+    app.router.add_get('/api/research/dashboard', dashboard)
     app.router.add_get('/api/research/market', market)
     app.router.add_get('/api/research/market-export', market)
     app.router.add_get('/api/research/games', games)

@@ -6,7 +6,7 @@ from app.collection import activity_mode
 from .local_security import read_json
 
 
-def mount(app):
+def mount(app, *, read_only=False):
     async def get(request):
         return web.json_response(await asyncio.to_thread(activity_mode.read_status))
 
@@ -26,5 +26,6 @@ def mount(app):
         return web.json_response(await asyncio.to_thread(activity_mode.activity))
 
     app.router.add_get("/api/admin/activity-mode", get)
-    app.router.add_patch("/api/admin/activity-mode", patch)
-    app.router.add_post("/api/admin/activity-mode/activity", activity)
+    if not read_only:
+        app.router.add_patch("/api/admin/activity-mode", patch)
+        app.router.add_post("/api/admin/activity-mode/activity", activity)

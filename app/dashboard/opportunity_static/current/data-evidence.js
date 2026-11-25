@@ -16,6 +16,19 @@ export function renderInput(root,value){
  if(value.calculation?.reason)summary.append(node('p',value.calculation.reason.replaceAll('_',' ')));root.append(summary);
  if(reference?.prices){const inputs=section(root,'Supporting reference prices');table(inputs,['Book','Selection / line','Odds','Received'],reference.prices.map(row=>[venue(row.venue),selection(row),odds(row.price_american),dateTime(row.received_at)]));}
 
+ const actions=node('div',undefined,'data-browser-links');
+ const receipt=value.original_response?.captures?.find(item=>item.state==='retained'&&
+   Date.parse(item.received_at)===Date.parse(value.times?.received_at));
+ if(value.original_response?.state==='retained'&&receipt){
+  const anchor=node('a','Inspect original response','research-button');
+  anchor.href='/data?'+new URLSearchParams({evidence:'pulls',receipt:receipt.id, event_id:value.event_id,
+   original_bookmaker_id:value.original_bookmaker_id, family:value.family});actions.append(anchor);
+ }
+ if(value.event_id){
+  const anchor=node('a','Find sporting result','research-button');
+  anchor.href='/data?'+new URLSearchParams({evidence:'populations',event_id:value.event_id});actions.append(anchor);
+ }
+ if(actions.childElementCount)root.append(actions);
  const mode=value.fee_mode||value.calculation_payload?.fee_mode;
  if(mode)root.append(node('p',mode.enabled?'Calculation captured with fees enabled.':'Calculation captured with fees off: all fees assumed to be 0.'));
  const download=node('a','Export this exact input & result','research-button');

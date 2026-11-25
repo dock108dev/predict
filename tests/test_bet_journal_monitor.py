@@ -14,51 +14,28 @@ NOW = stamp("2026-11-18T15:00:00Z")
 
 
 class RecoveryJournalIsolation(IsolatedAsyncioTestCase):
-    async def test_slow_journal_does_not_stall_recovery_or_overlap_and_close_drains(
-        self,
-    ):
+    async def test_pregame_recovery_never_starts_the_retired_journal_sampler(self):
         import asyncio
         from threading import Event
         from unittest.mock import AsyncMock
+
         from app.collection.pregame_owner import PregameOwner
 
         owner = PregameOwner(None)
         owner.research = SimpleNamespace(close=AsyncMock())
-        started, release, recovered = Event(), Event(), Event()
-        turns = []
-
-        def turn():
-            turns.append(1)
-            if len(turns) >= 2:
-                recovered.set()
-
-        def slow_poll():
-            started.set()
-            release.wait(3)
+        recovered = Event()
 
         with (
-            patch.object(owner, "turn", side_effect=turn),
-            patch.object(monitor, "poll", side_effect=slow_poll) as sampling,
-            patch(
-                "app.collection.background_work.BACKGROUND.critical_acquisition_pressure",
-                return_value=False,
-            ),
+            patch.object(owner, "turn", side_effect=recovered.set) as recovery,
+            patch.object(monitor, "poll") as sampling,
         ):
             owner.task = asyncio.create_task(owner.run())
             try:
-                self.assertTrue(await asyncio.to_thread(started.wait, 1))
                 self.assertTrue(await asyncio.to_thread(recovered.wait, 1))
-                owner.sample_journal()
-                self.assertEqual(sampling.call_count, 1)
-                closing = asyncio.create_task(owner.close())
-                await asyncio.sleep(0)
-                self.assertFalse(closing.done())
+                recovery.assert_called()
             finally:
-                owner.closed = True
-                owner.wake.set()
-                release.set()
-                await asyncio.wait_for(owner.close(), 2)
-            await asyncio.wait_for(closing, 2)
+                await owner.close()
+            sampling.assert_not_called()
 
 
 class Journal:

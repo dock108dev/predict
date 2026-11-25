@@ -30,12 +30,15 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     if owner is None:
         from app.dashboard.coverage_owner import CoverageOwner
         owner=CoverageOwner(output,spec_factory=configuration,product_mode=True,pilot_output=ROOT/'evidence/product-sessions')
+    if getattr(current_provider, 'database_mode', False):
+        from .workspace_app import create_app as create_workspace_app
+
+        return create_workspace_app(current_provider, owner)
     from app.dashboard.opportunity_history import WatchStore, Signals
     watches=WatchStore(watch_path or ROOT/'.local/predict-watchlists.json')
     signals=Signals()
     history_busy=False
     retained_sessions=sessions
-    observed_history_only=bool(getattr(current_provider,'database_mode',False) and not getattr(current_provider,'allow_synthetic',False))
     def retained():
         nonlocal retained_sessions
         if retained_sessions is None:retained_sessions=load_sessions()
@@ -83,13 +86,6 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         if owner.active() and s and s.journal and not hasattr(s,'projection'):
             saved=reopen(s.journal.path);select=next((r for r in saved['rows'] if r['type']=='multi_game_selection'),None)
             if select:values[s.sid]=dict(rows=saved['rows'],games=select['games'],coverage=select['coverage'],live=True,label='Current multi-game scan')
-        if observed_history_only:
-            # Production exposes authentic captures only. Test-only injected
-            # providers retain their isolated authored history fixtures.
-            modes={'real','production','observation','current'}
-            values={sid:value for sid,value in values.items() if
-                (value.get('product') or {}).get('data_mode') in modes or
-                bool(value.get('rows') and value['rows'][0].get('spec',{}).get('mode') in modes)}
         return values
     def product_cutoff(sid,d,cutoff):
         from app.dashboard import session_history
@@ -101,10 +97,7 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
             if snapshot is None:raise PublicRequestError('Older segmented cutoff available after Stop')
             return snapshot
         return session_history.load(d['folder'],cutoff)
-    from .workspace_routes import compatibility_middleware
     middlewares = [dashboard_guard(current_provider, logger=__name__)]
-    if getattr(current_provider, 'database_mode', False):
-        middlewares.append(compatibility_middleware())
     app=web.Application(middlewares=middlewares,client_max_size=IMPORT_BODY_LIMIT,handler_args={'auto_decompress':False});app[OWNER_KEY]=owner
     async def state(req):return web.json_response(owner.status())
     async def coverage_page(req):
@@ -511,92 +504,18 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
     app.router.add_get('/api/updates',updates)
     from pathlib import Path
     static_root=Path(__file__).parent
-    database_mode=getattr(current_provider,'database_mode',False)
-    from .raw_price_api import mount as mount_raw_prices
-    if database_mode:
-        from .workspace_routes import mount as mount_workspace
-        mount_workspace(app, static_root)
-        from .workspace_sessions import mount as mount_workspace_sessions
-        mount_workspace_sessions(app, owner)
-        async def desk_page(req):
-            from app.storage.odds_replay import DATASETS
-            if req.query.get('dataset', 'frozen') not in (*DATASETS, 'retained'):
-                raise PublicRequestError('Unknown replay dataset')
-            return web.FileResponse(static_root/'opportunity_static/current/desk.html')
+    preview_pages = {
+        '/': 'opportunity_static/current/index.html',
+        '/ev': 'opportunity_static/current/ev.html',
+        '/arbs': 'opportunity_static/current/arbs.html',
+        '/game': 'opportunity_static/index.html',
+    }
 
-        async def pregame_page(req):
-            if req.query.get('phase')=='live':
-                return web.FileResponse(static_root/'opportunity_static/current/desk.html')
-            if req.path == '/game' and req.query.get('game_capture'):
-                query = dict(req.query)
-                query.update(view='game', dataset='retained', result_id=query.pop('game_capture'))
-                raise web.HTTPFound(str(req.rel_url.with_path('/replay').with_query(query)))
-            return web.FileResponse(static_root/'opportunity_static/current/pregame.html')
+    async def preview_page(req):
+        return web.FileResponse(static_root/preview_pages[req.path])
 
-        for route in ('/opportunities', '/ev', '/browse-odds', '/game'):
-            app.router.add_get(route, pregame_page)
-        async def research_page(req):
-            # Preserve saved exact-comparison links made before Research became
-            # the landing view. Their explicit input selection still wins.
-            if req.path=='/' and (set(req.query)&{'id','bet_id','quote_key','line','game_key','phase'}):
-                return await pregame_page(req)
-            if req.path=='/':
-                raise web.HTTPFound('/research')
-            return web.FileResponse(static_root/'opportunity_static/current/research.html')
-        app.router.add_get('/',research_page)
-        app.router.add_get('/research',research_page)
-        from .research_api import mount as mount_research
-        mount_research(app)
-        async def pregame_arbs_page(req):
-            return web.FileResponse(static_root/'opportunity_static/current/pregame-arbs.html')
-        app.router.add_get('/arbs',pregame_arbs_page)
-        for route in ('/replay',):
-            app.router.add_get(route, desk_page)
-        from .current_pregame_api import mount as mount_current_pregame
-        mount_current_pregame(app)
-        from .activity_mode_api import mount as mount_activity_mode
-        mount_activity_mode(app)
-        from .bet_journal_api import mount as mount_bet_journal
-        mount_bet_journal(app)
-        from .appearance_api import mount as mount_appearance
-        mount_appearance(app)
-        async def desk_redirect(req):
-            raise web.HTTPFound('/')
-        app.router.add_get('/view/current/desk.html',desk_redirect)
-
-        async def trading_fees_page(req):
-            return web.FileResponse(static_root/'opportunity_static/current/trading-fees.html')
-
-        async def trading_fees(req):
-            from .fee_guide import guide
-
-            return web.json_response(await asyncio.to_thread(guide))
-
-        async def about_page(req):
-            return web.FileResponse(static_root/'opportunity_static/current/about.html')
-
-        app.router.add_get('/about', about_page)
-        app.router.add_get('/trading-fees', trading_fees_page)
-        app.router.add_get('/api/trading-fees', trading_fees)
-
-        from .admin_database import mount as mount_admin_database
-        from .quote_quality import mount as mount_quote_quality
-        mount_admin_database(app)
-        mount_raw_prices(app)
-        mount_quote_quality(app)
-    else:
-        preview_pages = {
-            '/': 'opportunity_static/current/index.html',
-            '/ev': 'opportunity_static/current/ev.html',
-            '/arbs': 'opportunity_static/current/arbs.html',
-            '/game': 'opportunity_static/index.html',
-        }
-
-        async def preview_page(req):
-            return web.FileResponse(static_root/preview_pages[req.path])
-
-        for route in preview_pages:
-            app.router.add_get(route, preview_page)
+    for route in preview_pages:
+        app.router.add_get(route, preview_page)
     async def odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/stored.html')
     async def raw_odds_page(req):return web.FileResponse(static_root/'opportunity_static/current/raw-odds.html')
     app.router.add_get('/raw-odds',raw_odds_page)
@@ -702,22 +621,13 @@ def create_app(output=OUTPUT,owner=None,sessions=None,watch_path=None,current_pr
         return web.json_response(value)
     async def comparison_coverage_page(req):return web.FileResponse(static_root/'opportunity_static/current/coverage.html')
     app.router.add_get('/api/comparison',comparison_data)
-    if not database_mode:app.router.add_get('/api/coverage',comparison_coverage)
+    app.router.add_get('/api/coverage',comparison_coverage)
     # The retained session coverage page has its own reader at /coverage;
     # current comparison coverage is explicitly namespaced.
     app.router.add_get('/current/coverage',comparison_coverage_page)
     app.router.add_get('/admin/retained',retained_page)
     from .current_state import mount as mount_current
     mount_current(app,current_provider)
-    if database_mode:
-        from .stored_games import mount as mount_stored
-        mount_stored(app,current_provider)
-        from .snapshot_api import mount as mount_snapshots
-        mount_snapshots(app)
-        from .replay_api import mount as mount_replay
-        mount_replay(app)
-        from .scanner_client_api import mount as mount_client
-        mount_client(app)
     async def current_admin(req):
         from .current_state import CURRENT_KEY, SelectionError
         provider=app[CURRENT_KEY].provider

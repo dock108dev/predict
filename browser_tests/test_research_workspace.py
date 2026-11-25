@@ -25,11 +25,6 @@ def test_daily_research_keeps_current_and_saved_versions_independent():
         dict(id=run_id, summary={"title": "Men’s D1"}, observed_at=late)
         for run_id in (latest, older)
     ]
-    template = {
-        "version": "mens-d1-daily",
-        "title": "Daily paper run",
-        "policy": {"scope": "mens-d1"},
-    }
     summary = dict(
         population=dict(
             provider_known_games=4,
@@ -58,7 +53,7 @@ def test_daily_research_keeps_current_and_saved_versions_independent():
                 source_state="active",
                 population_revision="dated-slate",
                 coverage_summary=summary,
-                runs=runs,
+                runs=runs[:1],
                 analysis_run=runs[0],
                 run=next(
                     (candidate for candidate in runs if candidate["id"] == run), None
@@ -69,32 +64,12 @@ def test_daily_research_keeps_current_and_saved_versions_independent():
                 missing_items=[],
             )
             route.fulfill(json=value)
-        elif url.path == "/api/research/workspace":
-            route.fulfill(json=dict(mens_d1_template=template))
-        elif url.path.startswith("/api/research/workspace/runs/"):
-            run = url.path.rsplit("/", 1)[1]
-            value = dict(
-                run=dict(
-                    id=run, date=day, title="Saved daily paper run", created_at=late
-                ),
-                definition=template,
-                report={},
-                findings=[],
-            )
-            if run == latest:
-                value["comparison"] = dict(
-                    prior_run_id=older, games=dict(before=3, after=4, delta=1)
-                )
-            route.fulfill(json=value)
-        elif url.path == "/api/workspace/status":
+        elif url.path in ("/api/workspace/status", "/api/workspace/collection"):
             route.fulfill(json={})
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
-        elif url.path in ("/data", "/research"):
-            route.fulfill(
-                path=ASSETS
-                / ("data.html" if url.path == "/data" else "research-workspace.html")
-            )
+        elif url.path == "/data":
+            route.fulfill(path=ASSETS / "data.html")
         else:
             route.fulfill(status=404)
 
@@ -108,38 +83,25 @@ def test_daily_research_keeps_current_and_saved_versions_independent():
         current = page.get_by_role("link", name="Current evidence", exact=True)
         expect(current).to_have_attribute("aria-current", "true")
         assert "run=" not in page.url
-        page.get_by_role(
-            "link", name="Open current analysis in Research", exact=True
-        ).click()
-        expect(current).to_have_attribute("aria-current", "true")
         expect(
-            page.get_by_role("button", name="Save run from retained schedule")
-        ).to_be_enabled()
-        assert coverage_reads == [None, None]
+            page.get_by_role("link", name="Open Experiments for this date", exact=True)
+        ).to_have_attribute("href", f"/experiments?scope=mens-d1&date={day}")
         versions = page.locator("details").filter(
             has_text="Saved experiment versions for this date"
         )
         versions.locator("summary").click()
+        expect(versions.locator(f'a[href*="run={older}"]')).to_have_count(0)
         versions.locator(f'a[href*="run={latest}"]').click()
-        expect(page.get_by_text("Changes from the previous saved run")).to_be_visible()
-        page.get_by_role("link", name=f"Open prior run · {older[:12]}").click()
-        expect(page.get_by_role("link", name="Best venue only")).to_have_attribute(
-            "aria-current", "true"
-        )
-        assert f"run={older}" in page.url
-        page.get_by_role("link", name="All qualifying venues").click()
+        saved = page.get_by_role("link", name="Saved Nov 24", exact=False)
+        expect(saved).to_have_attribute("href", f"/data?evidence=mens-d1&scope=mens-d1&date={day}&run={latest}")
         page.reload()
-        expect(
-            page.get_by_role("link", name="All qualifying venues")
-        ).to_have_attribute("aria-current", "true")
-        assert f"run={older}" in page.url
-        page.go_back()
-        expect(page.get_by_role("link", name="Best venue only")).to_have_attribute(
-            "aria-current", "true"
-        )
+        expect(saved).to_have_attribute("aria-current", "true")
+        page.goto(f"{base}/data?evidence=mens-d1&scope=mens-d1&date={day}&run={older}")
+        expect(saved).to_have_attribute("href", f"/data?evidence=mens-d1&scope=mens-d1&date={day}&run={older}")
         current.click()
         expect(current).to_have_attribute("aria-current", "true")
         assert "run=" not in page.url
+        assert coverage_reads == [None, latest, latest, older, None]
         assert not errors
         browser.close()
 

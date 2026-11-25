@@ -31,10 +31,9 @@ def _game_identity_sql(scope, order, details):
         'source:sportsgameodds:'||{scope}.event_id)"""
 
 
-def _population(filters):
+def _offer_guards(filters):
     # The acquisition owner is the authority for whether a request covers the
     # unrestricted board. Browser filters never expand declared membership.
-    coverage, args = "s.coverage->>'covers_board'='true'", []
     candidates = ["o.value#>>'{record,quote,venue}'=ANY(%s)",
         "o.value->>'reason' IS NULL",
         "o.value#>>'{record,quote,state}'='available'",
@@ -58,7 +57,7 @@ def _population(filters):
             FROM jsonb_array_elements(o.value#>'{calculation_payload,acquisition,required_inputs}') required)
             <= interval '600 seconds'""",
         "o.value#>>'{main,status}' IN ('main'" + (",'alternate'" if filters.get('include_alternates') == '1' else '') + ")"]
-    args = [*args, list(VENUES)]
+    args = [list(VENUES)]
     if filters.get('original_bookmaker_id'):
         candidates.append("COALESCE(o.value#>>'{record,comparison_source_metadata,provider_bookmaker_id}',o.value#>>'{record,quote,venue}')=%s")
         args.append(filters['original_bookmaker_id'])
@@ -73,6 +72,25 @@ def _population(filters):
             WHERE source_at IS NULL OR source_at::timestamptz<
               transaction_timestamp()-(%s::int*interval '1 minute'))""")
         args.append(int(filters['max_age_minutes']))
+    return " AND ".join(candidates), args
+
+
+LATEST_SCOPES = """WITH covered AS MATERIALIZED (
+      SELECT s.*,p.started_order,p.requested_at,p.request_scope,p.details,
+        row_number() OVER(PARTITION BY s.event_id,s.family,s.period ORDER BY p.started_order DESC) newest
+      FROM public.market_pull_scope s JOIN public.market_pull p USING(pull_id)
+      WHERE s.period='full_game' AND s.family IN ('moneyline','spread','total')
+        AND s.coverage->>'covers_board'='true'
+    ), current_scope AS MATERIALIZED (SELECT * FROM covered WHERE newest=1)"""
+
+NET_EV = """split_part(o.value#>>'{calculation_payload,raw,net_ev}','/',1)::numeric /
+          CASE WHEN position('/' IN o.value#>>'{calculation_payload,raw,net_ev}')>0
+            THEN NULLIF(split_part(o.value#>>'{calculation_payload,raw,net_ev}','/',2)::numeric,0) ELSE 1 END"""
+KICKOFF = """COALESCE(s.snapshot#>>'{event,scheduled_start}',s.details#>>'{event,starts_at}')::timestamptz"""
+
+
+def _population(filters):
+    candidates, args = _offer_guards(filters)
     clause = []
     if filters.get('provider') not in (None, '', 'sportsgameodds'):
         clause.append('false')
@@ -99,12 +117,7 @@ def _population(filters):
     where = ' WHERE ' + ' AND '.join(clause) if clause else ''
     # A fraction is parsed only from a successfully stored calculation; no
     # probability, fee or financial calculation runs in this reader.
-    query = """WITH covered AS MATERIALIZED (
-      SELECT s.*,p.started_order,p.requested_at,p.request_scope,p.details,
-        row_number() OVER(PARTITION BY s.event_id,s.family,s.period ORDER BY p.started_order DESC) newest
-      FROM public.market_pull_scope s JOIN public.market_pull p USING(pull_id)
-      WHERE s.period='full_game' AND s.family IN ('moneyline','spread','total') AND """ + coverage + """
-    ), current_scope AS MATERIALIZED (SELECT * FROM covered WHERE newest=1),
+    query = LATEST_SCOPES + """,
     projected AS (
       SELECT s.*,
         """ + _game_identity_sql('s','s.started_order','s.details') + """ game_id,
@@ -114,12 +127,10 @@ def _population(filters):
         winner.best,winner.net_ev
       FROM current_scope s LEFT JOIN LATERAL (
         SELECT o.value best,
-          split_part(o.value#>>'{calculation_payload,raw,net_ev}','/',1)::numeric /
-          CASE WHEN position('/' IN o.value#>>'{calculation_payload,raw,net_ev}')>0
-            THEN NULLIF(split_part(o.value#>>'{calculation_payload,raw,net_ev}','/',2)::numeric,0) ELSE 1 END net_ev
+          """ + NET_EV + """ net_ev
         FROM jsonb_array_elements(COALESCE(s.snapshot->'offers','[]'::jsonb)) WITH ORDINALITY o(value,ordinal)
         WHERE s.state='complete' AND o.value#>>'{record,market_identity,family}'=s.family
-          AND o.value#>>'{record,market_identity,period}'=s.period AND """ + ' AND '.join(candidates) + """
+          AND o.value#>>'{record,market_identity,period}'=s.period AND """ + candidates + """
         ORDER BY net_ev DESC,o.value#>>'{record,quote,venue}',
           o.value#>>'{calculation_payload,id}',o.ordinal LIMIT 1
       ) winner ON true
@@ -137,6 +148,86 @@ def markets(db, filters, *, offset=0, limit=50):
         (*args, limit, offset)).fetchall()
     return dict(rows=[row(db, value) for value in rows], total=count)
 
+
+def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30):
+    """Show current main offers from the latest complete covering pull per market."""
+    from app.comparison.fee_mode import read as read_fee_mode
+    from .pregame_known_withdrawals import phase_closed, reference_known_unavailable
+
+    candidates, args = _offer_guards({})
+    # Mature compact projections retain the winning reference book and exact side
+    # and line even when the individual source IDs live in compressed evidence.
+    # Match that same pair when checking a later explicit withdrawal.
+    line = """(split_part(o.value#>>'{display_offer,line}','/',1)::numeric /
+        COALESCE(NULLIF(split_part(o.value#>>'{display_offer,line}','/',2),''),'1')::numeric)"""
+    sql = LATEST_SCOPES + """,
+        upcoming AS MATERIALIZED (
+          SELECT s.*, """ + KICKOFF + """ start_at, known.scheduled_start::timestamptz confirmed_start,
+            COALESCE(""" + phase_closed('known') + """,false) phase_closed,
+            """ + _game_identity_sql('s','s.started_order','s.details') + """ game_id
+          FROM current_scope s
+          LEFT JOIN public.current_event known
+            ON known.provider='sportsgameodds' AND known.native_event_id=s.event_id
+          WHERE """ + KICKOFF + """ BETWEEN %s AND %s
+        ), eligible AS MATERIALIZED (
+          SELECT s.event_id,s.family,s.period,s.pull_id,s.game_id,s.details,s.snapshot->'event' event,
+            s.start_at,s.state,
+            winner.best,winner.net_ev,winner.eligible_until,winner.current AND winner.eligible_until>%s current
+          FROM upcoming s LEFT JOIN LATERAL (
+            SELECT o.value best, """ + NET_EV + """ net_ev,
+              LEAST(s.start_at,(o.value#>>'{calculation_payload,acquisition,received_from}')::timestamptz
+                + %s*interval '1 second') eligible_until,
+              (NOT s.phase_closed AND (s.confirmed_start IS NULL OR s.confirmed_start=s.start_at)
+                AND (o.value#>>'{calculation_payload,acquisition,received_until}')::timestamptz<=%s
+                AND COALESCE((o.value#>>'{calculation_payload,fee_mode,enabled}')::boolean,
+                  (s.snapshot#>>'{fee_mode,enabled}')::boolean,true)=%s
+                AND NOT EXISTS (SELECT 1 FROM public.current_contract_storage known
+                  WHERE known.id=o.value#>>'{calculation_payload,id}' AND known.active=false)
+                AND NOT EXISTS (SELECT 1 FROM public.current_offer_storage known
+                  LEFT JOIN public.sgo_line_presence lp ON lp.quote_id=known.sgo_quote_id
+                  WHERE known.contract_id=o.value#>>'{calculation_payload,id}'
+                    AND (known.facts->>'state'='unavailable' OR lp.expired))
+                AND NOT EXISTS (SELECT 1 FROM public.current_sgo_reference r
+                  WHERE r.event_id=s.event_id AND r.bookmaker_id=o.value#>>'{calculation_payload,reference,book}'
+                    AND r.facts->>'market'=s.family AND r.facts->>'period'=s.period
+                    AND (s.family='moneyline' OR (r.facts->>'line')::numeric=""" + line + """ * CASE
+                      WHEN s.family='spread' AND r.facts->>'side'<>o.value#>>'{display_offer,side}' THEN -1 ELSE 1 END)
+                    AND """ + reference_known_unavailable('r.id') + """)) current
+            FROM jsonb_array_elements(COALESCE(s.snapshot->'offers','[]'::jsonb)) o(value)
+            WHERE s.state='complete' AND o.value#>>'{record,market_identity,family}'=s.family
+              AND o.value#>>'{record,market_identity,period}'=s.period AND """ + candidates + """
+          ) winner ON true
+          WHERE s.start_at>%s AND (s.confirmed_start IS NULL OR s.confirmed_start>%s)
+        ), positive AS (
+          SELECT DISTINCT ON (event_id,family,period,best#>>'{display_offer,id}') *
+          FROM eligible WHERE current AND net_ev>0
+          ORDER BY event_id,family,period,best#>>'{display_offer,id}',net_ev DESC
+        )
+        SELECT (SELECT count(*) FROM positive) total,
+          count(*)>0 price_available,
+          COALESCE(bool_or(best IS NULL),false) inputs_unavailable,
+          COALESCE(bool_or(net_ev>0 AND NOT current),false) expired_positive,
+          (SELECT jsonb_agg(page ORDER BY net_ev DESC,event_id,family,best#>>'{display_offer,id}')
+            FROM (SELECT * FROM positive ORDER BY net_ev DESC,event_id,family,best#>>'{display_offer,id}'
+              LIMIT %s OFFSET %s) page) entries
+        FROM eligible"""
+    data = db.execute(sql, (at, until, at, freshness_seconds, at, read_fee_mode(db)['enabled'],
+        *args, at, at, limit, offset)).fetchone()
+    rows = []
+    for value in data['entries'] or []:
+        event = value['event'] or value['details'].get('event') or {}
+        details = value['best']['display_offer']
+        # The board retains only scalar display fields; the exact evidence read
+        # reopens the immutable pull and refuses a mismatched ID or revision.
+        rows.append(dict(id=details['id'], revision=details['revision'], pull_id=value['pull_id'],
+            market_id=value['game_id']+'|'+value['family']+'|'+value['period'], game=event.get('title') or value['event_id'],
+            league=event.get('competition') or event.get('league'), eligible_until=value['eligible_until'],
+            kickoff=value['start_at'], family=value['family'], venue=details['venue'], selection_label=details['outcome'],
+            line=details['line'], times=details['times'],
+            display=(value['best']['calculation_payload'].get('display') or {}),
+            posted=dict(value=details['price'], units=details['price_units']), calculation=details['calculation']))
+    return dict(rows=rows, total=data['total'], offset=offset, availability={key:data[key]
+        for key in ('price_available','inputs_unavailable','expired_positive')})
 
 def _selection_label(snapshot, record, payload, side):
     if side in ('over', 'under'):

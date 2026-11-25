@@ -11,7 +11,6 @@ class PregameOwner:
         self.service = service
         self.closed = False
         self.task = None
-        self.journal_task = None
         self.error = None
         self.progress = {}
         self.wake = asyncio.Event()
@@ -147,7 +146,6 @@ class PregameOwner:
             try:
                 await asyncio.to_thread(self.turn)
                 self.error = None
-                self.sample_journal()
             except Exception as exc:
                 failure(__name__, "current_pregame_recovery", exc)
                 self.error = type(exc).__name__
@@ -157,24 +155,6 @@ class PregameOwner:
                 pass
             self.wake.clear()
 
-    def sample_journal(self):
-        # Journal scans read committed prices and may take seconds. Keep one
-        # owned scan off the recovery path so it cannot stall affected games.
-        from .background_work import BACKGROUND
-        from app.dashboard.bet_journal_monitor import poll
-
-        if self.journal_task is not None:
-            if not self.journal_task.done():
-                return
-            try:
-                self.journal_task.result()
-            except Exception as exc:
-                failure(__name__, 'personal_journal_task', exc)
-            self.journal_task = None
-        if not self.closed and not BACKGROUND.critical_acquisition_pressure():
-            self.journal_task = asyncio.create_task(
-                asyncio.to_thread(poll), name='predict-journal-sample')
-
     async def close(self):
         self.closed = True
         self.wake.set()
@@ -183,5 +163,3 @@ class PregameOwner:
         await self.research.close()
         if self.task:
             await self.task
-        if self.journal_task:
-            await self.journal_task

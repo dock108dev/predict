@@ -8,6 +8,7 @@ from unittest.mock import patch
 from app.research import paper, paper_campaigns as campaigns, workspace
 from app.storage import paper_result_queue as queue
 from app.storage.store import encoded, hashed, stamp
+from psycopg.types.json import Jsonb
 from tests.latest_board_fixture import SOCKET
 from tests.test_paper_campaigns import config, fixed_config
 from tests.test_paper_experiments import frozen_priced, linear
@@ -20,6 +21,29 @@ class CampaignSQL(ResearchWorkspaceFixture):
         with self.connect() as db:
             db.execute('TRUNCATE public.ev_experiment_game,public.ev_experiment_record,public.paper_campaign CASCADE')
             db.execute('INSERT INTO public.ev_experiment_accounting(singleton) VALUES (true) ON CONFLICT DO NOTHING')
+
+    async def test_discovery_keeps_canonical_and_new_revisions_and_leaves_archived_rows(self):
+        await super().asyncSetUp()
+        with self.connect() as db:
+            archived = campaigns.create(db, config(), discoverable=False)
+            canonical = campaigns.configuration(fixed_config(name='Win $10'))
+            db.execute('INSERT INTO public.paper_campaign VALUES (%s,DEFAULT,%s,%s)',
+                       (campaigns.WIN_10_CAMPAIGN, Jsonb(canonical), len(encoded(canonical))))
+            assert [campaign['id'] for campaign in campaigns.index(db, active_only=True)] == [campaigns.WIN_10_CAMPAIGN]
+            db.execute('UPDATE public.paper_campaign_day SET next_check_at=%s', (self.at,))
+            with patch.object(campaigns.queue, 'utc', return_value=self.at), \
+                    patch.object(campaigns.queue, '_late_capture_due', return_value=False), \
+                    patch.object(campaigns.mens_d1, 'daily_population') as read_capture:
+                assert campaigns.tick(db) is None
+                read_capture.assert_not_called()
+            current = campaigns.create(db, fixed_config(name='New experiment'))
+            revised = campaigns.create(db, fixed_config(name='New experiment', target_profit_usd='11', supersedes=current['id']))
+            assert [campaign['id'] for campaign in campaigns.index(db, active_only=True)] == [
+                campaigns.WIN_10_CAMPAIGN, revised['id']]
+            assert {campaign['id'] for campaign in campaigns.index(db)} == {
+                campaigns.WIN_10_CAMPAIGN, archived['id'], current['id'], revised['id']}
+            assert campaigns.view(db, current['id'])['config']['target_profit_usd'] == '10'
+            assert len(campaigns.view(db, archived['id'])['days']) == 7
 
     async def test_ui_configuration_queues_seven_days_and_publishes_repriced_snapshot_once(self):
         await super().asyncSetUp()

@@ -109,3 +109,46 @@
 .workbench-page :is(.research-button,button):not(:disabled):hover { border-color: var(--p-accent); }
 .workbench-page :is(a,button,input,select,summary,textarea):focus-visible { outline: 2px solid var(--p-focus); }
 .workbench-page main :is(p,dd,li,td) a:not(.research-button) { color: var(--p-accent); text-decoration: underline; text-underline-offset: .14em; }
+
+.workbench-page .masthead:has(.workspace-collection) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  padding-inline: var(--workbench-gutter);
+}
+.workbench-page .masthead:has(.workspace-collection) nav {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  gap: 0 clamp(.65rem, 2.4vw, 2rem);
+}
+.workspace-collection {
+  position: relative;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: .875rem;
+}
+.workspace-collection summary {
+  padding-block: .4rem;
+  cursor: pointer;
+}
+.workspace-collection > div {
+  position: absolute;
+  z-index: 20;
+  inset-inline-end: 0;
+  width: min(19rem, calc(100vw - 2rem));
+  padding: .75rem;
+  border: 1px solid var(--line);
+  border-radius: .45rem;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 .35rem 1rem #0002;
+}
+.workspace-collection dl { display: grid; grid-template-columns: auto 1fr; gap: .25rem .85rem; }
+.workspace-collection dd { margin: 0; }
+.workspace-collection a { color: var(--p-accent); text-decoration: underline; }
+@media (max-width: 460px) {
+  .workbench-page .masthead:has(.workspace-collection) nav { font-size: .875rem; }
+  .workspace-collection summary { max-width: 7rem; line-height: 1.2; }
+}

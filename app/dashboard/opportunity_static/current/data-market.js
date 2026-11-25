@@ -30,6 +30,13 @@ function offerTable(root,offers,onSelect){const table=node('table',undefined,'ca
 export function renderMarket(root,value,{positive=false,includeAlternates=false,onSelect,onCapture}){
  root.replaceChildren();const row=value.row;root.append(node('p',`${readable(row.family)} · ${dateTime(row.received_at)} · ${row.state==='complete'?'Captured':stateLabel(row)}`));
  if(row.reason)root.append(node('p',readable(row.reason),'experiment-notice'));
+ const related=node('div',undefined,'data-browser-links');
+ for(const [title,params] of [['Open original odds pull',{evidence:'pulls',pull:row.pull_id}],
+   ['Find sporting result',{evidence:'populations',event_id:row.event_id}]]){
+  if(Object.values(params).some(value=>!value))continue;
+  const anchor=node('a',title,'research-button');anchor.href='/data?'+new URLSearchParams(params);related.append(anchor);
+ }
+ if(related.childElementCount)root.append(related);
  const tabs=node('div',undefined,'market-offer-tabs'),content=node('div');root.append(tabs,content);
  const offers=value.offers||[],eligible=offers.filter(offer=>offer.main_role==='main'||includeAlternates&&offer.main_role==='alternate'),focused=positive?eligible.filter(offer=>number(offer.calculation?.net_ev_percent)>0):eligible;
  function select(label,render){const button=node('button',label);button.onclick=()=>{for(const other of tabs.children)other.setAttribute('aria-pressed',String(other===button));content.replaceChildren();render();};tabs.append(button);return button;}
@@ -52,5 +59,7 @@ export function renderMarketInput(root,value){
  if(!prices.length)references.append(node('p','No matching reference pair in this pull.'));root.append(references);
  root.append(node('p','Stored screening calculation. Price availability, exact contract and settlement limitations remain applicable.'));
  const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'})),download=node('a','Export this exact offer & supporting calculation','research-button');download.href=url;download.download='predict-market-offer.json';root.append(download);
- const details=node('details',undefined,'market-evidence');details.append(node('summary','Source identities, revisions, exact arithmetic and reproduction evidence'),node('pre',JSON.stringify(value,null,2)));root.append(details);return ()=>URL.revokeObjectURL(url);
+ const details=node('details',undefined,'market-evidence');details.append(node('summary','Normalized record and calculation evidence'),node('pre',JSON.stringify(value,null,2)));root.append(details);
+ if(row.pull_id){const anchor=node('a','Open original odds pull','research-button');anchor.href='/data?'+new URLSearchParams({evidence:'pulls',pull:row.pull_id});root.append(anchor);}
+ return ()=>URL.revokeObjectURL(url);
 }

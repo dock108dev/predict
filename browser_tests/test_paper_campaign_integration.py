@@ -131,13 +131,13 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
         app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
         mount(app)
 
-        async def research(_request):
-            return web.FileResponse(ASSETS / "research-workspace.html")
+        async def experiments(_request):
+            return web.FileResponse(ASSETS / "experiment-workspace.html")
 
         async def status(_request):
             return web.json_response({})
 
-        app.router.add_get("/research", research)
+        app.router.add_get("/experiments", experiments)
         app.router.add_get("/api/workspace/status", status)
         app.router.add_static("/view/current/", ASSETS)
         server = TestServer(app)
@@ -171,21 +171,22 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     executable_path=os.getenv("PREDICT_CI_CHROMIUM")
                 )
                 page = await browser.new_page(viewport=dict(width=390, height=820))
-                await page.goto(str(server.make_url("/research")))
-                await (
-                    page.get_by_role("navigation", name="Research sections")
-                    .get_by_role("link", name="Experiments")
-                    .click()
-                )
-                await page.get_by_role(
-                    "link", name="Create experiment", exact=True
-                ).click()
+                await page.goto(str(server.make_url(
+                    f"/experiments?view=create&from=data&date={day}&provider=sportsgameodds&family=spread"
+                )))
+                await expect(page.get_by_label("First game date (Eastern)")).to_have_value(day)
+                await expect(page.get_by_label("Last game date (Eastern)")).to_have_value(day)
+                await expect(page.get_by_label("Game scope", exact=True)).to_have_value("")
+                await expect(page.get_by_text("sportsgameodds",exact=True)).to_be_visible()
+                await page.get_by_label("Game scope", exact=True).select_option("mens-d1")
+                await page.get_by_label("Use the experiment’s game scope and dates").check()
                 await page.get_by_label("Experiment name").fill(
                     "Controlled $7.51 replay"
                 )
                 await page.get_by_label("First game date (Eastern)").fill(day)
                 await page.get_by_label("Last game date (Eastern)").fill("2026-11-21")
                 await page.get_by_label("Target win profit ($)").fill("7.51")
+                await page.get_by_label("Compare with Kelly").check()
                 await page.get_by_role("button", name="Review", exact=True).click()
                 async with page.expect_response(
                     lambda res: (
@@ -209,7 +210,9 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     assert run, db.execute(
                         "SELECT state,last_error FROM public.paper_campaign_day"
                     ).fetchall()
-                    pending = queue.process_one(db)
+                    queue.process_one(db)
+                    queue.process_one(db)
+                    pending = queue.read(db, run)["version"]["id"]
                     assert pending, db.execute(
                         "SELECT last_error FROM public.paper_result_job"
                     ).fetchall()
@@ -246,23 +249,30 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     )
                 with connect_web() as restarted:
                     queue.dispatch(restarted)
-                    graded = queue.process_one(restarted)
+                    grades = [queue.process_one(restarted) for _ in range(3)]
+                    graded = queue.read(restarted, run)["version"]["id"]
                     assert graded and graded != pending
+                    assert graded in grades
                 await page.reload(wait_until="domcontentloaded")
-                await page.get_by_role("link", name="Weekly", exact=True).click()
                 await expect(
-                    page.get_by_role("heading", name="Daily results", exact=True)
+                    page.get_by_role("heading", name="Controlled $7.51 replay", exact=True)
                 ).to_be_visible()
-                await page.get_by_role("link", name=day, exact=True).click()
-                await page.get_by_role(
-                    "link", name="All qualifying venues", exact=True
-                ).click()
+                await page.get_by_label("Game date (Eastern)").select_option(day)
+                await page.get_by_label("Portfolio", exact=True).select_option("all_venues")
+                comparison=page.locator(".experiment-comparison table")
+                await expect(comparison.get_by_role("columnheader", name="Win $7.51")).to_be_visible()
+                await expect(comparison.get_by_role("columnheader", name="Kelly")).to_be_visible()
+                await expect(comparison.get_by_role("row", name="ROI")).to_contain_text("300.00% on $2.50 graded stake")
+                await comparison.get_by_role("link", name="Inspect games and trades").first.click()
                 await expect(
                     page.locator(".result-ledger-table tbody tr")
                 ).to_have_count(1)
                 await expect(
                     page.locator(".result-ledger-table tbody tr")
                 ).to_contain_text("$2.50")
+                await page.locator(".result-ledger-table tbody tr a").click()
+                await page.get_by_text("Trade calculation and frozen evidence", exact=True).click()
+                await expect(page.get_by_role("heading", name="Paper sizing and fee treatment")).to_be_visible()
                 api = str(
                     server.make_url(f"{BASE}/runs/{run}/results?variant=all_venues")
                 )

@@ -1,89 +1,92 @@
 """Personal-workspace HTML compatibility without changing API ownership."""
 from pathlib import Path
-from urllib.parse import urlencode
+from types import SimpleNamespace
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 from aiohttp import web
 
 from .local_security import HEADERS, PublicRequestError, read_json
 
 # Keep local selection context, never an arbitrary redirect target.
-SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book section run claim theory definition finding variant ticket evidence pull scope coverage_game coverage_filter coverage_job result trade filter trade_filter'.split())
+SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id receipt receipt_offset source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book run campaign variant ticket evidence pull scope coverage_game coverage_filter coverage_job result trade filter trade_filter sort include_alternates from sizing_quote sizing_bet trade_ev trade_sort trade_page ledger_view snapshot schema object rows storage views'.split())
 CATALOG_CONTEXT = {'search', 'sport', 'provider', 'original_bookmaker_id', 'book', 'family', 'calculation_status', 'max_age_minutes', 'game', 'bet', 'reference_scope'}
 DATA_PATHS = {'/browse-odds', '/odds', '/raw-odds', '/game', '/replay', '/admin/retained'}
-RETIRED_PATHS = {'/scanner', '/my-bets', '/about', '/trading-fees'}
+RETIRED_PATHS = {'/arbs', '/scanner', '/my-bets', '/about', '/trading-fees'}
 HTML_DESTINATIONS = {
-    'experiments.html': '/research?section=experiments',
-    'research-workspace.html': '/research',
-    'data.html': '/data', 'settings.html': '/settings', 'admin.html': '/settings',
-    'coverage.html': '/settings#storage', 'pregame-arbs.html': '/data?view=arbitrage',
-    'arbs.html': '/data?view=arbitrage', 'ev.html': '/data?calculation_status=positive',
-    'index.html': '/research', 'dashboard.html': '/data', 'pregame.html': '/data',
-    'desk.html': '/data', 'stored.html': '/data', 'raw-odds.html': '/data',
+    'dashboard.html': '/', 'experiment-workspace.html': '/experiments',
+    'experiments.html': '/experiments', 'research-workspace.html': '/research',
+    'research.html': '/research', 'data.html': '/data',
+    'settings.html': '/settings', 'admin.html': '/admin',
+    'coverage.html': '/data?evidence=mens-d1', 'ev.html': '/',
+    'index.html': '/', 'pregame.html': '/data', 'desk.html': '/data',
+    'stored.html': '/data', 'raw-odds.html': '/data',
 }
-RETIRED_HTML = {'scanner.html', 'scanner-shell.html', 'bet-journal.html', 'about.html', 'trading-fees.html'}
+PAGES = {'/': 'dashboard.html', '/data': 'data.html',
+         '/experiments': 'experiment-workspace.html', '/settings': 'settings.html'}
 
 
 def destination(request):
-    """Return an explicit local compatibility target, or None for live routes."""
+    """Keep exact evidence bookmarks usable after retiring the old pages."""
     path = request.path.rstrip('/') or '/'
     if path == '/':
-        target = '/data' if 'id' in request.query or set(request.query) & CATALOG_CONTEXT else '/research'
-    elif path == '/research':
-        catalog_context = set(request.query) & CATALOG_CONTEXT
-        if request.query.get('section') == 'experiments' and request.query.get('run'):
-            catalog_context.discard('game')  # Paper game IDs belong to the selected run.
-        if 'id' in request.query and 'revision' in request.query:
-            target = '/data?evidence=checkpoints'
-        elif catalog_context:
+        if 'id' in request.query or set(request.query) & CATALOG_CONTEXT:
             target = '/data'
         else:
-            target = '/research' if request.path.endswith('/') else None
-    elif path == '/experiments':
-        target = ('/data?evidence=checkpoints' if 'id' in request.query or 'context' in request.query
-                  else '/research?section=experiments')
+            return None
+    elif path == '/research':
+        if 'id' in request.query and 'revision' in request.query:
+            target = '/data?evidence=checkpoints'
+        elif request.query.get('section') == 'experiments' or any(
+                request.query.get(key) for key in ('campaign', 'run', 'result', 'trade')):
+            target = '/experiments'
+        elif set(request.query) & CATALOG_CONTEXT:
+            target = '/data'
+        elif request.query.get('section') in ('coverage', 'quality'):
+            target = '/data'
+        else:
+            target = '/experiments'
+    elif path in PAGES:
+        if path == '/experiments' and ('id' in request.query or 'context' in request.query):
+            target = '/data?evidence=checkpoints'
+        elif request.path != path:
+            target = path
+        else:
+            return None
     elif path in DATA_PATHS:
         target = '/data'
-    elif path in ('/ev', '/opportunities'):
-        target = '/data?calculation_status=positive'
-    elif path == '/arbs':
-        target = '/data?view=arbitrage'
+    elif path in ('/dashboard', '/ev', '/opportunities'):
+        target = '/data' if request.query.get('id') else '/'
     elif path in ('/coverage', '/current/coverage'):
-        target = '/settings#storage'
+        target = '/data?evidence=mens-d1'
     elif path == '/admin':
         section = request.query.get('section')
-        target = ('/data' if section in ('calculations', 'inspection', 'timing', 'quality', 'retained')
-                  else '/settings#storage' if section in ('coverage', 'database')
-                  else '/settings#credits' if section == 'usage'
-                  else '/settings#sources' if section == 'sources'
-                  else '/settings#preferences' if section == 'settings'
-                  else '/settings')
-    elif path in ('/view', '/view/current') and request.path.endswith('/'):
-        target = '/research'
+        if section == 'database':
+            target = '/data?evidence=tables'
+        elif section in ('calculations', 'inspection', 'timing', 'quality', 'retained'):
+            target = '/data'
+        else:
+            anchor = {'coverage':'storage', 'usage':'credits', 'sources':'sources',
+                      'settings':'preferences'}.get(section, 'collection')
+            target = '/settings#' + anchor
+    elif path in ('/view', '/view/current'):
+        target = '/'
     elif path.startswith('/view/') and (path.endswith('.html') or request.path.endswith('/')):
         name = Path(path).name
-        if name in ('admin.html', 'research.html'):
-            from types import SimpleNamespace
-            if name == 'admin.html':
-                return destination(SimpleNamespace(path='/admin', query=request.query))
-            return destination(SimpleNamespace(path='/research/', query=request.query))
-        target = HTML_DESTINATIONS.get(name)
+        target = '/data' if name == 'dashboard.html' and request.query.get('capture') else HTML_DESTINATIONS.get(name)
+        if target in ('/admin', '/research'):
+            return destination(SimpleNamespace(path=target, query=request.query))
         if target is None:
             return 'retired'
     elif path in RETIRED_PATHS:
         return 'retired'
     else:
         return None
-    if target is None:
-        return None
-    if path.startswith('/view/') and Path(path).name in RETIRED_HTML:
-        return 'retired'
-    from urllib.parse import parse_qsl, urlsplit
     parts = urlsplit(target)
     query = {key: value for key, value in request.query.items()
              if key in SELECTION_KEYS and len(value) <= 1024}
-    if parts.path != '/research':
-        query.pop('section', None)
     query.update(dict(parse_qsl(parts.query)))
+    if parts.path == '/experiments' and query.get('view') == 'schedule':
+        query['view'] = 'create'
     if parts.path == '/data' and any(request.query.get(key) for key in ('original_bookmaker_id', 'book', 'venue')):
         query.setdefault('reference_scope', 'all')
         if not query.get('original_bookmaker_id'):
@@ -92,13 +95,12 @@ def destination(request):
                 book = {'polymarket_us': 'polymarket', 'prophetx': 'prophetexchange'}.get(book, book)
             query['original_bookmaker_id'] = book
     back = urlsplit(request.query.get('back', ''))
-    if not back.scheme and not back.netloc and back.path in (DATA_PATHS | {'/data', '/experiments', '/settings', '/research', '/ev', '/opportunities', '/arbs'}):
-        from types import SimpleNamespace
-        if back.path in ('/data', '/research', '/settings'):
-            back_query = {key: value for key, value in parse_qsl(back.query) if key in SELECTION_KEYS and len(value) <= 1024}
-            query['back'] = back.path + ('?' + urlencode(back_query) if back_query else '')
-        else:
-            query['back'] = destination(SimpleNamespace(path=back.path, query=dict(parse_qsl(back.query))))
+    if not back.scheme and not back.netloc and back.path in (
+            DATA_PATHS | set(PAGES) | {'/research', '/ev', '/opportunities'}):
+        back_query = {key: value for key, value in parse_qsl(back.query)
+                      if key in SELECTION_KEYS and len(value) <= 1024}
+        adapted = destination(SimpleNamespace(path=back.path, query=back_query))
+        query['back'] = adapted or back.path + ('?' + urlencode(back_query) if back_query else '')
     # Old links used source_event; the catalog filters exact native event IDs.
     if query.get('source_event') and not query.get('event_id'):
         query['event_id'] = query['source_event']
@@ -117,7 +119,7 @@ def compatibility_middleware():
                     raise PublicRequestError('Unknown replay dataset')
             target = destination(request)
             if target == 'retired':
-                return web.Response(status=410, content_type='text/html', headers=HEADERS, text='''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Predict · Retired page</title><link rel="stylesheet" href="/view/current/pregame.css"><script type="module" src="/view/current/workspace-nav.js"></script></head><body><header class="masthead"><a class="brand" href="/research">PREDICT</a><nav aria-label="Main" data-workspace-nav></nav></header><main class="board-wrap"><h1>This page is retired</h1><p><a href="/research">Open Research</a> or <a href="/data">open Data</a>.</p></main></body></html>''')
+                return web.Response(status=410, content_type='text/html', headers=HEADERS, text='''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Predict · Retired page</title><link rel="stylesheet" href="/view/current/pregame.css"><script type="module" src="/view/current/workspace-nav.js"></script></head><body><header class="masthead"><a class="brand" href="/">Predict</a><nav aria-label="Main" data-workspace-nav></nav></header><main class="board-wrap"><h1>This page is retired</h1><p><a href="/">Open Dashboard</a> or <a href="/data">open Data</a>.</p></main></body></html>''')
             if target:
                 raise web.HTTPFound(target)
         return await handler(request)
@@ -126,13 +128,12 @@ def compatibility_middleware():
 
 def mount(app, static_root):
     from .mens_d1_coverage_api import mount as mount_daily_coverage
-    mount_daily_coverage(app)
+    mount_daily_coverage(app, read_only=True)
 
     async def page(request):
-        name = {'/research': 'research-workspace.html', '/data': 'data.html', '/settings': 'settings.html'}[request.path]
-        return web.FileResponse(static_root / 'opportunity_static/current' / name, headers=HEADERS)
+        return web.FileResponse(static_root / 'opportunity_static/current' / PAGES[request.path], headers=HEADERS)
 
-    for route in ('/research', '/data', '/settings'):
+    for route in PAGES:
         app.router.add_get(route, page)
 
     async def status(request):

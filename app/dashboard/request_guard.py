@@ -44,8 +44,8 @@ def dashboard_guard(current_provider, *, logger):
                 response = web.json_response(
                     dict(
                         error="current_state_transport_retired",
-                        reason="Use current SQL comparison boards and their revision-bound Details.",
-                        current_api="/api/comparison-current",
+                        reason="Open Dashboard for stored pregame opportunities.",
+                        current_api="/api/research/dashboard",
                         current_url="/",
                         provider_requests=0,
                     ),

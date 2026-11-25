@@ -8,35 +8,22 @@ login. Hosted use needs no local `.env` or running app. Pushes to `main` deploy
 through the focused private-beta CI path; [server and Mac setup](docs/hetzner.md) explains
 the private deployment and optional local development.
 
-Predict opens on **Research**, with theories and claims linked to dated paper
-experiments, findings and their original evidence. **Data** holds current markets,
-individual odds pulls, historical captures and sporting results. Market-to-book
-EV and market-to-market arbitrage remain Data views. **Settings** holds collection
-controls and operating status.
-See the [personal workspace guide](docs/personal-data-workspace.md).
+Predict opens on **Dashboard**, where the highest current positive expected
+value appears first. Open an offer to see its captured prices and calculation
+inputs while keeping your place on the board.
 
-The collector receives odds, normalizes affected games, calculates using posted
-prices, and stores current prices and complete calculations in PostgreSQL. Refresh and inspection
-only read stored data. Arb reads also balance a bounded illustrative allocation
-using the stored fee inputs. Pregame observations have no age expiry: authoritative kickoff,
-non-pregame status, explicit withdrawal, replacement by a newer main line, and repeated scoped line omissions
-after a 15-minute grace period govern removal. Odds may be delayed.
+**Data** browses stored observations, odds pulls, sporting results, historical
+captures and PostgreSQL tables. You can carry a filtered selection to experiment
+creation. **Experiments** opens Win $10 and its Kelly comparison. New campaigns
+use the same paper results and evidence view.
 
-[Workspace guide](docs/personal-data-workspace.md) ·
-[Current data flow and API](docs/current-pregame.md) ·
-[Calculation policy](docs/benchmark-ev.md)
-
-Authentic saved-capture bookmarks open evidence inspection within Data.
-Live executable size and cross-venue fills are not established by these boards.
-[Price and liquidity limitations](docs/liquidity.md).
-[Monitor and Live collection](docs/monitor-live.md) describes the personal-app defaults, controls and retention.
-Underlying source identity and calculation limitations remain beside the exact
-observation. Aggregate observations retain their SportsGameOdds provenance.
-
-The standalone My Bets interface is retired. Existing journal records, APIs,
-exposure and the provider-free quote sampler remain intact. Trading remains
-outside Predict.
-[Journal workflow, measurement definitions and durability](docs/bet-journal.md)
+Open **Collection controls** from the status area for Stop, Resume, source
+pauses, credit usage and retention. The status area shows the latest accepted
+odds receipt, the next scheduled pull and collection problems. The three
+destinations and their exports read committed evidence. Scheduled collection
+runs independently of the browser. The [workspace guide](docs/personal-data-workspace.md)
+and [simplification inventory](docs/engineering/predict-simplification-20261125.md)
+describe the workflows and retained dependencies.
 
 ## Requirements and quickstart
 
@@ -56,9 +43,8 @@ scripts/project-postgres start
 ```
 
 Open the loopback address printed by the launcher. If port 8784 is free,
-use [Predict on port 8784](http://127.0.0.1:8784/). The desk needs committed
-prices to show current offers. Collection settings control Monitor and Live;
-authentic saved odds remain available for later inspection.
+use [Predict on port 8784](http://127.0.0.1:8784/). Dashboard shows committed prices. Collection controls preserve the existing
+schedule and source pauses. Saved odds remain available in Data.
 `cp -n` preserves an existing config, and `check-config` prints its acquisition scope.
 
 For UI iteration with a real dev-server database and no local collectors, see

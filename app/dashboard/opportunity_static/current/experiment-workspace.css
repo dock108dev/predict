@@ -1,0 +1,26 @@
+.experiment-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .75rem 1rem;
+  margin-block: 1rem;
+}
+
+.experiment-controls label { display: grid; gap: .3rem; }
+.experiment-comparison { margin-block-end: 1rem; }
+.experiment-comparison table { width: 100%; border-collapse: collapse; text-align: left; }
+.experiment-comparison :is(th, td) { vertical-align: top; padding: .65rem .55rem; border-bottom: 1px solid var(--border, #7775); }
+.experiment-comparison tbody th { font-weight: 500; }
+.experiment-comparison td { font-variant-numeric: tabular-nums; }
+.experiment-comparison .experiment-status { font-size: .9em; }
+.experiment-comparison details { margin-block: 1rem; }
+.experiment-comparison .research-button { display: inline-block; }
+.experiment-detail { margin-block: 1rem; }
+.campaign-evidence-rules dl, .campaign-handoff dl { grid-column: 1 / -1; }
+.campaign-handoff p { grid-column: 1 / -1; margin: 0; }
+.campaign-handoff .campaign-check { grid-column: 1 / -1; }
+
+@media (max-width: 480px) {
+  .experiment-comparison :is(th, td) { padding-inline: .3rem; overflow-wrap: anywhere; }
+  .experiment-comparison .research-button { padding-inline: .35rem; }
+}

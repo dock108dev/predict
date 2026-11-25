@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Experiments</title><link rel="icon" href="/view/current/predict-icon.png">
+<link rel="stylesheet" href="/view/current/pregame.css"><link rel="stylesheet" href="/view/current/research.css">
+<link rel="stylesheet" href="/view/current/workbench-shell.css"><link rel="stylesheet" href="/view/current/research-workspace.css">
+<link rel="stylesheet" href="/view/current/experiment-workspace.css">
+<script type="module" src="/view/current/workspace-nav.js"></script>
+<script type="module" src="/view/current/experiment-workspace.js"></script>
+</head><body class="research-page workbench-page">
+<a class="skip" href="#experiments-main">Skip to experiments</a>
+<header class="masthead"><nav aria-label="Main" data-workspace-nav><a href="/">Dashboard</a><a href="/data">Data</a><a href="/experiments" aria-current="page">Experiments</a></nav></header>
+<main class="board-wrap" id="experiments-main">
+  <header class="board-heading"><h1>Experiments</h1><a class="research-button" href="/experiments?view=create">Create experiment</a></header>
+  <p id="experiments-status" role="status" hidden></p>
+  <div id="experiment-view"></div>
+</main>
+<dialog id="experiment-source" class="workspace-dialog" aria-labelledby="experiment-source-title">
+  <div class="research-dialog-heading"><h2 id="experiment-source-title">Saved evidence</h2><form method="dialog"><button>Close</button></form></div>
+  <div id="experiment-source-content"></div>
+</dialog>
+</body></html>

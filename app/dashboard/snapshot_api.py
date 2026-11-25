@@ -198,7 +198,7 @@ def history(db, out):
     return out
 
 
-def mount(app):
+def mount(app, *, retained_only=False):
     # Result IDs are immutable. Keep one list root, bounded to one revision.
     # Reading a small selected member must not evict the large rolling root.
     # Evidence retention/authority is still checked at its owning read boundary.
@@ -908,12 +908,13 @@ def mount(app):
         return web.json_response(await asyncio.to_thread(work))
 
     app.router.add_get("/api/comparison-snapshot", read)
-    app.router.add_get("/api/comparison-current", current_read)
-    app.router.add_get("/api/comparison-current/updates", current_read)
-    app.router.add_get("/api/comparison-current/fee-coverage", current_read)
-    app.router.add_get("/api/comparison-current/selection", current_read)
-    app.router.add_post("/api/comparison-current/lease", evidence_lease)
-    app.router.add_delete("/api/comparison-current/lease", evidence_lease)
-    app.router.add_post("/api/comparison-current/settings", current_settings)
-    app.router.add_post("/api/comparison-snapshot", operate)
     app.router.add_get("/api/comparison-snapshot/details", details)
+    if not retained_only:
+        app.router.add_get("/api/comparison-current", current_read)
+        app.router.add_get("/api/comparison-current/updates", current_read)
+        app.router.add_get("/api/comparison-current/fee-coverage", current_read)
+        app.router.add_get("/api/comparison-current/selection", current_read)
+        app.router.add_post("/api/comparison-current/lease", evidence_lease)
+        app.router.add_delete("/api/comparison-current/lease", evidence_lease)
+        app.router.add_post("/api/comparison-current/settings", current_settings)
+        app.router.add_post("/api/comparison-snapshot", operate)

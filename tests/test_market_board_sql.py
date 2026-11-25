@@ -137,6 +137,71 @@ class MarketBoardSQL(LatestBoardFixture):
             self.assertEqual(older['offers'][0]['calculation']['status'],'positive')
             self.assertIn(narrow,{item['pull_id'] for item in older['history']})
 
+    async def test_dashboard_ranks_offers_and_withholds_stale_or_partial_evidence(self):
+        from app.comparison import fee_mode
+        from app.storage.current_rows import event_id
+        from app.storage.sportsgameodds_reference import quote_identity
+
+        at = stamp(AT)
+        until = at + timedelta(hours=24)
+        options = dict(at=at, until=until, freshness_seconds=1800)
+        with self.connect() as db:
+            fee_mode.set_enabled(db, False)
+            pull = self.start(db)
+            self.publish(db, pull, captured_offer(ev='1/10'),
+                         captured_offer(ev='1/5', venue='novig'), captured_offer(ev='-1/5', venue='prophetx'),
+                         captured_offer(ev='1/2', line='-4', main='alternate'))
+            with db.transaction():
+                db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+                first = market_board.dashboard(db, **options, limit=1)
+                second = market_board.dashboard(db, **options, offset=1, limit=1)
+            self.assertEqual(first['total'], 2)
+            high, = first['rows']
+            low, = second['rows']
+            self.assertEqual((high['venue'], low['venue']), ('novig', 'kalshi'))
+            self.assertEqual(stamp(high['kickoff']), stamp('2026-11-23T01:00:00Z'))
+            original = market_board.detail(db, market_id=high['market_id'], pull_id=high['pull_id'],
+                                          offer_id=high['id'], revision=high['revision'])
+            self.assertEqual(original['selected_offer']['calculation']['net_ev_ratio'], '1/5')
+            self.assertEqual(stamp(high['eligible_until']), at + timedelta(minutes=30))
+            stale = market_board.dashboard(db, **dict(options, at=at + timedelta(minutes=30)))
+            self.assertEqual(stale['total'], 0)
+            self.assertTrue(stale['availability']['expired_positive'])
+            fee_mode.set_enabled(db, True)
+            repriced = market_board.dashboard(db, **options)
+            self.assertEqual(repriced['total'], 0)
+            self.assertTrue(repriced['availability']['expired_positive'])
+            fee_mode.set_enabled(db, False)
+
+            quote = quote_identity('source-game', 'fanduel', 'withdrawn-home-spread', '-3')
+            db.execute('''INSERT INTO public.sgo_quote_revision
+                       (id,event_id,bookmaker_id,revision,source_order,received_order,expires_at,facts,is_current)
+                       VALUES(%s,'source-game','fanduel','known',0,0,%s,%s,true)''',
+                       (quote, until, Jsonb(dict(market='spread', period='full_game', side='home', line='-3', available=False))))
+            withdrawn = market_board.dashboard(db, **options)
+            self.assertEqual(withdrawn['total'], 0)
+            self.assertTrue(withdrawn['availability']['expired_positive'])
+            # Explicitly retained withdrawal affects current eligibility only.
+            self.assertEqual(original['selected_offer'], market_board.detail(
+                db, market_id=high['market_id'], pull_id=pull, offer_id=high['id'], revision=high['revision'])['selected_offer'])
+            db.execute('DELETE FROM public.sgo_quote_revision WHERE id=%s', (quote,))
+
+            known = event_id('sportsgameodds', 'source-game')
+            db.execute('''INSERT INTO public.current_event
+                       (id,provider,native_event_id,competition,scheduled_start,expires_order,revision,facts)
+                       VALUES(%s,'sportsgameodds','source-game','NBA',%s,0,'known','{"status":{"started":true}}')''',
+                       (known, high['kickoff']))
+            started = market_board.dashboard(db, **options)
+            self.assertEqual(started['total'], 0)
+            self.assertTrue(started['availability']['expired_positive'])
+            db.execute('DELETE FROM public.current_event WHERE id=%s', (known,))
+
+            newer = self.start(db)
+            acquisition.finish(db, newer, 'partial', details={'reason': 'fixture_incomplete'})
+            pending = market_board.dashboard(db, **options)
+            self.assertEqual(pending['total'], 0)
+            self.assertTrue(pending['availability']['inputs_unavailable'])
+
     async def test_delayed_old_completion_cannot_overwrite_new_complete_missing_inputs(self):
         with self.connect() as db:
             older = self.start(db)

@@ -45,9 +45,12 @@ print(runtime["runtime_id"])
 compose up -d --no-deps --wait --wait-timeout 180 web
 first=$(curl -fsS http://127.0.0.1:8784/api/admin/status | jq -er 'select(.dispatch_enabled == false and .data_runtime.healthy) | .runtime_id')
 [[ "$before" == "$first" ]]
-[[ $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8784/) == 302 ]]
-curl -fsS http://127.0.0.1:8784/research > "$scratch/research.html"
-grep -q '/view/current/research.js' "$scratch/research.html"
+[[ $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8784/) == 200 ]]
+curl -fsS http://127.0.0.1:8784/ > "$scratch/dashboard.html"
+grep -q '/view/current/dashboard.js' "$scratch/dashboard.html"
+curl -fsS http://127.0.0.1:8784/experiments > "$scratch/experiments.html"
+grep -q '/view/current/experiment-workspace.js' "$scratch/experiments.html"
+[[ $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8784/api/scanner/summaries) == 404 ]]
 curl -fsS http://127.0.0.1:8784/api/research/catalog > "$scratch/research-catalog.json"
 jq -e '.schema == "predict-research-catalog-1" and .provider_requests == 0 and .scheduled_calculations == 0' "$scratch/research-catalog.json" >/dev/null
 catalog_token=$(jq -er '.token' "$scratch/research-catalog.json")

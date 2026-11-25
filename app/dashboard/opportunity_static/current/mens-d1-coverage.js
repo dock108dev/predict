@@ -65,7 +65,7 @@ export function coverageURL(query, extra = {}) {
 }
 
 function researchURL(query, extra = {}) {
-  return '/research?' + new URLSearchParams({section:'experiments', ...coverageContext(query), ...extra});
+  return '/experiments?' + new URLSearchParams({...coverageContext(query), ...extra});
 }
 
 export function readDailyCoverage(query, {summary = false} = {}) {
@@ -124,7 +124,7 @@ function versionsPicker(value, query, to) {
   const current = link('Current evidence', to(context), 'research-button');
   if (!selected) current.setAttribute('aria-current', 'true');
   actions.append(current);
-  const active = (value.runs || []).find(run => run.id === selected);
+  const active = value.run?.id === selected ? value.run : null;
   if (active) {
     const saved = link(`Saved ${time(active.observed_at)}`, to(context, {run:active.id}), 'research-button');
     saved.setAttribute('aria-current', 'true');
@@ -656,7 +656,7 @@ export async function renderCoverage(root, incoming, isCurrent) {
     if (value.run_population?.kind === 'retained_provider_snapshot') root.append(node('p', 'This saved provider snapshot uses the odds-provider games and season membership known when it was saved. Its saved expected-slate denominator is unknown.', 'workspace-notice'));
     if (!value.population_revision && !value.run_population) root.append(node('p', 'Capture counts use retained provider games with evidence of D1 membership for both teams.'));
     const actions = node('div', undefined, 'workspace-links');
-    actions.append(link(value.run ? 'Open selected experiment' : 'Open current analysis in Research',
+    actions.append(link(value.run ? 'Open selected experiment' : 'Open Experiments for this date',
       researchURL(query, workbenchContext(incoming)), 'research-button'));
     request.set('export', '1');
     actions.append(link('Export dated game and coverage ledger', endpoint + '?' + request, 'research-button'));

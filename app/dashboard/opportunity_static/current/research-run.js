@@ -111,7 +111,8 @@ export function renderRun(root, {run, definition, report, comparison}, navigatio
   methods.append(node('p', `The game date uses Eastern time. Screening requires ${policy.recovered_checkpoints ? 'an original frozen checkpoint or an explicitly reconstructed T−10 response' : 'a valid frozen T−10 checkpoint'} and unrounded EV of at least ${pct(policy.minimum_ev)}. ${sizing}`));
   methods.append(node('p','Paper commitments are sized independently without an aggregate budget cap or intraday compounding.'));
   methods.append(node('p', `Each paper commitment is repriced under the original fee assumption. ${feeModes.length ? feeModes.join(' · ') + '.' : 'No captured fee treatments are recorded for this run.'} Quoted price is assumed available at the modeled size.`));
-  methods.append(node('p', 'Paper replay and sporting-result grading are recorded separately. Execution and actual venue settlement are unverified.'), definitionLink);
+  methods.append(node('p', 'Paper replay and sporting-result grading are recorded separately. Execution and actual venue settlement are unverified.'));
+  if (definitionLink) methods.append(definitionLink);
   intro.append(methods);
   const actions = node('div', undefined, 'workspace-links');
   actions.append(evidenceLink('Export saved run and evidence', exportLink));
@@ -121,14 +122,16 @@ export function renderRun(root, {run, definition, report, comparison}, navigatio
   if (comparison?.prior_run_id && navigation.priorRunLink) root.append(runComparison(comparison, navigation.priorRunLink));
 
   const runs = node('section', undefined, 'workspace-panel');
-  runs.append(node('h2', 'Portfolio variants'), node('p', 'Both variants use the same observations. Best venue keeps the highest qualifying sized EV for each exact bet; all qualifying venues keeps one ticket per exact bet per venue.'));
-  const nav = node('div', undefined, 'workspace-variant');
-  for (const [name, title] of Object.entries(variants)) {
-    const action = evidenceLink(title, variantLink(name));
-    if (name === variant) action.setAttribute('aria-current', 'true');
-    nav.append(action);
+  if (!navigation.embedded) {
+    runs.append(node('h2', 'Portfolio variants'), node('p', 'Both variants use the same observations. Best venue keeps the highest qualifying sized EV for each exact bet; all qualifying venues keeps one ticket per exact bet per venue.'));
+    const nav = node('div', undefined, 'workspace-variant');
+    for (const [name, title] of Object.entries(variants)) {
+      const action = evidenceLink(title, variantLink(name));
+      if (name === variant) action.setAttribute('aria-current', 'true');
+      nav.append(action);
+    }
+    runs.append(nav);
   }
-  runs.append(nav);
   const portfolio = report?.portfolios?.[variant];
   if (portfolio && (coverage.captured_games || coverage.reconstructed_games)) {
     runs.append(node('h3', variants[variant]), pairs({
