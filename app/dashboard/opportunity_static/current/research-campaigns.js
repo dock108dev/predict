@@ -309,6 +309,8 @@ function campaignHeader(data,period,portfolioHref,modeHref) {
 
 const dayStatus={
   scheduled:'Scheduled',
+  replay_queued:'Replay queued',
+  replaying:'Replaying retained evidence',
   waiting_for_evidence:'Waiting for capture evidence',
   deferred_for_capture:'Waiting for T−10 capture',
   no_usable_capture:'Missing usable T−10 evidence',
@@ -322,8 +324,12 @@ const dayStatus={
 };
 
 function statusText(day) {
+  if(day.replay_state==='replaying') {
+    const prior=dayStatus[day.result_state] || (day.result_pending ? 'Grading update pending' : null);
+    return [dayStatus.replaying,prior,day.capture_state==='partial' ? 'Partial T−10 coverage' : null].filter(Boolean).join(' · ');
+  }
   if(day.error) return 'Replay failed';
-  return [dayStatus[day.result_state] || dayStatus[day.state] || label(day.state),
+  return [dayStatus[day.result_state] || dayStatus[day.replay_state] || dayStatus[day.state] || label(day.state),
     day.capture_state==='partial' ? 'Partial T−10 coverage' : null,
     day.result_pending ? 'Grading update pending' : null, day.retrospective ? 'Retrospective replay' : null].filter(Boolean).join(' · ');
 }
@@ -354,8 +360,10 @@ export function renderScheduledDay(root,data,day,{daily,weekly,dayHref,portfolio
   heading.querySelector('.results-controls').append(form);
   const notice=node('div',undefined,'workspace-notice results-status');
   notice.setAttribute('role','status');
+  const replaying=['replay_queued','replaying'].includes(day.replay_state);
   notice.append(node('strong',statusText(day)),
-    node('p',day.error || 'Awaiting retained capture evidence. Paper financials are unavailable.'),
+    node('p',replaying ? 'Paper financials appear after the retained-evidence replay and grading.'
+      : day.error || 'Awaiting retained capture evidence. Paper financials are unavailable.'),
     ...(day.next_check_at ? [node('p',`Next evidence check ${time(day.next_check_at)}`)] : []));
   const actions=node('div',undefined,'workspace-links');
   actions.append(link('Daily coverage and issue decisions','/data?'+new URLSearchParams({
@@ -410,7 +418,8 @@ export function renderCampaign(root,data,{edit=false,daily,weekly,dayHref,portfo
       }
       dateCell.append(history);
     }
-    const description=day.error ? `Replay failed · ${day.error}` : statusText(day);
+    const description=day.error && day.replay_state!=='replaying'
+      ? `Replay failed · ${day.error}` : statusText(day);
     const financials=day.analysis?summaryRows(day.analysis.summary):Array(headers.length).fill(day.result_state==='no_usable_capture'?'Unavailable':'Pending');
     return [dateCell,description,day.next_check_at?time(day.next_check_at):'—',
       day.captures?`${c.captured||0} / ${c.reconstructed||0} / ${(c.missed||0)+(c.failed||0)+(c.refused||0)+(c.no_task||0)} / ${(c.pending||0)+(c.claimed||0)}`:'Awaiting evidence', ...financials];

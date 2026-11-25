@@ -106,6 +106,8 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
     fixed_run, kelly_run, other_run, revised_run = (letter * 64 for letter in "def0")
     first_date, other_date = "2026-11-23", "2026-11-20"
     configs, posts, exports, errors = {}, [], [], []
+    unavailable_fee = "captured_fee_inputs_unavailable"
+    unavailable_increment = "fixed_profit_quantity_increment_unavailable"
     change_counts = {
         "jointly_qualifying_quotes": 0,
         "fixed_profit_only_qualifying_quotes": 1,
@@ -134,6 +136,11 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
             stake_exact_usd=str(stake), stake_usd=money(stake), pnl_exact_usd=str(-stake), pnl_usd=money(-stake),
             return_exact_usd="0", expected_profit_exact_usd=str(ev * stake), expected_profit_usd=money(ev * stake))
         return selected
+
+    def excluded_quote(run):
+        if run in (fixed_run, kelly_run):
+            return dict(frozen_quote_id="unpriced-in-both-modes", offer_index=2, reason=unavailable_fee)
+        return dict(frozen_quote_id="missing-increment", offer_index=2, reason=unavailable_increment)
 
     def serve(route):
         target = urlsplit(route.request.url)
@@ -186,6 +193,12 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
             if path.endswith("/results"):
                 data = dict(report=saved_report, status=dict(state="graded", stale=False))
                 route.fulfill(json=data)
+            elif path.endswith("/offers"):
+                excluded = excluded_quote(identity)
+                route.fulfill(json=dict(run_id=identity, games=[dict(offers=[
+                    dict(offer_index=excluded["offer_index"], sizing=dict(state="excluded",
+                        frozen_quote_id=excluded["frozen_quote_id"], reason=excluded["reason"])),
+                ])]), headers={"Content-Disposition": 'attachment; filename="offers.json"'})
             elif "/tickets/" in path:
                 route.fulfill(json=dict(ticket=selected, evidence=dict(trade=dict(sizing=selected.get("sizing")))))
             else:
@@ -198,7 +211,11 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
                 route.fulfill(json=dict(run=dict(id=identity, date=cfg["start_date"], title=cfg["name"]),
                     definition=definition,
                     report=dict(policy=dict(execution="paper_only", sizing_mode=mode, target_profit_usd=cfg["target_profit_usd"]),
-                        portfolios=saved_report["portfolios"]),
+                        portfolios=saved_report["portfolios"], games=[
+                            dict(status="captured", sizing_exclusions=[excluded_quote(identity)]),
+                            dict(status="captured", sizing_exclusions=[dict(excluded_quote(identity),
+                                frozen_quote_id="second-quote-with-same-reason")]),
+                        ]),
                     sizing_runs=dict(fixed_profit=fixed_run, kelly=kelly_run) if cfg["kelly_comparison"] else {mode: identity},
                     sizing_comparison=views if cfg["kelly_comparison"] else {}))
         else:
@@ -224,6 +241,19 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
             expect(page.get_by_role("region", name="Review experiment")).to_be_visible()
             page.get_by_role("button", name="Save and run").click()
 
+        def inspect_exclusions(reason, run, code):
+            disclosure = page.get_by_text("Sizing exclusions", exact=True)
+            container = disclosure.locator("..")
+            row = container.get_by_role("row", name=re.compile(reason))
+            expect(row).to_be_hidden()
+            disclosure.click()
+            expect(row.get_by_role("cell", name="2", exact=True)).to_be_visible()
+            destination = container.get_by_role("link", name="Export dated offer ledger").get_attribute("href")
+            assert destination == f"{endpoint}/runs/{run}/offers"
+            ledger = page.request.get(base + destination)
+            assert ledger.ok
+            assert ledger.json()["games"][0]["offers"][0]["sizing"]["reason"] == code
+
         page.goto(base + "/research?section=experiments")
         create("Men’s D1 Win $10", first_date, "2026-11-29", "10")
         page.get_by_label("Compare with Kelly").check()
@@ -235,6 +265,7 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
         expect(page.get_by_role("heading", name="Win profit and Kelly comparison")).to_be_visible()
         page.get_by_role("link", name="All qualifying venues", exact=True).click()
         page.get_by_role("link", name=first_date, exact=True).click()
+        inspect_exclusions("Captured fee inputs unavailable", fixed_run, unavailable_fee)
         page.get_by_role("link", name="East Carolina -14.5").click()
         page.get_by_label("Grade", exact=True).select_option("loss")
         inspector = page.get_by_role("complementary", name="Trade inspector")
@@ -247,6 +278,7 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
         expect(page.get_by_label("Grade", exact=True)).to_have_value("loss")
         expect(inspector).to_contain_text("Kalshi")
         expect(inspector).to_contain_text("Showing a different venue for the same exact bet")
+        inspect_exclusions("Captured fee inputs unavailable", kelly_run, unavailable_fee)
         page.reload()
         expect(modes.get_by_role("link", name="Kelly", exact=True)).to_have_attribute("aria-current", "page")
         expect(page.get_by_role("link", name="All qualifying venues", exact=True)).to_have_attribute("aria-current", "true")
@@ -268,6 +300,9 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
         week_export = page.get_by_role("link", name="Export daily, weekly and EV analysis").get_attribute("href")
         assert page.request.get(base + week_export).ok
         assert exports == [(second_id, "fixed_profit", "all_venues")]
+        page.get_by_role("link", name=other_date, exact=True).click()
+        inspect_exclusions("Captured quantity increment unavailable", other_run, unavailable_increment)
+        page.get_by_role("link", name="Weekly", exact=True).click()
         page.get_by_role("button", name="Edit as a new version").click()
         expect(page.get_by_label("Target win profit ($)")).to_have_value("7.5")
         page.reload()

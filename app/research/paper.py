@@ -281,13 +281,12 @@ def scoped_candidates(entry, checkpoint, policy):
     return tickets, gaps
 
 
-def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, population=None, as_of=None):
-    """Passive backtest, independent of early-positive retention and live prices."""
+def _replay_games(db, day, at, policy, population):
+    """Yield one game and verified retained checkpoint at a time."""
     from . import experiment as owner
     from .mens_d1 import in_paper_cohort
-    date.fromisoformat(day)
+
     frozen_policy = policy or POLICY
-    at = (stamp(as_of) if as_of is not None else datetime.now(timezone.utc)).isoformat()
     reconciled = population is not None and population["kind"] == "reconciled_occurrences"
     games = list(db.execute("""SELECT g.* FROM public.ev_experiment_game g
         WHERE event->>'league'=%s AND
@@ -311,8 +310,6 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, popul
                 schedule_id=None, outcome_id=None, attempt_ids=[]))
         eligible = {row["game_id"] for row in population["games"] if in_paper_cohort(row)}
         games = [game for game in games if game["id"] in eligible]
-    tickets, dispositions, exclusions = [], [], Counter()
-    outcome_evidence = {}
     for game in games:
         checkpoint = owner._checkpoint_view(db, game, "late")
         original_status = checkpoint["status"]
@@ -339,17 +336,52 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, popul
                 target_at=checkpoint["target_at"], deadline_at=checkpoint["deadline_at"],
                 attempt_ids=[row["id"] for row in db.execute("""SELECT id FROM public.ev_experiment_record
                     WHERE game_id=%s AND kind='attempt' AND checkpoint='late' ORDER BY recorded_at,id""", (game["id"],))])
-        if status in ("captured", "reconstructed"):
-            snapshot = checkpoint["snapshot"]
-            if population is not None:
-                if recovered_id:
-                    entry.update(original_capture_status=original_status, reconstructed_at=checkpoint["persisted_at"],
-                                 recovery=checkpoint["recovery"])
-                found, gaps = scoped_candidates(entry, checkpoint, frozen_policy)
+        if recovered_id and status in ("captured", "reconstructed"):
+            entry.update(original_capture_status=original_status, reconstructed_at=checkpoint["persisted_at"],
+                         recovery=checkpoint["recovery"])
+        yield game, entry, checkpoint, recovered_id
+    for entry in untracked:
+        yield None, entry, None, None
+
+
+def scoped_reports(db, day, policies, *, population, as_of=None, evidence=False):
+    """Price each sizing mode on the same frozen checkpoint before advancing to the next game."""
+    date.fromisoformat(day)
+    at = (stamp(as_of) if as_of is not None else datetime.now(timezone.utc)).isoformat()
+    shared = policies[0]
+    frozen = shared or POLICY
+    binding_fields = ("league", "recovered_checkpoints", "defer_results")
+    if any(policy is None or any(policy.get(key) != frozen.get(key) for key in binding_fields)
+           for policy in policies[1:]):
+        raise ValueError("paper_replay_checkpoint_policy_mismatch")
+    replays = [(policy or POLICY, [], [], Counter()) for policy in policies]
+    for _, entry, checkpoint, _ in _replay_games(db, day, at, shared, population):
+        for policy, dispositions, tickets, exclusions in replays:
+            disposition = dict(entry)
+            if entry["status"] in ("captured", "reconstructed"):
+                found, gaps = scoped_candidates(disposition, checkpoint, policy)
                 tickets.extend(found)
                 exclusions.update(gaps)
-                dispositions.append(entry)
-                continue
+            dispositions.append(disposition)
+    return [assemble(day, at, policy, dispositions, tickets, exclusions,
+                     evidence=evidence, population=deepcopy(population) if len(policies) > 1 else population)
+            for policy, dispositions, tickets, exclusions in replays]
+
+
+def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, population=None, as_of=None):
+    """Passive backtest, independent of early-positive retention and live prices."""
+    from . import experiment as owner
+
+    if population is not None:
+        return scoped_reports(db, day, [policy], population=population, as_of=as_of, evidence=evidence)[0]
+    date.fromisoformat(day)
+    frozen_policy = policy or POLICY
+    at = (stamp(as_of) if as_of is not None else datetime.now(timezone.utc)).isoformat()
+    tickets, dispositions, exclusions = [], [], Counter()
+    outcome_evidence = {}
+    for game, entry, checkpoint, recovered_id in _replay_games(db, day, at, policy, None):
+        if entry["status"] in ("captured", "reconstructed"):
+            snapshot = checkpoint["snapshot"]
             outcome = None
             if game.get("outcome_id") and not frozen_policy.get("defer_results"):
                 index = owner._closure(db, [game["outcome_id"]])
@@ -358,8 +390,6 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, popul
             found, gaps = candidates(snapshot, game_id=game["id"], checkpoint_id=checkpoint["id"],
                 at=checkpoint["received_at"] if recovered_id else checkpoint["persisted_at"], outcome=outcome, policy=policy)
             if recovered_id:
-                entry.update(original_capture_status=original_status, reconstructed_at=checkpoint["persisted_at"],
-                             recovery=checkpoint["recovery"])
                 for ticket in found:
                     ticket.update(source_kind="retrospective_raw_t10", reconstructed_at=checkpoint["persisted_at"])
             if frozen_policy.get("defer_results"):
@@ -373,9 +403,8 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, popul
             entry.update(tickets=len(found), coverage=snapshot.get("coverage"),
                          fee_mode=snapshot.get("fee_mode"), exclusions=gaps)
         dispositions.append(entry)
-    dispositions.extend(untracked)
     return assemble(day, at, frozen_policy, dispositions, tickets, exclusions,
-                    outcome_evidence=outcome_evidence, evidence=evidence, population=population)
+                    outcome_evidence=outcome_evidence, evidence=evidence)
 
 
 def assemble(day, at, frozen_policy, dispositions, tickets, exclusions, *,

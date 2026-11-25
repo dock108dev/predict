@@ -194,3 +194,19 @@ class PaperResultQueueSQL(ResearchWorkspaceFixture):
             self.assertEqual(fresh["version"]["supersedes"], pending["version"]["id"])
             self.assertEqual(fresh["report"]["games"][0]["result"]["state"], "final")
             self.assertFalse(fresh["pending"])
+
+    def test_worker_grades_two_due_reports_before_starting_next_replay(self):
+        stop = Event()
+        with self.connect() as db:
+            self.discover(db)
+            first = self.save(db)
+            second = self.save(db, dict(title="Paired report scheduling", question="When did the grades publish?",
+                                       claim_ids=["positive-net-returns"]))
+
+        def next_replay(db):
+            for identity in (first, second):
+                self.assertFalse(queue.read(db, identity, status_only=True)["pending"])
+            stop.set()
+
+        with patch.object(paper_result_worker.paper_campaigns, "tick", side_effect=next_replay):
+            paper_result_worker.run(stop, connector=self.connect)

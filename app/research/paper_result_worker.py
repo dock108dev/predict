@@ -32,7 +32,10 @@ def run(stop, *, connector=connect):
                             census_priority = market_census.campaign_checkpoints(db, now)
                             repair_at = now + REPAIR_INTERVAL
                         queue.dispatch(db)
-                        queue.process_one(db)
+                        if queue.process_one(db):
+                            # A paired replay queues two grades. Give both a turn
+                            # before starting the next potentially large replay.
+                            queue.process_one(db)
                         paper_campaigns.tick(db)
                         market_census.tick(db, priority=census_priority)
                     stop.wait(POLL_SECONDS)

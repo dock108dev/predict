@@ -190,11 +190,11 @@ def tick(db):
                     today > job['game_date']])
                 if fingerprint != job['fingerprint'] or not run_id:
                     parent = workspace._definition(db, workspace.PILOT_VERSION)
-                    for mode in modes(job['config']):
-                        definition = _definition(parent, job, population, recovery, fingerprint, mode)
-                        report = paper.report(db, day, evidence=True, policy=definition['policy'],
-                                              population=deepcopy(population), as_of=now.isoformat())
-                        replays.append((definition, report))
+                    definitions = [_definition(parent, job, population, recovery, fingerprint, mode)
+                                   for mode in modes(job['config'])]
+                    reports = paper.scoped_reports(db, day, [definition['policy'] for definition in definitions],
+                                                  population=deepcopy(population), as_of=now.isoformat(), evidence=True)
+                    replays = list(zip(definitions, reports, strict=True))
                 state = 'published'
         with db.transaction():
             if replays:
@@ -413,6 +413,8 @@ def view(db, identity, variant=None, mode=None):
     available_modes = modes(config)
     mode = mode if mode in available_modes else available_modes[0]
     variant = variant if variant in config['portfolios'] else config['portfolios'][0]
+    now = queue.utc()
+    today = now.astimezone(EASTERN).date()
     history = _history(db, identity)
     day_rows = list(db.execute('SELECT * FROM public.paper_campaign_day WHERE campaign_id=%s ORDER BY game_date', (identity,)))
     run_ids = {day['game_date']: _mode_runs(history.get(day['game_date'], []), day['run_id'], available_modes[0])
@@ -427,7 +429,13 @@ def view(db, identity, variant=None, mode=None):
         run_id = runs.get(mode)
         snapshots = [dict(id=r['id'], recorded_at=r['recorded_at'].isoformat())
                      for r in history.get(game_date, []) if r['mode'] == mode]
-        entry = dict(date=str(game_date), run_id=run_id, run_ids=runs, state=day['state'], error=day['last_error'],
+        replay_state = day['state']
+        if day['lease_until'] and day['lease_until'] > now:
+            replay_state = 'replaying'
+        elif replay_state == 'scheduled' and game_date <= today:
+            replay_state = 'replay_queued'
+        entry = dict(date=str(game_date), run_id=run_id, run_ids=runs, state=day['state'],
+                     replay_state=replay_state, error=day['last_error'],
                      next_check_at=max(day['next_check_at'], datetime.combine(game_date, time.min, EASTERN)).isoformat(),
                      checked_at=day['updated_at'].isoformat(), snapshots=snapshots,
                      retrospective=game_date <= row['created_at'].astimezone(EASTERN).date(),

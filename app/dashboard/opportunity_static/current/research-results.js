@@ -498,6 +498,41 @@ function breakdowns(portfolio) {
   return panel;
 }
 
+const sizingExclusionReasons = {
+  captured_fee_inputs_unavailable:'Captured fee inputs unavailable',
+  fixed_profit_fee_rounding_unverified:'Fee rounding could not be verified',
+  fixed_profit_frozen_odds_mismatch:'Frozen odds conflict with the recorded price',
+  fixed_profit_positive_win_unavailable:'No achievable positive net win profit',
+  fixed_profit_price_or_quantity_grid_conflict:'Frozen price conflicts with the captured increment',
+  fixed_profit_price_or_quantity_grid_unavailable:'Captured price or quantity increment unavailable',
+  fixed_profit_quantity_increment_unavailable:'Captured quantity increment unavailable',
+  fixed_profit_quantity_unit_unavailable:'Captured quantity unit unavailable',
+  kelly_below_one_cent:'Kelly commitment below one cent',
+  kelly_sizing_did_not_converge:'Kelly sizing did not converge',
+  sized_ev_below_4pct:'Net EV after sizing fell below 4%',
+  sized_ev_below_minimum:'Net EV after sizing fell below the minimum',
+  sizing_inputs_incomplete:'Sizing inputs incomplete',
+  unsupported_cashflow_states:'Captured cashflows do not describe a supported bet',
+};
+
+function sizingExclusions(selected) {
+  const counts = new Map();
+  for (const game of selected.report.games || []) {
+    for (const exclusion of game.sizing_exclusions || []) {
+      const reason = sizingExclusionReasons[exclusion.reason] || label(exclusion.reason);
+      counts.set(reason, (counts.get(reason) || 0) + 1);
+    }
+  }
+  if (!counts.size) return null;
+  const reasons = [...counts.entries()].sort(([a, x], [b, y]) => y - x || a.localeCompare(b));
+  const panel = node('details', undefined, 'workspace-panel workspace-card');
+  panel.append(node('summary', 'Sizing exclusions'),
+    node('p', 'These frozen quotes were excluded while sizing this day’s paper trades. Counts are for the current sizing mode across the full day.'),
+    table(['Reason', 'Quotes'], reasons.map(([reason, total]) => [reason, count(total)])),
+    link('Export dated offer ledger', '/api/research/workspace/runs/' + encodeURIComponent(selected.run.id) + '/offers'));
+  return panel;
+}
+
 function sizingComparison(value, navigation) {
   const panel=node('details',undefined,'workspace-panel workspace-card');
   panel.append(node('summary','Sizing qualification and venue changes'),pairs(comparisonCounts(value.counts)));
@@ -573,8 +608,10 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   tools.append(resultActions(analysis, navigation), assumptions);
   if(navigation.editHref)tools.append(link('Edit as a new version',navigation.editHref));
   root.replaceChildren(header);
+  const exclusions = sizingExclusions(selected);
   if (!portfolio) {
     header.append(tools);
+    if (exclusions) root.append(exclusions);
     return;
   }
   const game = report.games.find(row => row.game_id === navigation.game);
@@ -596,6 +633,7 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
     root.append(tradeLedger(report, portfolio, selected, analysis, navigation, inspectTrade, views));
   }
   root.append(tools);
+  if (exclusions) root.append(exclusions);
   if (usable) {
     const comparison=selected.sizing_comparison?.[navigation.variant];
     if(comparison?.counts)root.append(sizingComparison(comparison,navigation));

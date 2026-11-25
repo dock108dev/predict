@@ -1,4 +1,5 @@
 """Disposable scheduled run publication, immutable inputs and passive rollups."""
+from copy import deepcopy
 from datetime import timedelta
 from fractions import Fraction as F
 from unittest import skipUnless
@@ -6,7 +7,7 @@ from unittest.mock import patch
 
 from app.research import paper, paper_campaigns as campaigns, workspace
 from app.storage import paper_result_queue as queue
-from app.storage.store import hashed, stamp
+from app.storage.store import encoded, hashed, stamp
 from tests.latest_board_fixture import SOCKET
 from tests.test_paper_campaigns import config, fixed_config
 from tests.test_paper_experiments import frozen_priced, linear
@@ -114,6 +115,14 @@ class CampaignSQL(ResearchWorkspaceFixture):
             with patch.object(queue, 'utc', return_value=self.at):
                 campaign = campaigns.create(db, body)
                 assert campaigns.create(db, body) == campaign
+                assert [day['replay_state'] for day in campaigns.view(db, campaign['id'])['days']] == [
+                    'replay_queued', 'scheduled']
+                db.execute('''UPDATE public.paper_campaign_day SET lease_until=%s
+                    WHERE campaign_id=%s AND game_date=%s''',
+                    (self.at + timedelta(minutes=1), campaign['id'], '2026-11-23'))
+                assert campaigns.view(db, campaign['id'])['days'][0]['replay_state'] == 'replaying'
+                db.execute('UPDATE public.paper_campaign_day SET lease_until=NULL WHERE campaign_id=%s',
+                           (campaign['id'],))
             population = dict(kind='reconciled_occurrences', source='fixture', membership_version='fixture',
                 revision='p'*64, observed_at=self.at.isoformat(), expected_games=None,
                 games=[dict(scope_state='eligible', paper_eligible=True, provider_event_id='paired',
@@ -149,6 +158,13 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 assert first['fixed_profit']['definition']['policy']['target_profit_usd'] == '10'
                 assert first['kelly']['definition']['policy']['kelly_multiplier'] == '1/40'
                 assert 'kelly_multiplier' not in first['fixed_profit']['definition']['policy']
+                policies = [first[mode]['definition']['policy'] for mode in ('fixed_profit', 'kelly')]
+                replay = dict(population=deepcopy(population), as_of=first['fixed_profit']['report']['as_of'], evidence=True)
+                with patch.object(experiment, '_closure', wraps=experiment._closure) as closure:
+                    streamed = paper.scoped_reports(db, '2026-11-23', policies, **replay)
+                    assert closure.call_count == 1
+                independent = [paper.report(db, '2026-11-23', policy=policy, **replay) for policy in policies]
+                assert encoded(streamed) == encoded(independent)
                 assert queue.process_one(db) and queue.process_one(db)
                 assert all(queue.read(db, run_id)['report']['games'][0]['result']['state'] == 'pending'
                            for run_id in pair.values())
