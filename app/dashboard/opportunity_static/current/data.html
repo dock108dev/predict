@@ -1,17 +1,18 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Predict · Data</title><link rel="icon" href="/view/current/predict-icon.png"><link rel="apple-touch-icon" href="/view/current/predict-icon.png">
+<title>Data</title><link rel="icon" href="data:,">
 <link rel="stylesheet" href="/view/current/pregame.css"><link rel="stylesheet" href="/view/current/research.css">
-<link rel="stylesheet" href="/view/current/research-workspace.css">
+<link rel="stylesheet" href="/view/current/workbench-shell.css"><link rel="stylesheet" href="/view/current/research-workspace.css">
 <script type="module" src="/view/current/workspace-nav.js"></script>
 <script type="module" src="/view/current/data-workbench.js"></script>
 <script type="module" src="/view/current/data.js"></script>
-</head><body class="research-page">
+</head><body class="research-page workbench-page">
 <a class="skip" href="#data-main">Skip to Data</a>
-<header class="masthead"><a class="brand" href="/research">PREDICT</a><nav aria-label="Main" data-workspace-nav></nav></header>
+<header class="masthead"><nav aria-label="Main" data-workspace-nav><a href="/research">Research</a><a href="/data" aria-current="page">Data</a><a href="/settings">Settings</a></nav></header>
 <main class="board-wrap" id="data-main">
-<header class="board-heading"><div><h1>Data</h1><p>Inspect stored observations, acquisition attempts, frozen checkpoints and sporting results.</p></div></header>
+<div class="workspace-page-heading">
+<header class="board-heading"><h1>Data</h1></header>
 <nav class="workspace-sections" aria-label="Data sections">
 <a href="/data" data-evidence-view="observations" aria-current="page">Observations</a>
 <a href="/data?evidence=pulls" data-evidence-view="pulls">Odds pulls</a>
@@ -19,6 +20,7 @@
 <a href="/data?evidence=populations" data-evidence-view="populations">Results &amp; populations</a>
 <a href="/data?evidence=mens-d1&amp;scope=mens-d1" data-evidence-view="mens-d1">Men’s D1 coverage</a>
 </nav>
+</div>
 <div id="data-observations">
 <form id="catalog-filters" class="catalog-filters data-filters">
 <label>Search<input id="search" name="search" type="search" placeholder="Team, event or source market" maxlength="150"></label>

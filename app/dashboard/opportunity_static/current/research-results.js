@@ -1,6 +1,8 @@
 import {count, details, label, link, node, pairs, pct, stack, table, time, usd} from './workspace-ui.js';
-import {selection, venue} from './workspace-format.js';
+import {number, selection, venue} from './workspace-format.js';
 import {qualityComparison} from './research-quality.js';
+import {band, workbenchPeriod} from './research-campaigns.js';
+import {gradeFilters, ledgerViewModel, resolvedGrade, tradeSorts} from './research-ledger.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
 const reportStates = {
@@ -26,15 +28,29 @@ const resultStates = {
 const captured = game => ['captured', 'frozen', 'reconstructed'].includes(game.capture_status);
 const money = value => value == null ? '—' : usd(value);
 const ticketSelection = ticket => selection({...ticket, selection_label:ticket.label});
+const gradeLabel = ticket => gradeStates[ticket.grade?.state] || 'Unresolved';
+const marketContext = ticket => [
+  {moneyline:'Moneyline', spread:'Spread', total:'Total'}[ticket.family] || label(ticket.family),
+  {full_game:'Full game', first_half:'First half', second_half:'Second half', '1h':'First half', '2h':'Second half'}[ticket.period] ||
+    (ticket.period ? label(ticket.period) : 'Period not recorded'),
+].join(' · ');
 const action = (title, href) => link(title, href, 'research-button');
-const selectionGraded = grade => ['win', 'loss', 'push', 'void'].includes(grade?.state);
+const focusKey = (element, key) => {
+  element.dataset.workbenchFocus = key;
+  return element;
+};
 
-function dropdown(title, options, current, change) {
-  const field = node('label', title), select = node('select');
+function dropdown(title, options, current, change, key) {
+  const field = node('label'), caption = node('span', title), select = node('select');
   select.append(...options.map(([value, text]) => new Option(text, value)));
   select.value = current;
   select.onchange = () => change(select.value);
-  field.append(select);
+  if (key) {
+    caption.id = 'result-label-' + key;
+    select.setAttribute('aria-labelledby', caption.id);
+    focusKey(select, key);
+  }
+  field.append(caption, select);
   return field;
 }
 
@@ -55,23 +71,26 @@ function statusNotice(analysis, pinned, summary) {
     : analysis.error ? 'Result analysis unavailable' : reportStates[summary ? reportingState : state] || 'Reading result analysis…';
   notice.append(node('strong', message));
   if (analysis.error) notice.append(node('p', analysis.error));
-  else if (historical) notice.append(node('p', 'This version shows the scores and grades published at its recorded time. Open the latest result to check for changes.'));
-  else if (analysis.status?.stale) notice.append(node('p', 'Retained evidence or grading inputs changed. The previous report is available in result history. Current grades will appear after processing.'));
-  else if (state === 'collecting' || state === 'update_pending') notice.append(node('p', 'The background worker will publish this report automatically from retained evidence.'));
+  else if (!historical && analysis.status?.stale) notice.append(node('p', 'Retained evidence or grading inputs changed. The previous report is available in result history. Current grades will appear after processing.'));
+  else if (!historical && (state === 'collecting' || state === 'update_pending')) notice.append(node('p', 'The background worker will publish this report automatically from retained evidence.'));
   if (analysis.status?.reason && !historical) notice.append(node('p', label(analysis.status.reason)));
-  const {observed_at, processed_at} = analysis.version || {};
-  if (observed_at || processed_at) notice.append(node('p', [observed_at && `Result evidence observed ${time(observed_at)}`,
-    processed_at && `Report published ${time(processed_at)}`].filter(Boolean).join(' · '), 'workspace-clocks'));
   return notice;
 }
 
 function coverageLine(coverage, games) {
-  const scheduled = coverage.pending_games || 0;
-  const gaps = games?.length ? games.filter(game => !captured(game) && !['pending', 'claimed'].includes(game.capture_status)).length
-    : (coverage.missing_tracked_games || 0) + (coverage.untracked_games || 0);
+  const pending = game => ['pending', 'claimed'].includes(game.capture_status);
+  const reviewed = games?.length ?? coverage.known_games ?? coverage.dated_eligible_games ?? coverage.tracked_games;
+  const finals = games?.filter(game => game.result?.state === 'final').length ?? coverage.final_games;
+  const frozen = games?.filter(game => ['captured', 'frozen'].includes(game.capture_status)).length ?? coverage.captured_games;
+  const reconstructed = games?.filter(game => game.capture_status === 'reconstructed').length ?? coverage.reconstructed_games;
+  const scheduled = games?.filter(pending).length ?? coverage.pending_games;
+  const gaps = games?.filter(game => !captured(game) && !pending(game)).length ?? coverage.missing_capture_games ??
+    ((coverage.missing_tracked_games || 0) + (coverage.untracked_games || 0));
   const context = [
-    `${count(coverage.captured_games || 0)} frozen`,
-    coverage.reconstructed_games && `${count(coverage.reconstructed_games)} reconstructed`,
+    reviewed != null && `${count(reviewed)} ${reviewed === 1 ? 'game' : 'games'} reviewed`,
+    finals != null && `${count(finals)} ${finals === 1 ? 'final' : 'finals'}`,
+    frozen != null && `${count(frozen)} frozen`,
+    reconstructed && `${count(reconstructed)} reconstructed`,
     gaps && `${count(gaps)} ${gaps === 1 ? 'game' : 'games'} without retained T−10 evidence`,
     scheduled && `${count(scheduled)} awaiting capture`,
     coverage.expected_games == null ? 'Complete slate unknown' : `${count(coverage.expected_games)} expected games`,
@@ -80,7 +99,7 @@ function coverageLine(coverage, games) {
 }
 
 function resultActions(analysis, navigation) {
-  const group = node('div', undefined, 'workspace-links');
+  const group = node('div', undefined, 'workspace-links result-actions');
   const {version, versions, links} = analysis;
   if (links && (navigation.pinned || !analysis.status?.stale)) {
     for (const [type, title] of [['report', 'Export graded report'], ['games', 'Export game rows'], ['trades', 'Export trade rows']]) {
@@ -89,16 +108,20 @@ function resultActions(analysis, navigation) {
   }
   if (version) group.append(link('Link to this result version', navigation.href({result:version.id})));
   if (navigation.pinned) group.append(link('Open latest result', navigation.href({result:null})));
-  if (versions?.length) {
+  if (versions?.length || version) {
     const history = node('details'), rows = node('ul');
-    history.append(node('summary', 'Result history'), rows);
-    for (const item of versions) {
+    history.append(node('summary', 'Result history'));
+    const {observed_at, processed_at} = version || {};
+    if (observed_at || processed_at) history.append(node('p', [observed_at && `Result evidence observed ${time(observed_at)}`,
+      processed_at && `Report published ${time(processed_at)}`].filter(Boolean).join(' · '), 'workspace-clocks'));
+    for (const item of versions || []) {
       const row = node('li');
       const entry = link(`${time(item.processed_at)} · ${item.id.slice(0, 12)}`, navigation.href({result:item.id}));
       if (item.id === version?.id) entry.setAttribute('aria-current', 'true');
       row.append(entry);
       rows.append(row);
     }
+    if (rows.childElementCount) history.append(rows);
     if (version) history.append(details('Exact result version and evidence revision', version));
     group.append(history);
   }
@@ -108,20 +131,27 @@ function resultActions(analysis, navigation) {
 function summaryView(summary, gameCount) {
   const partial = summary.resolved > 0 && summary.unresolved > 0;
   const metrics = pairs({
-    Tickets:count(summary.tickets), 'Games with tickets':count(summary.games), 'Games in report':count(gameCount),
-    Staked:money(summary.stake_usd), 'Expected profit at entry':money(summary.expected_profit_usd),
-    ...(partial ? {'Expected profit · resolved':money(summary.resolved_expected_profit_usd)} : {}),
-    [partial ? 'Returned · resolved' : 'Returned']:money(summary.return_usd),
     [partial ? 'Modeled net P/L · resolved' : 'Modeled net P/L']:money(summary.pnl_usd),
+    Staked:money(summary.stake_usd),
+    [partial ? 'Returned · resolved' : 'Returned']:money(summary.return_usd),
+    'Expected profit at entry':money(summary.expected_profit_usd),
     'Modeled ROI':summary.roi_percent != null ? `${summary.roi_percent}%` : summary.roi == null ? '—' : pct(summary.roi),
+    ...(partial ? {'Expected profit · resolved':money(summary.resolved_expected_profit_usd)} : {}),
   }, 'workspace-stats');
+  const pnl = metrics.querySelector('dd');
+  if (number(summary.pnl_usd) > 0) pnl.classList.add('result-positive');
+  if (number(summary.pnl_usd) < 0) pnl.classList.add('result-negative');
   const graded = summary.tickets && summary.tickets === summary.resolved
-    ? `${summary.tickets === 1 ? '1 selected ticket graded' : `All ${count(summary.tickets)} selected tickets graded`} · ` : '';
-  const row = node('p', `${graded}${count(summary.wins)} wins · ${count(summary.losses)} losses · ${count(summary.pushes)} pushes · ${count(summary.voids)} voids · ${count(summary.unresolved)} unresolved (${money(summary.unresolved_stake_usd)} staked)`, 'results-counts');
+    ? summary.tickets === 1 ? '1 selected ticket graded' : `All ${count(summary.tickets)} selected tickets graded`
+    : `${count(summary.tickets)} ${summary.tickets === 1 ? 'selected ticket' : 'selected tickets'}`;
   const population = partial
     ? `ROI uses ${money(summary.roi_stake_usd)} in resolved stake. Unresolved stakes are tracked separately.`
     : summary.roi != null ? `ROI uses ${money(summary.roi_stake_usd)} in total stake.` : 'ROI is unavailable without resolved stake.';
-  return [metrics, row, node('p', population, 'workspace-caption')];
+  const section = node('section', undefined, 'result-portfolio-summary');
+  section.append(node('h3', 'Full portfolio'), metrics,
+    node('p', `${graded} · ${count(summary.games)} of ${count(gameCount)} games with trades · ${count(summary.wins)} wins · ${count(summary.losses)} losses · ${count(summary.pushes)} pushes · ${count(summary.voids)} voids · ${count(summary.unresolved)} unresolved (${money(summary.unresolved_stake_usd)} staked)`, 'results-counts'),
+    node('p', population, 'workspace-caption'));
+  return section;
 }
 
 function score(result = {}) {
@@ -156,7 +186,8 @@ function gamesView(report, portfolio, navigation) {
     ['missing', 'Missing capture'], ['unresolved', 'Unresolved trades'],
   ];
   panel.append(node('h3', 'Games'), controls, content);
-  controls.append(dropdown('Show games', gameFilter, navigation.filter, filter => navigation.go({filter:filter === 'all' ? null : filter})));
+  controls.append(dropdown('Show games', gameFilter, navigation.filter,
+    filter => navigation.go({filter:filter === 'all' ? null : filter, ledger_view:'games'}), 'game-filter'));
   const games = report.games.filter(game => {
     const summary = portfolio.by_game[game.game_id];
     if (navigation.filter === 'traded') return summary?.tickets;
@@ -205,13 +236,14 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   const summary = portfolio.by_game[game.game_id];
   const allTickets = portfolio.tickets.filter(ticket => ticket.game_id === game.game_id);
   const matching = allTickets.filter(ticket => navigation.tradeFilter === 'all' || (navigation.tradeFilter === 'unresolved'
-    ? !selectionGraded(ticket.grade) : ticket.grade?.state === navigation.tradeFilter));
-  const trade = allTickets.find(ticket => ticket.id === navigation.trade);
+    ? !resolvedGrade(ticket.grade) : ticket.grade?.state === navigation.tradeFilter));
+  const requested = matching.find(ticket => ticket.id === navigation.trade);
+  const trade = navigation.trade ? requested || matching[0] : null;
   const headline = node('h3', game.title);
   headline.tabIndex = -1;
   const resultStatus = resultStates[game.result?.state] || 'Result';
   const scoreLine = score(game.result);
-  panel.append(link('All games', navigation.href({game:null, trade:null, trade_filter:null})), headline,
+  panel.append(link('All games', navigation.href({game:null, trade:null, ledger_view:'games'})), headline,
     node('p', resultStatus === scoreLine ? scoreLine : `${resultStatus} · ${scoreLine}`, 'results-score'),
     node('p', `${time(game.starts_at)} · ${captureDescription(game, summary)}`, 'workspace-caption'));
   if (navigation.coverageHref) panel.append(link('Game coverage and issue decisions', navigation.coverageHref(game)));
@@ -229,18 +261,20 @@ function gameView(game, portfolio, navigation, inspectTrade) {
     ...(partial ? {'Expected profit · resolved':money(summary.resolved_expected_profit_usd)} : {}),
     [partial ? 'Returned · resolved' : 'Returned']:money(summary?.return_usd),
     [partial ? 'Modeled P/L · resolved' : 'Modeled P/L']:money(summary?.pnl_usd)}, 'workspace-stats'));
+  if (navigation.trade && !requested) panel.append(node('p', trade
+    ? 'The requested trade is outside this view. Showing an available trade.'
+    : 'The requested trade is outside this view.'));
   if (trade) panel.append(tradeView(trade, game, navigation, inspectTrade));
-  else if (navigation.trade) panel.append(node('p', 'That trade is unavailable in this portfolio.'));
   const controls = node('div', undefined, 'workspace-form');
-  controls.append(dropdown('Show trades', [['all', 'All grades'], ['win', 'Wins'], ['loss', 'Losses'], ['push', 'Pushes'], ['void', 'Voids'], ['unresolved', 'Unresolved']],
-    navigation.tradeFilter, filter => navigation.go({trade_filter:filter === 'all' ? null : filter})));
+  controls.append(dropdown('Show trades', gradeFilters, navigation.tradeFilter,
+    filter => navigation.go({trade_filter:filter === 'all' ? null : filter}), 'game-trade-filter'));
   panel.append(node('h4', 'Selected paper trades'), controls);
   if (!matching.length) panel.append(node('p', 'No trades match this view.'));
   else panel.append(table(['Selection', 'Venue', 'Odds', 'Probability', 'EV', 'Stake', 'Expected profit', 'Grade', 'Return', 'P/L'], matching.map(ticket => {
     const selectionLink = link(ticketSelection(ticket), navigation.href({trade:ticket.id}));
     if (trade?.id === ticket.id) selectionLink.setAttribute('aria-current', 'true');
     return [selectionLink, venue(ticket.venue), ticket.posted_odds, pct(ticket.probability), pct(ticket.ev), money(ticket.stake_usd),
-      money(ticket.expected_profit_usd), gradeStates[ticket.grade?.state] || label(ticket.grade?.state), money(ticket.return_usd), money(ticket.pnl_usd)];
+      money(ticket.expected_profit_usd), gradeLabel(ticket), money(ticket.return_usd), money(ticket.pnl_usd)];
   })));
   return panel;
 }
@@ -264,6 +298,172 @@ function tradeView(trade, game, navigation, inspectTrade) {
   return panel;
 }
 
+function moneyCell(value) {
+  const amount = number(value);
+  return node('span', money(value), amount > 0 ? 'result-positive' : amount < 0 ? 'result-negative' : undefined);
+}
+
+function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
+  const panel = node('aside', undefined, 'workspace-panel result-inspector paper-result-trade');
+  panel.setAttribute('aria-label', 'Trade inspector');
+  panel.id = 'trade-inspector';
+  const headline = node('h3', ticketSelection(trade));
+  headline.tabIndex = -1;
+  const context = node('div', undefined, 'result-inspector-context');
+  if (game) context.append(node('p', game.title));
+  context.append(node('p', `${venue(trade.venue)} · ${marketContext(trade)} · ${gradeLabel(trade)}`));
+  panel.append(link('Back to trade ledger', '#trade-ledger-title', 'result-inspector-back'), headline, context);
+  if (ledger.missingSelection) {
+    panel.append(node('p', 'The requested trade is outside this view. Showing an available trade.', 'workspace-caption'));
+  } else if (ledger.selectionPage && ledger.selectionPage !== ledger.page) {
+    panel.append(link('Show selected trade in ledger', navigation.href({trade_page:ledger.selectionPage})));
+  }
+  const probability = trade.capture_origin === 'reconstructed' ? 'Reconstructed probability' : 'Frozen probability';
+  panel.append(pairs({
+    'Posted odds':trade.posted_odds,
+    [probability]:pct(trade.probability),
+    'Net EV at commitment':pct(trade.ev),
+    Stake:money(trade.stake_usd),
+    'Expected profit at entry':money(trade.expected_profit_usd),
+    'Modeled return':money(trade.return_usd),
+  }));
+  const pnl = node('p', undefined, 'result-inspector-pnl');
+  pnl.append(node('strong', 'Modeled P/L'), moneyCell(trade.pnl_usd));
+  panel.append(pnl);
+  if (game) {
+    panel.append(node('p', score(game.result), 'results-score'),
+      link('Game result and coverage', navigation.href({game:game.game_id, ledger_view:'games', trade:trade.id})));
+  }
+  const witness = node('div', undefined, 'result-inspector-provenance');
+  witness.append(pairs({'T−10 origin':label(trade.capture_origin)}));
+  panel.append(witness);
+
+  const evidence = node('details', undefined, 'result-inspector-evidence'), calculation = node('div');
+  evidence.append(node('summary', 'Trade calculation and frozen evidence'), calculation);
+  const grade = trade.grade || {};
+  if (grade.explanation || grade.reason) {
+    const explanation = node('details');
+    explanation.append(node('summary', 'Grading explanation'), node('p', grade.explanation || label(grade.reason)));
+    panel.append(explanation);
+  }
+  panel.append(evidence, resultEvidence(game?.result, grade), details('Exact grading inputs and ticket identity', trade));
+  inspectTrade(calculation, trade, value => {
+    const {kelly, clocks} = value.evidence?.trade || {};
+    const age = clocks?.quote_age_at_receipt_seconds;
+    witness.replaceChildren(pairs({
+      'Kelly fraction':kelly?.multiplier ? `${kelly.multiplier} full Kelly` : 'Unknown',
+      'Bankroll reference':kelly?.reference_bankroll_usd == null ? 'Unknown' : usd(kelly.reference_bankroll_usd),
+      'T−10 origin':label(trade.capture_origin),
+      'Quote age at receipt':age != null ? `${Number(age).toFixed(3)} seconds`
+        : clocks?.quote_age_state === 'future' ? 'Source timestamp after receipt' : 'Unknown',
+    }));
+  });
+  return panel;
+}
+
+function ledgerTable(ledger, games, navigation) {
+  const headers = ['Selection', 'Venue', 'Odds', 'EV', 'Stake', 'Grade', 'Modeled P/L'];
+  const scroll = table(headers, ledger.rows.map(ticket => {
+    const game = games.get(ticket.game_id);
+    const selected = ticket.id === ledger.selected?.id;
+    const exactSelection = ticketSelection(ticket);
+    const selectionName = ticketSelection({...ticket, line:null});
+    const pick = focusKey(link(exactSelection, navigation.href({
+      game:null, ledger_view:null, trade:ticket.id, trade_page:ledger.page,
+    }), 'result-ledger-selection'), 'trade-' + ticket.id);
+    if (exactSelection !== selectionName) {
+      const line = node('span', exactSelection.slice(selectionName.length + 1), 'result-ledger-exact-line');
+      pick.replaceChildren(selectionName + ' ', line);
+    }
+    if (selected) pick.setAttribute('aria-current', 'true');
+    const selectionCell = node('div');
+    selectionCell.append(pick, node('small', marketContext(ticket), 'result-ledger-line'));
+    if (game) selectionCell.append(node('small', game.title, 'result-ledger-game'));
+    const grade = gradeLabel(ticket), tone = grade === 'Win' ? 'result-positive' : grade === 'Loss' ? 'result-negative' : '';
+    return [selectionCell, venue(ticket.venue), ticket.posted_odds, pct(ticket.ev), money(ticket.stake_usd),
+      node('span', grade, tone), moneyCell(ticket.pnl_usd)];
+  }));
+  scroll.classList.add('result-ledger-table');
+  const tableElement = scroll.firstElementChild;
+  tableElement.setAttribute('aria-labelledby', 'trade-ledger-title');
+  tableElement.setAttribute('role', 'table');
+  for (const group of tableElement.querySelectorAll('thead, tbody')) group.setAttribute('role', 'rowgroup');
+  for (const row of tableElement.querySelectorAll('tr')) row.setAttribute('role', 'row');
+  for (const column of tableElement.querySelectorAll('th')) column.setAttribute('role', 'columnheader');
+  for (const cell of tableElement.querySelectorAll('td')) cell.setAttribute('role', 'cell');
+  const direction = ledger.sort === 'ev_asc' ? 'ascending' : 'descending';
+  const sortHeader = {ev_asc:3, ev_desc:3, stake_desc:4, pnl_desc:6}[ledger.sort];
+  tableElement.querySelectorAll('th')[sortHeader].setAttribute('aria-sort', direction);
+  tableElement.querySelector('a[aria-current]')?.closest('tr')?.classList.add('result-ledger-selected');
+  return scroll;
+}
+
+function ledgerPagination(ledger, navigation) {
+  const footer = node('div', undefined, 'result-ledger-pagination');
+  const pager = node('nav');
+  pager.setAttribute('aria-label', 'Trade pagination');
+  for (const [title, page] of [['Previous', ledger.page - 1], ['Next', ledger.page + 1]]) {
+    if (page >= 1 && page <= ledger.pageCount) {
+      pager.append(focusKey(action(title, navigation.href({trade_page:page})), 'page-' + title.toLowerCase()));
+    } else {
+      const button = node('button', title, 'research-button');
+      button.type = 'button';
+      button.disabled = true;
+      pager.append(button);
+    }
+  }
+  footer.append(node('p', `${count(ledger.offset + 1)}–${count(ledger.offset + ledger.rows.length)} of ${count(ledger.total)} trades`), pager);
+  return footer;
+}
+
+function tradeLedger(report, portfolio, selected, analysis, navigation, inspectTrade, views) {
+  // The daily and freshness comparisons share the campaign's configured bucket edges.
+  const buckets = analysis.quality?.fresh_target_only?.buckets || [];
+  const originals = selected.report.portfolios.all_venues.tickets || [];
+  const ledger = ledgerViewModel(portfolio.tickets, originals, buckets, navigation.params);
+  const games = new Map(report.games.map(game => [game.game_id, game]));
+  const section = node('section', undefined, 'result-workbench');
+  const heading = node('div', undefined, 'result-ledger-heading');
+  const title = node('h3', 'Trades');
+  title.id = 'trade-ledger-title';
+  title.tabIndex = -1;
+  const controls = node('div', undefined, 'workspace-form result-ledger-controls');
+  const change = (key, value) => navigation.go({[key]:value, trade_page:1});
+  if (buckets.length > 1) {
+    controls.append(dropdown('Screening EV', [['all', 'All EV buckets'], ...buckets.map(bucket => [bucket.minimum, band(bucket)])],
+      ledger.bucket?.minimum || 'all', value => change('trade_ev', value === 'all' ? null : value), 'ledger-ev'));
+  }
+  controls.append(dropdown('Grade', gradeFilters, ledger.grade, value => change('trade_filter', value === 'all' ? null : value), 'ledger-grade'),
+    dropdown('Sort trades', tradeSorts, ledger.sort, value => change('trade_sort', value === 'ev_desc' ? null : value), 'ledger-sort'));
+  heading.append(title, views, controls);
+  section.append(heading);
+  if (ledger.subset) {
+    const {tickets, resolved, stake, resolvedStake, pnl} = ledger.subset;
+    const partial = resolved !== tickets;
+    const caption = [
+      'Filtered subset',
+      `${count(tickets)} of ${count(portfolio.tickets.length)} trades`,
+      `Staked ${money(stake)}`,
+      `${partial ? 'Modeled P/L on resolved trades' : 'Modeled P/L'} ${money(pnl)}`,
+      ...(partial ? [`Resolved stake ${money(resolvedStake)}`] : []),
+    ];
+    section.append(node('p', caption.join(' · '), 'result-ledger-subset'));
+  }
+  if (!ledger.rows.length) {
+    section.append(node('p', portfolio.tickets.length ? 'No trades match the current filters.'
+      : 'No selected paper trades in this portfolio.'));
+    return section;
+  }
+  const split = node('div', undefined, 'result-workbench-split');
+  const sheet = node('div', undefined, 'result-ledger');
+  if (ledger.selected) sheet.append(link('Selected trade details', '#trade-inspector', 'result-jump-inspector'));
+  sheet.append(ledgerTable(ledger, games, navigation), ledgerPagination(ledger, navigation));
+  split.append(sheet);
+  if (ledger.selected) split.append(tradeInspector(ledger.selected, games.get(ledger.selected.game_id), ledger, navigation, inspectTrade));
+  section.append(split);
+  return section;
+}
+
 function breakdowns(portfolio) {
   const panel = node('details', undefined, 'workspace-panel');
   panel.append(node('summary', 'Results by venue and capture origin'));
@@ -279,41 +479,72 @@ function breakdowns(portfolio) {
 
 export function renderResults(root, selected, analysis, navigation, inspectTrade) {
   const header = node('section', undefined, 'workspace-panel workspace-card paper-result-summary');
-  header.append(node('h2', selected.run.title), node('p', `${selected.run.date} Eastern · Paper results`, 'workspace-caption'));
+  const dayHeader = node('div', undefined, 'result-day-header'), title = node('div');
+  const policy = selected.report.policy || {};
+  const context = [`${selected.run.date} Eastern`, 'Paper results',
+    policy.minimum_ev && `EV ≥${pct(policy.minimum_ev)}`, policy.kelly_multiplier && `${policy.kelly_multiplier} Kelly`];
+  title.append(node('h2', selected.run.title), node('p', context.filter(Boolean).join(' · '), 'workspace-caption'));
   const controls = node('div', undefined, 'results-controls');
-  const dates = node('div', undefined, 'workspace-form');
-  dates.append(dropdown('Saved game date (Eastern)', navigation.dates.map(day => [day, day]), selected.run.date, navigation.changeDate));
+  const dates = node('div', undefined, 'workspace-form result-date-control');
+  dates.append(dropdown('Game date (Eastern)', navigation.dates.map(day => [day, day]), selected.run.date, navigation.changeDate, 'game-date'));
   const variantsNav = node('nav', undefined, 'workspace-variant');
   variantsNav.setAttribute('aria-label', 'Paper portfolios');
   for (const [name, title] of Object.entries(variants)) {
-    const entry = action(title, navigation.href({variant:name}));
+    const entry = focusKey(action(title, navigation.href({variant:name})), 'portfolio-' + name);
     if (name === navigation.variant) entry.setAttribute('aria-current', 'true');
     variantsNav.append(entry);
   }
+  if (navigation.weeklyHref) controls.append(workbenchPeriod(navigation.href({view:null}), navigation.weeklyHref, 'daily'));
   controls.append(dates, variantsNav);
   const report = navigation.pinned || !analysis.status?.stale ? analysis.report : null;
   const portfolio = report?.portfolios?.[navigation.variant];
   const usable = report?.games.some(captured);
-  header.append(controls, statusNotice(analysis, navigation.pinned, portfolio?.summary), coverageLine(report?.coverage || selected.run.coverage || {}, report?.games));
-  if (portfolio && usable) header.append(...summaryView(portfolio.summary, report.games.length));
+  dayHeader.append(title, statusNotice(analysis, navigation.pinned, portfolio?.summary));
+  header.append(dayHeader, controls);
+  if (portfolio && usable) header.append(summaryView(portfolio.summary, report.games.length));
   else {
     const original = selected.report.portfolios[navigation.variant];
     const originalUsable = selected.report.games?.some(game => captured({capture_status:game.status}));
     if (!portfolio && (originalUsable || original.count)) {
-      header.append(pairs({Tickets:count(original.count), 'Games with tickets':count(original.unique_games),
-        Staked:money(original.turnover_usd), 'Expected profit at entry':money(original.expected_profit_usd)}, 'workspace-stats'));
+      const saved = node('section', undefined, 'result-portfolio-summary');
+      saved.append(node('h3', 'Full portfolio at entry'),
+        pairs({Tickets:count(original.count), 'Games with tickets':count(original.unique_games),
+          Staked:money(original.turnover_usd), 'Expected profit at entry':money(original.expected_profit_usd)}, 'workspace-stats'));
+      header.append(saved);
     } else header.append(node('p', 'Paper financials require usable T−10 evidence.'));
   }
-  header.append(node('p', 'Paper outcomes use recorded fee and quoted-size assumptions. Actual fees, executable size and venue settlement are unverified. A venue-native contract ID is shown when retained.', 'workspace-caption'), resultActions(analysis, navigation));
+  const assumptions = node('details');
+  assumptions.append(node('summary', 'Paper assumptions'), node('p', 'Paper outcomes use recorded fee and quoted-size assumptions. Actual fees, executable size and venue settlement are unverified. A venue-native contract ID is shown when retained.'));
+  header.append(coverageLine(report?.coverage || selected.run.coverage || {}, report?.games));
+  const tools = node('div', undefined, 'result-report-tools');
+  tools.append(resultActions(analysis, navigation), assumptions);
   root.replaceChildren(header);
-  if (!portfolio) return;
-  const game = report.games.find(row => row.game_id === navigation.game);
-  if (game) root.append(gameView(game, portfolio, navigation, inspectTrade));
-  else {
-    if (navigation.game) root.append(node('p', 'That game is unavailable in this report.'));
-    const quality = qualityComparison(analysis.quality);
-    if (quality && usable) root.append(quality);
-    root.append(gamesView(report, portfolio, navigation));
+  if (!portfolio) {
+    header.append(tools);
+    return;
   }
-  if (usable) root.append(breakdowns(portfolio));
+  const game = report.games.find(row => row.game_id === navigation.game);
+  const showGames = Boolean(navigation.game || navigation.params.ledger_view === 'games' || navigation.filter !== 'all');
+  const views = node('nav', undefined, 'workspace-variant result-view-controls');
+  views.setAttribute('aria-label', 'Report detail');
+  const trades = action('Trades', showGames ? navigation.href({ledger_view:null, game:null, filter:null}) : '#trade-ledger-title');
+  const games = action('Games and coverage', navigation.href({ledger_view:'games', game:null}));
+  (showGames ? games : trades).setAttribute('aria-current', 'page');
+  views.append(trades, games);
+  if (showGames) {
+    root.append(views);
+    if (game) root.append(gameView(game, portfolio, navigation, inspectTrade));
+    else {
+      if (navigation.game) root.append(node('p', 'That game is unavailable in this report.'));
+      root.append(gamesView(report, portfolio, navigation));
+    }
+  } else {
+    root.append(tradeLedger(report, portfolio, selected, analysis, navigation, inspectTrade, views));
+  }
+  root.append(tools);
+  if (usable) {
+    const quality = qualityComparison(analysis.quality);
+    if (quality) root.append(quality);
+    root.append(breakdowns(portfolio));
+  }
 }

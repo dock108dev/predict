@@ -50,8 +50,18 @@ export function coverageContext(query, fallbackDate) {
   }).filter(([,value]) => value));
 }
 
+export const ledgerKeys = ['game', 'trade', 'filter', 'trade_filter', 'trade_ev', 'trade_sort', 'trade_page', 'ledger_view'];
+const reviewKeys = ['result', ...ledgerKeys];
+export function workbenchContext(query, keys = [...reviewKeys, 'campaign', 'view']) {
+  return Object.fromEntries(keys.filter(key => query.has(key)).map(key => [key, query.get(key)]));
+}
+
 export function coverageURL(query, extra = {}) {
-  return '/data?' + new URLSearchParams({evidence:'mens-d1', ...coverageContext(query), ...extra});
+  const sameRun = extra.run == null || extra.run === query.get('run');
+  const sameDate = extra.date == null || extra.date === query.get('date');
+  return '/data?' + new URLSearchParams({
+    evidence:'mens-d1', ...coverageContext(query), ...(sameRun && sameDate ? workbenchContext(query) : {}), ...extra,
+  });
 }
 
 function researchURL(query, extra = {}) {
@@ -629,7 +639,7 @@ export async function renderCoverage(root, incoming, isCurrent) {
   try {
     const value = await readDailyCoverage(query);
     if (!isCurrent()) return;
-    const canonical = coverageURL(query);
+    const canonical = coverageURL(incoming);
     if (location.pathname + location.search !== canonical) {
       history.replaceState(null, '', canonical + location.hash);
       window.dispatchEvent(new Event('workspace-context'));
@@ -646,7 +656,8 @@ export async function renderCoverage(root, incoming, isCurrent) {
     if (value.run_population?.kind === 'retained_provider_snapshot') root.append(node('p', 'This saved provider snapshot uses the odds-provider games and season membership known when it was saved. Its saved expected-slate denominator is unknown.', 'workspace-notice'));
     if (!value.population_revision && !value.run_population) root.append(node('p', 'Capture counts use retained provider games with evidence of D1 membership for both teams.'));
     const actions = node('div', undefined, 'workspace-links');
-    actions.append(link(value.run ? 'Open selected experiment' : 'Open current analysis in Research', researchURL(query), 'research-button'));
+    actions.append(link(value.run ? 'Open selected experiment' : 'Open current analysis in Research',
+      researchURL(query, workbenchContext(incoming)), 'research-button'));
     request.set('export', '1');
     actions.append(link('Export dated game and coverage ledger', endpoint + '?' + request, 'research-button'));
     const analysis = value.analysis_run || value.run;

@@ -1,6 +1,6 @@
-.settings-page { max-width: 1200px; }
-.research-page main>section { padding-block: .6rem 1rem; border-bottom:1px solid var(--line,#d4d9de); }
-.research-page main>section h2 { font-size:1.1rem; }
+.workbench-page main > section { padding-block: 1.15rem; border-top: 1px solid var(--line); }
+.workbench-page main > section h2 { margin-top: 0; }
+.workbench-page main > details { border-top: 1px solid var(--line); padding-block: 1rem; }
 #collection-state,#credits-state,#storage-state { max-width:60rem; }
 #source-rows td { min-width:0; }
 #control-result:empty,#configuration-result:empty { display:none; }

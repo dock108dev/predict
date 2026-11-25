@@ -2,11 +2,15 @@
 
 import json
 import os
+import re
+from fractions import Fraction
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+import pytest
 from playwright.sync_api import expect, sync_playwright
 
+from app.research.paper_results import _summary
 from browser_tests.test_pregame_current import ASSETS
 from browser_tests.test_research_workspace import research_http_fixture
 
@@ -227,15 +231,18 @@ def test_paper_results_journey_refresh_and_exact_history():
             f"{base}/research?section=experiments&definition={definition['version']}"
         )
         summary = page.locator(".paper-result-summary")
-        expect(page.get_by_role('link',name='Back to daily & weekly results')).to_have_attribute('href',__import__('re').compile('campaign='+'d'*64))
+        expect(page.get_by_role('link',name='Back to daily & weekly results')).to_have_attribute('href',re.compile('campaign='+'d'*64))
         expect(summary).to_contain_text("1 selected ticket graded")
         expect(summary).to_contain_text("1 game without retained T−10 evidence")
         expect(summary).to_contain_text("Complete slate unknown")
-        expect(page.get_by_role("heading", name="Games", exact=True)).to_be_visible()
+        expect(page.get_by_role("heading", name="Trades", exact=True)).to_be_visible()
+        expect(page.locator(".result-ledger-selection")).to_have_text("East Carolina -14.5")
         page.get_by_text("Capture provenance and quote freshness", exact=True).click()
         expect(page.get_by_role("heading", name="Exploratory target-age screen · ≤60 seconds")).to_be_visible()
         expect(page.get_by_text("Over 300 seconds", exact=True)).to_be_visible()
         expect(page.get_by_text("Unknown timestamp", exact=True)).to_be_visible()
+        page.get_by_role("link", name="Games and coverage", exact=True).click()
+        expect(page.get_by_role("heading", name="Games", exact=True)).to_be_visible()
         page.get_by_label("Show games").select_option("reconstructed")
         expect(page.get_by_role("row").filter(has_text="Visitor at Host")).to_contain_text("Original task refused")
         expect(page.get_by_role("link", name=TITLE)).to_have_count(0)
@@ -301,5 +308,126 @@ def test_paper_results_journey_refresh_and_exact_history():
         expect(trade).to_contain_text("-$75.32")
         expect(summary).to_contain_text("Historical result")
         assert all(method == "GET" for method, _, _ in requests)
+        assert not errors
+        browser.close()
+
+
+def ledger_report():
+    result = report(FIRST)
+    best = result["portfolios"]["best_venue"]
+    template = best["tickets"][0]
+    games, trades = result["games"], []
+    for index in range(18):
+        game = f"game-{index:02d}"
+        state = ["loss", "pending", "conflicting", "push", "void", "win"][index % 6]
+        resolved = state in {"win", "loss", "push", "void"}
+        returned = {"win": "15.00", "loss": "0.00"}.get(state, "5.00") if resolved else None
+        pnl = {"win": "10.00", "loss": "-5.00"}.get(state, "0.00") if resolved else None
+        trade = dict(template, id=f"trade-{index:02d}", game_id=game,
+                     label=f"University of Lower Allegheny State at Capital Region {index:02d}",
+                     line="+31/2" if index % 2 else "-31/2", period="1h",
+                     venue="novig" if index % 2 else "prophetx",
+                     ev=f"{10**20+min(index, 16)}/1000000000000000000000",
+                     grade=dict(state=state, explanation=f"Witness for ticket {index:02d}"),
+                     stake_usd="5.00", stake_exact_usd="5",
+                     expected_profit_usd="0.50",
+                     expected_profit_exact_usd=str(Fraction(5)*Fraction(f"{10**20+min(index, 16)}/1000000000000000000000")),
+                     return_usd=returned, return_exact_usd=returned, pnl_usd=pnl, pnl_exact_usd=pnl)
+        trades.append(trade)
+        games.append(dict(game_id=game,title=f"Away {index:02d} at Home {index:02d}",
+                          capture_status="captured", result={"state": "final"}))
+    for variant, selected in [("best_venue", trades[:-2]), ("all_venues", trades)]:
+        result["portfolios"][variant] = dict(tickets=selected, summary=_summary(selected),
+            by_game={trade["game_id"]: _summary([trade]) for trade in selected}, by_venue={}, by_capture={})
+    result.update(status="partially_graded")
+    return result
+
+
+@pytest.mark.parametrize("width", [1440, 390])
+def test_flat_ledger_exact_order_population_and_inspector_navigation(width):
+    results = ledger_report()
+    trades = results["portfolios"]["all_venues"]["tickets"]
+    tickets = {trade["id"]:trade for trade in trades}
+    originals = [dict(trade, screen_ev="1/25" if index < 9 else "2/25")
+                 for index, trade in enumerate(trades)]
+    expected = [ticket["id"] for ticket in sorted(trades, key=lambda ticket: (-Fraction(ticket["ev"]), ticket["id"]))]
+    errors, requests = [], []
+
+    def serve(route):
+        target = urlsplit(route.request.url)
+        path = target.path
+        requests.append((route.request.method, path))
+        if path == "/research":
+            route.fulfill(path=ASSETS / "research-workspace.html")
+        elif path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(path).name)
+        elif path == "/api/workspace/status":
+            route.fulfill(json={})
+        elif path == BASE:
+            route.fulfill(json={"definitions": [], "runs": []})
+        elif path == f"{BASE}/runs/{RUN}":
+            route.fulfill(json=dict(run=dict(id=RUN,date=DAY,title="Paper universe"),
+                definition={}, report=dict(policy={"execution": "paper_only"},
+                                          portfolios={"best_venue": {}, "all_venues": {"tickets": originals}})))
+        elif path == RESULTS:
+            route.fulfill(json=dict(report=results,version={"id": FIRST},status={"state":"partially_graded"},
+                quality={"fresh_target_only":{"buckets":[{"minimum":"1/25","maximum":"2/25"},
+                                                         {"minimum":"2/25","maximum":None}]}}))
+        elif path.startswith(f"{BASE}/runs/{RUN}/tickets/"):
+            trade = tickets[path.rsplit("/",1)[1]]
+            route.fulfill(json=dict(ticket=dict(trade,title=f"Frozen {trade['label']}"),
+                                    evidence={"trade":{"clocks":{"source_at":CLOCK}}}))
+        else:
+            route.fulfill(status=404)
+
+    with research_http_fixture(serve) as base, sync_playwright() as runtime:
+        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport={"width": width, "height": 820})
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(f"{base}/research?section=experiments&date={DAY}&run={RUN}&variant=all_venues&result={FIRST}")
+        ledger = page.locator(".result-ledger-table")
+        inspector = page.locator("#trade-inspector")
+        expect(page.locator(".paper-result-summary")).to_contain_text("Partially graded")
+        expect(page.locator(".paper-result-summary")).to_contain_text("ROI uses $60.00 in resolved stake")
+        expect(ledger.locator("tbody tr")).to_have_count(8)
+        seen = []
+        for size in (8, 8, 2):
+            rows = ledger.locator("a.result-ledger-selection")
+            expect(rows).to_have_count(size)
+            seen.extend(parse_qs(urlsplit(href).query)["trade"][0] for href in rows.evaluate_all("(rows) => rows.map(row => row.href)"))
+            next_page = page.get_by_role("link",name="Next",exact=True)
+            if size == 8:
+                next_page.click()
+        assert seen == expected
+        assert all(key not in parse_qs(urlsplit(page.url).query) for key in ("game", "ledger_view"))
+        pick = ledger.locator("a.result-ledger-selection").last
+        expect(pick).to_contain_text("-15.5")
+        expect(pick).to_contain_text("University of Lower Allegheny State")
+        pick.click()
+        expect(inspector).to_contain_text("Witness for ticket 00")
+        expect(inspector).to_contain_text("Away 00 at Home 00")
+        assert parse_qs(urlsplit(page.url).query)["trade"] == ["trade-00"]
+        page.reload()
+        expect(inspector).to_contain_text("Witness for ticket 00")
+        page.get_by_role("link",name="Previous",exact=True).click()
+        page.get_by_role("link",name="Previous",exact=True).click()
+        expect(ledger.locator("a.result-ledger-selection").first).to_have_attribute("href",re.compile("trade=trade-16"))
+        expect(inspector).to_contain_text("Witness for ticket 00")
+        page.get_by_label("Grade",exact=True).select_option("unresolved")
+        expect(ledger.locator("tbody tr")).to_have_count(6)
+        assert parse_qs(urlsplit(page.url).query)["trade_filter"] == ["unresolved"]
+        expect(inspector).not_to_contain_text("Witness for ticket 00")
+        assert parse_qs(urlsplit(page.url).query)["trade_page"] == ["1"]
+        page.go_back()
+        expect(inspector).to_contain_text("Witness for ticket 00")
+        page.get_by_label("Screening EV",exact=True).select_option("1/25")
+        expect(page.locator(".result-ledger-subset")).to_contain_text("9 of 18 trades")
+        expect(page.locator(".result-ledger-subset")).to_contain_text("Staked $45.00")
+        page.get_by_role("link",name="Next",exact=True).click()
+        expect(ledger.locator("a.result-ledger-selection")).to_have_attribute("href",re.compile("trade=trade-00"))
+        page.get_by_label("Sort trades").select_option("ev_asc")
+        expect(ledger.locator("a.result-ledger-selection").first).to_have_attribute("href",re.compile("trade=trade-00"))
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        assert all(method == "GET" for method, _ in requests)
         assert not errors
         browser.close()

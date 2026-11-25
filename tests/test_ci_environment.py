@@ -586,6 +586,8 @@ class EnforcementTests(unittest.TestCase):
                 "app/dashboard/opportunity_static/current/manrope-OFL.txt",
                 "app/dashboard/opportunity_static/current/barlow-semi-condensed-600.ttf",
                 "app/dashboard/opportunity_static/current/barlow-OFL.txt",
+                "app/dashboard/opportunity_static/current/ibm-plex-sans.woff2",
+                "app/dashboard/opportunity_static/current/ibm-plex-sans-OFL.txt",
                 "app/dashboard/opportunity_static/current/predict-icon.png",
                 "app/dashboard/opportunity_static/current/sora-400.ttf",
                 "app/dashboard/opportunity_static/current/sora-500.ttf",
@@ -605,7 +607,12 @@ class EnforcementTests(unittest.TestCase):
                     self.assertRaisesRegex(ValueError, "Missing package inputs"),
                 ):
                     validate([name for name in names if name != missing], root)
-            for extra in ("unreviewed.ttf", "private.txt", "unreviewed.png"):
+            for extra in (
+                "unreviewed.ttf",
+                "unreviewed.woff2",
+                "private.txt",
+                "unreviewed.png",
+            ):
                 name = "app/dashboard/opportunity_static/current/" + extra
                 (root / name).write_text("not an approved package input")
                 with (

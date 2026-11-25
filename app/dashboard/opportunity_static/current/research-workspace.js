@@ -1,15 +1,20 @@
 import {byId, card, count, details, label, link, list, node, pairs, pct, readJSON, table, time, usd} from './workspace-ui.js';
 import {renderRun, renderSavedEvidence} from './research-run.js';
 import {renderResults} from './research-results.js';
-import {campaignList,campaignForm,renderCampaign} from './research-campaigns.js';
-import {coverageContext, coverageURL, experimentCoverage, readDailyCoverage, reconciliationSummary} from './mens-d1-coverage.js';
+import {campaignDays,campaignForm,campaignHref,campaignList,readCampaign,renderCampaign,renderScheduledDay} from './research-campaigns.js';
+import {coverageContext, coverageURL, experimentCoverage, ledgerKeys, readDailyCoverage, reconciliationSummary, workbenchContext} from './mens-d1-coverage.js';
 import {renderWorkspaceNavigation} from './workspace-nav.js';
 
 const endpoint = '/api/research/workspace';
 const sections = new Set(['theories', 'experiments', 'results']);
 const root = byId('research-view'), status = byId('research-status');
 const dialogs = byId('research-evidence');
-let workspace, readiness, version = 0, loadedRun, busy = false, stopResultRefresh = () => {};
+let workspace, readiness, version = 0, loadedRun, busy = false, stopResultRefresh = () => {}, updateResultRoute;
+
+const resultKeys = ['result', ...ledgerKeys];
+const present = values => Object.fromEntries(Object.entries(values).filter(([, value]) => value != null));
+const resultContext = query => workbenchContext(query, resultKeys);
+const portfolioVariant = query => query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
 
 const locationState = () => new URLSearchParams(location.search);
 const sectionName = query => sections.has(query.get('section')) ? query.get('section') : 'overview';
@@ -20,9 +25,20 @@ function url(section, params = {}) {
   const query = new URLSearchParams({...(section === 'overview' ? {} : {section}), ...params});
   return '/research' + (query.size ? '?' + query : '');
 }
-function navigate(href) {
-  history.pushState(null, '', href);
-  render();
+function navigate(href, {inspect = false, replace = false} = {}) {
+  if (href !== location.pathname + location.search) {
+    if (replace) history.replaceState(null, '', href);
+    else history.pushState(null, '', href);
+  }
+  render({inspect});
+}
+function dailyContext(context, date, run) {
+  const next = {...context, view:'daily', date, run, scope:context.campaign ? 'mens-d1' : context.scope};
+  if (date !== context.date || (context.run && context.run !== run)) {
+    for (const key of ['result', 'game', 'trade', 'trade_page', 'coverage_game']) delete next[key];
+  }
+  if (!next.campaign) delete next.view;
+  return present(next);
 }
 const runLink = (run, title = run.title || run.date) => link(title, url('experiments', {run:run.id}));
 const claimLink = id => link(claimById(id)?.title || id, url('theories', {claim:id}));
@@ -425,42 +441,83 @@ function resultFingerprint(analysis) {
 
 async function openResults(mount, selected, query, context, variant, requestVersion) {
   const id = selected.run.id;
-  const pins = ['result', 'game', 'trade', 'filter', 'trade_filter'];
-  const params = {...context, run:id, date:selected.run.date, variant,
-    ...Object.fromEntries(pins.filter(name => query.has(name)).map(name => [name, query.get(name)]))};
-  const href = overrides => url('experiments', Object.fromEntries(Object.entries({...params, ...overrides}).filter(([, value]) => value != null)));
+  const campaign = selected.definition.campaign_id;
+  const base = {...context, ...(campaign ? {campaign} : {}), run:id, date:selected.run.date, variant};
+  const initialRoute = resultRouteKey(query);
+  let params = {...base, ...resultContext(query)};
+  const href = overrides => url('experiments', present({...params, ...overrides}));
   const runs = definitionRuns(selected.definition);
+  const scheduled = campaignDays(workspace.campaigns?.find(entry => entry.id === campaign));
   const navigation = {
-    variant, href, go:overrides => navigate(href(overrides)), game:params.game, trade:params.trade, pinned:Boolean(params.result),
-    coverageHref:context.scope ? game => coverageURL(new URLSearchParams({...context, run:id, variant}),
+    variant, href, go:overrides => navigate(href(overrides)), pinned:Boolean(params.result),
+    coverageHref:context.scope ? game => coverageURL(new URLSearchParams(params),
       {coverage_game:game.occurrence_id || game.game_id}) + '#mens-d1-issues' : null,
-    filter:['traded', 'zero', 'missing', 'unresolved', 'frozen', 'reconstructed'].includes(params.filter) ? params.filter : 'all',
-    tradeFilter:['win', 'loss', 'push', 'void', 'unresolved'].includes(params.trade_filter) ? params.trade_filter : 'all',
-    dates:[...new Set([selected.run.date, ...runs.map(run => run.date)])].sort().reverse(),
+    dates:[...new Set([selected.run.date, ...scheduled, ...runs.map(run => run.date)])].sort().reverse(),
     changeDate:day => {
-      const run = runs.find(candidate => candidate.date === day);
-      if (run && run.id !== id) navigate(url('experiments', {...(context.scope ? {scope:context.scope} : {}), date:day, run:run.id, variant}));
+      const run = campaign ? null : runs.find(candidate => candidate.date === day);
+      if (day !== selected.run.date) navigate(url('experiments', dailyContext(params, day, run?.id)));
     },
   };
+  function setNavigation() {
+    Object.assign(navigation, {
+      params, game:params.game, trade:params.trade,
+      weeklyHref:campaign ? href({view:'weekly'}) : null,
+      filter:['traded', 'zero', 'missing', 'unresolved', 'frozen', 'reconstructed'].includes(params.filter) ? params.filter : 'all',
+      tradeFilter:['win', 'loss', 'push', 'void', 'unresolved'].includes(params.trade_filter) ? params.trade_filter : 'all',
+    });
+  }
+  setNavigation();
   const current = () => requestVersion === version && mount.isConnected;
   let lastAnalysis = {};
-  const inspectTrade = (container, trade) => {
+  let displayedAnalysis;
+  const ticketReads = new Map();
+  const inspectTrade = (container, trade, onLoaded) => {
     container.append(node('p', 'Reading frozen quote and Kelly calculation…'));
-    readJSON(runAPI(id) + '/tickets/' + encodeURIComponent(trade.id)).then(value => {
+    if (!ticketReads.has(trade.id)) {
+      ticketReads.set(trade.id, readJSON(runAPI(id) + '/tickets/' + encodeURIComponent(trade.id)).catch(error => {
+        ticketReads.delete(trade.id);
+        throw error;
+      }));
+    }
+    ticketReads.get(trade.id).then(value => {
       if (!current() || !container.isConnected) return;
+      onLoaded?.(value);
       renderSavedEvidence(container, value, {
         ticket:true, resultReview:true, exportLink:runAPI(id) + '?export=1',
         gameLink:gameId => href({evidence:gameId}),
       });
     }).catch(error => { if (current() && container.isConnected) container.replaceChildren(node('p', error.message)); });
   };
+  function renderReport({inspect = false} = {}) {
+    const focus = document.activeElement?.dataset.workbenchFocus;
+    const disclosures = [...mount.querySelectorAll('details[open] > summary:first-child')]
+      .map(summary => summary.textContent);
+    renderResults(mount, selected, displayedAnalysis, navigation, inspectTrade);
+    for (const summary of mount.querySelectorAll('details > summary:first-child')) {
+      if (disclosures.includes(summary.textContent)) summary.parentElement.open = true;
+    }
+    if (inspect) {
+      mount.querySelector('.paper-result-trade h3, .paper-result-trade h4')
+        ?.focus({preventScroll:matchMedia('(min-width: 1061px)').matches});
+    } else if (focus) {
+      mount.querySelector(`[data-workbench-focus="${CSS.escape(focus)}"]`)?.focus({preventScroll:true});
+    }
+  }
   const publish = (analysis, {connectionLost = false, statusOnly = false} = {}) => {
     if (!current()) return;
     if (connectionLost && lastAnalysis.report) {
       analysis = {...lastAnalysis, error:analysis.error, status:{...lastAnalysis.status, stale:true}};
     } else if (statusOnly) analysis = {...lastAnalysis, status:analysis.status};
     else lastAnalysis = analysis;
-    renderResults(mount, selected, analysis, navigation, inspectTrade);
+    displayedAnalysis = analysis;
+    renderReport();
+  };
+  updateResultRoute = (next, options) => {
+    if (!current() || resultRouteKey(next) !== initialRoute) return false;
+    params = {...base, ...resultContext(next)};
+    setNavigation();
+    renderReport(options);
+    return true;
   };
   const read = (status = false) => readJSON(`${runAPI(id)}/results?` + new URLSearchParams({variant,
     ...(params.result ? {version:params.result} : {}), ...(status ? {status:'1'} : {})}));
@@ -479,17 +536,67 @@ async function openResults(mount, selected, query, context, variant, requestVers
   }
 }
 
+function resultRouteKey(query) {
+  const route = new URLSearchParams(query);
+  for (const key of ledgerKeys) route.delete(key);
+  if (route.get('view') === 'daily') route.delete('view');
+  // The run identifies the campaign and date on both older and canonical links.
+  if (route.has('run')) {
+    for (const key of ['campaign', 'date', 'scope', 'definition']) route.delete(key);
+  }
+  route.set('variant', portfolioVariant(query));
+  route.sort();
+  return route.toString();
+}
+
 async function experiments(query, requestVersion) {
-  if (!query.get('run') && query.get('campaign')) {
+  if (query.get('campaign') && (!query.get('run') || query.get('view') === 'weekly')) {
     root.replaceChildren(node('p','Reading daily and weekly results…'));
-    const edit = query.get('view') === 'revise';
-    let timer, stopped=false;
-    const refresh=async()=>{
-      if(stopped||version!==requestVersion)return;
-      try { if(!root.querySelector('form')) await renderCampaign(root,query.get('campaign'),query.get('variant')==='all_venues'?'all_venues':'best_venue',()=>!stopped&&version===requestVersion,{edit}); }
-      finally { if(!edit&&!stopped&&version===requestVersion)timer=setTimeout(()=>refresh().catch(()=>{}),20000); }
+    const campaign = query.get('campaign'), variant = portfolioVariant(query);
+    const edit = query.get('view') === 'revise', daily = query.get('view') === 'daily';
+    const context = {...Object.fromEntries(query), campaign, variant};
+    const current = () => !stopped && version === requestVersion;
+    const weekHref = overrides => campaignHref(campaign, variant, {...context, view:'weekly', ...overrides});
+    const dayHref = (day, run) => url('experiments', dailyContext(context, day, run));
+    let timer, stopped = false;
+    const refresh = async () => {
+      try {
+        const data = await readCampaign(campaign, variant);
+        if (!current() || root.querySelector('form')) return;
+        root.querySelector('.campaign-read-status')?.remove();
+        const day = data.days.find(item => item.date === context.date)
+          || data.days.findLast(item => item.run_id) || data.days[0];
+        if (daily && day?.run_id) {
+          navigate(dayHref(day.date, day.run_id), {replace:true});
+          return;
+        }
+        const options = {
+          edit, weekly:weekHref(),
+          daily:day ? dayHref(day.date, context.run || day.run_id) : null,
+          dayHref,
+          portfolioHref:key => daily
+            ? url('experiments', {...dailyContext(context, day.date, null), variant:key})
+            : weekHref({variant:key}),
+        };
+        if (daily && day) {
+          renderScheduledDay(root, data, day, {...options, dayHref:date => navigate(dayHref(date, data.days.find(item => item.date === date)?.run_id))});
+        } else renderCampaign(root, data, options);
+      } catch (error) {
+        if (!current()) return;
+        if (edit) throw error;
+        const previous = root.querySelector('.paper-workbench-header');
+        const notice = node('p', previous ? 'Showing the last loaded experiment reports. Refresh failed.' : error.message,
+          'campaign-read-status workspace-notice');
+        notice.setAttribute('role','status');
+        const existing = root.querySelector('.campaign-read-status');
+        if (existing) existing.replaceWith(notice);
+        else if (previous) root.prepend(notice);
+        else root.replaceChildren(notice);
+      } finally {
+        if (!edit && current()) timer = setTimeout(() => refresh().catch(() => {}), 20000);
+      }
     };
-    stopResultRefresh=()=>{stopped=true;clearTimeout(timer);};
+    stopResultRefresh = () => { stopped = true; clearTimeout(timer); };
     await refresh();
     return;
   }
@@ -511,11 +618,14 @@ async function experiments(query, requestVersion) {
       ? {...coverageContext(query, selected.run.date), date:selected.run.date} : {};
     const dateContext = {...context};
     delete dateContext.run;
-    const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
+    const variant = portfolioVariant(query);
     const nav = node('div', undefined, 'workspace-links');
-    if (selected.definition.campaign_id) nav.append(link('Back to daily & weekly results',url('experiments',{campaign:selected.definition.campaign_id,variant})));
+    const resultReview = resultContext(query);
+    if (selected.definition.campaign_id) nav.append(link('Back to daily & weekly results',url('experiments',{
+      ...context, ...resultReview, campaign:selected.definition.campaign_id, date:selected.run.date, run:id, variant, view:'weekly',
+    })));
     if (Object.keys(context).length) {
-      const dataContext = new URLSearchParams({...context, run:id, variant});
+      const dataContext = new URLSearchParams({...context, ...resultReview, run:id, variant});
       nav.append(link('Daily coverage and issue decisions', coverageURL(dataContext) + '#mens-d1-issues'));
     }
     nav.append(link(Object.keys(context).length ? 'Current evidence and saved runs' : 'Experiments and runs', url('experiments', dateContext)),
@@ -523,8 +633,7 @@ async function experiments(query, requestVersion) {
     root.replaceChildren(nav);
     const hasPortfolios = selected.report?.portfolios?.best_venue && selected.report?.portfolios?.all_venues;
     const paper = hasPortfolios && String(selected.report.policy?.execution || '').startsWith('paper_only');
-    const reviewContext = {...context, run:id, date:selected.run.date, variant,
-      ...Object.fromEntries(['result', 'game', 'trade', 'filter', 'trade_filter'].filter(key => query.has(key)).map(key => [key, query.get(key)]))};
+    const reviewContext = {...context, run:id, date:selected.run.date, variant, ...resultReview};
     const evidenceHref = (key, value) => url('experiments', {...reviewContext, [key]:value});
     let audit = root;
     if (paper) {
@@ -532,7 +641,8 @@ async function experiments(query, requestVersion) {
       const reconciliation = node('div');
       audit = node('details', undefined, 'workspace-panel result-audit');
       audit.append(node('summary', 'Original selection and coverage audit'));
-      root.append(reconciliation, mount, audit);
+      root.prepend(mount);
+      root.append(reconciliation, audit);
       if (Object.keys(context).length && !query.has('game')) {
         const selectedContext = new URLSearchParams({...context, run:id, variant});
         readDailyCoverage(selectedContext, {summary:true}).then(value => {
@@ -617,10 +727,16 @@ async function experiments(query, requestVersion) {
   data.append(link('Frozen checkpoint comparisons', '/data?evidence=checkpoints'), link('Declared populations and evaluations', '/data?evidence=populations'));
   root.append(data);
 }
-async function render() {
+async function render(options) {
   if (!workspace) return;
+  const query = locationState();
+  if (updateResultRoute?.(query, options)) {
+    renderWorkspaceNavigation();
+    return;
+  }
+  updateResultRoute = null;
   stopResultRefresh();
-  const query = locationState(), section = sectionName(query), requestVersion = ++version;
+  const section = sectionName(query), requestVersion = ++version;
   renderWorkspaceNavigation();
   for (const anchor of document.querySelectorAll('[data-section]')) {
     if (anchor.dataset.section === section) anchor.setAttribute('aria-current', 'page');
@@ -648,7 +764,9 @@ document.addEventListener('click', event => {
   const target = new URL(anchor.href, location.href);
   if (target.origin !== location.origin || target.pathname !== '/research' || target.hash) return;
   event.preventDefault();
-  navigate(target.pathname + target.search);
+  navigate(target.pathname + target.search, {
+    inspect:target.searchParams.has('trade') && target.searchParams.get('trade') !== locationState().get('trade'),
+  });
 });
 window.addEventListener('popstate', render);
 byId('research-evidence-close').onclick = () => dialogs.close();

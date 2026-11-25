@@ -85,13 +85,17 @@ class Assets(unittest.IsolatedAsyncioTestCase):
             self.assertIn('/api/bet-journal/{id}',routes)
             self.assertGreaterEqual(len(app.cleanup_ctx),3)
 
-    async def test_public_desk_declares_the_packaged_browser_icon(self):
+    async def test_workspace_titles_and_navigation_are_unbranded(self):
         async with TestClient(TestServer(self.app())) as client:
             for path in PUBLIC_DESK_PAGES:
                 html=await (await client.get(path)).text()
-                icons=re.findall(r'<link rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"',html)
-                self.assertEqual(icons,['/view/current/predict-icon.png']*2,path)
-            response=await client.get('/view/current/predict-icon.png')
+                title = path[1:].capitalize()
+                self.assertIn(f"<title>{title}</title>", html)
+                self.assertIn('<link rel="icon" href="data:,">', html)
+                self.assertNotIn('predict-icon.png', html)
+                self.assertNotIn('class="brand"', html)
+                self.assertIn(f'<a href="{path}" aria-current="page">{title}</a>', html)
+            response = await client.get('/view/current/predict-icon.png')
             self.assertTrue((await response.read()).startswith(b"\x89PNG\r\n\x1a\n"))
 
     async def test_ordinary_pages_deliver_their_module_graph(self):
@@ -109,12 +113,13 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                     response=await client.get(path)
                     self.assertEqual(response.status,200,path)
                     suffix=Path(path.split('?')[0]).suffix
-                    self.assertIn({'.css':'css','.js':'javascript','.ttf':'font'}[suffix],response.headers['Content-Type'])
-                    if suffix=='.ttf':continue
+                    self.assertIn({'.css':'css','.js':'javascript','.ttf':'font','.woff2':'font'}[suffix],response.headers['Content-Type'])
+                    if suffix in {'.ttf', '.woff2'}:continue
                     source=await response.text()
                     imports=(re.findall(r"url\([\"\']([^\"\']+)[\"\']\)",source) if suffix=='.css' else re.findall(r"(?:from\s+|import\s*)['\"]([^'\"]+)['\"]",source))
                     pending.extend(urljoin(path,module) for module in imports)
-                self.assertTrue({'pregame.css','research.css','workspace-nav.js','manrope.ttf'} <= {Path(path.split('?')[0]).name for path in seen},page)
+                self.assertTrue({'pregame.css','research.css','workbench-shell.css','workspace-nav.js',
+                                 'manrope.ttf','ibm-plex-sans.woff2'} <= {Path(path.split('?')[0]).name for path in seen},page)
             self.assertEqual((await client.get('/current/assets/unknown.js')).status,404)
 
 
