@@ -14,7 +14,7 @@ from app.comparison import current_pregame as math
 from app.comparison import fixed_profit
 from app.comparison.pregame_valuation import decimal_display, score
 from app.storage.store import hashed, stamp
-from .ev_movement import exact_bet_identity, offer_measurements
+from .ev_movement import _role, exact_bet_identity, offer_measurements
 
 POLICY = dict(
     version="paper-tminus10-quarter-kelly-4pct-1", league="NCAAB",
@@ -34,6 +34,7 @@ SCALE = F(POLICY["sizing_scale_usd"])
 MINIMUM = F(POLICY["minimum_ev"])
 FIXED_PROFIT_RULE = fixed_profit.RULE
 KELLY_RULE = "iterative-posted-fees-cent-budget-1"
+MAIN_FIRST_ONE_PER_GAME = "main_first_one_per_game"
 
 
 def cents(value):
@@ -111,6 +112,60 @@ def grade(identity, outcome, sized):
                 pnl_usd=money(pnl), pnl_exact_usd=str(pnl), released_at=(outcome or {}).get("known_at"))
 
 
+def _line_scope(identity):
+    return hashed([identity["family"], identity["period"], identity["settlement"]])
+
+
+def _comparable_line(identity):
+    line = F(identity["line"])
+    # The away side's +3 and the home side's −3 describe the same spread line.
+    return -line if identity["family"] == "spread" and identity["outcome"] == "away" else line
+
+
+def _main_anchors(snapshot, game_id):
+    """Use observed venue roles, including main offers that will fail eligibility."""
+    anchors = defaultdict(lambda: defaultdict(dict))
+    for index, offer in enumerate(snapshot.get("offers", [])):
+        try:
+            record = offer["record"]
+            if record["quote"]["state"] != "available" or _role(record)["status"] != "main":
+                continue
+            identity = exact_bet_identity(record, event_identity=game_id)
+            if identity["family"] == "moneyline":
+                continue
+            line = _comparable_line(identity)
+            anchors[_line_scope(identity)][identity["venue"]].setdefault(line, index)
+        except (ValueError, KeyError, TypeError, ArithmeticError):
+            continue
+    return anchors
+
+
+def _selection_evidence(identity, line_role, anchors):
+    evidence = dict(line_role=line_role)
+    if identity["family"] == "moneyline":
+        if identity["settlement"]["outcome_cardinality"] == 2:
+            return dict(evidence, tier="main", basis="two_way_moneyline")
+        return dict(evidence, tier="unranked", reason="two_way_moneyline_unverified")
+
+    venue = identity["venue"]
+    sources = anchors.get(_line_scope(identity), {})
+    if venue in sources:
+        entries = {line: (venue, index) for line, index in sources[venue].items()}
+        basis = "venue_main_line"
+    else:
+        entries = {line: (other, index) for other in sorted(sources, reverse=True)
+                   for line, index in sources[other].items()}
+        basis = "other_venue_main_line"
+    if len(entries) != 1:
+        reason = "main_line_anchor_conflict" if entries else "main_line_anchor_unavailable"
+        return dict(evidence, tier="unranked", reason=reason)
+    (line, (anchor_venue, offer_index)), = entries.items()
+    distance = abs(_comparable_line(identity) - line)
+    tier = "main" if line_role == "main" and venue == anchor_venue and distance == 0 else "nearby_alternate"
+    return dict(evidence, tier=tier, basis=basis, distance_points=str(distance),
+                anchor=dict(line=str(line), venue=anchor_venue, offer_index=offer_index))
+
+
 def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None, counts=None):
     policy_id, scale, mode, target_profit, minimum_stake = POLICY_ID, SCALE, None, None, None
     if policy is not None:
@@ -124,6 +179,8 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
             target_profit = F(policy["target_profit_usd"])
         else:
             scale = F(policy["sizing_scale_usd"])
+    anchors = (_main_anchors(snapshot, game_id)
+               if policy and policy.get("portfolio_rule") == MAIN_FIRST_ONE_PER_GAME else None)
     tickets, excluded, conflicts = {}, Counter(), set()
     for index, offer in enumerate(snapshot.get("offers", [])):
         sizing_stage = False
@@ -194,6 +251,8 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                     reference_bankroll_usd=policy.get("reference_bankroll_usd"),
                     kelly_multiplier=policy.get("kelly_multiplier")))
                 ticket.update(frozen_quote_id=quote_id, sizing=sizing)
+            if anchors is not None:
+                ticket["portfolio_selection"] = _selection_evidence(identity, _role(offer["record"])["status"], anchors)
             if key in tickets:
                 # Conflicting duplicate rows are incomplete evidence, not two bets.
                 if tickets[key]["witness"] != ticket["witness"]:
@@ -218,14 +277,44 @@ def best_order(ticket):
     return -F(ticket["ev"]), ticket["venue"], ticket.get("frozen_quote_id") or ticket["id"]
 
 
-def portfolios(tickets, *, as_of):
+def _main_order(ticket):
+    evidence = ticket["portfolio_selection"]
+    return (evidence["tier"] != "main", F(evidence.get("distance_points", 0)), -F(ticket["probability"]))
+
+
+def best_tickets(tickets, portfolio_rule=None):
+    """Use the top sized EV quote per bet, optionally after choosing one bet per game."""
     best = {}
+    ranked = {}
     for ticket in tickets:
         key = ticket["equivalent_bet_id"]
         if key not in best or best_order(ticket) < best_order(best[key]):
             best[key] = ticket
+        if (portfolio_rule == MAIN_FIRST_ONE_PER_GAME
+                and ticket.get("portfolio_selection", {}).get("tier") in ("main", "nearby_alternate")):
+            order = _main_order(ticket), best_order(ticket)
+            if key not in ranked or order < ranked[key][0]:
+                ranked[key] = order, ticket
+    if portfolio_rule != MAIN_FIRST_ONE_PER_GAME:
+        return list(best.values())
+
+    games = {}
+    for bet, ((rank, _), witness) in ranked.items():
+        quote = best[bet]
+        game = quote["game_id"]
+        order = rank, best_order(quote)
+        if game not in games or order < games[game][0]:
+            evidence = dict(witness["portfolio_selection"],
+                ranked_quote_venue=witness["venue"], ranked_quote_id=witness.get("frozen_quote_id") or witness["id"],
+                fair_probability=witness["probability"],
+                selected_quote_line_role=quote.get("portfolio_selection", {}).get("line_role", "unknown"))
+            games[game] = order, dict(quote, portfolio_selection=evidence)
+    return [games[game][1] for game in sorted(games)]
+
+
+def portfolios(tickets, *, as_of, portfolio_rule=None):
     return {name: summarize(values, as_of=as_of) for name, values in
-            (("best_venue", list(best.values())), ("all_venues", tickets))}
+            (("best_venue", best_tickets(tickets, portfolio_rule)), ("all_venues", tickets))}
 
 
 def summarize(tickets, *, as_of):
@@ -419,7 +508,18 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, popul
 def assemble(day, at, frozen_policy, dispositions, tickets, exclusions, *,
              outcome_evidence=None, evidence=False, population=None):
     policy_id = hashed(frozen_policy)
-    values = portfolios(tickets, as_of=at)
+    rule = frozen_policy.get("portfolio_rule")
+    values = portfolios(tickets, as_of=at, portfolio_rule=rule)
+    if rule == MAIN_FIRST_ONE_PER_GAME:
+        values["all_venues"]["candidate_pool_only"] = True
+        selected_games = {ticket["game_id"] for ticket in values["best_venue"]["tickets"]}
+        tiers = defaultdict(Counter)
+        for ticket in tickets:
+            tiers[ticket["game_id"]][ticket["portfolio_selection"]["tier"]] += 1
+        for game in dispositions:
+            if game["status"] in ("captured", "reconstructed"):
+                game["tickets"] = int(game["game_id"] in selected_games)
+                game["selection_audit"] = dict(tiers[game["game_id"]])
     result = dict(policy=deepcopy(frozen_policy), policy_id=policy_id, date=day, as_of=at,
         designation=("Opportunity record only; original frozen checkpoints plus explicitly reconstructed T−10 raw responses; results deferred"
                      if frozen_policy.get("recovered_checkpoints") else

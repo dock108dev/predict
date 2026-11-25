@@ -1,7 +1,8 @@
 import {count, details, label, link, node, pairs, pct, stack, table, time, usd} from './workspace-ui.js';
 import {number, selection, venue} from './workspace-format.js';
 import {qualityComparison} from './research-quality.js';
-import {band, comparisonCounts, exactMoney, fixedProfitFields, sizingTitle, workbenchPeriod, workbenchSizing} from './research-campaigns.js';
+import {band, comparisonCounts, exactMoney, fixedProfitFields, mainFirstRule, sizingTitle, workbenchPeriod, workbenchSizing} from './research-campaigns.js';
+import {portfolioSelectionFields} from './research-run.js';
 import {gradeFilters, ledgerViewModel, requestedTrade, resolvedGrade, tradeSorts} from './research-ledger.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
@@ -275,6 +276,12 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   if (navigation.coverageHref) panel.append(link('Game coverage and issue decisions', navigation.coverageHref(game)));
   if (!trade) panel.append(resultEvidence(game.result));
   if (game.capture_reason) panel.append(node('p', label(game.capture_reason), 'workspace-caption'));
+  if (game.selection_audit) {
+    const {main=0,nearby_alternate:alternates=0,unranked=0}=game.selection_audit;
+    panel.append(node('h4','Qualifying quotes reviewed'),pairs({
+      'Main-line quotes':count(main), 'Ranked alternate quotes':count(alternates), 'Quotes without a verified main line':count(unranked),
+    }));
+  }
   if (!allTickets.length) {
     const message = captured(game) ? 'No trades qualified under this portfolio’s saved selection rules.'
       : ['pending', 'claimed'].includes(game.capture_status) ? 'T−10 evidence is still pending for this game.'
@@ -320,6 +327,7 @@ function tradeView(trade, game, navigation, inspectTrade) {
     'Net EV at commitment':pct(trade.ev), Stake:money(trade.stake_usd),
     'Expected profit · stake × net EV':money(trade.expected_profit_usd), 'Modeled return':money(trade.return_usd),
     'Modeled P/L · return minus stake':money(trade.pnl_usd), 'Capture origin':label(trade.capture_origin),
+    ...portfolioSelectionFields(trade.portfolio_selection,trade.family),
   }), resultEvidence(game.result, grade), details('Exact grading inputs and ticket identity', trade), calculation);
   inspectTrade(calculation, trade);
   return panel;
@@ -356,6 +364,7 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
     Stake:money(trade.stake_usd),
     'Expected profit at entry':money(trade.expected_profit_usd),
     'Modeled return':money(trade.return_usd),
+    ...portfolioSelectionFields(trade.portfolio_selection,trade.family),
   }));
   const pnl = node('p', undefined, 'result-inspector-pnl');
   pnl.append(node('strong', 'Modeled P/L'), moneyCell(trade.pnl_usd));
@@ -460,7 +469,8 @@ function ledgerPagination(ledger, navigation) {
 function tradeLedger(report, portfolio, selected, analysis, navigation, inspectTrade, views) {
   // The daily and freshness comparisons share the campaign's configured bucket edges.
   const buckets = analysis.quality?.fresh_target_only?.buckets || [];
-  const originals = selected.report.portfolios.all_venues.tickets || [];
+  const {portfolios} = selected.report;
+  const originals = portfolios.all_venues?.tickets || portfolios[navigation.variant]?.tickets || [];
   const ledger = ledgerViewModel(portfolio.tickets, originals, buckets, navigation.params);
   const games = new Map(report.games.map(game => [game.game_id, game]));
   const section = node('section', undefined, 'result-workbench');
@@ -593,6 +603,7 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   const context = [`${selected.run.date} Eastern`, 'Paper results',
     policy.minimum_ev && `EV ≥${pct(policy.minimum_ev)}`,
     policy.minimum_stake_usd != null && `Stake ≥${exactMoney(policy.minimum_stake_usd)}`,
+    policy.portfolio_rule===mainFirstRule.id && mainFirstRule.title,
     navigation.mode==='fixed_profit' ? sizingTitle(navigation.config,navigation.mode)
       : policy.kelly_multiplier && `${policy.kelly_multiplier} full Kelly`];
   if (!navigation.embedded) title.append(node('h2', selected.run.title));

@@ -1,5 +1,5 @@
 import {byId,card,count,link,node,pairs,pct,readJSON,table,time,usd} from './workspace-ui.js';
-import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,ruleSummary,sizingTitle} from './research-campaigns.js';
+import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,mainFirstRule,ruleSummary,sizingTitle} from './research-campaigns.js';
 import {coverageURL,ledgerKeys} from './mens-d1-coverage.js';
 import {oddsBreakdown,renderResults} from './research-results.js';
 import {qualityComparison} from './research-quality.js';
@@ -235,6 +235,7 @@ function showResults(config, visible, context) {
     'Open archived snapshot',context.archiveHref));
   const scope=visible ? 'Men’s Division I vs. Division I' : 'Archived experiment';
   panel.append(node('p', scope+' · Paper · T−10 · EV ≥'+pct(config.minimum_ev),'workspace-caption'));
+  if (config.portfolio_rule===mainFirstRule.id) panel.append(node('p',mainFirstRule.title,'workspace-caption'));
   const dates=campaignDays(config).map(value=>[value,displayDate.format(new Date(value+'T12:00:00Z'))]);
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
   const period=node('nav',undefined,'workspace-variant');

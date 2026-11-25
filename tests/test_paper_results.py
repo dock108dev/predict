@@ -2,7 +2,7 @@ from copy import deepcopy
 from fractions import Fraction
 from hashlib import sha256
 
-from app.research import paper_results as results
+from app.research import paper, paper_results as results
 from app.storage.store import encoded
 
 
@@ -83,6 +83,24 @@ def test_grade_exact_frozen_trade_and_portfolios_reconcile():
         for field in ("stake", "return", "pnl", "expected_profit"):
             key = field + "_exact_usd"
             assert sum(Fraction(v[key]) for v in all_view[views].values()) == Fraction(all_view["summary"][key])
+
+
+def test_one_per_game_report_preserves_selected_proof_and_ignores_pending_candidates_in_status():
+    selected = ticket("selected")
+    unranked = ticket("unranked", game_id="unranked")
+    selected[0]["portfolio_selection"] = dict(tier="nearby_alternate")
+    unranked[0]["portfolio_selection"] = dict(tier="unranked", reason="main_line_anchor_unavailable")
+    proof = dict(tier="main", ranked_quote_venue="prophetx", selected_quote_line_role="alternate")
+    saved = run(selected, unranked, best=[dict(selected[0], portfolio_selection=proof)])
+    saved["payload"]["report"]["policy"].update(sizing_mode="fixed_profit",
+        portfolio_rule=paper.MAIN_FIRST_ONE_PER_GAME, portfolios=["best_venue"])
+    capture, frozen = game()
+    no_pick, other = game("unranked")
+    report = results.build_report(saved, (context(capture, frozen, [evidence()]), context(no_pick, other, [])))
+    assert report["status"] == "graded" and report["coverage"]["zero_trade_games"] == 1
+    assert report["portfolios"]["best_venue"]["tickets"][0]["portfolio_selection"] == proof
+    assert report["portfolios"]["all_venues"]["candidate_pool_only"]
+    assert report["portfolios"]["all_venues"]["summary"]["unresolved"] == 1
 
 
 def test_corrections_conflicts_and_reinstated_score_are_separate_grades():

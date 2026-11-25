@@ -7,6 +7,10 @@ const API='/api/research/workspace/campaigns';
 const titles={best_venue:'Best venue only',all_venues:'All qualifying venues'};
 const allPortfolios=Object.keys(titles);
 const modes={fixed_profit:'Win fixed profit',kelly:'Kelly'};
+export const mainFirstRule={
+  id:'main_first_one_per_game',title:'One bet per game, main lines first',
+  description:'Rank qualifying main lines by fair win probability, then net EV. If none qualify, consider eligible alternate lines closest to a recorded main line.',
+};
 const defaultOddsEdges=['200','300','500','1000'];
 const oddsEdgeList=edges=>edges.map(edge=>'+'+edge).join(', ');
 export const campaignHref=(id,variant='best_venue',context={})=>'/research?'+new URLSearchParams({
@@ -126,6 +130,7 @@ export function ruleSummary(config) {
   const fixed=config.sizing_mode==='fixed_profit';
   const kelly=config.kelly_multiplier!=null
     ? `${percent(config.kelly_multiplier)}% of full Kelly on a ${usd(config.reference_bankroll_usd)} reference bankroll` : null;
+  const mainFirst=config.portfolio_rule===mainFirstRule.id;
   return {
     'Game scope':'Men’s NCAA Division I vs. Division I',
     'Game dates':`${config.start_date} through ${config.end_date}, inclusive (Eastern)`,
@@ -135,6 +140,7 @@ export function ruleSummary(config) {
     'Minimum stake':config.minimum_stake_usd == null ? 'No minimum' : `${exactMoney(config.minimum_stake_usd)} per trade after sizing`,
     'EV buckets':config.bucket_edges.map((minimum,i,edges)=>band({minimum,maximum:edges[i+1]})).join(', '),
     'Posted odds bucket boundaries':oddsEdgeList(config.odds_bucket_edges || defaultOddsEdges),
+    'Bet selection':mainFirst ? `${mainFirstRule.title}. ${mainFirstRule.description}` : 'All qualifying bets in the selected portfolio',
     Portfolios:(config.portfolios || allPortfolios).map(portfolio=>titles[portfolio]).join(' and '),
     ...evidenceRules,
   };
@@ -152,7 +158,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     name:'', scope:'mens-d1', start_date:monday.toISOString().slice(0,10), end_date:sunday.toISOString().slice(0,10),
     minimum_ev:'4', minimum_stake_usd:'1.00', sizing_mode:'fixed_profit', target_profit_usd:'10', kelly_comparison:false,
     kelly_multiplier:'2.5', reference_bankroll_usd:'10000', bucket_edges:'4, 8, 15, 25', portfolios:allPortfolios,
-    odds_bucket_edges:oddsEdgeList(defaultOddsEdges),
+    odds_bucket_edges:oddsEdgeList(defaultOddsEdges), portfolio_rule:'',
   };
   if(config)Object.assign(defaults,config,{
     sizing_mode:config.sizing_mode || 'kelly', minimum_ev:percent(config.minimum_ev),
@@ -228,12 +234,18 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   oddsEdges.parentElement.append(oddsHelp);
   const portfolios=node('fieldset',undefined,'campaign-portfolios'), picks=[];
   portfolios.append(node('legend','Portfolios'));
+  const selectionRule=field(portfolios,'portfolio_rule','Bet selection',{
+    options:{'':'All qualifying bets',[mainFirstRule.id]:mainFirstRule.title},required:false,
+  });
+  const portfolioHelp=node('p');
+  portfolioHelp.id='campaign-portfolio-help';
+  selectionRule.setAttribute('aria-describedby',portfolioHelp.id);
   for(const [id,title] of Object.entries(titles)) {
     const lab=node('label',title,'campaign-check'), input=node('input');
     input.type='checkbox';input.value=id;input.checked=defaults.portfolios.includes(id);
     lab.prepend(input);portfolios.append(lab);picks.push(input);
   }
-  portfolios.append(node('p','Best venue keeps one qualifying venue per exact bet. Different lines stay separate.'));
+  portfolios.append(portfolioHelp);
   fields.append(portfolios);
   let acceptFilters;
   if (handoff) {
@@ -260,6 +272,19 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   }
   inputs.sizing_mode.onchange=inputs.kelly_comparison.onchange=updateFields;
   updateFields();
+  let unrestricted=picks.map(input=>input.checked);
+  selectionRule.onchange=()=>{
+    const limit=selectionRule.value===mainFirstRule.id;
+    if (limit && !picks[0].disabled) unrestricted=picks.map(input=>input.checked);
+    picks.forEach((input,i)=>{
+      input.disabled=limit;
+      input.checked=limit ? input.value==='best_venue' : unrestricted[i];
+    });
+    portfolioHelp.textContent=limit
+      ? `This rule saves at most one trade per game, across all markets and venues. ${mainFirstRule.description}`
+      : 'Best venue keeps one qualifying venue per exact bet. Different lines stay separate.';
+  };
+  selectionRule.onchange();
   const review=node('section',undefined,'campaign-review'), feedback=node('p');
   const reviewHeading=node('h3','Review experiment');
   reviewHeading.tabIndex=-1;
@@ -298,6 +323,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
       throw Error('Enter a Kelly fraction greater than 0% and at most 100%.');
     }
     if(body.minimum_stake_usd==='')delete body.minimum_stake_usd;
+    if(!body.portfolio_rule)delete body.portfolio_rule;
     for(const [key,title] of [['target_profit_usd','win profit target'],['reference_bankroll_usd','reference bankroll'],
       ['minimum_stake_usd','minimum stake']]) {
       if(body[key]!=null && (!(number(body[key])>0) || !/^(\d+(\.\d+)?|\.\d+|\d+\/\d+)$/.test(body[key]))) {

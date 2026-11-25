@@ -81,6 +81,34 @@ def test_settings_normalize_minimum_stake_and_custom_odds_boundaries():
             campaigns.configuration(fixed_config(odds_bucket_edges=edges))
 
 
+def test_one_bet_per_game_configuration_only_offers_the_single_ticket_portfolio():
+    rule = paper.MAIN_FIRST_ONE_PER_GAME
+    configured = campaigns.configuration(fixed_config(portfolio_rule=rule, portfolios=['best_venue']))
+    assert configured['portfolio_rule'] == rule
+    assert configured['portfolios'] == ['best_venue']
+    assert 'portfolio_rule' not in campaigns.configuration(fixed_config())
+    for portfolios, value in ((['all_venues'], rule), (['best_venue', 'all_venues'], rule),
+                              (['best_venue'], 'unsupported')):
+        with pytest.raises(workspace.SelectionError, match='one-bet-per-game rule'):
+            campaigns.configuration(fixed_config(portfolio_rule=value, portfolios=portfolios))
+
+
+def test_ev_thresholds_reselect_a_single_pick_from_the_frozen_candidate_pool():
+    rule = paper.MAIN_FIRST_ONE_PER_GAME
+    main = dict(ticket('main', '.05'), probability='0.55',
+                portfolio_selection=dict(tier='main', distance_points='0', line_role='main'))
+    near = dict(ticket('near', '.12'), probability='0.29',
+                portfolio_selection=dict(tier='nearby_alternate', distance_points='2', line_role='alternate'))
+    far = dict(ticket('far', '.18'), probability='0.40',
+               portfolio_selection=dict(tier='nearby_alternate', distance_points='7', line_role='alternate'))
+    rows = [far, near, main]
+    assert [t['id'] for t in campaigns.select(rows, F('.04'), 'best_venue', rule)] == ['main']
+    assert [t['id'] for t in campaigns.select(rows, F('.08'), 'best_venue', rule)] == ['near']
+    summary = campaigns.analysis(rows, ['.04', '.08', '.15'], 'best_venue', rule)
+    assert [F(t['summary']['expected_roi']) for t in summary['thresholds']] == [F('.05'), F('.12'), F('.18')]
+    assert [t['summary']['tickets'] for t in summary['thresholds']] == [1, 1, 1]
+
+
 def test_posted_odds_uses_selected_portfolio_and_keeps_unpublished_grades_pending():
     rows = [dict(ticket('winner', '.06', bet='shared', state='win'), posted_odds='+500',
                  stake_usd='10', return_exact_usd='20'),

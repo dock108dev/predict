@@ -43,9 +43,12 @@ def entries(*rows):
         return paper.candidates(checkpoint(*rows), game_id="g",checkpoint_id="late-frozen",at=AT)
 
 
-def frozen_priced(odds, *, venue="prophetx", ev=".08", rule=None, fee=None, grid=None):
-    row = priced(odds, ev=ev, venue=venue)
+def frozen_priced(odds, *, venue="prophetx", ev=".08", rule=None, fee=None, grid=None,
+                  line="-3", side="home", main=True):
+    row = priced(odds, ev=ev, venue=venue, line=line)
     record = row["record"]
+    record["selection"]["participant"] = side
+    record["comparison_source_metadata"]["alternate"] = not main
     quote = record["quote"]
     quote["source"].update(native_market_id="market", native_outcome_id="home", native_side="bookmaker_outcome")
     if grid:
@@ -195,6 +198,84 @@ def test_minimum_stake_reselects_best_venue_and_keeps_stake_exactly_at_floor():
     [trade] = paper.portfolios(limited, as_of=AT)["best_venue"]["tickets"]
     assert trade["venue"] == "polymarket_us" and trade["cash_commitment_usd"] == "1"
     assert gaps == {"sized_stake_below_minimum": 1}
+
+
+def test_one_per_game_prefers_probable_main_bet_then_resolves_best_equivalent_quote():
+    snapshot = checkpoint(
+        frozen_priced("-110", ev=".06"),
+        frozen_priced("+305", line="3", side="away", ev=".12"),
+        frozen_priced("-105", venue="polymarket_us", ev=".09", main=False),
+        frozen_priced("-250", line="-1", ev=".20", main=False),
+    )
+    rule = paper.MAIN_FIRST_ONE_PER_GAME
+    policy = dict(fixed_policy(), portfolio_rule=rule)
+    rows, _ = paper.candidates(snapshot, game_id="g", checkpoint_id="frozen", at=AT, policy=policy)
+    assert len(rows) == 4
+    [picked] = paper.best_tickets(rows, rule)
+    assert [picked] == paper.best_tickets(reversed(rows), rule)
+    assert picked["line"] == "-3" and picked["side"] == "home" and picked["venue"] == "polymarket_us"
+    evidence = picked["portfolio_selection"]
+    assert evidence["tier"] == "main" and evidence["ranked_quote_venue"] == "prophetx"
+    assert evidence["selected_quote_line_role"] == "alternate"
+
+
+def test_one_per_game_uses_ineligible_main_anchor_and_compares_away_spreads_on_home_scale():
+    snapshot = checkpoint(
+        frozen_priced("+102", line="3", side="away", ev=".01"),
+        frozen_priced("+150", line="-4", main=False),
+        frozen_priced("+110", line="-7", main=False, ev=".20"),
+        frozen_priced("+100", line="-3", venue="polymarket_us", main=False),
+    )
+    rule = paper.MAIN_FIRST_ONE_PER_GAME
+    policy = dict(fixed_policy(), portfolio_rule=rule)
+    rows, gaps = paper.candidates(snapshot, game_id="g", checkpoint_id="frozen", at=AT, policy=policy)
+    assert gaps == {"below_minimum_ev": 1}
+    cross_venue = next(t for t in rows if t["venue"] == "polymarket_us")
+    assert cross_venue["portfolio_selection"]["basis"] == "other_venue_main_line"
+    [picked] = paper.best_tickets([t for t in rows if t is not cross_venue], rule)
+    assert picked["line"] == "-4"
+    assert picked["portfolio_selection"]["distance_points"] == "1"
+    assert picked["portfolio_selection"]["anchor"] == {"line": "-3", "venue": "prophetx", "offer_index": 0}
+    [picked] = paper.best_tickets(rows, rule)
+    assert picked["id"] == cross_venue["id"]
+
+
+def test_one_per_game_leaves_unanchored_and_conflicting_lines_in_candidate_evidence():
+    alternate = frozen_priced("+130", line="-4", main=False)
+    mains = (frozen_priced("+102", ev=".01"), frozen_priced("+102", line="-6", ev=".01"))
+    rule = paper.MAIN_FIRST_ONE_PER_GAME
+    policy = dict(fixed_policy(), portfolio_rule=rule)
+    for snapshot, reason in ((checkpoint(alternate), "main_line_anchor_unavailable"),
+                             (checkpoint(alternate, *mains), "main_line_anchor_conflict")):
+        rows, _ = paper.candidates(snapshot, game_id="g", checkpoint_id="frozen", at=AT, policy=policy)
+        [unranked] = rows
+        assert unranked["portfolio_selection"] == {"tier": "unranked", "line_role": "alternate", "reason": reason}
+        report = paper.assemble("2026-11-22", AT, policy, [dict(game_id="g", status="captured")], rows, {})
+        assert report["portfolios"]["best_venue"]["count"] == report["games"][0]["tickets"] == 0
+        assert report["portfolios"]["all_venues"]["count"] == 1
+        assert report["portfolios"]["all_venues"]["candidate_pool_only"]
+        assert report["games"][0]["selection_audit"] == {"unranked": 1}
+
+
+def test_one_per_game_treats_two_way_moneyline_as_main_across_multiple_games():
+    row = frozen_priced("-125")
+    record = row["record"]
+    record["market_identity"].update(family="moneyline", line=None)
+    record["selection"].update(signed_line=None, predicate="win")
+    del record["comparison_source_metadata"]["alternate"]
+    reference = row["calculation_payload"]["reference"]
+    row["calculation_payload"] = paper.math.calculate(record, reference, row["fee_input"], at=stamp(AT), game_key="g")
+    rule = paper.MAIN_FIRST_ONE_PER_GAME
+    policy = dict(fixed_policy(), portfolio_rule=rule)
+    rows = []
+    for game_id in ("other", "g"):
+        candidates, gaps = paper.candidates(checkpoint(row), game_id=game_id, checkpoint_id="frozen", at=AT, policy=policy)
+        assert not gaps
+        rows.extend(candidates)
+    picks = paper.best_tickets(rows, rule)
+    assert picks == paper.best_tickets(reversed(rows), rule)
+    assert [t["game_id"] for t in picks] == ["g", "other"]
+    assert all(t["portfolio_selection"]["basis"] == "two_way_moneyline" for t in picks)
 
 
 @pytest.mark.parametrize("odds,expected", [("-110","110"),("+300","33.33"),("+3000","3.33")])

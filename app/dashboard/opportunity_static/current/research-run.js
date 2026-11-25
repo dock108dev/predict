@@ -1,6 +1,6 @@
 import {card, count, details, label, link, list, node, pairs, pct, stack, table, text, time, usd} from './workspace-ui.js';
 import {number, selection, venue} from './workspace-format.js';
-import {exactMoney, fixedProfitFields} from './research-campaigns.js';
+import {exactMoney, fixedProfitFields, mainFirstRule} from './research-campaigns.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
 const validity = {
@@ -20,6 +20,29 @@ const evidenceLink = (title, href) => link(title, href, 'research-button');
 const evidenceClock = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_York',
   month:'short', day:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3, timeZoneName:'short'});
 const preciseTime = value => value && Number.isFinite(Date.parse(value)) ? evidenceClock.format(new Date(value)) : 'Not recorded';
+
+export function portfolioSelectionFields(choice, family) {
+  const tier = {main:'Qualifying main line', nearby_alternate:'Closest qualifying alternate'}[choice?.tier];
+  if (!tier) return {};
+  const {anchor, basis, ranked_quote_venue, fair_probability, selected_quote_line_role} = choice;
+  const distance = number(choice.distance_points);
+  const source = {two_way_moneyline:'Two-way moneyline', venue_main_line:'Main line at the ranking venue',
+    other_venue_main_line:'Main line recorded at another venue'}[basis];
+  const role = {main:'Main', alternate:'Alternate', unknown:'Unconfirmed'}[selected_quote_line_role];
+  const anchorLabel = family==='spread' ? 'Recorded main line (home spread)' : 'Recorded main line';
+  const anchorLine = number(anchor?.line) ?? anchor?.line;
+  const anchorVenue = anchor?.venue ? ` · ${venue(anchor.venue)}` : '';
+  return {
+    'Selection tier':tier,
+    ...(source ? {'Line evidence':source} : {}),
+    ...(anchorLine == null ? {} : {[anchorLabel]:`${anchorLine}${anchorVenue}`}),
+    ...(choice.tier==='nearby_alternate' && distance!=null ? {'Distance from main line':`${distance} ${distance===1 ? 'point' : 'points'}`} : {}),
+    ...(ranked_quote_venue ? {'Ranking quote venue':venue(ranked_quote_venue)} : {}),
+    ...(fair_probability == null ? {} : {'Fair win probability used to rank':pct(fair_probability)}),
+    ...(role ? {'Selected quote line role':role} : {}),
+  };
+}
+
 function coverageDescription(run) {
   if (run.coverage?.reconstructed_games) return 'This opportunity record separates frozen calculations from reconstructions that used the original T−10 responses. Sporting grades appear in the separate result reports.';
   if (run.validity === 'no_valid_capture') return 'No paper result can be evaluated from this saved run. Capture dispositions show why evidence is unavailable.';
@@ -111,6 +134,7 @@ export function renderRun(root, {run, definition, report, comparison}, navigatio
   methods.append(node('p', `The game date uses Eastern time. Screening requires ${policy.recovered_checkpoints ? 'an original frozen checkpoint or an explicitly reconstructed T−10 response' : 'a valid frozen T−10 checkpoint'} and unrounded EV of at least ${pct(policy.minimum_ev)}. ${sizing}`));
   if (policy.minimum_stake_usd != null) methods.append(node('p',
     `The minimum stake per trade is ${exactMoney(policy.minimum_stake_usd)} after sizing and modeled fees.`));
+  if (policy.portfolio_rule===mainFirstRule.id) methods.append(node('p',`${mainFirstRule.title}. ${mainFirstRule.description}`));
   methods.append(node('p','Paper commitments are sized independently without an aggregate budget cap or intraday compounding.'));
   methods.append(node('p', `Each paper commitment is repriced under the original fee assumption. ${feeModes.length ? feeModes.join(' · ') + '.' : 'No captured fee treatments are recorded for this run.'} Quoted price is assumed available at the modeled size.`));
   methods.append(node('p', 'Paper replay and sporting-result grading are recorded separately. Execution and actual venue settlement are unverified.'));
@@ -125,9 +149,12 @@ export function renderRun(root, {run, definition, report, comparison}, navigatio
 
   const runs = node('section', undefined, 'workspace-panel');
   if (!navigation.embedded) {
-    runs.append(node('h2', 'Portfolio variants'), node('p', 'Both variants use the same observations. Best venue keeps the highest qualifying sized EV for each exact bet; all qualifying venues keeps one ticket per exact bet per venue.'));
+    const constrained = policy.portfolio_rule===mainFirstRule.id;
+    runs.append(node('h2', 'Portfolio variants'), node('p', constrained ? mainFirstRule.description
+      : 'Both variants use the same observations. Best venue keeps the highest qualifying sized EV for each exact bet; all qualifying venues keeps one ticket per exact bet per venue.'));
     const nav = node('div', undefined, 'workspace-variant');
     for (const [name, title] of Object.entries(variants)) {
+      if (constrained && name!=='best_venue') continue;
       const action = evidenceLink(title, variantLink(name));
       if (name === variant) action.setAttribute('aria-current', 'true');
       nav.append(action);
@@ -231,6 +258,7 @@ export function renderSavedEvidence(root, value, {ticket, resultReview = false, 
     const trade = evidence.trade || {}, clocks = trade.clocks || {}, quote = trade.quote || {};
     const kelly = trade.kelly || {};
     const sizing = trade.sizing || item.sizing;
+    const portfolioSelection = item.portfolio_selection || trade.portfolio_selection;
     const fixed = sizing?.mode === 'fixed_profit';
     const recovered = item.source_kind === 'retrospective_raw_t10';
     if (!resultReview) {
@@ -258,6 +286,8 @@ export function renderSavedEvidence(root, value, {ticket, resultReview = false, 
       'Gross EV at quoted price':pct(trade.gross_ev), 'Screening EV (rounded for display)':pct(item.screen_ev),
       'EV at modeled commitment':pct(item.ev),
     }, {reference, exact_probability:item.probability, exact_screen_ev:item.screen_ev, exact_sized_ev:item.ev});
+    if (portfolioSelection?.tier) evidenceSection(root, 'Portfolio selection', mainFirstRule.description,
+      resultReview ? null : portfolioSelectionFields(portfolioSelection,item.family), portfolioSelection);
     const rule = fixed
       ? 'The closest positive modeled win profit wins, with ties going to the lower commitment. Quantity and fees are repriced at the frozen quote.'
       : 'The saved Kelly calculation uses the modeled win and loss returns, then applies the recorded multiplier and bankroll. Quantity and fee rounding determine the final commitment.';

@@ -61,7 +61,7 @@ def read(db, run_id, *, variant, version_id, status_only):
                         workspace._run(db, run_id)["payload"])
             tickets = paper_campaigns.analysis_tickets(document, report)
             quality = paper_campaigns.quality(tickets, settings["bucket_edges"], variant,
-                                              inputs=version["id"])
+                                              inputs=version["id"], portfolio_rule=settings.get("portfolio_rule"))
             odds_edges = settings.get("odds_bucket_edges", paper_campaigns.DEFAULT_ODDS_EDGES)
             report = dict(report, portfolios={name: dict(portfolio,
                 odds_buckets=paper_campaigns.odds_buckets(portfolio["tickets"], odds_edges))

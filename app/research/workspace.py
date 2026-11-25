@@ -11,6 +11,7 @@ from psycopg.types.json import Jsonb
 from app.storage import payload_codec
 from app.storage.store import ROOT, encoded, hashed, stamp
 from . import experiment, mens_d1, paper, paper_evidence, records
+from .ev_movement import _role
 
 SCHEMA = "predict-research-workspace-1"
 PILOT_VERSION = "ncaab-t10-paper-v1"
@@ -234,19 +235,22 @@ def _summary(report, title):
               "incomplete_tracked_capture": "incomplete", "tracked_captures_only": "screened"}[validity]
     return dict(title=title, status=status, validity=validity, coverage=coverage,
                 variants={name: {k: v for k, v in portfolio.items() if k != "tickets"}
-                          for name, portfolio in report["portfolios"].items()})
+                          for name, portfolio in report["portfolios"].items()
+                          if not portfolio.get("candidate_pool_only")})
 
 
 def _finding_payloads(run_id, definition, report, summary):
     all_venues = report["portfolios"]["all_venues"]
+    ranked = all_venues.get("candidate_pool_only") is True
+    selected = report["portfolios"]["best_venue"] if ranked else all_venues
     capture_evidence = [dict(label="Run population and coverage", run_id=run_id)]
-    ticket_evidence = [dict(label="Both venue variants", run_id=run_id)]
+    ticket_evidence = [dict(label="Selected paper trades" if ranked else "Both venue variants", run_id=run_id)]
     for game in report["games"]:
         capture_evidence.append(dict(label=game["title"], run_id=run_id, game_id=game["game_id"],
                                      checkpoint_id=game["checkpoint_id"]))
-    if all_venues["tickets"]:
-        ticket = next((row for row in all_venues["tickets"] if row["grading"]["pnl_usd"] is not None),
-                      all_venues["tickets"][0])
+    if selected["tickets"]:
+        ticket = next((row for row in selected["tickets"] if row["grading"]["pnl_usd"] is not None),
+                      selected["tickets"][0])
         ticket_evidence.append(dict(label="Frozen quote, sized calculation and result evidence", run_id=run_id,
                                     ticket_id=ticket["id"], game_id=ticket["game_id"],
                                     checkpoint_id=ticket["checkpoint_id"]))
@@ -264,8 +268,9 @@ def _finding_payloads(run_id, definition, report, summary):
          ["The expected league-wide population and untracked games are unknown.",
           "Missing captures and incomplete source returns limit what this run can examine."], capture_evidence),
         ("sizing", "Paper selection and sizing", ["t10-selection", "fee-sizing"],
-         f'{all_venues["count"]} tickets qualified across {all_venues["unique_games"]} games in All qualifying venues.',
-         "support" if all_venues["count"] else "unexamined",
+         (f'{selected["count"]} paper trades selected with at most one trade per game.' if ranked else
+          f'{selected["count"]} tickets qualified across {selected["unique_games"]} games in All qualifying venues.'),
+         "support" if selected["count"] else "unexamined",
          ["The replay documents which branch ran. Independent checks are needed to verify the calculation.",
           "Every ticket uses a modeled amount and captured price. Execution and venue settlement remain unverified."],
          ticket_evidence),
@@ -572,8 +577,12 @@ def offer_export_plan(db, run_id):
     if policy.get("sizing_mode"):
         fields["sizing"] = {key: policy[key] for key in (
             "sizing_mode", "sizing_rule", "target_profit_usd", "kelly_multiplier", "reference_bankroll_usd",
-            "minimum_stake_usd", "portfolios"
+            "minimum_stake_usd", "portfolio_rule", "portfolios"
         ) if key in policy}
+    if policy.get("portfolio_rule") == paper.MAIN_FIRST_ONE_PER_GAME:
+        selected["portfolio_selection"] = {
+            (ticket["game_id"], witnesses[ticket["id"]]["offer_index"]): ticket["portfolio_selection"]
+            for name in ("all_venues", "best_venue") for ticket in report["portfolios"][name]["tickets"]}
     return fields, report["games"], selected
 
 
@@ -590,10 +599,15 @@ def offer_export_game(db, game, minimum, selected, *, sizing=None):
     offers = offer_rows(checkpoint, game_id=game["game_id"], minimum=minimum, at=at)
     sizing_exclusions = {item["offer_index"]: item for item in game.get("sizing_exclusions", ())}
     portfolios = sizing.get("portfolios", selected) if sizing else selected
+    selection_evidence = selected.get("portfolio_selection")
     for offer in offers:
         position = offer["offer_index"]
         key = game["game_id"], position
         offer["selected_tickets"] = {name: selected[name][key] for name in portfolios if key in selected[name]}
+        if selection_evidence is not None:
+            offer["source_line_role"] = _role(checkpoint["snapshot"]["offers"][position]["record"])
+            if key in selection_evidence:
+                offer["portfolio_selection"] = selection_evidence[key]
         if sizing and position in sizing_exclusions:
             failure = sizing_exclusions[position]
             offer["sizing"] = dict(state="excluded", **{name: failure[name] for name in (
@@ -633,7 +647,10 @@ def ticket_detail(db, run_id, ticket_id):
     if witness is None:
         raise UnknownSelection("Unknown ticket in this saved run.")
     report = document["report"]
-    ticket = next(t for t in report["portfolios"]["all_venues"]["tickets"] if t["id"] == ticket_id)
+    portfolio = report["portfolios"]["all_venues"]
+    ticket = next(t for t in portfolio["tickets"] if t["id"] == ticket_id)
+    if portfolio.get("candidate_pool_only"):
+        ticket = next((t for t in report["portfolios"]["best_venue"]["tickets"] if t["id"] == ticket_id), ticket)
     game = _game(report, ticket["game_id"])
     checkpoint_id, outcome_id = game["checkpoint_id"], game["outcome_id"]
     index = experiment._closure(db, [key for key in (checkpoint_id, outcome_id) if key])

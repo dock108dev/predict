@@ -195,10 +195,13 @@ def _game_context(game, source, known, current, occurrence, evidence):
                      or (occurrence or {}).get("occurrence_id"))
     if not occurrence_id and known.get("source_event_id"):
         occurrence_id = f"provider:{known['source_event_id']}"
-    return dict(game_id=game["game_id"], occurrence_id=occurrence_id, title=game.get("title"),
+    result = dict(game_id=game["game_id"], occurrence_id=occurrence_id, title=game.get("title"),
                 starts_at=game.get("starts_at"), capture_status=game["status"], capture_reason=game.get("reason"),
                 checkpoint_id=game.get("checkpoint_id"), schedule_id=game.get("schedule_id"),
                 result=_game_result(roles, names, evidence, unavailable))
+    if "selection_audit" in game:
+        result["selection_audit"] = game["selection_audit"]
+    return result
 
 
 def _lookup_games(db, run):
@@ -384,6 +387,8 @@ def _ticket(run_id, ticket, witness, game, known):
            "decision_at", "times")}
     if "sizing" in ticket:
         row.update(frozen_quote_id=ticket["frozen_quote_id"], sizing=ticket["sizing"])
+    if "portfolio_selection" in ticket:
+        row["portfolio_selection"] = ticket["portfolio_selection"]
     row.update(grade=grade, occurrence_id=game["occurrence_id"], quote_receipt_sha256=quote_hashes,
                capture_origin="reconstructed" if game["capture_status"] == "reconstructed" else "frozen")
     return _money(row, stake=stake, expected_profit=expected, return_=returned,
@@ -436,6 +441,8 @@ def build_report(run, contexts):
     """Compute the exact same report for the same frozen run and evidence."""
     document = run["payload"]
     original = document["report"]
+    policy = original["policy"]
+    one_per_game = policy.get("portfolio_rule") == paper.MAIN_FIRST_ONE_PER_GAME
     game_entries = {game["game_id"]: (game, known) for game, known in contexts}
     witnesses = document.get("witnesses") or {}
     graded = {}
@@ -444,20 +451,31 @@ def build_report(run, contexts):
         graded[ticket["id"]] = _ticket(run["id"], ticket, witnesses.get(ticket["id"]), game, known)
     portfolios = {}
     for name in VARIANTS:
-        tickets = [graded[ticket["id"]] for ticket in original["portfolios"][name]["tickets"]]
+        entries = original["portfolios"][name]["tickets"]
+        if one_per_game and name == "best_venue":
+            # The ranked line may be witnessed at a different venue from the
+            # best sized quote. Preserve that reason on the selected grade.
+            tickets = [dict(graded[ticket["id"]], portfolio_selection=ticket["portfolio_selection"]) for ticket in entries]
+        else:
+            tickets = [graded[ticket["id"]] for ticket in entries]
         portfolios[name] = dict(tickets=tickets, summary=_summary(tickets),
             by_game=_breakdown(tickets, "game_id", game_entries), by_venue=_breakdown(tickets, "venue"),
             by_capture=_breakdown(tickets, "capture_origin", ("frozen", "reconstructed")))
+    if one_per_game:
+        portfolios["all_venues"]["candidate_pool_only"] = True
+    primary = "best_venue" if one_per_game else "all_venues"
     games = [game for game, _ in game_entries.values()]
     coverage = dict((run.get("summary") or {}).get("coverage") or {})
     coverage.update(known_games=len(games),
         missing_capture_games=sum(g["capture_status"] not in CAPTURED | {"pending", "claimed"} for g in games),
-        zero_trade_games=sum(g["capture_status"] in CAPTURED and not portfolios["all_venues"]["by_game"][g["game_id"]]["tickets"]
+        zero_trade_games=sum(g["capture_status"] in CAPTURED and not portfolios[primary]["by_game"][g["game_id"]]["tickets"]
                              for g in games),
         final_games=sum(g["result"]["state"] == "final" for g in games))
-    summary = portfolios["all_venues"]["summary"]
+    summary = portfolios[primary]["summary"]
     pending_games = any(g["result"]["state"] == "pending" for g in games)
-    if summary["tickets"] and not summary["unresolved"]:
+    if one_per_game:
+        status = portfolio_status(dict(portfolios=portfolios, games=games), primary)
+    elif summary["tickets"] and not summary["unresolved"]:
         status = "graded"
     elif summary["resolved"]:
         status = "partially_graded"
@@ -471,11 +489,10 @@ def build_report(run, contexts):
                 result_observed_at=max((g["result"]["observed_at"] for g in games if g["result"]["observed_at"]),
                                        key=stamp, default=None),
                 coverage=coverage, games=games, portfolios=portfolios, provider_requests=0, orders_submitted=0)
-    policy = original["policy"]
     if "sizing_mode" in policy:
         report["sizing_policy"] = {key: policy[key] for key in ("sizing_mode", "sizing_rule", "target_profit_usd",
             "reference_bankroll_usd", "kelly_multiplier", "sizing_scale_usd", "minimum_ev", "minimum_stake_usd",
-            "portfolios")
+            "portfolio_rule", "portfolios")
             if key in policy}
     return report
 

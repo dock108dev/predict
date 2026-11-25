@@ -56,6 +56,11 @@ def configuration(body):
             raise workspace.SelectionError('Choose one or both supported venue portfolios.')
         portfolios = [v for v in VARIANTS if v in selected]
         sizing['sizing_mode'] = mode
+        if 'portfolio_rule' in body:
+            fields.add('portfolio_rule')
+            if body['portfolio_rule'] != paper.MAIN_FIRST_ONE_PER_GAME or portfolios != ['best_venue']:
+                raise workspace.SelectionError('Choose Best venue for the one-bet-per-game rule.')
+            sizing['portfolio_rule'] = body['portfolio_rule']
         if mode == 'fixed_profit':
             fields |= {'target_profit_usd', 'kelly_comparison'}
             comparison = body.get('kelly_comparison')
@@ -171,8 +176,9 @@ def _definition(parent, job, population, recovery, fingerprint, mode):
         return definition
     policy = definition['policy']
     policy.update(sizing_mode=mode, portfolios=config['portfolios'])
-    if 'minimum_stake_usd' in config:
-        policy['minimum_stake_usd'] = config['minimum_stake_usd']
+    policy.update({key: config[key] for key in ('minimum_stake_usd', 'portfolio_rule') if key in config})
+    if config.get('portfolio_rule') == paper.MAIN_FIRST_ONE_PER_GAME:
+        policy['duplicates'] = 'One trade per game; retain the best qualifying venue for the ranked bet.'
     if mode == 'fixed_profit':
         for key in ('reference_bankroll_usd', 'kelly_multiplier', 'sizing_scale_usd'):
             policy.pop(key, None)
@@ -267,16 +273,11 @@ def _finish(db, job, lease_until, state, run_id, fingerprint, error):
         (now+interval, state, error, run_id, fingerprint, now, job['campaign_id'], job['game_date'], lease_until))
 
 
-def select(tickets, minimum, variant):
+def select(tickets, minimum, variant, portfolio_rule=None):
     eligible = [t for t in tickets if F(t['screen_ev']) >= minimum and F(t['ev']) >= minimum]
-    if variant == 'all_venues':
+    if variant == 'all_venues' and portfolio_rule is None:
         return eligible
-    best = {}
-    for ticket in eligible:
-        key = ticket['equivalent_bet_id']
-        if key not in best or paper.best_order(ticket) < paper.best_order(best[key]):
-            best[key] = ticket
-    return list(best.values())
+    return paper.best_tickets(eligible, portfolio_rule)
 
 
 def _expected_roi(profit, stake):
@@ -350,16 +351,17 @@ def odds_buckets(tickets, edges=DEFAULT_ODDS_EDGES):
     return buckets
 
 
-def analysis(tickets, edges, variant):
+def analysis(tickets, edges, variant, portfolio_rule=None):
     edges = list(map(F,edges))
-    selected = select(tickets, edges[0], variant)
+    selected = select(tickets, edges[0], variant, portfolio_rule)
     buckets = []
     for i, lower in enumerate(edges):
         upper = edges[i+1] if i+1<len(edges) else None
         group = [t for t in selected if F(t['screen_ev'])>=lower and (upper is None or F(t['screen_ev'])<upper)]
         buckets.append(dict(minimum=str(lower),maximum=str(upper) if upper else None,
                             summary=_analysis_summary(group)))
-    thresholds = [dict(minimum=str(edge), summary=_analysis_summary(select(tickets,edge,variant))) for edge in edges]
+    thresholds = [dict(minimum=str(edge), summary=_analysis_summary(select(tickets, edge, variant, portfolio_rule)))
+                  for edge in edges]
     return dict(summary=_analysis_summary(selected), buckets=buckets, thresholds=thresholds)
 
 
@@ -392,23 +394,26 @@ def analysis_tickets(document, report):
     return tickets
 
 
-def quality(tickets, edges, variant, *, inputs):
-    selected = select(tickets, F(edges[0]), variant)
+def quality(tickets, edges, variant, *, inputs, portfolio_rule=None):
+    selected = select(tickets, F(edges[0]), variant, portfolio_rule)
     fresh = [t for t in tickets if t['target_age_bucket'] == 'up_to_60']
-    return dict(rule=QUALITY_VERSION, version=hashed([QUALITY_VERSION, inputs, edges, variant]),
+    version_inputs = [QUALITY_VERSION, inputs, edges, variant]
+    if portfolio_rule is not None:
+        version_inputs.append(portfolio_rule)
+    return dict(rule=QUALITY_VERSION, version=hashed(version_inputs),
         target_age_boundary_seconds=60,
         target_age_clock='Original target quote receipt minus provider book update time, inclusive from 0 to 60 seconds.',
         reference_age_clock='Oldest age across the required exact reference inputs, using each original receipt and book update time.',
-        provenance={origin: analysis([t for t in tickets if t['capture_origin'] == origin], edges, variant)
+        provenance={origin: analysis([t for t in tickets if t['capture_origin'] == origin], edges, variant, portfolio_rule)
                     for origin in ('frozen', 'reconstructed')},
         target_quote_age=paper_results._breakdown(selected, 'target_age_bucket', AGE_BUCKETS),
         reference_quote_age=paper_results._breakdown(selected, 'reference_age_bucket', AGE_BUCKETS),
-        fresh_target_only=analysis(fresh, edges, variant))
+        fresh_target_only=analysis(fresh, edges, variant, portfolio_rule))
 
 
-def _window_analysis(tickets, edges, variant, *, inputs):
-    result = analysis(tickets, edges, variant)
-    return dict(result, quality=quality(tickets, edges, variant, inputs=inputs))
+def _window_analysis(tickets, edges, variant, *, inputs, portfolio_rule=None):
+    result = analysis(tickets, edges, variant, portfolio_rule)
+    return dict(result, quality=quality(tickets, edges, variant, inputs=inputs, portfolio_rule=portfolio_rule))
 
 
 def _history(db, identity, game_date=None):
@@ -448,13 +453,13 @@ def snapshot_document(db, run_id):
     return dict(report=_snapshot_reports(db, [run_id])[run_id])
 
 
-def sizing_comparison(reports, minimum, variant, *, details=False):
+def sizing_comparison(reports, minimum, variant, *, details=False, portfolio_rule=None):
     if not all(mode in reports and any(g['status'] in paper_results.CAPTURED for g in reports[mode]['games'])
                for mode in MODES):
         return None
     pools = {mode: reports[mode]['portfolios']['all_venues']['tickets'] for mode in MODES}
     qualified = {mode: {ticket['frozen_quote_id']: ticket for ticket in pools[mode]} for mode in MODES}
-    selected = {mode: {ticket['frozen_quote_id']: ticket for ticket in select(pools[mode], minimum, variant)}
+    selected = {mode: {ticket['frozen_quote_id']: ticket for ticket in select(pools[mode], minimum, variant, portfolio_rule)}
                 for mode in MODES}
     fixed, kelly = (qualified[mode].keys() for mode in MODES)
     fixed_selected, kelly_selected = (selected[mode].keys() for mode in MODES)
@@ -505,7 +510,9 @@ def sizing_run_detail(db, run, definition, report):
     reports = {mode: report if identity == run['id'] else other_reports[identity]
                for mode, identity in related.items()}
     minimum = F(report['policy']['minimum_ev'])
-    return dict(sizing_runs=related, sizing_comparison={v: sizing_comparison(reports, minimum, v, details=True)
+    portfolio_rule = report['policy'].get('portfolio_rule')
+    return dict(sizing_runs=related, sizing_comparison={v: sizing_comparison(reports, minimum, v, details=True,
+                                                                            portfolio_rule=portfolio_rule)
                                                      for v in report['policy']['portfolios']})
 
 
@@ -533,6 +540,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
     latest_reports = _snapshot_reports(db, report_ids) if config['version'] == SIZING_VERSION else {}
     edges = config['bucket_edges']
     odds_edges = config.get('odds_bucket_edges', DEFAULT_ODDS_EDGES)
+    portfolio_rule = config.get('portfolio_rule')
     comparison = Counter()
     selected_tickets, selected_days = [], 0
     for day in day_rows:
@@ -557,7 +565,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                      capture_state='scheduled' if day['state'] == 'scheduled' else 'awaiting_evidence')
         if compare:
             entry['comparison'] = sizing_comparison({m: latest_reports[r] for m, r in runs.items()},
-                                                    F(edges[0]), variant)
+                                                    F(edges[0]), variant, portfolio_rule=portfolio_rule)
             if entry['comparison'] is not None:
                 comparison.update(entry['comparison'])
         if run_id:
@@ -575,7 +583,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                 complete = usable == len(source['games']) and all(
                     (game.get('coverage') or {}).get('incomplete') is False for game in source['games'])
                 entry['capture_state'] = 'retained' if complete else 'partial'
-                selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant)
+                selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant, portfolio_rule)
                 selected = list(_selection_rows(selections, report, variant))
                 entry['selection'] = _selection_summary(selected, odds_edges)
                 if in_window:
@@ -592,14 +600,16 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                     if in_window:
                         all_tickets.extend(tickets)
                         versions.append(entry['result_id'])
-                    entry['analysis'] = _window_analysis(tickets, edges, variant, inputs=entry['result_id'])
+                    entry['analysis'] = _window_analysis(tickets, edges, variant, inputs=entry['result_id'],
+                                                         portfolio_rule=portfolio_rule)
                     if config['version'] == SIZING_VERSION and not state['pending'] and not state['error']:
                         entry['result_state'] = paper_results.portfolio_status(report, variant)
         days.append(entry)
     return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
                 as_of=now.isoformat(),
                 selection=_selection_summary(selected_tickets, odds_edges) if selected_days else None,
-                weekly=_window_analysis(all_tickets, edges, variant, inputs=versions) if versions else None,
+                weekly=_window_analysis(all_tickets, edges, variant, inputs=versions,
+                                        portfolio_rule=portfolio_rule) if versions else None,
                 comparison=dict(comparison) if comparison else None,
                 reported_days=len(versions),provider_requests=0,orders_submitted=0)
 

@@ -405,4 +405,36 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await expect(page.get_by_text("Archived experiment · previous rules", exact=True)).to_be_visible()
                 await expect(page.locator(".paper-result-trade")).to_contain_text("$2.50")
                 assert parse_qs(urlsplit(page.url).query)["result"] == [graded]
+
+                await page.get_by_role("link", name="Open current results", exact=True).click()
+                await page.get_by_role("link", name="Edit experiment", exact=True).click()
+                selection = page.get_by_label("Bet selection", exact=True)
+                await expect(selection).to_have_value("")
+                await selection.select_option("main_first_one_per_game")
+                await expect(page.get_by_label("Best venue only", exact=True)).to_be_checked()
+                await expect(page.get_by_label("All qualifying venues", exact=True)).not_to_be_checked()
+                await minimum.fill("2.50")
+                await page.get_by_label("Compare with Kelly").uncheck()
+                await page.get_by_role("button", name="Review", exact=True).click()
+                async with page.expect_response(
+                    lambda res: res.request.method == "POST" and res.url.endswith(BASE + "/campaigns")
+                ) as saved_rule:
+                    await page.get_by_role("button", name="Save and run", exact=True).click()
+                assert (await saved_rule.value).ok
+                await page.wait_for_url(re.compile(rf"[?&]campaign=(?!{revision_id})[0-9a-f]{{64}}"))
+                single_id = parse_qs(urlsplit(page.url).query)["campaign"][0]
+                with connect_web() as db:
+                    single_run = paper_campaigns.tick(db)
+                    assert single_run and single_run != revised_run
+                    queue.process_one(db)
+                    selected = paper_campaigns.view(db, single_id)
+                    assert selected["config"]["portfolio_rule"] == "main_first_one_per_game"
+                    assert selected["config"]["portfolios"] == ["best_venue"]
+                    assert selected["weekly"]["summary"]["tickets"] == 1
+                await page.reload(wait_until="domcontentloaded")
+                await expect(page.get_by_text("One bet per game, main lines first", exact=False).first).to_be_visible()
+                await page.get_by_role("link", name="Inspect games and trades", exact=True).click()
+                await expect(page.locator(".result-ledger-table tbody tr")).to_have_count(1)
+                await page.locator(".result-ledger-table tbody tr a").click()
+                await expect(page.locator(".paper-result-trade")).to_contain_text("Qualifying main line")
                 await browser.close()
