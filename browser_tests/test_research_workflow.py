@@ -24,6 +24,7 @@ def test_research_evidence_and_versioned_replay():
         "claim_ids": ["capture"],
         "evaluation_criteria": ["Trace every graded ticket."],
         "policy": {
+            "execution": "paper_only",
             "minimum_ev": "1/25",
             "reference_bankroll_usd": "10000",
             "kelly_multiplier": "1/4",
@@ -223,7 +224,9 @@ def test_research_evidence_and_versioned_replay():
                 }
             route.fulfill(json=saved[run_id])
         elif path.startswith(BASE + "/runs/"):
-            if "/tickets/" in path:
+            if path.endswith("/results"):
+                route.fulfill(json={"status": {"state": "collecting"}})
+            elif "/tickets/" in path:
                 route.fulfill(
                     json={
                         "ticket": ticket,
@@ -306,11 +309,16 @@ def test_research_evidence_and_versioned_replay():
         expect(page.get_by_text("Retention guard refused capture.")).to_be_visible()
 
         page.get_by_role("link", name="Open pilot run").click()
+        audit = page.locator(".result-audit")
+        audit.locator("summary").click()
         expect(page.get_by_text("Incomplete tracked population")).to_be_visible()
-        expect(page.locator(".workspace-stats").first).to_contain_text(
+        expect(audit.locator(".workspace-stats").first).to_contain_text(
             "Expected gamesUnknown"
         )
-        page.get_by_role("link", name="All qualifying venues").click()
+        page.locator(".paper-result-summary").get_by_role(
+            "link", name="All qualifying venues"
+        ).click()
+        audit.locator("summary").click()
         expect(
             page.get_by_role("heading", name="All qualifying venues")
         ).to_be_visible()
@@ -331,7 +339,7 @@ def test_research_evidence_and_versioned_replay():
         expect(evidence.get_by_text("Capture refused")).to_be_visible()
         expect(evidence.get_by_text("retention limit").first).to_be_visible()
         evidence.get_by_role("button", name="Close").click()
-        page.get_by_role("link", name="Results", exact=True).click()
+        page.get_by_role("link", name="Findings", exact=True).click()
         page.get_by_role("link", name=CLAIM, exact=True).click()
         expect(page.get_by_role("heading", name=CLAIM)).to_be_visible()
 

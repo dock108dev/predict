@@ -491,10 +491,10 @@ class SportsGameOddsWorker:
             except (ValueError, OperationalError, QueryCanceled) as exc:
                 failure(__name__, 'sgo_page_admission_interrupted', exc)
                 raise RuntimeError('provider page admission interrupted') from exc
-            # A final sporting score is a separate research observation. It
+            # A sporting result or cancellation is a separate research observation. It
             # cannot grant authority to post-start odds or venue settlement.
             if any(event.get('game_results') or event.get('scores') or
-                   event['status'].get('completed') is True or event['status'].get('finalized') is True
+                   any(event['status'].get(key) is True for key in ('completed', 'finalized', 'cancelled'))
                    for event in page.events):
                 from .bulk_checkpoint import owned_thread
                 from .sgo_game_results import ingest

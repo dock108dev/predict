@@ -24,4 +24,4 @@ CMD ["python", "-m", "app.storage.odds_archive_export"]
 
 FROM runtime AS web
 COPY deploy/compose.yml deploy/predict.Caddyfile deploy/release.sh deploy/managed-config.py deploy/image-cleanup.py deploy/managed/
-CMD ["python", "-m", "app.dashboard.opportunity_board", "--host", "0.0.0.0", "--port", "8784"]
+CMD ["python", "-m", "app.dashboard.web_runtime", "--host", "0.0.0.0", "--port", "8784"]

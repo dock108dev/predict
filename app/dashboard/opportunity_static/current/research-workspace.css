@@ -45,6 +45,17 @@
 .workspace-dialog summary { cursor:pointer; }
 .workspace-table th { white-space:normal; }
 .workspace-table td:first-child { min-width:9rem; }
+.paper-result-summary { border-top:3px solid var(--p-accent); }
+.results-controls { display:flex; flex-wrap:wrap; align-items:end; gap:.7rem 1.2rem; margin-bottom:.8rem; }
+.results-status p { margin:.3rem 0 0; }
+.results-coverage { color:var(--muted); font-size:.875rem; }
+.results-counts,.results-score { color:var(--p-ink); font-size:1.1rem; font-weight:650; }
+.paper-result-games .workspace-table,.paper-result-game .workspace-table { font-variant-numeric:tabular-nums; }
+.paper-result-games .workspace-table a,.paper-result-game .workspace-table a { color:var(--p-accent); text-decoration:underline; text-underline-offset:2px; }
+.paper-result-game a[aria-current=true] { font-weight:700; }
+.paper-result-trade { background:var(--p-alternate); }
+.paper-result-trade section { border-top:1px solid var(--line); padding-top:.6rem; }
+.result-audit { border-top:1px solid var(--line); padding-top:.6rem; }
 .workspace-highlight { outline:2px solid var(--p-accent); outline-offset:3px; }
 .workspace-dialog .research-dialog-heading { gap:1rem; }
 #research-status:empty,#research-replay-status:empty { display:none; }
@@ -53,5 +64,6 @@
  .workspace-sections { column-gap:.85rem; }
  .workspace-card { padding:.8rem; }
  .workspace-table { min-width:38rem; }
+ .paper-result-games .workspace-table,.paper-result-game .workspace-table,.paper-result-summary ~ details .workspace-table { min-width:0; }
  #data-mens-d1 .workspace-table, #data-mens-d1 .workspace-table td { min-width:0; }
 }

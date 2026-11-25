@@ -58,6 +58,14 @@ def test_missing_scores_are_null_not_zero_and_pregame_empty_is_not_result():
     assert result(response()) == []
 
 
+def test_cancelled_game_without_score_is_retained_as_an_exception():
+    raw = response()
+    raw['data'][0]['status']['cancelled'] = True
+    item, = result(raw)
+    assert item['reason'] == 'sporting_result_cancelled'
+    assert not item['final']
+
+
 def test_result_receipt_cannot_be_known_before_arrival():
     parsed = parse_page(json.dumps(page()).encode(), RECEIVED)
     with pytest.raises(ValueError, match='future_receipt'):

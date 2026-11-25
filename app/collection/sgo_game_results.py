@@ -6,6 +6,8 @@ from .sportsgameodds_current_rows import event_record, participant_ids
 from app.normalization.college_registry import sgo_registry
 
 VERSION = 'sgo-final-team-points-1'
+TERMINAL_DISPUTES = frozenset(('sporting_result_score_conflict', 'sporting_result_live_conflict',
+                              'sporting_result_canonical_role_mapping_changed', 'sporting_result_cancelled'))
 
 
 def _score(value):
@@ -32,7 +34,7 @@ def observations(page, *, known_at):
     for event in page.events:
         status = event['status']
         final = status.get('completed') is True or status.get('finalized') is True
-        if not final and not event.get('game_results') and not event.get('scores'):
+        if not final and status.get('cancelled') is not True and not event.get('game_results') and not event.get('scores'):
             continue
         received = event['received_at']
         if stamp(received) > known:
@@ -42,8 +44,8 @@ def observations(page, *, known_at):
         scores = {role: _score(game.get(role, team.get(role))) for role in ('home', 'away')}
         conflict = any(game.get(role) is not None and team.get(role) is not None
                        and _score(game[role]) != _score(team[role]) for role in scores)
-        reason = ('sporting_result_not_final' if not final else
-                  'sporting_result_cancelled' if status.get('cancelled') is True else
+        reason = ('sporting_result_cancelled' if status.get('cancelled') is True else
+                  'sporting_result_not_final' if not final else
                   'sporting_result_live_conflict' if status.get('live') is True else
                   'sporting_result_score_conflict' if conflict else
                   'sporting_result_score_missing' if any(value is None for value in scores.values()) else None)

@@ -111,6 +111,30 @@ def plan(root, paths):
             sql.update(SQL_CORE)
         if path.startswith("app/research/paper") or path == "app/dashboard/paper_api.py":
             sql.add("tests/test_paper_experiments_sql.py")
+        if path.startswith(
+            (
+                "app/research/paper_result",
+                "app/storage/paper_result",
+                "app/dashboard/paper_result",
+                "tests/test_paper_result",
+            )
+        ) or path in (
+            "app/dashboard/research_workspace_api.py",
+            "app/storage/migrations/120_paper_results.sql",
+        ):
+            pure.update(
+                {"tests/test_paper_results.py", "tests/test_paper_results_api.py"}
+            )
+            sql.add("tests/test_paper_result_queue_sql.py")
+        if path in (
+            "app/collection/sgo_game_results.py",
+            "app/collection/sportsgameodds_worker.py",
+            "app/research/experiment.py",
+        ):
+            pure.add("tests/test_sgo_game_results.py")
+            sql.add(
+                "tests/test_ev_experiment_sql.py::ExperimentSQL::test_ordinary_terminal_dispute_supersedes_a_final_until_corrected"
+            )
         if path in ("app/research/recovery.py", "tests/test_t10_recovery.py"):
             pure.add("tests/test_t10_recovery.py")
             sql.add("tests/test_t10_recovery.py::RecoverySQL")

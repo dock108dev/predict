@@ -471,6 +471,44 @@ class ExperimentSQL(LatestBoardFixture):
             state=db.execute("SELECT state FROM ev_experiment_task WHERE game_id=%s AND checkpoint='outcome'",(task["game_id"],)).fetchone()["state"]
             self.assertEqual(state,"final")
 
+    async def test_ordinary_terminal_dispute_supersedes_a_final_until_corrected(self):
+        from app.research import paper_results
+
+        with self.connect() as db:
+            now = owner.utc()
+            event = self.event(starts=now-timedelta(hours=3))
+            owner.discover(db, [event], at=now-timedelta(hours=4))
+            grade = dict(source="sportsgameodds", event_id=event["source_event_id"], league="NBA",
+                         home="home", away="away", starts_at=event["starts_at"], final=True,
+                         home_score="100", away_score="90", receipt_sha256="a" * 64,
+                         received_at=owner.clock(now), knowledge_at=owner.clock(now))
+            self.assertEqual(owner.observe_outcomes(db, [grade], at=now)["matched"], 1)
+            self.advance(now+timedelta(minutes=1))
+            dispute = dict(grade, final=False, reason="sporting_result_score_conflict",
+                           receipt_sha256="b" * 64, received_at=owner.clock(self.now),
+                           knowledge_at=owner.clock(self.now))
+            self.assertEqual(owner.observe_outcomes(db, [dispute], at=self.now)["matched"], 1)
+            self.assertEqual(owner.observe_outcomes(db, [dispute], at=self.now)["unchanged"], 1)
+            self.assertEqual(owner.observe_outcomes(db, [grade], at=self.now)["unchanged"], 1)
+            game = db.execute("SELECT id, schedule_id, outcome_id FROM public.ev_experiment_game").fetchone()
+            index = owner._closure(db, [game["outcome_id"]])
+            current = owner._value(index[game["outcome_id"]], index)
+            prior = current["supersedes_id"]
+            prior_index = owner._closure(db, [prior])
+            self.assertTrue(owner._value(prior_index[prior], prior_index)["data"]["final"])
+            evidence = paper_results._sgo_evidence(game, event, dict(home="home", away="away"),
+                game["outcome_id"], current["data"], owner.clock(self.now))
+            self.assertEqual(evidence["state"], "conflicting")
+            self.advance(self.now+timedelta(minutes=1))
+            clarified = dict(grade, receipt_sha256="c" * 64, received_at=owner.clock(self.now),
+                             knowledge_at=owner.clock(self.now))
+            self.assertEqual(owner.observe_outcomes(db, [clarified], at=self.now)["matched"], 1)
+            head = db.execute("SELECT outcome_id FROM public.ev_experiment_game").fetchone()["outcome_id"]
+            index = owner._closure(db, [head])
+            corrected = owner._value(index[head], index)
+            self.assertEqual(corrected["supersedes_id"], game["outcome_id"])
+            self.assertTrue(corrected["data"]["final"])
+
     async def test_real_http_catalog_detail_export_are_passive_and_revision_bound(self):
         from app.dashboard import research_api
         with self.connect() as db:

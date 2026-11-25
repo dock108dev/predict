@@ -7,7 +7,7 @@ from aiohttp import web
 from .local_security import HEADERS, PublicRequestError, read_json
 
 # Keep local selection context, never an arbitrary redirect target.
-SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book section run claim theory definition finding variant ticket evidence pull scope coverage_game coverage_filter coverage_job'.split())
+SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book section run claim theory definition finding variant ticket evidence pull scope coverage_game coverage_filter coverage_job result trade filter trade_filter'.split())
 CATALOG_CONTEXT = {'search', 'sport', 'provider', 'original_bookmaker_id', 'book', 'family', 'calculation_status', 'max_age_minutes', 'game', 'bet', 'reference_scope'}
 DATA_PATHS = {'/browse-odds', '/odds', '/raw-odds', '/game', '/replay', '/admin/retained'}
 RETIRED_PATHS = {'/scanner', '/my-bets', '/about', '/trading-fees'}
@@ -29,9 +29,12 @@ def destination(request):
     if path == '/':
         target = '/data' if 'id' in request.query or set(request.query) & CATALOG_CONTEXT else '/research'
     elif path == '/research':
+        catalog_context = set(request.query) & CATALOG_CONTEXT
+        if request.query.get('section') == 'experiments' and request.query.get('run'):
+            catalog_context.discard('game')  # Paper game IDs belong to the selected run.
         if 'id' in request.query and 'revision' in request.query:
             target = '/data?evidence=checkpoints'
-        elif set(request.query) & CATALOG_CONTEXT:
+        elif catalog_context:
             target = '/data'
         else:
             target = '/research' if request.path.endswith('/') else None

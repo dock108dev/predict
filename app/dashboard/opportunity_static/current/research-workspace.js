@@ -1,5 +1,6 @@
 import {byId, card, count, details, label, link, list, node, pairs, pct, readJSON, table, time, usd} from './workspace-ui.js';
 import {renderRun, renderSavedEvidence} from './research-run.js';
+import {renderResults} from './research-results.js';
 import {coverageContext, experimentCoverage, readDailyCoverage} from './mens-d1-coverage.js';
 import {renderWorkspaceNavigation} from './workspace-nav.js';
 
@@ -7,7 +8,7 @@ const endpoint = '/api/research/workspace';
 const sections = new Set(['theories', 'experiments', 'results']);
 const root = byId('research-view'), status = byId('research-status');
 const dialogs = byId('research-evidence');
-let workspace, readiness, version = 0, loadedRun, busy = false;
+let workspace, readiness, version = 0, loadedRun, busy = false, stopResultRefresh = () => {};
 
 const locationState = () => new URLSearchParams(location.search);
 const sectionName = query => sections.has(query.get('section')) ? query.get('section') : 'overview';
@@ -17,6 +18,10 @@ const definitionById = version => (workspace.definitions || []).find(definition 
 function url(section, params = {}) {
   const query = new URLSearchParams({...(section === 'overview' ? {} : {section}), ...params});
   return '/research' + (query.size ? '?' + query : '');
+}
+function navigate(href) {
+  history.pushState(null, '', href);
+  render();
 }
 const runLink = (run, title = run.title || run.date) => link(title, url('experiments', {run:run.id}));
 const claimLink = id => link(claimById(id)?.title || id, url('theories', {claim:id}));
@@ -374,9 +379,114 @@ function dailyRunForm(template, query, requestVersion, summaryRead) {
   }).catch(error => { if (current()) feedback.textContent = error.message; });
   return panel;
 }
+
+function definitionRuns(definition) {
+  if (!definition) return [];
+  return (workspace.runs || []).filter(run => run.definition_version === definition.version
+    || (definition.id && definitionById(run.definition_version)?.id === definition.id));
+}
+
+function watchResults(read, publish, current, initial, pinned) {
+  let started = true, reading = false, fingerprint = resultFingerprint(initial);
+  async function check() {
+    if (!started || reading || document.hidden || !current()) return;
+    reading = true;
+    try {
+      const state = await read(true);
+      if (resultFingerprint(state) === fingerprint || !started || !current()) return;
+      if (!pinned && state.status?.stale) publish(state, {statusOnly:true});
+      const latest = await read();
+      if (started && current()) {
+        fingerprint = resultFingerprint(latest);
+        publish(latest);
+      }
+    } catch (error) {
+      if (!started || !current()) return;
+      fingerprint = '';
+      publish({error:error.message}, {connectionLost:true});
+    } finally {
+      reading = false;
+    }
+  }
+  const timer = setInterval(check, 15000);
+  document.addEventListener('visibilitychange', check);
+  return () => {
+    started = false;
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange', check);
+  };
+}
+
+function resultFingerprint(analysis) {
+  const {state, reason, stale, latest_version} = analysis.status || {};
+  return JSON.stringify([state, reason, stale, latest_version, analysis.version?.id]);
+}
+
+async function openResults(mount, selected, query, context, variant, requestVersion) {
+  const id = selected.run.id;
+  const pins = ['result', 'game', 'trade', 'filter', 'trade_filter'];
+  const params = {...context, run:id, date:selected.run.date, variant,
+    ...Object.fromEntries(pins.filter(name => query.has(name)).map(name => [name, query.get(name)]))};
+  const href = overrides => url('experiments', Object.fromEntries(Object.entries({...params, ...overrides}).filter(([, value]) => value != null)));
+  const runs = definitionRuns(selected.definition);
+  const navigation = {
+    variant, href, go:overrides => navigate(href(overrides)), game:params.game, trade:params.trade, pinned:Boolean(params.result),
+    filter:['traded', 'zero', 'missing', 'unresolved'].includes(params.filter) ? params.filter : 'all',
+    tradeFilter:['win', 'loss', 'push', 'void', 'unresolved'].includes(params.trade_filter) ? params.trade_filter : 'all',
+    dates:[...new Set([selected.run.date, ...runs.map(run => run.date)])].sort().reverse(),
+    changeDate:day => {
+      const run = runs.find(candidate => candidate.date === day);
+      if (run && run.id !== id) navigate(url('experiments', {...(context.scope ? {scope:context.scope} : {}), date:day, run:run.id, variant}));
+    },
+  };
+  const current = () => requestVersion === version && mount.isConnected;
+  let lastAnalysis = {};
+  const inspectTrade = (container, trade) => {
+    container.append(node('p', 'Reading frozen quote and Kelly calculation…'));
+    readJSON(runAPI(id) + '/tickets/' + encodeURIComponent(trade.id)).then(value => {
+      if (!current() || !container.isConnected) return;
+      renderSavedEvidence(container, value, {
+        ticket:true, resultReview:true, exportLink:runAPI(id) + '?export=1',
+        gameLink:gameId => href({evidence:gameId}),
+      });
+    }).catch(error => { if (current() && container.isConnected) container.replaceChildren(node('p', error.message)); });
+  };
+  const publish = (analysis, {connectionLost = false, statusOnly = false} = {}) => {
+    if (!current()) return;
+    if (connectionLost && lastAnalysis.report) {
+      analysis = {...lastAnalysis, error:analysis.error, status:{...lastAnalysis.status, stale:true}};
+    } else if (statusOnly) analysis = {...lastAnalysis, status:analysis.status};
+    else lastAnalysis = analysis;
+    renderResults(mount, selected, analysis, navigation, inspectTrade);
+  };
+  const read = (status = false) => readJSON(`${runAPI(id)}/results?` + new URLSearchParams({variant,
+    ...(params.result ? {version:params.result} : {}), ...(status ? {status:'1'} : {})}));
+  publish({});
+  try {
+    const analysis = await read();
+    if (!current()) return;
+    publish(analysis);
+    if (!dialogs.open && params.game) mount.querySelector(params.trade ? '.paper-result-trade h4' : '.paper-result-game h3')?.focus();
+    stopResultRefresh = watchResults(read, publish, current, analysis, navigation.pinned);
+  } catch (error) {
+    if (!current()) return;
+    const analysis = {error:error.message};
+    publish(analysis);
+    if (!params.result) stopResultRefresh = watchResults(read, publish, current, analysis);
+  }
+}
+
 async function experiments(query, requestVersion) {
-  const id = query.get('run');
+  const requestedDefinition = query.get('definition');
+  const matchingRuns = requestedDefinition && query.get('view') !== 'definition' ? definitionRuns(definitionById(requestedDefinition)) : [];
+  const definitionRun = matchingRuns.find(run => !query.has('date') || run.date === query.get('date'));
+  const id = query.get('run') || definitionRun?.id;
   if (id) {
+    if (!query.has('run')) {
+      query.set('run', id);
+      query.set('date', definitionRun.date);
+      history.replaceState(null, '', '/research?' + query);
+    }
     const selected = loadedRun?.run.id === id ? loadedRun : await readJSON(runAPI(id));
     if (requestVersion !== version) return;
     loadedRun = selected;
@@ -386,23 +496,41 @@ async function experiments(query, requestVersion) {
     delete dateContext.run;
     const nav = node('div', undefined, 'workspace-links');
     nav.append(link(Object.keys(context).length ? 'Current evidence and saved runs' : 'Experiments and runs', url('experiments', dateContext)),
-      link('Open evaluation results', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
+      link('Open research findings', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
     const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
     root.replaceChildren(nav);
-    if (Object.keys(context).length) root.append(experimentCoverage(new URLSearchParams({...context, variant}),
-      selected.run.date, selected.run, () => requestVersion === version));
-    renderRun(root, selected, {
-      variant, variantLink:name => url('experiments', {...context, run:id, variant:name}),
-      ticketLink:ticket => url('experiments', {...context, run:id, variant, ticket:ticket.id}),
-      gameLink:game => url('experiments', {...context, run:id, variant, evidence:game.game_id}),
-      exportLink:runAPI(id) + '?export=1',
-      offerExportLink:Object.keys(context).length ? runAPI(id) + '/offers' : null,
-      priorRunLink:prior => url('experiments', {...dateContext, run:prior, variant}),
-      definitionLink:link('Open frozen definition', url('experiments', {...dateContext, definition:selected.run.definition_version})),
-    });
+    const hasPortfolios = selected.report?.portfolios?.best_venue && selected.report?.portfolios?.all_venues;
+    const paper = hasPortfolios && String(selected.report.policy?.execution || '').startsWith('paper_only');
+    const reviewContext = {...context, run:id, date:selected.run.date, variant,
+      ...Object.fromEntries(['result', 'game', 'trade', 'filter', 'trade_filter'].filter(key => query.has(key)).map(key => [key, query.get(key)]))};
+    const evidenceHref = (key, value) => url('experiments', {...reviewContext, [key]:value});
+    let audit = root;
+    if (paper) {
+      const mount = node('div');
+      audit = node('details', undefined, 'workspace-panel result-audit');
+      audit.append(node('summary', 'Original selection and coverage audit'));
+      root.append(mount, audit);
+      openResults(mount, selected, query, context, variant, requestVersion);
+    }
+    const showAudit = () => {
+      if (Object.keys(context).length) audit.append(experimentCoverage(new URLSearchParams({...context, variant}),
+        selected.run.date, selected.run, () => requestVersion === version));
+      const original = hasPortfolios && !paper ? {...selected, report:{...selected.report, portfolios:null}} : selected;
+      renderRun(audit, original, {
+        variant, variantLink:name => url('experiments', {...reviewContext, variant:name}),
+        ticketLink:ticket => evidenceHref('ticket', ticket.id),
+        gameLink:game => evidenceHref('evidence', game.game_id),
+        exportLink:runAPI(id) + '?export=1',
+        offerExportLink:Object.keys(context).length ? runAPI(id) + '/offers' : null,
+        priorRunLink:prior => url('experiments', {...dateContext, run:prior, variant}),
+        definitionLink:link('Open frozen definition', url('experiments', {...dateContext, definition:selected.run.definition_version, view:'definition'})),
+      });
+    };
+    if (paper) audit.addEventListener('toggle', () => { if (audit.open && audit.childElementCount === 1) showAudit(); });
+    else showAudit();
     if (selected.findings?.length) {
       const resultPanel = node('section', undefined, 'workspace-panel');
-      resultPanel.append(node('h2', 'Run findings'));
+      resultPanel.append(node('h2', 'Research findings for this run'));
       findings(resultPanel, selected.findings);
       root.append(resultPanel);
     }
@@ -417,7 +545,7 @@ async function experiments(query, requestVersion) {
         const value = await readJSON(runAPI(id) + path);
         if (requestVersion === version) renderSavedEvidence(content, value, {
           ticket:Boolean(ticket), exportLink:runAPI(id) + '?export=1',
-          gameLink:gameId => url('experiments', {...context, run:id, variant, evidence:gameId}),
+          gameLink:gameId => evidenceHref('evidence', gameId),
         });
       } catch (error) {
         if (requestVersion === version) content.replaceChildren(node('p', error.message));
@@ -442,7 +570,7 @@ async function experiments(query, requestVersion) {
     root.append(definitionCard(selected));
     if (selected !== template && selected.policy?.scope !== 'mens-d1') root.append(replayForm(selected, query));
     const versions = definitions.filter(definition => definition.id === selected.id && definition.version !== selected.version);
-    if (versions.length) links(root, 'Other frozen versions', versions, definition => link(definition.version, url('experiments', {definition:definition.version})));
+    if (versions.length) links(root, 'Other frozen versions', versions, definition => link(definition.version, url('experiments', {definition:definition.version, view:'definition'})));
   } else root.append(node('p', 'No matching experiment definition is available.'));
   const experiments = new Map();
   for (const definition of definitions) {
@@ -462,6 +590,7 @@ async function experiments(query, requestVersion) {
 }
 async function render() {
   if (!workspace) return;
+  stopResultRefresh();
   const query = locationState(), section = sectionName(query), requestVersion = ++version;
   renderWorkspaceNavigation();
   for (const anchor of document.querySelectorAll('[data-section]')) {
@@ -490,8 +619,7 @@ document.addEventListener('click', event => {
   const target = new URL(anchor.href, location.href);
   if (target.origin !== location.origin || target.pathname !== '/research' || target.hash) return;
   event.preventDefault();
-  history.pushState(null, '', target.pathname + target.search);
-  render();
+  navigate(target.pathname + target.search);
 });
 window.addEventListener('popstate', render);
 byId('research-evidence-close').onclick = () => dialogs.close();
@@ -501,7 +629,7 @@ dialogs.addEventListener('close', () => {
   query.delete('ticket');
   query.delete('evidence');
   history.replaceState(null, '', '/research?' + query);
-  ++version;
+  render();
 });
 async function init() {
   const query = locationState();

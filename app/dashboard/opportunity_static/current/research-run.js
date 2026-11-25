@@ -20,7 +20,7 @@ const evidenceClock = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_Yo
   month:'short', day:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3, timeZoneName:'short'});
 const preciseTime = value => value && Number.isFinite(Date.parse(value)) ? evidenceClock.format(new Date(value)) : 'Not recorded';
 function coverageDescription(run) {
-  if (run.coverage?.reconstructed_games) return 'This opportunity record separates original frozen calculations from calculations made later using retained responses received inside the T−10 window. Missing games and unseen source markets remain unavailable. Results integration is deferred.';
+  if (run.coverage?.reconstructed_games) return 'This opportunity record separates frozen calculations from reconstructions that used the original T−10 responses. Sporting grades appear in the separate result reports.';
   if (run.validity === 'no_valid_capture') return 'No paper result can be evaluated from this saved run. Capture dispositions show why evidence is unavailable.';
   if (run.coverage?.missing_tracked_games) return 'Some tracked games have no valid T−10 capture. Financial metrics are limited to tickets from captured games.';
   return 'Financial metrics use the available frozen T−10 captures. Slate-wide completeness is unknown.';
@@ -132,8 +132,8 @@ export function renderRun(root, {run, definition, report, comparison}, navigatio
       ...(!policy.defer_results ? {'Peak overlapping commitment':usd(portfolio.peak_committed_usd)} : {}),
     }, 'workspace-stats'));
     const resultGrid = node('div', undefined, 'workspace-grid');
-    const resolved = card(policy.defer_results ? 'Results integration deferred' : 'Resolved tickets');
-    resolved.append(node('p', policy.defer_results ? 'Results are deliberately excluded from this opportunity record. Cash releases and peak capital after results have not been modeled.' : portfolio.resolved ? 'Expected and realized-model values use the same resolved-ticket population.' : 'No tickets have a decisive sporting result in this saved run.'), pairs({
+    const resolved = card(policy.defer_results ? 'Original opportunity record' : 'Resolved tickets');
+    resolved.append(node('p', policy.defer_results ? 'Sporting grades are published separately. This saved selection preserves the original calculations and commitments.' : portfolio.resolved ? 'Expected and realized-model values use the same resolved-ticket population.' : 'No tickets have a decisive sporting result in this saved run.'), pairs({
       'Resolved tickets':count(portfolio.resolved),
       'Expected profit at entry':portfolio.resolved ? usd(portfolio.resolved_expected_profit_usd) : 'Unavailable',
       'Modeled P/L':portfolio.resolved ? usd(portfolio.modeled_resolved_pnl_usd) : 'Unavailable',
@@ -178,7 +178,7 @@ function evidenceSection(root, title, description, values, technical) {
   if (technical) section.append(details('Exact evidence and source details', technical));
   root.append(section);
 }
-export function renderSavedEvidence(root, value, {ticket, exportLink, gameLink}) {
+export function renderSavedEvidence(root, value, {ticket, resultReview = false, exportLink, gameLink}) {
   root.replaceChildren();
   if (!ticket) {
     const game = value.game || value.disposition || value.evidence?.game || value;
@@ -217,12 +217,15 @@ export function renderSavedEvidence(root, value, {ticket, exportLink, gameLink})
     const reference = offer.calculation_payload?.reference || sized.reference || {};
     const original = offer.record?.quote?.original;
     const fee = sized.fee || {};
+    const cashflows = fee.cashflows || {};
     const trade = evidence.trade || {}, clocks = trade.clocks || {}, quote = trade.quote || {};
     const kelly = trade.kelly || {};
     const recovered = item.source_kind === 'retrospective_raw_t10';
-    root.append(node('h3', item.title + ' · ' + selection({ ...item, selection_label:item.label })));
-    root.append(node('p', `${venue(item.venue)} at ${text(item.posted_odds)}. This modeled ticket uses the frozen T−10 offer and its recorded probability.`));
-    if (recovered) root.append(node('p', `Calculated retrospectively from an original T−10 response. Reconstruction saved ${time(item.reconstructed_at)}. EV was not successfully frozen at T−10. Results integration is deferred.`, 'workspace-notice'));
+    if (!resultReview) {
+      root.append(node('h3', item.title + ' · ' + selection({ ...item, selection_label:item.label })));
+      root.append(node('p', `${venue(item.venue)} at ${text(item.posted_odds)}. This modeled ticket uses the frozen T−10 offer and its recorded probability.`));
+    }
+    if (recovered) root.append(node('p', `The model used the retained original T−10 response to reconstruct probability and EV. Reconstruction saved ${time(item.reconstructed_at)}.`, 'workspace-notice'));
     if (item.game_id) root.append(evidenceLink('Open frozen checkpoint', gameLink(item.game_id)));
     evidenceSection(root, 'Frozen quote', null, {
       'Posted odds':item.posted_odds, 'Original source price':original?.value ?? item.posted_odds,
@@ -238,28 +241,34 @@ export function renderSavedEvidence(root, value, {ticket, exportLink, gameLink})
       'Capture clock':preciseTime(clocks.captured_at), 'Persistence clock':preciseTime(clocks.persisted_at),
       'Modeled decision time':preciseTime(item.decision_at), 'Capture eligibility':recovered ? 'Retrospective reconstruction; original T−10 response' : 'Valid frozen T−10 checkpoint',
     }, {checkpoint:evidence.checkpoint, original_offer:offer, source_quote:quote, clocks});
-    evidenceSection(root, 'Probability and screening', 'The captured probability is used for both screening and paper sizing.', {
+    evidenceSection(root, 'Probability and screening', 'Net EV weights the modeled win and loss return rates by their frozen outcome probabilities.', {
       'Estimated outcome probability':pct(item.probability), 'Reference book':reference.book ? venue(reference.book) : 'Unknown',
       'Gross EV at quoted price':pct(trade.gross_ev), 'Screening EV (rounded for display)':pct(item.screen_ev),
       'EV at modeled commitment':pct(item.ev),
     }, {reference, exact_probability:item.probability, exact_screen_ev:item.screen_ev, exact_sized_ev:item.ev});
-    evidenceSection(root, 'Paper sizing and fee treatment', `${capturedFee(item.fee_mode)}. Paper turnover assumes the quoted price is available at the modeled stake.`, {
+    evidenceSection(root, 'Paper sizing and fee treatment', `${capturedFee(item.fee_mode)}. The saved Kelly calculation uses the modeled win and loss returns, then applies the recorded multiplier and bankroll. Quantity and fee rounding determine the final commitment.`, {
       'Fee evidence for an actual order':trade.fees?.actual_fee_evidence === 'unknown' ? 'Unknown' : trade.fees?.actual_fee_evidence,
       'Executable size at the quoted price':trade.size?.executable_size_evidence === 'unavailable' ? 'Unavailable in captured evidence' : trade.size?.executable_size_evidence,
       'Reference bankroll':usd(kelly.reference_bankroll_usd), 'Kelly multiplier':pct(kelly.multiplier),
       'Modeled win / loss net return':`${pct(kelly.outcome_returns?.win)} / ${pct(kelly.outcome_returns?.loss)}`,
+      'Recorded net receipt on win':usd(cashflows.win?.net_receipt_usd),
+      'Recorded net receipt on loss':usd(cashflows.loss?.net_receipt_usd),
+      ...(cashflows.push ? {'Recorded net receipt on push':usd(cashflows.push.net_receipt_usd)} : {}),
+      ...(cashflows.void ? {'Recorded net receipt on void':usd(cashflows.void.net_receipt_usd)} : {}),
       'Kelly budget':usd(item.kelly_budget_usd), 'Paper commitment':usd(item.stake_usd),
       'Purchase':usd(item.purchase_usd), Quantity:fee.quantity, 'Modeled entry fee':usd(fee.entry_usd),
       'Expected profit at entry':usd(item.expected_profit_usd),
     }, {fee_input:offer.fee_input, sized_calculation:sized, trade_evidence:trade});
-    const result = evidence.sporting_result;
-    evidenceSection(root, 'Sporting-result grading', 'Actual execution and venue settlement remain unverified.', {
-      'Sporting grade':resultLabel[item.grading?.state] || 'Unresolved',
-      'Modeled P/L':item.grading?.pnl_usd == null ? 'Unavailable' : usd(item.grading.pnl_usd),
-      'Result known at':time(result?.known_at || item.grading?.released_at),
-      Reason:label(item.grading?.reason),
-    }, result || item.grading);
-    root.append(details('Ticket identity, revisions and complete witness', value));
+    if (!resultReview) {
+      const result = evidence.sporting_result;
+      evidenceSection(root, 'Sporting-result grading', 'This grade belongs to the original saved selection.', {
+        'Sporting grade':resultLabel[item.grading?.state] || 'Unresolved',
+        'Modeled P/L':item.grading?.pnl_usd == null ? 'Unavailable' : usd(item.grading.pnl_usd),
+        'Result known at':time(result?.known_at || item.grading?.released_at),
+        Reason:label(item.grading?.reason),
+      }, result || item.grading);
+      root.append(details('Ticket identity, revisions and complete witness', value));
+    }
   }
   root.append(evidenceLink('Export saved run and evidence', exportLink));
 }

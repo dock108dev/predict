@@ -12,6 +12,7 @@ from app.diagnostics import failure
 from app.owned_work import joined_thread
 from app.research import mens_d1, workspace
 from app.storage.store import connect, encoded
+from . import paper_results_view
 from .local_security import HEADERS, PublicRequestError, read_json
 
 BASE = "/api/research/workspace"
@@ -71,6 +72,35 @@ def mount(app):
         identity = _identity(request.match_info["run_id"])
         value = await work(workspace.run_detail, identity, export=bool(query))
         return _response(value, filename=f'predict-research-{value["run"]["date"]}-{identity[:12]}.json' if query else None)
+
+    async def results(request):
+        query = request.query
+        variant = query.get("variant", "best_venue")
+        export = query.get("export")
+        status = query.get("status")
+        if (set(query) - {"variant", "version", "export", "status"} or len(query) != len(set(query))
+                or variant not in paper_results_view.VARIANTS
+                or export is not None and export not in paper_results_view.EXPORTS
+                or status is not None and (status != "1" or export)):
+            raise PublicRequestError("Select a valid paper results view.")
+        run_id = _identity(request.match_info["run_id"])
+        version_id = _identity(query["version"]) if "version" in query else None
+        value = await work(paper_results_view.read, run_id, variant=variant,
+                           version_id=version_id, status_only=status == "1")
+        if export is None:
+            return _response(value)
+        if not value["report"] or value["status"]["stale"] and version_id is None:
+            raise web.HTTPConflict(reason="Current results are updating. Select a published version to export it.")
+        name = f'predict-paper-{value["date"]}-{variant}-{value["version"]["id"][:12]}-{export}.json'
+        return _response(paper_results_view.export(value, export), filename=name)
+
+    async def result_evidence(request):
+        if request.query:
+            raise PublicRequestError("The original result receipt takes no filters.")
+        identity = _identity(request.match_info["result_id"])
+        digest, body = await work(paper_results_view.original_result, identity)
+        return web.Response(body=body, content_type="application/json", headers={**HEADERS,
+            "Content-Disposition": f'attachment; filename="predict-original-{digest}.json"'})
 
     async def offers(request):
         if request.query:
@@ -183,9 +213,11 @@ def mount(app):
         return _response(value, filename=f"predict-checkpoint-{game[:12]}.json" if query else None)
 
     app.router.add_get(BASE, index)
+    app.router.add_get(BASE + "/result-evidence/{result_id}", result_evidence)
     app.router.add_post(BASE + "/runs", replay)
     app.router.add_get(BASE + "/mens-d1-jobs/{job_id}", replay_status)
     app.router.add_get(BASE + "/runs/{run_id}", run)
+    app.router.add_get(BASE + "/runs/{run_id}/results", results)
     app.router.add_get(BASE + "/runs/{run_id}/offers", offers)
     app.router.add_get(BASE + "/runs/{run_id}/tickets/{ticket_id}", ticket)
     app.router.add_get(BASE + "/runs/{run_id}/evidence/{game_id}", evidence)

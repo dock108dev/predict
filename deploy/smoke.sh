@@ -52,6 +52,15 @@ curl -fsS http://127.0.0.1:8784/api/research/catalog > "$scratch/research-catalo
 jq -e '.schema == "predict-research-catalog-1" and .provider_requests == 0 and .scheduled_calculations == 0' "$scratch/research-catalog.json" >/dev/null
 catalog_token=$(jq -er '.token' "$scratch/research-catalog.json")
 curl -fsS -X DELETE -H 'Origin: http://127.0.0.1:8784' -H 'Content-Type: application/json' "http://127.0.0.1:8784/api/research/read?token=$catalog_token" >/dev/null
+compose exec -T web python -c '
+from app.storage.store import connect
+
+with connect() as db:
+    assert db.execute(
+        "SELECT 1 FROM pg_stat_activity WHERE application_name=%s",
+        ("predict-paper-result-grader",),
+    ).fetchone()
+'
 data_containers=$(compose ps --status running --quiet db collector archive | sort)
 [[ $(wc -l <<< "$data_containers") -eq 3 ]]
 web_container=$(compose ps --status running --quiet web)

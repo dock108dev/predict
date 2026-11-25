@@ -114,6 +114,14 @@ def retention_usage(db):
         row['daily_coverage_reserved_bytes'] = int(daily['reserved'])
         row['total'] += row['daily_coverage_bytes']
         row['reserved'] += row['daily_coverage_reserved_bytes']
+    if db.execute("SELECT to_regclass('public.paper_result_report') r").fetchone()['r']:
+        results = db.execute("""SELECT count(*) n,COALESCE(sum(payload_bytes),0) +
+            (SELECT sum(pg_total_relation_size(relation)) FROM unnest(ARRAY[
+                'public.paper_result_job','public.paper_result_dependency','public.paper_result_input'
+            ]::regclass[]) AS relation) bytes FROM public.paper_result_report""").fetchone()
+        row['paper_result_bytes'] = int(results['bytes'])
+        row['total'] += row['paper_result_bytes']
+        row['records'] += results['n']
     return row
 
 

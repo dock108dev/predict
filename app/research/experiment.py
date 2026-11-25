@@ -811,40 +811,61 @@ def capture_outcome(db, game_id, observation, *, token=None, requested_at=None,
 
 
 def observe_outcomes(db, observations, *, at=None):
-    """Use ordinary final receipts without saving every non-final poll revision."""
+    """Retain finals and explicit terminal disputes from ordinary receipts."""
+    from app.collection.sgo_game_results import TERMINAL_DISPUTES
+
     at = at or utc()
     counts = dict(matched=0, unchanged=0, nonfinal=0, unmatched=0, invalid=0, refused=0)
     for source in observations:
-        if not source.get("final"):
+        if not source.get("final") and source.get("reason") not in TERMINAL_DISPUTES:
             counts["nonfinal"] += 1
             continue
         game = db.execute("SELECT * FROM public.ev_experiment_game WHERE provider='sportsgameodds' AND source_event_id=%s", (source["event_id"],)).fetchone()
-        if not game or (source.get("home"),source.get("away"),source.get("league"),stamp(source["starts_at"])) != (
-                game["event"]["home"],game["event"]["away"],game["event"]["league"],stamp(game["event"]["starts_at"])):
+        if not game:
             counts["unmatched"] += 1
             continue
-        if not stamp(game["event"]["starts_at"]) <= stamp(source["received_at"]) <= stamp(source["knowledge_at"]) <= at:
+        received = stamp(source["received_at"])
+        if not received <= stamp(source["knowledge_at"]) <= at:
             counts["invalid"] += 1
             continue
         try:
             with db.transaction():
                 _lock(db)
                 game = db.execute("SELECT * FROM public.ev_experiment_game WHERE id=%s FOR UPDATE", (game["id"],)).fetchone()
+                event = game["event"]
+                start = stamp(event["starts_at"])
+                if source.get("league") != event["league"] or stamp(source["starts_at"]) != start:
+                    counts["unmatched"] += 1
+                    continue
+                if received < start and source.get("reason") != "sporting_result_cancelled":
+                    counts["invalid"] += 1
+                    continue
+                if (source.get("home"), source.get("away")) != (event["home"], event["away"]):
+                    source = dict(source, final=False, reason="sporting_result_canonical_role_mapping_changed")
+                signature = (bool(source["final"]), source.get("reason"),
+                             source.get("home_score"), source.get("away_score"))
                 if game["outcome_id"]:
                     index = _closure(db, [game["outcome_id"]])
-                    prior = _value(index[game["outcome_id"]], index)["data"]
-                    if prior.get("final") and (prior.get("home_score"),prior.get("away_score")) == (source.get("home_score"),source.get("away_score")):
+                    prior_value = _value(index[game["outcome_id"]], index)
+                    prior = prior_value["data"]
+                    prior_signature = (bool(prior["final"]), (prior.get("source_result") or {}).get("reason"),
+                                       prior.get("home_score"), prior.get("away_score"))
+                    if (received < stamp(prior["observed_at"]) or (signature == prior_signature
+                            and prior_value.get("schedule_id") == game["schedule_id"])):
                         counts["unchanged"] += 1
                         continue
                 value = dict(data=dict(source=source["source"], published_at=source.get("published_at"),
-                    observed_at=source["received_at"], final=True, result="completed",
+                    observed_at=source["received_at"], final=bool(source["final"]),
+                    result="completed" if source["final"] else "unresolved",
                     home_score=source.get("home_score"), away_score=source.get("away_score"),
                     receipt_sha256=source.get("receipt_sha256"), source_result=source),
-                    known_at=source["knowledge_at"], trigger="ordinary_final_receipt",
+                    known_at=source["knowledge_at"],
+                    trigger="ordinary_final_receipt" if source["final"] else "ordinary_result_dispute",
                     schedule_id=game["schedule_id"], supersedes_id=game["outcome_id"])
                 identity, size = _write(db, "outcome", value, game_id=game["id"], checkpoint="outcome")
                 db.execute("UPDATE public.ev_experiment_game SET outcome_id=%s,unique_payload_bytes=unique_payload_bytes+%s,updated_at=clock_timestamp() WHERE id=%s", (identity,size,game["id"]))
-                db.execute("UPDATE public.ev_experiment_task SET state='final',result_id=%s,token=NULL,last_reason=NULL,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='outcome'", (identity,game["id"]))
+                if source["final"]:
+                    db.execute("UPDATE public.ev_experiment_task SET state='final',result_id=%s,token=NULL,last_reason=NULL,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='outcome'", (identity,game["id"]))
                 counts["matched"] += 1
         except Exception as exc:
             if not records._retention_failure(exc):
