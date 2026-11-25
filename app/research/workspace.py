@@ -537,10 +537,8 @@ def run_detail(db, run_id, *, export=False):
     return result
 
 
-def offer_export(db, run_id):
-    """Read only the evidence-bearing games and exact offer indices of this saved run."""
-    from .market_census import offer_rows
-
+def offer_export_plan(db, run_id):
+    """Find the immutable games, policy and selected offer indices for this run."""
     row = _run(db, run_id)
     report = row["payload"]["report"]
     if not report.get("population"):
@@ -548,25 +546,32 @@ def offer_export(db, run_id):
     witnesses = row["payload"]["witnesses"]
     selected = {name: {(ticket["game_id"], witnesses[ticket["id"]]["offer_index"]):ticket["id"]
                        for ticket in portfolio["tickets"]} for name, portfolio in report["portfolios"].items()}
-    games = []
-    for game in report["games"]:
-        entry = {key:game.get(key) for key in ("game_id", "title", "status", "checkpoint_id", "exclusions")}
-        if game["status"] in ("captured", "reconstructed"):
-            identity = game["checkpoint_id"]
-            index = experiment._closure(db, [identity])
-            checkpoint = experiment._value(index[identity], index)
-            at = checkpoint["received_at"] if game["status"] == "reconstructed" else experiment.clock(index[identity]["recorded_at"])
-            offers = offer_rows(checkpoint, game_id=game["game_id"], minimum=report["policy"]["minimum_ev"], at=at)
-            for offer in offers:
-                key = game["game_id"], offer["offer_index"]
-                offer["selected_tickets"] = {name:rows[key] for name, rows in selected.items() if key in rows}
-            entry.update(receipt_sha256=checkpoint["snapshot"].get("receipt_sha256"), decision_at=at, offers=offers)
-        else:
-            entry["offers"] = None
-        games.append(entry)
-    value = dict(date=report["date"], as_of=report["as_of"], run_id=run_id,
-                 report_revision=row["report_revision"], minimum_ev=report["policy"]["minimum_ev"], games=games,
-                 provider_requests=0, orders_submitted=0)
+    fields = dict(date=report["date"], as_of=report["as_of"], run_id=run_id,
+                  report_revision=row["report_revision"], minimum_ev=report["policy"]["minimum_ev"],
+                  provider_requests=0, orders_submitted=0)
+    return fields, report["games"], selected
+
+
+def offer_export_game(db, game, minimum, selected):
+    from .market_census import offer_rows
+
+    entry = {key:game.get(key) for key in ("game_id", "title", "status", "checkpoint_id", "exclusions")}
+    if game["status"] not in ("captured", "reconstructed"):
+        return dict(entry, offers=None)
+    identity = game["checkpoint_id"]
+    index = experiment._closure(db, [identity])
+    checkpoint = experiment._value(index[identity], index)
+    at = checkpoint["received_at"] if game["status"] == "reconstructed" else experiment.clock(index[identity]["recorded_at"])
+    offers = offer_rows(checkpoint, game_id=game["game_id"], minimum=minimum, at=at)
+    for offer in offers:
+        key = game["game_id"], offer["offer_index"]
+        offer["selected_tickets"] = {name:rows[key] for name, rows in selected.items() if key in rows}
+    return dict(entry, receipt_sha256=checkpoint["snapshot"].get("receipt_sha256"), decision_at=at, offers=offers)
+
+
+def offer_export(db, run_id):
+    fields, games, selected = offer_export_plan(db, run_id)
+    value = dict(fields, games=[offer_export_game(db, game, fields["minimum_ev"], selected) for game in games])
     return dict(value, evidence_sha256=hashed(value))
 
 

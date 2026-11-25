@@ -1,6 +1,7 @@
 """Browser endpoints for retained paper research and original evidence."""
 
 import asyncio
+from hashlib import sha256
 import re
 from uuid import uuid4
 
@@ -75,9 +76,33 @@ def mount(app):
         if request.query:
             raise PublicRequestError("The saved offer export takes no filters.")
         identity = _identity(request.match_info["run_id"])
-        async with dated_export:
-            value = await work(workspace.offer_export, identity, timeout=None)
-        return _response(value, filename=f'predict-mens-d1-offers-{value["date"]}-{identity[:12]}.json')
+        fields, games, selected = await work(workspace.offer_export_plan, identity)
+        filename = f'predict-mens-d1-offers-{fields["date"]}-{identity[:12]}.json'
+        response = web.StreamResponse(headers={**HEADERS, "Content-Type": "application/json",
+            "Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store, no-transform"})
+        before = {key:value for key, value in fields.items() if key < "games"}
+        after = {key:value for key, value in fields.items() if key > "games"}
+        prefix = encoded(before)[:-1] + b',"games":['
+        suffix = b'],' + encoded(after)[1:]
+        digest = sha256(prefix)
+        await response.prepare(request)
+        try:
+            await response.write(prefix)
+            for position, game in enumerate(games):
+                async with dated_export:
+                    value = await work(workspace.offer_export_game, game, fields["minimum_ev"], selected, timeout=None)
+                body = (b"," if position else b"") + encoded(value)
+                digest.update(body)
+                await response.write(body)
+            # Keep the canonical digest independent of transport and append it only after all games.
+            digest.update(suffix)
+            await response.write(suffix[:-1] + b',"evidence_sha256":' + encoded(digest.hexdigest()) + b"}")
+            await response.write_eof()
+        except BaseException:
+            if request.transport is not None:
+                request.transport.close()
+            raise
+        return response
 
     async def replay(request):
         nonlocal active
