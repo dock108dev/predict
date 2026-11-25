@@ -363,3 +363,11 @@ captured before this later fee instruction retain their original assumption;
 new checkpoints record the actual selected mode. NCAAB model/game-log work
 remains deferred. Private screenshots, exports, normal-CI artifacts and installed
 journey receipts are in `.local/personal-workspace-20261122/`.
+
+
+## Private research beta
+
+The November 23–29 NCAAB paper campaign is running on the deployed private beta.
+November 23 is reconciled and graded, November 24 is partially graded, and
+November 25–29 remain scheduled. Future protected captures, finals and score
+corrections remain operating observations. See the [first-beta closeout](../predict-first-beta-closeout-20261124.md).
