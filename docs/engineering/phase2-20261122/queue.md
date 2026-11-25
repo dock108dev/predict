@@ -1,5 +1,14 @@
 # Phase 2 completion and deferred backlog
 
+## Delivered: unbranded Workbench presentation
+
+Revision `b404e97` installs the unbranded Research, Data and Settings shell,
+flat daily trade ledger, selected-trade inspector and retained game coverage.
+The November 23–29 Kelly campaign continues on its existing definition.
+The closeout records signed-in checks, pinned exports, immutable populations and
+the final deployment. [Workbench closeout](../predict-first-beta-closeout-20261124.md#workbench-release) ·
+[Required release CI](https://github.com/dock108dev/predict/actions/runs/45548444638)
+
 ## Men’s D1 coverage slice deployed
 
 The [coverage assignment and operating record](../mens-d1-coverage-completion-20261124.md)

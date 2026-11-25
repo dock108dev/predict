@@ -4,6 +4,62 @@
 Settings flows are live. The existing November 23–29 men’s D1 paper experiment
 continues automatically on the same campaign. [Weekly research](https://predict.dock108.dev/research?section=experiments&campaign=93b8937a41703ce083609c50e52135019fe36bf082a1f32ecf5a00d54daffeda&variant=best_venue)
 
+## Workbench release
+
+The unbranded Workbench was installed November 24, 2026 Eastern through the
+guarded main release, followed by web revision
+`b404e9770574e0112dd6e1648454320da6c7a976`. Web, collector, archive and
+PostgreSQL reported healthy, the three role input digests matched the
+candidate, and the collector and archive images were reused. Schema migration
+123 remained current. [Required release CI](https://github.com/dock108dev/predict/actions/runs/45548444638)
+
+Daily results open with one row per saved ticket. The ledger ranks full-precision
+sized EV before paging and uses frozen screening EV for the configured buckets.
+The inspector opens from the ledger and includes the original calculation,
+receipts, sporting result and provenance. The game view still includes evaluated
+games with zero qualifying tickets and games with missing T−10 captures. Daily,
+weekly, historical and receipt links keep their existing evidence paths. The
+shell uses local IBM Plex Sans with the ledger and inspector side by side on
+desktop and stacked at narrow widths. [Pinned daily report](https://predict.dock108.dev/research?section=experiments&scope=mens-d1&date=2026-11-23&run=5100a1a827c4e76236489281f67f92e411ce2f8b61495cb9f5e823635b881ea3&variant=best_venue&result=28c7c513348367c2ac7961fb9d214d8e8d24b40999f742acd93e725c7a987967) · [Sample spread](https://predict.dock108.dev/research?section=experiments&scope=mens-d1&date=2026-11-23&run=5100a1a827c4e76236489281f67f92e411ce2f8b61495cb9f5e823635b881ea3&variant=best_venue&result=28c7c513348367c2ac7961fb9d214d8e8d24b40999f742acd93e725c7a987967&trade=4bc3a9717748802de5835e7c7d1988595f8869945b7633b28b67ecb4149d54c1)
+
+Rapid paging exposed a stalled Weekly transition in the first desktop
+production walkthrough. The follow-up renders each automatic inspector preview
+from its existing result row and reads the detailed frozen witness on explicit
+selection or when its disclosure is opened. Changing the preview also closes
+the previous trade's disclosure. The browser regression starts with zero
+ticket detail reads across the full multi-page ledger and verifies both ways
+of loading a witness. The installed desktop run traversed all 114 All-venue
+tickets with zero automatic witness reads, then loaded Weekly in 1.84 seconds.
+
+Local verification passed 217 focused checks and 30 subtests, 15 disposable
+PostgreSQL 16 cases, and 14 Chromium journeys. The production SQL comparison
+matched all 12 existing definitions, 15 original run payload/report/summary
+hash sets, 48 graded result versions and 99 issue decisions. Eight newer result
+versions appended while the existing worker ran. The same seven-day campaign
+configuration, dispatch, Stop and source pause values matched the baseline.
+November 23 was graded, November 24 was partially graded, and November 25–29
+remained scheduled at the postrelease read.
+
+The version-pinned Best portfolio had 76 tickets, $448.68 staked and
+−$45.44 modeled P/L. All venues had 114 tickets, $596.34 staked and
+−$135.28 modeled P/L. The signed-in comparison reconciled exact commitments,
+returns, expected profit, modeled P/L and the ROI denominator from every
+ticket. The six graded report, game and trade export manifests, freshness
+and provenance results, and the sampled original quote receipt hash matched.
+Live weekly totals followed the latest published daily versions.
+
+The installed side pane measured 319 × 590 CSS pixels. The signed-in route
+rendered without horizontal page overflow and kept the trade and version
+through selection, reload, Back and Weekly/Daily navigation. The Florida
+International −21.5 inspector opened the frozen quote, original receipt link
+and paper sizing. Production screenshots and read-only witnesses are retained
+under `.local/workbench-beta-20261124/`.
+
+Optional standalone wheel smoke still cannot load the existing November 23
+audit JSON from the installed wheel. The guarded container includes that
+artifact and passed deployment. The separate failure is retained in
+`.local/workbench-beta-20261124/optional-package-smoke.log`.
+
 ## Release and verification
 
 - Application revision `825cf299ded7eb3be4b8031ada47e7170d9fc20c`. The normal
