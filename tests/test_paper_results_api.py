@@ -20,11 +20,12 @@ def test_result_status_history_and_exact_variant_exports():
     url = f"{BASE}/runs/{run}/results"
     statements = []
     game = dict(game_id="game", evidence_id=evidence)
+    missing = dict(game_id="missing", evidence_id=evidence, capture_status="missed")
     trade = dict(id="trade", state="loss", evidence_id=evidence)
     totals = dict(tickets=1, pnl_usd="-1.00")
-    old_report = dict(games=[game], portfolios={
-        "best_venue": dict(by_game={"game": dict(tickets=0)}, tickets=[]),
-        "all_venues": dict(by_game={"game": totals}, tickets=[trade]),
+    old_report = dict(games=[game, missing], portfolios={
+        "best_venue": dict(by_game={"game": dict(tickets=0), "missing": dict(tickets=0)}, tickets=[]),
+        "all_venues": dict(by_game={"game": totals, "missing": dict(tickets=0)}, tickets=[trade]),
     })
 
     class Connection:
@@ -91,7 +92,7 @@ def test_result_status_history_and_exact_variant_exports():
                     if kind == "report":
                         assert exported["report"] == old_report
                     elif kind == "games":
-                        assert exported["rows"] == [dict(game, totals=totals)]
+                        assert exported["rows"] == [dict(game, totals=totals), dict(missing, totals=None)]
                     else:
                         assert exported["rows"] == [trade]
                 assert statements.count("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY") == 7

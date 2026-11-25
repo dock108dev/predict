@@ -4,7 +4,7 @@ import sqlite3
 from urllib.parse import urlencode
 
 from app.collection import original_receipts
-from app.research import experiment, paper_campaigns, workspace
+from app.research import experiment, paper_campaigns, paper_results, workspace
 from app.storage import paper_result_queue
 from app.storage.store import hashed
 from .pipeline import serial
@@ -77,7 +77,9 @@ def export(view, kind):
             result["quality"] = view["quality"]
     elif kind == "games":
         by_game = report["portfolios"][variant]["by_game"]
-        result["rows"] = [dict(game, totals=by_game[game["game_id"]]) for game in report["games"]]
+        result["rows"] = [dict(game, totals=by_game[game["game_id"]]
+                              if game.get("capture_status", "captured") in paper_results.CAPTURED else None)
+                          for game in report["games"]]
     else:
         result["rows"] = report["portfolios"][variant]["tickets"]
     result["manifest"] = dict(bundle_sha256=hashed(result))

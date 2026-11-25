@@ -293,12 +293,16 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   controls.append(dates, variantsNav);
   const report = navigation.pinned || !analysis.status?.stale ? analysis.report : null;
   const portfolio = report?.portfolios?.[navigation.variant];
+  const usable = report?.games.some(captured);
   header.append(controls, statusNotice(analysis, navigation.pinned, portfolio?.summary), coverageLine(report?.coverage || selected.run.coverage || {}, report?.games));
-  if (portfolio) header.append(...summaryView(portfolio.summary, report.games.length));
+  if (portfolio && usable) header.append(...summaryView(portfolio.summary, report.games.length));
   else {
     const original = selected.report.portfolios[navigation.variant];
-    header.append(pairs({Tickets:count(original.count), 'Games with tickets':count(original.unique_games),
-      Staked:money(original.turnover_usd), 'Expected profit at entry':money(original.expected_profit_usd)}, 'workspace-stats'));
+    const originalUsable = selected.report.games?.some(game => captured({capture_status:game.status}));
+    if (!portfolio && (originalUsable || original.count)) {
+      header.append(pairs({Tickets:count(original.count), 'Games with tickets':count(original.unique_games),
+        Staked:money(original.turnover_usd), 'Expected profit at entry':money(original.expected_profit_usd)}, 'workspace-stats'));
+    } else header.append(node('p', 'Paper financials require usable T−10 evidence.'));
   }
   header.append(node('p', 'Paper outcomes use recorded fee and quoted-size assumptions. Actual fees, executable size and venue settlement are unverified. A venue-native contract ID is shown when retained.', 'workspace-caption'), resultActions(analysis, navigation));
   root.replaceChildren(header);
@@ -308,8 +312,8 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   else {
     if (navigation.game) root.append(node('p', 'That game is unavailable in this report.'));
     const quality = qualityComparison(analysis.quality);
-    if (quality) root.append(quality);
+    if (quality && usable) root.append(quality);
     root.append(gamesView(report, portfolio, navigation));
   }
-  root.append(breakdowns(portfolio));
+  if (usable) root.append(breakdowns(portfolio));
 }
