@@ -450,6 +450,28 @@ def test_missing_id_is_retried_later_without_changing_source_receipt():
     asyncio.run(scenario())
 
 
+def test_exact_id_refresh_retains_omissions_and_excludes_unrequested_members():
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, now=lambda: NOW)
+        worker.events = {'e1': event(1), 'e2': event(2)}
+        page = Page((event(1), event(3)), (), 'unused', 'a' * 64)
+        worker.collector = SimpleNamespace(fetch=AsyncMock(return_value=page))
+        worker._publish = AsyncMock()
+        worker.state = AsyncMock()
+        retained = []
+        worker._retain_pull = lambda supplied, retrieval: retained.append((supplied, retrieval))
+        await worker._fetch(worker.params(event_ids=['e1', 'e2']))
+        [(supplied, retrieval)] = retained
+        assert supplied == page
+        assert retrieval == dict(requested_event_ids=['e1', 'e2'], returned_event_ids=['e1', 'e3'],
+            resolved_aliases={}, omitted_requested_event_ids=['e2'], unexpected_event_ids=['e3'],
+            next_cursor_present=True, state='unresolved_requested_members')
+        assert {item['event_id'] for item in worker._publish.await_args.args[0].events} == {'e1'}
+        assert set(worker.events) == {'e1', 'e2'}
+    asyncio.run(scenario())
+
+
 def test_provider_alias_replaces_only_the_old_poll_schedule():
     async def scenario():
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())

@@ -149,6 +149,15 @@ def plan(root, paths):
             sql.update({"tests/test_mens_d1_coverage_sql.py",
                         "tests/test_mens_d1_coverage_api.py::MensD1CoverageSQL",
                         "tests/test_paper_experiments_sql.py"})
+        if "market_census" in path or "issue_dispositions" in path or "nov23_audit" in path:
+            pure.add("tests/test_market_census.py::test_no_provider_odds_requires_affirmative_exact_return")
+            sql.update({"tests/test_market_census.py::MarketCensusSQL",
+                        "tests/test_mens_d1_coverage_api.py::MensD1CoverageSQL"})
+        if path in ("app/collection/sportsgameodds_adapter.py", "app/collection/sportsgameodds_worker.py"):
+            pure.update({
+                "tests/test_sportsgameodds_discovery.py::test_discovery_retains_unique_members_through_mixed_overlaps",
+                "tests/test_sportsgameodds_worker.py::test_exact_id_refresh_retains_omissions_and_excludes_unrequested_members",
+            })
         if path.startswith(("app/fees/", "app/comparison/", "app/settlement")):
             scopes.add("fees")
         if path.startswith("app/dashboard/"):

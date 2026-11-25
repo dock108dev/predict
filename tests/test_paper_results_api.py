@@ -41,9 +41,12 @@ def test_result_status_history_and_exact_variant_exports():
             statements.append(statement)
             if parameters:
                 assert parameters == (run,)
+                self.campaign = "JOIN public.research_workspace_definition" in statement
                 return self
 
         def fetchone(self):
+            if self.campaign:
+                return None
             return dict(id=run, report_revision="d" * 64, game_date=date(2026, 11, 23),
                         paper=True)
 

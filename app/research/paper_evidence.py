@@ -2,19 +2,40 @@
 
 from fractions import Fraction
 
-from app.storage.store import stamp
+from app.storage.store import exact_time
 
 VERSION = "paper-trade-evidence-1"
 
 
 def _age(source_at, received_at):
-    if not source_at or not received_at:
-        return None
+    age = age_at_receipt(dict(source_at=source_at, received_at=received_at))
+    return float(age) if age is not None and age >= 0 else None
+
+
+def age_at_receipt(clocks):
+    """Compare the original retained times at their available precision."""
     try:
-        age = (stamp(received_at) - stamp(source_at)).total_seconds()
-    except (TypeError, ValueError):
+        return exact_time(clocks['received_at']) - exact_time(clocks['source_at'])
+    except (KeyError, TypeError, ValueError):
         return None
-    return age if age >= 0 else None
+
+
+def reference_age(calculation):
+    reference = calculation.get('reference') or {}
+    prices = reference.get('required_input_prices')
+    if not prices:
+        if len(reference.get('candidate_probabilities') or {}) > 1:
+            return None
+        prices = reference.get('prices') or ()
+    ages = [age_at_receipt(price) for price in prices]
+    # A future input is still known even if other timestamps are unavailable.
+    if any(age is not None and age < 0 for age in ages):
+        return min(age for age in ages if age is not None)
+    return max(ages) if ages and all(age is not None for age in ages) else None
+
+
+def _age_state(value):
+    return 'unknown' if value is None else 'future' if value < 0 else 'known'
 
 
 def clock_counts(tickets):
@@ -34,6 +55,7 @@ def inspect(ticket, checkpoint, offer, sized, policy):
     quote = (offer.get("record") or {}).get("quote") or {}
     source = quote.get("source") or {}
     times = ticket.get("times") or {}
+    target_age, oldest_reference_age = age_at_receipt(times), reference_age(sized)
     fee = sized.get("fee") or {}
     mode = ticket.get("fee_mode") or {}
     decimal = (sized.get("raw") or {}).get("posted_decimal")
@@ -58,6 +80,10 @@ def inspect(ticket, checkpoint, offer, sized, policy):
         clocks=dict(source_at=times.get("source_at"), source_time_kind=times.get("source_time_kind"),
                     quote_received_at=times.get("received_at"),
                     quote_age_at_receipt_seconds=_age(times.get("source_at"), times.get("received_at")),
+                    quote_age_state=_age_state(target_age),
+                    reference_quote_age_state=_age_state(oldest_reference_age),
+                    oldest_reference_age_at_receipt_seconds=(float(oldest_reference_age)
+                        if _age_state(oldest_reference_age) == 'known' else None),
                     requested_at=checkpoint.get("requested_at"),
                     dispatched_at=(snapshot.get("times") or {}).get("dispatch_at"),
                     received_at=checkpoint.get("received_at"), known_at=checkpoint.get("known_at"),

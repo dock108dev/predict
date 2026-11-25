@@ -1,6 +1,7 @@
 """Check the results-first browser path against versioned, read-only responses."""
 
 import json
+import os
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -92,7 +93,8 @@ def report(revision):
             {
                 "game_id": "no-trades",
                 "title": "Visitor at Host",
-                "capture_status": "captured",
+                "capture_status": "reconstructed",
+                "original_capture_status": "refused",
                 "result": {"state": "final"},
             },
             {
@@ -149,6 +151,7 @@ def test_paper_results_journey_refresh_and_exact_history():
                 return dict(id=identity, observed_at=CLOCK, processed_at=CLOCK)
 
             published = report(revision)
+            totals = published["portfolios"][variant]["summary"]
             if query.get("export"):
                 kind = query["export"]
                 payload = {
@@ -179,6 +182,15 @@ def test_paper_results_journey_refresh_and_exact_history():
                     "version": metadata(revision),
                     "versions": [metadata(identity) for identity in {latest, FIRST}],
                     "report": None if query.get("status") else published,
+                    "quality": None if query.get("status") else {
+                        "version": "quote-freshness-1",
+                        "target_age_boundary_seconds": 60,
+                        "target_age_clock": "Provider receipt time minus target quote source time.",
+                        "provenance": {"frozen": {"summary": totals}},
+                        "target_quote_age": {"over_300": totals},
+                        "reference_quote_age": {"unknown": totals},
+                        "fresh_target_only": {"summary": {**totals, "tickets": 0}},
+                    },
                     "links": {
                         kind: f"{RESULTS}?version={revision}&variant={variant}&export={kind}"
                         for kind in ("report", "games", "trades")
@@ -208,7 +220,7 @@ def test_paper_results_journey_refresh_and_exact_history():
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
-        browser = runtime.chromium.launch()
+        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
         page = browser.new_page(viewport={"width": 390, "height": 820})
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(
@@ -220,6 +232,13 @@ def test_paper_results_journey_refresh_and_exact_history():
         expect(summary).to_contain_text("1 game without retained T−10 evidence")
         expect(summary).to_contain_text("Complete slate unknown")
         expect(page.get_by_role("heading", name="Games", exact=True)).to_be_visible()
+        page.get_by_text("Capture provenance and quote freshness", exact=True).click()
+        expect(page.get_by_role("heading", name="Exploratory target-age screen · ≤60 seconds")).to_be_visible()
+        expect(page.get_by_text("Over 300 seconds", exact=True)).to_be_visible()
+        expect(page.get_by_text("Unknown timestamp", exact=True)).to_be_visible()
+        page.get_by_label("Show games").select_option("reconstructed")
+        expect(page.get_by_role("row").filter(has_text="Visitor at Host")).to_contain_text("Original task refused")
+        expect(page.get_by_role("link", name=TITLE)).to_have_count(0)
         page.get_by_label("Show games").select_option("missing")
         expect(page.get_by_role("link", name="Missing at Capture")).to_be_visible()
         expect(page.get_by_role("link", name=TITLE)).to_have_count(0)

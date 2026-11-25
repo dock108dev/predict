@@ -1,11 +1,15 @@
 """Reconcile provider returns with frozen paper inputs without changing the replay."""
 
 from collections import Counter, defaultdict
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
 from hashlib import sha256
 import json
+import logging
 import sqlite3
+
+from psycopg.types.json import Jsonb
 
 from app.collection.sgo_capabilities import CORE_ODD_IDS, MARKET_TYPES, supported_odd
 from app.collection.sportsgameodds_current_rows import display_venue, source_bookmaker
@@ -14,13 +18,16 @@ from app.comparison.cashflows import exact_wire
 from app.comparison.pregame_reference import target
 from app.comparison.reference_scope import REQUEST_BOOKS
 from app.comparison.sgo_reference import BEST_BOOKS, OPPOSITE
-from app.storage.store import hashed, stamp
+from app.storage.store import encoded, hashed, stamp
 
 
-VERSION = "sgo-checkpoint-market-census-1"
+VERSION = "sgo-checkpoint-market-census-2"
+BASELINE_MINIMUM = "1/25"
 REFERENCE_EXCLUSIONS = {"reference_exact_pair_unavailable", "reference_two_trusted_books_required"}
 CORE_OUTCOMES = {odd: (MARKET_TYPES[odd.split("-")[-2]], odd.split("-")[-1]) for odd in CORE_ODD_IDS}
 EVENT_PAGINATION = "https://sportsgameodds.com/docs/guides/data-batches"
+EVENT_ODDS_STATUS = "https://sportsgameodds.com/docs/endpoints/getEvents"
+LOG = logging.getLogger(__name__)
 
 
 def _members(value):
@@ -53,16 +60,22 @@ def retrieval(scope, event_ids, next_cursor, receipt_sha256, *, cursor_known=Tru
             next_cursor_sha256=sha256(next_cursor.encode()).hexdigest() if isinstance(next_cursor, str) else None)])
 
 
-def summarize_coverage(coverage):
+def summarize_coverage(coverage, *, derived=None):
     """Read the small saved coverage object without expanding checkpoint payloads."""
+    if derived is not None:
+        return dict(derived["summary"], version=derived["version"], evidence_revision=derived["evidence_revision"],
+                    basis=derived["retrieval"]["basis"], offer_accounting_minimum_ev=derived["minimum_ev"])
     if not coverage:
         return None
     requested = coverage.get("requested") or {}
     books, odds = requested.get("bookmakers") or [], requested.get("odd_ids") or []
     proof = coverage.get("retrieval") or {}
-    return dict(retrieval_state=proof.get("state", "unknown_completeness"), traversal=proof.get("traversal", "unknown"),
+    expected, returned = len(books) * len(odds), coverage.get("returned_cells")
+    return dict(basis="frozen_normalized_checkpoint", retrieval_state=proof.get("state", "unknown_completeness"),
+                request_state=proof.get("request_state", "unknown_completeness"), traversal=proof.get("traversal", "unknown"),
                 venue_market_state="unknown_completeness", normalized_rows=(coverage.get("received") or {}).get("quotes"),
-                requested_cells=len(books) * len(odds), returned_cells=coverage.get("returned_cells"),
+                requested_cells=expected if books and odds else None, returned_cells=returned,
+                unreturned_cells=expected - returned if returned is not None and books and odds else None,
                 alternate_lines_requested=requested.get("include_alt_lines"))
 
 
@@ -135,7 +148,7 @@ def _returned_rows(raw_event, normalized):
     return result
 
 
-def _requests(scope, rows, state):
+def _requests(scope, rows, *, verified_target, no_provider_odds):
     requested_books, requested_odds = _members(scope.get("bookmakerID")), _members(scope.get("oddID"))
     cells = defaultdict(list)
     for row in rows:
@@ -153,11 +166,23 @@ def _requests(scope, rows, state):
                 disposition = "returned"
             elif odd not in CORE_OUTCOMES:
                 disposition = "unsupported"
+            elif no_provider_odds:
+                disposition = "no_provider_odds_observed"
             else:
-                disposition = "requested_but_unreturned" if state != "unknown_completeness" else "return_unverified"
+                disposition = "requested_but_unreturned" if verified_target else "return_unverified"
             result.append(dict(bookmaker_id=book, venue=display_venue(book), odd_id=odd, family=family,
                 outcome=outcome, requested=requested, state=disposition, rows=len(values), row_states=dict(states)))
     return result
+
+
+def _event_odds(event, verified_target):
+    status = _fields(event.get("status"))
+    present, available = status.get("oddsPresent"), status.get("oddsAvailable")
+    no_odds = verified_target and present is False and available is not True and not event.get("odds")
+    return dict(state="no_provider_odds_observed" if no_odds else "unknown_if_no_rows",
+                odds_present=present if isinstance(present, bool) else None,
+                odds_available=available if isinstance(available, bool) else None,
+                scope="this_provider_event_response", documentation=EVENT_ODDS_STATUS)
 
 
 class ReferenceCensus:
@@ -243,7 +268,9 @@ class ReferenceCensus:
             expected = 0 if original_reason == "reference_exact_pair_unavailable" else 1
             self.cache[key] = dict(reason=original_reason, normalized_reference_line=line,
                 required_trusted_books=valuation.MIN_TRUSTED_BOOKS, qualifying_trusted_books=len(eligible),
-                frozen_disposition_matches=len(eligible) == expected, causes=reasons, books=details)
+                frozen_disposition_matches=len(eligible) == expected, causes=reasons, books=details,
+                assessment="method_ineligible" if self.raw_verified and len(eligible) == expected
+                    and "normalization_or_projection_gap" not in reasons else "reference_evidence_review")
         return self.cache[key]
 
 
@@ -332,7 +359,7 @@ def offer_rows(checkpoint, *, game_id, minimum, at):
     return _offers(snapshot, normalized, None, at=at, game_id=game_id, minimum=Fraction(minimum))
 
 
-def from_checkpoint(checkpoint, checkpoint_id, *, include_rows=True, minimum="1/25"):
+def from_checkpoint(checkpoint, checkpoint_id, *, include_rows=True, minimum=BASELINE_MINIMUM):
     """Build an auditable view of one immutable checkpoint and its original response."""
     snapshot = checkpoint["snapshot"]
     event_id = snapshot.get("source_event", {}).get("event_id")
@@ -342,7 +369,7 @@ def from_checkpoint(checkpoint, checkpoint_id, *, include_rows=True, minimum="1/
     by_source = {(row["bookmaker_id"], row["odd_id"], row["line"]): row for row in normalized}
     facts = {_key(q["venue"], q["odd_id"], q["line"]): q for q in snapshot.get("raw_quotes", ()) if q.get("event_id") == event_id}
     original, payload = _original(snapshot)
-    raw_rows, market_groups = [], []
+    raw_rows, market_groups, event = [], [], {}
     if payload is not None:
         events = {row["eventID"]: row for row in payload["data"] if isinstance(row, dict) and isinstance(row.get("eventID"), str)}
         batch_scope = ((snapshot.get("acquisition") or {}).get("batch") or {}).get("request_scope")
@@ -350,7 +377,7 @@ def from_checkpoint(checkpoint, checkpoint_id, *, include_rows=True, minimum="1/
                              [] if batch_scope else events, payload.get("nextCursor"), digest)
         if batch_scope:
             response["physical_request"] = retrieval(batch_scope, events, payload.get("nextCursor"), digest)
-        if event := events.get(event_id):
+        if event := events.get(event_id, {}):
             raw_rows = _returned_rows(event, facts)
             market_groups = [dict(odd_id=odd, supported=supported_odd(body),
                 bookmaker_ids=sorted(_fields(_fields(body).get("byBookmaker")))) for odd, body in _fields(event.get("odds")).items()]
@@ -365,41 +392,62 @@ def from_checkpoint(checkpoint, checkpoint_id, *, include_rows=True, minimum="1/
             verified = isinstance(has_next, bool)
             response = retrieval(scope, [event_id] if event_id and verified else [], has_next, digest, cursor_known=verified)
         response = dict(response, basis="frozen_normalized_checkpoint")
-    cells = _requests(scope, raw_rows if payload is not None else normalized, response["state"])
+    verified_target = (bool(event) and original.get("request_scope_matches") is not False
+                       and original.get("request_clock_matches") is not False
+                       and response["request_state"] == "all_requested_events_returned")
+    event_odds = _event_odds(event, verified_target)
+    if raw_rows:
+        event_odds["state"] = "provider_rows_observed"
+    cells = _requests(scope, raw_rows if payload is not None else normalized, verified_target=verified_target,
+                      no_provider_odds=event_odds["state"] == "no_provider_odds_observed")
     clocks = snapshot.get("times") or {}
     at = clocks.get("inputs_cutoff") or clocks.get("known_at") or checkpoint.get("known_at")
-    reference = ReferenceCensus(snapshot, normalized, raw_rows, raw_verified=payload is not None, at=at)
+    reference = ReferenceCensus(snapshot, normalized, raw_rows, raw_verified=verified_target, at=at)
     minimum = Fraction(minimum)
     offers = _offers(snapshot, by_source, reference, at=at, game_id=checkpoint.get("game_id"), minimum=minimum)
     dispositions = Counter(offer["disposition"] for offer in offers)
+    accounting = dict(unavailable=dispositions["price_withdrawn"],
+        reference_ineligible=sum(dispositions[key] for key in REFERENCE_EXCLUSIONS),
+        below_minimum=dispositions["below_minimum_ev"], screen_passed=dispositions["screen_passed"])
+    accounting["other"] = len(offers) - sum(accounting.values())
     gaps = [offer["reference_gap"] for offer in offers if offer["reference_gap"]]
     causes = Counter(cause for gap in gaps for cause in gap["causes"])
     book_causes = Counter(book["reason"] for gap in gaps for book in gap["books"])
     states = Counter(row["state"] for row in normalized)
     raw_states = Counter(row["state"] for row in raw_rows)
+    request_states = Counter(cell["state"] for cell in cells)
+    fallback = (summarize_coverage(snapshot.get("coverage")) or {}) if payload is None else {}
+    unreturned = request_states["requested_but_unreturned"] if verified_target else fallback.get("unreturned_cells")
+    returned = request_states["returned"] if verified_target else fallback.get("returned_cells")
     result = dict(version=VERSION, checkpoint_id=checkpoint_id, event_id=event_id,
         source="sportsgameodds", as_of=clocks.get("received_at"), reference_input_cutoff=at, minimum_ev=exact_wire(minimum),
-        original_response=original, retrieval=response, requested_scope=_scope_fields(scope),
+        original_response=original, retrieval=response, event_odds=event_odds, requested_scope=_scope_fields(scope),
         summary=dict(retrieval_state=response["state"], traversal=response["traversal"],
             request_state=response["request_state"],
             venue_market_state=response["venue_market_state"], requested_cells=sum(cell["requested"] for cell in cells),
-            returned_cells=sum(cell["state"] == "returned" for cell in cells),
-            request_states=dict(Counter(cell["state"] for cell in cells)), normalized_rows=len(normalized),
+            returned_cells=returned, unreturned_cells=unreturned,
+            no_provider_odds_cells=request_states["no_provider_odds_observed"] if verified_target else None,
+            counts_basis="verified_original_response" if verified_target else fallback.get("basis"),
+            alternate_lines_requested=scope.get("includeAltLines"),
+            request_states=dict(request_states), normalized_rows=len(normalized),
             normalized_states=dict(states), original_rows=len(raw_rows) if payload is not None else None,
             original_states=dict(raw_states), observed_offers=len(offers), evaluated_offers=sum(o["evaluated"] for o in offers),
-            screen_passed_offers=dispositions["screen_passed"], offer_dispositions=dict(dispositions),
+            screen_passed_offers=dispositions["screen_passed"], offer_dispositions=dict(dispositions), offer_accounting=accounting,
             reference_exclusions=sum(dispositions[key] for key in REFERENCE_EXCLUSIONS), reference_causes=dict(causes),
+            reference_accounting=dict(exact_pair_missing=dispositions["reference_exact_pair_unavailable"],
+                insufficient_trusted_books=dispositions["reference_two_trusted_books_required"],
+                method_ineligible=sum(gap["assessment"] == "method_ineligible" for gap in gaps)),
             reference_book_causes=dict(book_causes), reference_disposition_mismatches=sum(not g["frozen_disposition_matches"] for g in gaps)),
         provider_requests=0, orders_submitted=0)
     if include_rows:
         stored_coverage = snapshot.get("coverage") or {}
         result.update(request_cells=cells, market_groups=market_groups, original_rows=raw_rows, normalized_rows=normalized,
             projection_rejections=stored_coverage.get("rejected_projection", []), offers=offers)
-    result["evidence_revision"] = hashed([VERSION, checkpoint_id, original, response, result["minimum_ev"]])
+    result["evidence_revision"] = hashed([VERSION, checkpoint_id, original, response, event_odds, result["minimum_ev"], result["summary"]])
     return result
 
 
-def for_checkpoint(db, checkpoint_id, *, include_rows=True, minimum="1/25"):
+def for_checkpoint(db, checkpoint_id, *, include_rows=True, minimum=BASELINE_MINIMUM):
     """Read one selected checkpoint without acquisition or mutations."""
     from . import experiment
 
@@ -410,3 +458,90 @@ def for_checkpoint(db, checkpoint_id, *, include_rows=True, minimum="1/25"):
     checkpoint = experiment._value(row, index)
     return from_checkpoint(dict(checkpoint, game_id=row["game_id"]), checkpoint_id,
                            include_rows=include_rows, minimum=minimum)
+
+
+def read_summaries(db, checkpoint_ids):
+    ids = sorted({identity for identity in checkpoint_ids if identity})
+    if not ids:
+        return {}
+    return {row["checkpoint_id"]: row["payload"] for row in db.execute("""SELECT checkpoint_id,payload
+        FROM public.research_market_census WHERE format_version=%s AND checkpoint_id=ANY(%s)""", (VERSION, ids))}
+
+
+def campaign_checkpoints(db, now):
+    """Prioritize already-published days of campaigns that are still running."""
+    from .paper_campaigns import EASTERN
+
+    today = now.astimezone(EASTERN).date()
+    rows = db.execute("""SELECT game->>'checkpoint_id' AS id, MIN(day.game_date) AS first_day
+        FROM public.paper_campaign_day day JOIN public.paper_campaign campaign ON campaign.id=day.campaign_id
+        JOIN public.research_workspace_run run ON run.id=day.run_id
+        CROSS JOIN LATERAL jsonb_array_elements(run.payload#>'{report,games}') AS game
+        WHERE campaign.payload->>'end_date'>=%s AND game->>'checkpoint_id' IS NOT NULL
+        GROUP BY game->>'checkpoint_id' ORDER BY first_day,id""", (str(today),))
+    return [row["id"] for row in rows]
+
+
+def apply_summary(census, derived):
+    if derived is None:
+        return census
+    summary = summarize_coverage(None, derived=derived)
+    if census["minimum_ev"] != derived["minimum_ev"]:
+        for field in ("screen_passed_offers", "offer_dispositions", "offer_accounting"):
+            summary[field] = census["summary"][field]
+        summary["offer_accounting_minimum_ev"] = census["minimum_ev"]
+    return dict(census, summary=summary, retrieval=derived["retrieval"], event_odds=derived["event_odds"],
+                published_evidence_revision=derived["evidence_revision"])
+
+
+def _defer(db, checkpoint_id, delay, reason):
+    db.execute("""INSERT INTO public.research_market_census_retry(format_version,checkpoint_id,retry_after,reason)
+        VALUES (%s,%s,clock_timestamp()+%s,%s) ON CONFLICT (format_version,checkpoint_id)
+        DO UPDATE SET retry_after=EXCLUDED.retry_after,reason=EXCLUDED.reason""",
+        (VERSION, checkpoint_id, delay, reason))
+
+
+def tick(db, priority=()):
+    """Publish one bounded, retained-original summary without issuing any collection requests."""
+    from app.storage import paper_result_queue as queue
+
+    if queue._late_capture_due(db, queue.utc()):
+        return None
+    row = db.execute("""SELECT record.id FROM public.ev_experiment_record record
+        JOIN public.ev_experiment_game game ON game.id=record.game_id
+        LEFT JOIN unnest(%s::text[]) WITH ORDINALITY AS prioritized(id,position) ON prioritized.id=record.id
+        WHERE record.kind='checkpoint' AND record.checkpoint='late' AND game.provider='sportsgameodds'
+          AND game.event->>'league'='NCAAB'
+          AND NOT EXISTS (SELECT 1 FROM public.research_market_census census
+            WHERE census.checkpoint_id=record.id AND census.format_version=%s)
+          AND NOT EXISTS (SELECT 1 FROM public.research_market_census_retry retry
+            WHERE retry.checkpoint_id=record.id AND retry.format_version=%s AND retry.retry_after>clock_timestamp())
+        ORDER BY prioritized.position NULLS LAST,record.recorded_at DESC,record.id LIMIT 1""",
+        (list(priority), VERSION, VERSION)).fetchone()
+    if row is None:
+        return None
+    checkpoint_id = row["id"]
+    try:
+        census = for_checkpoint(db, checkpoint_id, include_rows=False)
+    except (TypeError, KeyError, ValueError, ArithmeticError, AttributeError) as error:
+        LOG.warning("Market census pending for %s (%s)", checkpoint_id, type(error).__name__)
+        _defer(db, checkpoint_id, timedelta(hours=1), "checkpoint_derivation_failed")
+        return None
+    original = census["original_response"]
+    if not (original.get("request_clock_matches") is True and original.get("request_scope_matches") is True
+            and census["summary"]["counts_basis"] == "verified_original_response"):
+        _defer(db, checkpoint_id, timedelta(hours=1), "exact_original_response_unverified")
+        return None
+    size = len(encoded(census))
+    try:
+        with db.transaction():
+            queue._admit(db, size)
+            published = db.execute("""INSERT INTO public.research_market_census
+                (format_version,checkpoint_id,evidence_revision,payload_bytes,payload)
+                VALUES (%s,%s,%s,%s,%s) ON CONFLICT (format_version,checkpoint_id) DO NOTHING RETURNING checkpoint_id""",
+                (VERSION, checkpoint_id, census["evidence_revision"], size, Jsonb(census))).fetchone()
+            db.execute("DELETE FROM public.research_market_census_retry WHERE format_version=%s AND checkpoint_id=%s",
+                       (VERSION, checkpoint_id))
+    except queue.PublicationDeferred:
+        return None
+    return published["checkpoint_id"] if published else None

@@ -248,6 +248,7 @@ def main(argv=None):
                     "tests/test_research_coverage_sql.py",
                     "tests/test_research_records_sql.py",
                     "tests/test_paper_result_queue_sql.py",
+                    "tests/test_market_census.py",
                     "tests/test_sc09_bulk_sql.py",
                     "tests/test_raw_prices_sql.py",
                     "tests/test_admin_database_sql.py",

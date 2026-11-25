@@ -105,9 +105,15 @@ async function refreshDailyCoverage(){
   $('mens-d1-job-table').hidden=!value.jobs.length;
   $('mens-d1-job-rows').replaceChildren(...value.jobs.map(job=>{
    const row=node('tr');
-   for(const item of [job.game_date,words(job.purpose),words(job.state),
-    clock(job.next_attempt_at||job.due_at),clock(job.last_attempt_at),clock(job.last_success_at),
-    `${job.attempts}${job.last_reason?' · '+words(job.last_reason):''}`])row.append(node('td',item));
+   const columns=[['Eastern game date',job.game_date],['Job',words(job.purpose)],['State',words(job.state)],
+    ['Due / retry',clock(job.next_attempt_at||job.due_at)],['Last attempt',clock(job.last_attempt_at)],['Last success',clock(job.last_success_at)],
+    ['Attempts / reason',`${job.attempts}${job.last_reason?' · '+words(job.last_reason):''}`]];
+   for(const [name,item] of columns){const cell=node('td',item);cell.dataset.label=name;row.append(cell);}
+   if(job.game_date){
+    const dateLink=node('a',job.game_date);
+    dateLink.href='/data?'+new URLSearchParams({evidence:'mens-d1',scope:'mens-d1',date:job.game_date});
+    row.firstElementChild.replaceChildren(dateLink);
+   }
    return row;
   }));
  }catch(error){

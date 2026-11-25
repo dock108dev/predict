@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.research import paper, paper_campaigns as campaigns, workspace
+from app.research import paper, paper_campaigns as campaigns, paper_evidence, workspace
 from tests.test_paper_experiments import AT, linear, priced
 from tests.test_ev_movement import checkpoint
 
@@ -34,6 +34,31 @@ def test_higher_threshold_reselects_best_venue_from_qualifying_pool():
     assert campaigns.select(rows,F('.04'),'best_venue')[0]['id']=='a'
     assert campaigns.select(rows,F('.08'),'best_venue')[0]['id']=='b'
     assert len(campaigns.select(rows,F('.04'),'all_venues'))==2
+
+
+def test_freshness_uses_original_clocks_and_reselects_before_best_venue():
+    receive = '2026-11-23T18:00:00Z'
+    timestamps = ['2026-11-23T17:59:00Z', '2026-11-23T17:58:59.999999999Z',
+                  '2026-11-23T17:55:00Z', '2026-11-23T17:54:59Z',
+                  None, '2026-11-23T18:00:00.000000001Z']
+    rows = [dict(ticket(str(i), ev, bet='same' if i in (0,1) else None),
+                 times=dict(source_at=source, received_at=receive),
+                 capture_origin='reconstructed' if i == 1 else 'frozen')
+            for i, (source, ev) in enumerate(zip(timestamps, ('.085', '.25', '.04', '.04', '.04', '.04')))]
+    references = [dict(source_at=timestamps[0], received_at=receive), dict(source_at=timestamps[2], received_at=receive)]
+    document = dict(report=dict(portfolios=dict(all_venues=dict(tickets=rows))), witnesses={
+        '0': dict(sized_calculation=dict(reference=dict(required_input_prices=references)))})
+    tickets = campaigns.analysis_tickets(document, document['report'])
+    edges = ['.04', '.08', '.15', '.25']
+    value = campaigns.quality(tickets, edges, 'all_venues', inputs='result')
+    assert [b['tickets'] for b in value['target_quote_age'].values()] == [1, 2, 1, 1, 1]
+    assert value['reference_quote_age']['over_60_to_300']['tickets'] == 1
+    best = campaigns.quality(tickets, edges, 'best_venue', inputs='result')
+    assert best['target_quote_age']['up_to_60']['tickets'] == 0
+    assert best['fresh_target_only']['summary']['expected_profit_exact_usd'] == '17/20'
+    assert [b['summary']['tickets'] for b in best['fresh_target_only']['thresholds']] == [1, 1, 0, 0]
+    assert value['version'] != best['version']
+    assert paper_evidence.reference_age(dict(reference=dict(prices=references + [{}]))) is None
 
 
 @pytest.mark.parametrize('odds,expected',[('-110','11.00'),('+300','3.33'),('+3000','.33')])

@@ -30,14 +30,17 @@
 #data-mens-d1 .workspace-table td a { color:var(--p-accent); text-decoration:underline; }
 .workspace-form { display:flex; gap:.7rem; flex-wrap:wrap; align-items:end; }
 .workspace-form label { display:grid; gap:.25rem; font-size:.875rem; min-width:8rem; }
-.workspace-form :is(input,select) { font:inherit; color:inherit; background:var(--paper); border:1px solid var(--line); border-radius:4px; min-height:42px; padding:.5rem; max-width:100%; }
+.workspace-form :is(input,select,textarea) { font:inherit; color:inherit; background:var(--paper); border:1px solid var(--line); border-radius:4px; min-height:42px; padding:.5rem; max-width:100%; }
 .workspace-form details { width:100%; padding:.75rem 0; }
 .workspace-claims { border:1px solid var(--line); border-radius:.35rem; padding:.6rem .8rem; }
 .workspace-claims label { display:flex; align-items:center; gap:.5rem; flex-direction:row-reverse; justify-content:flex-end; }
 .workspace-claims input { min-height:auto; }
 .workspace-form details summary,.workspace-panel summary { cursor:pointer; font-weight:650; margin-block:.5rem; }
 .workspace-variant { display:flex; flex-wrap:wrap; gap:.45rem; }
-.workspace-variant a[aria-current=true] { border-color:var(--p-accent); font-weight:700; }
+.workspace-variant :is(a[aria-current=true],button[aria-pressed=true]) { border-color:var(--p-accent); font-weight:700; }
+.issue-entry { border-top:1px solid var(--line); padding-top:.4rem; }
+.issue-decision-form label:nth-child(2) { flex:1 1 18rem; }
+.issue-decision-form :is(label,p) { max-width:100%; }
 .workspace-dialog { width:min(860px,calc(100vw - 28px)); max-height:90vh; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:.55rem; overflow:auto; padding:1rem 1.2rem; }
 .workspace-dialog::backdrop { background:#0b1829b8; }
 .workspace-dialog :is(pre,dd),.workspace-panel pre { overflow-wrap:anywhere; white-space:pre-wrap; }
@@ -64,7 +67,8 @@
  .workspace-sections { column-gap:.85rem; }
  .workspace-card { padding:.8rem; }
  .workspace-table { min-width:38rem; }
- .paper-result-games .workspace-table,.paper-result-game .workspace-table,.paper-result-summary ~ details .workspace-table { min-width:0; }
+ .paper-result-games .workspace-table,.paper-result-game .workspace-table,.paper-result-summary ~ details .workspace-table,
+ .paper-quality .workspace-table,.research-page .workspace-card > .catalog-scroll .workspace-table { min-width:0; }
  #data-mens-d1 .workspace-table, #data-mens-d1 .workspace-table td { min-width:0; }
 }
 .campaign-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:1rem; }

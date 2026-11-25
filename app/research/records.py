@@ -125,6 +125,11 @@ def retention_usage(db):
     if db.execute("SELECT to_regclass('public.paper_campaign') r").fetchone()['r']:
         campaign_bytes = db.execute("SELECT pg_total_relation_size('public.paper_campaign') + pg_total_relation_size('public.paper_campaign_day') bytes").fetchone()['bytes']
         row['total'] += campaign_bytes
+    if db.execute("SELECT to_regclass('public.research_market_census') r").fetchone()['r']:
+        census_bytes = db.execute("""SELECT pg_total_relation_size('public.research_market_census')
+            + pg_total_relation_size('public.research_market_census_retry') bytes""").fetchone()['bytes']
+        row['market_census_bytes'] = census_bytes
+        row['total'] += census_bytes
     return row
 
 

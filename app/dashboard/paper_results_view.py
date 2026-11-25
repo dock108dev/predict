@@ -4,7 +4,7 @@ import sqlite3
 from urllib.parse import urlencode
 
 from app.collection import original_receipts
-from app.research import experiment, workspace
+from app.research import experiment, paper_campaigns, workspace
 from app.storage import paper_result_queue
 from app.storage.store import hashed
 from .pipeline import serial
@@ -41,15 +41,26 @@ def read(db, run_id, *, variant, version_id, status_only):
         status = state.get("state") or ("awaiting_results" if current else "collecting")
         reason = None
     links = {}
+    quality = None
     if version:
         path = f"{BASE}/runs/{run_id}/results"
         links = {name: path + "?" + urlencode(dict(version=version["id"], variant=variant, export=name))
                  for name in EXPORTS}
+    if report:
+        config = db.execute("""SELECT c.payload FROM public.paper_campaign c
+            JOIN public.research_workspace_definition d ON d.payload->>'campaign_id'=c.id
+            JOIN public.research_workspace_run r ON r.definition_version=d.version
+            WHERE r.id=%s""", (run_id,)).fetchone()
+        if config:
+            document = workspace._run(db, run_id)["payload"]
+            tickets = paper_campaigns.analysis_tickets(document, report)
+            quality = paper_campaigns.quality(tickets, config["payload"]["bucket_edges"], variant,
+                                              inputs=version["id"])
     return serial(dict(schema=SCHEMA, run_id=run_id, date=run["game_date"],
         report_revision=run["report_revision"], variant=variant,
         status=dict(state=status, reason=reason, stale=stale, updated_at=state.get("updated_at"),
                     latest_version=current),
-        version=version, versions=state.get("versions", []), report=report, links=links,
+        version=version, versions=state.get("versions", []), report=report, quality=quality, links=links,
         provider_requests=0, orders_submitted=0))
 
 
@@ -62,6 +73,8 @@ def export(view, kind):
     result.update(schema=SCHEMA, export=kind, variant=variant)
     if kind == "report":
         result["report"] = report
+        if view.get("quality") is not None:
+            result["quality"] = view["quality"]
     elif kind == "games":
         by_game = report["portfolios"][variant]["by_game"]
         result["rows"] = [dict(game, totals=by_game[game["game_id"]]) for game in report["games"]]

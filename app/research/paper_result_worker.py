@@ -8,8 +8,7 @@ from threading import Event
 
 from psycopg import Error
 
-from app.research import paper_results
-from app.research import paper_campaigns
+from app.research import market_census, paper_campaigns, paper_results
 from app.storage import paper_result_queue as queue
 from app.storage.store import connect
 
@@ -20,6 +19,7 @@ POLL_SECONDS = 2
 
 def run(stop, *, connector=connect):
     repair_at = queue.utc()
+    census_priority = ()
     while not stop.is_set():
         try:
             with connector() as db:
@@ -29,10 +29,12 @@ def run(stop, *, connector=connect):
                     if not queue._late_capture_due(db, now):
                         if now >= repair_at:
                             queue.repair(db, paper_results.VERSION)
+                            census_priority = market_census.campaign_checkpoints(db, now)
                             repair_at = now + REPAIR_INTERVAL
                         queue.dispatch(db)
                         queue.process_one(db)
                         paper_campaigns.tick(db)
+                        market_census.tick(db, priority=census_priority)
                     stop.wait(POLL_SECONDS)
         except Error as error:
             LOG.warning("Paper result database temporarily unavailable (%s)", type(error).__name__)

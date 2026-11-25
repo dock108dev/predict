@@ -385,21 +385,34 @@ class SportsGameOddsWorker:
         with connect() as db:
             return begin(db, params, at=self.now())
 
-    def _retain_pull(self, page, params):
+    def _retain_pull(self, page, retrieval):
         from app.storage.acquisition_snapshot import accept, finish
         from app.storage.store import connect
         with connect() as db:
             accept(db, page)
-            if 'leagueID' not in params:
-                finish(db, page.pull_id, 'partial', details=dict(reason='working_surface_only'))
-            elif not page.next_cursor:
-                finish(db, page.pull_id, 'complete', details=dict(reason='discovery_cursor_closed; moving_scope_omissions_uncertain'))
+            if retrieval is not None:
+                finish(db, page.pull_id, 'partial', details=dict(reason='working_surface_only', event_retrieval=retrieval))
 
-    def _fail_pull(self, pull_id, state, reason):
+    def _finish_discovery(self, page, traversal, reason):
+        from app.storage.acquisition_snapshot import finish
+        from app.storage.store import connect
+
+        if page.pull_id:
+            with connect() as db:
+                finish(db, page.pull_id, 'complete' if traversal.complete else 'partial',
+                       details=dict(reason=reason, unique_events=len(traversal._seen_events),
+                                    duplicate_events=traversal.duplicate_events, authoritative_absence=False))
+
+    def _fail_pull(self, pull_id, state, reason, keep_cursor=False):
         from app.storage.acquisition_snapshot import finish
         from app.storage.store import connect
         with connect() as db:
-            finish(db, pull_id, state, details=dict(reason=reason))
+            if keep_cursor:
+                db.execute("""UPDATE public.market_pull SET details=details||
+                    jsonb_build_object('last_failed_cursor_attempt',%s::text)
+                    WHERE pull_id=%s AND state='in_progress'""", (reason, pull_id))
+            else:
+                finish(db, pull_id, state, details=dict(reason=reason))
 
     async def _fetch_owned(self, params):
         if not await self.request_in_scope_async(params):
@@ -436,6 +449,16 @@ class SportsGameOddsWorker:
                 for alias in event.get('aliases', ()):
                     if alias in requested and alias not in returned:
                         aliases.setdefault(alias, set()).add(event['event_id'])
+            resolved_aliases = {alias: next(iter(replacements)) for alias, replacements in aliases.items()
+                                if len(replacements) == 1}
+            omitted = requested.difference(returned, resolved_aliases)
+            unexpected = returned.difference(requested, resolved_aliases.values()) if requested else set()
+            retrieval = dict(requested_event_ids=sorted(requested), returned_event_ids=sorted(returned),
+                             resolved_aliases=resolved_aliases, omitted_requested_event_ids=sorted(omitted),
+                             unexpected_event_ids=sorted(unexpected), next_cursor_present=bool(page.next_cursor),
+                             state='unresolved_requested_members' if omitted or unexpected else 'all_requested_members_returned'
+                             ) if requested else None
+            events = tuple(event for event in page.events if event['event_id'] not in unexpected)
             # A paid response is not a successfully admitted observation until
             # the source-revocable ingress transaction succeeds. Stage schedule
             # changes so a failed admission cannot postpone retry or discard an
@@ -443,7 +466,7 @@ class SportsGameOddsWorker:
             observed_at = self.now()
             next_events = {event_id: event for event_id, event in self.events.items()
                            if self.event_in_scope(event, observed_at)}
-            for event in page.events:
+            for event in events:
                 if event['league'] not in aggregate_scope(self.service.config):
                     raise ValueError('provider returned outside configured scope')
                 if (not self.event_in_scope(event, observed_at) or event['status'].get('ended')
@@ -454,34 +477,33 @@ class SportsGameOddsWorker:
             # SGO can return a replacement event for a requested old ID. Its
             # explicit alias updates scheduling only; it is not cross-provider
             # identity or authority to withdraw the old source observation.
-            for alias, replacements in aliases.items():
-                if len(replacements) == 1:
-                    next_events.pop(alias, None)
+            for alias in resolved_aliases:
+                next_events.pop(alias, None)
             if len(next_events) > self.max_events:
                 raise ValueError('event scheduling capacity exceeded')
             # An empty or partial ID response is not evidence of closure.
             # Remember the local attempt solely to avoid repeatedly spending on
             # an omitted ID; never change its provider or receipt clocks.
-            if 'eventIDs' in params:
-                seen = {event['event_id'] for event in page.events}
-                resolved_aliases = {alias for alias, replacements in aliases.items() if len(replacements) == 1}
-                for event_id in requested - seen - resolved_aliases:
-                    if event_id in next_events:
-                        next_events[event_id] = dict(next_events[event_id], last_polled_at=self.now().isoformat())
+            for event_id in omitted:
+                if event_id in next_events:
+                    next_events[event_id] = dict(next_events[event_id], last_polled_at=observed_at.isoformat())
             from psycopg import OperationalError
             from psycopg.errors import QueryCanceled
             admitted_page = page
+            if unexpected:
+                admitted_page = replace(page, events=events,
+                                        quotes=tuple(quote for quote in page.quotes if quote['event_id'] not in unexpected))
             if getattr(self.service, 'activity_mode_enabled', False) or not live_enabled(self.service.config):
-                pregame = {event['event_id'] for event in page.events
+                pregame = {event['event_id'] for event in admitted_page.events
                            if self.event_in_scope(event, datetime.fromisoformat(event['received_at']))}
                 # A provider may report an explicit closure with started=true.
                 # Admit its lifecycle evidence without admitting post-start odds.
-                events = tuple(event for event in page.events if event['event_id'] in pregame or
+                if len(pregame) != len(admitted_page.events):
+                    visible = tuple(event for event in admitted_page.events if event['event_id'] in pregame or
                                any(event['status'].get(key) is True for key in
                                    ('started', 'live', 'cancelled', 'completed', 'ended', 'delayed', 'suspended')))
-                if len(pregame) != len(page.events):
-                    admitted_page = replace(page, events=events,
-                                            quotes=tuple(quote for quote in page.quotes
+                    admitted_page = replace(admitted_page, events=visible,
+                                            quotes=tuple(quote for quote in admitted_page.quotes
                                                          if quote['event_id'] in pregame))
             try:
                 if params.get('includeAltLines') is True:
@@ -495,12 +517,12 @@ class SportsGameOddsWorker:
             # cannot grant authority to post-start odds or venue settlement.
             if any(event.get('game_results') or event.get('scores') or
                    any(event['status'].get(key) is True for key in ('completed', 'finalized', 'cancelled'))
-                   for event in page.events):
+                   for event in events):
                 from .bulk_checkpoint import owned_thread
                 from .sgo_game_results import ingest
                 try:
                     self.metrics['sporting_results'] = await owned_thread(
-                        ingest, page, known_at=self.now().isoformat())
+                        ingest, replace(page, events=events), known_at=self.now().isoformat())
                 except Exception as exc:
                     failure(__name__, 'sgo_sporting_result_ingestion', exc)
                     self.metrics['sporting_results'] = dict(state='unavailable', reason='sporting_result_ingestion_failed')
@@ -509,17 +531,17 @@ class SportsGameOddsWorker:
                 alternate['admitted_alternate_rows'] += len(admitted)
                 alternate['admitted_available_alternate_rows'] += sum(quote.get('available') is True for quote in admitted)
             self.events = next_events
-            if page.events:
+            if events:
                 await self.state('available', 'sgo_page_received',
                                  'SportsGameOdds page received; individual source clocks and availability apply.')
             # Broader discovery remains separate from full-alt checkpoints.
-            await owned_thread(self._retain_pull, page, params)
+            await owned_thread(self._retain_pull, page, retrieval)
             return page
         except BaseException as exc:
             if pull_id:
                 await owned_thread(self._fail_pull, pull_id,
                     'cancelled' if isinstance(exc, asyncio.CancelledError) else 'failed',
-                    type(exc).__name__)
+                    type(exc).__name__, bool(params.get('cursor')) and not isinstance(exc, RejectedCursor))
             raise
         finally:
             self.page_in_progress = False
@@ -553,6 +575,7 @@ class SportsGameOddsWorker:
             'next_cursor': traversal.next_cursor,
             'pages': len(traversal.pages),
             'charged_objects': traversal.charged_objects,
+            'duplicate_events': traversal.duplicate_events,
             'seen_cursors': sorted(traversal._seen_cursors),
             'seen_events': sorted(traversal._seen_events),
         }, now=self.now())
@@ -583,8 +606,12 @@ class SportsGameOddsWorker:
                 objects = value.get('charged_objects', max(pages, len(events)))
                 if type(objects) is not int or not max(pages, len(events)) <= objects <= pages * self.page_limit:
                     continue
+                duplicates = value.get('duplicate_events', 0)
+                if type(duplicates) is not int or not 0 <= duplicates <= objects - len(events):
+                    continue
                 traversal = Traversal(max_pages=self.max_discovery_pages)
                 traversal.charged_objects = objects
+                traversal.duplicate_events = duplicates
                 traversal.starts_after = params['startsAfter']
                 traversal.next_cursor = value['next_cursor']
                 traversal.pages = [None] * pages
@@ -650,6 +677,8 @@ class SportsGameOddsWorker:
                 tally['max_schedule_delay_seconds'] = max(tally['max_schedule_delay_seconds'], delay)
 
     async def cycle(self):
+        from .bulk_checkpoint import owned_thread
+
         now = self.now()
         # Receipt time schedules polling and carries no source-price authority.
         candidates = self.scheduled_events(at=now)
@@ -762,6 +791,7 @@ class SportsGameOddsWorker:
                 except ValueError:
                     # Moving pages cannot prove absence. Keep observations
                     # already admitted and retry discovery on its normal cadence.
+                    await owned_thread(self._finish_discovery, page, traversal, 'discovery_cursor_walk_unstable')
                     self.discovery_progress.pop(league, None)
                     if self.ledger is not None:
                         self.ledger.clear_discovery_progress(league)
@@ -773,6 +803,7 @@ class SportsGameOddsWorker:
                 traversal.charged_objects += response_object_charge(len(page.events))
                 traversal.pages[-1] = None
                 if traversal.complete:
+                    await owned_thread(self._finish_discovery, page, traversal, 'discovery_cursor_closed; moving_scope_omissions_uncertain')
                     self.discovery_progress.pop(league, None)
                     completed_at = self.now()
                     self.discovery_at[league] = completed_at
@@ -781,6 +812,7 @@ class SportsGameOddsWorker:
                     self.metrics.get('discovery_unstable', {}).pop(league, None)
                     break
                 if len(traversal.pages) >= traversal.max_pages:
+                    await owned_thread(self._finish_discovery, page, traversal, 'discovery_page_limit_reached')
                     self.discovery_progress.pop(league, None)
                     if self.ledger is not None:
                         self.ledger.clear_discovery_progress(league)

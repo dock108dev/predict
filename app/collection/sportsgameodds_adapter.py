@@ -396,6 +396,7 @@ class Traversal:
         self.next_cursor = None
         self.pages = []
         self.charged_objects = 0
+        self.duplicate_events = 0
         self._seen_cursors = set()
         self._seen_events = set()
         self.finished = False
@@ -406,9 +407,13 @@ class Traversal:
             self.failed = True
             raise ValueError('cursor traversal')
         ids = {event['event_id'] for event in page.events}
-        if ids & self._seen_events or (page.next_cursor is not None and page.next_cursor in self._seen_cursors):
+        repeated = ids & self._seen_events
+        if (repeated and ids == repeated) or (page.next_cursor is not None and page.next_cursor in self._seen_cursors):
             self.failed = True
-            raise ValueError('moving or cyclic traversal')
+            raise ValueError('discovery_page_no_new_events_or_cyclic_cursor')
+        # Mixed duplicates and new IDs can occur as start times move. Keep
+        # traversing, with one membership but separate receipt observations.
+        self.duplicate_events += len(repeated)
         self._seen_events.update(ids)
         if cursor is not None:
             self._seen_cursors.add(cursor)

@@ -451,7 +451,12 @@ def _publish(db, day, parent, definition, report):
                 (version,id,supersedes,payload_bytes,payload) VALUES (%s,%s,%s,%s,%s)""",
                 (definition["version"], definition["id"], definition["supersedes"],
                  len(encoded(definition_body)), Jsonb(definition_body)))
-        if definition.get("designation") == mens_d1.RECONCILED:
+        if definition.get("campaign_id"):
+            prior = db.execute("""SELECT r.id FROM public.research_workspace_run r
+                JOIN public.research_workspace_definition d ON r.definition_version=d.version
+                WHERE r.game_date=%s AND d.payload->>'campaign_id'=%s
+                ORDER BY r.recorded_at DESC,r.id LIMIT 1""", (day, definition["campaign_id"])).fetchone()
+        elif definition.get("designation") == mens_d1.RECONCILED:
             prior = db.execute("""SELECT r.id FROM public.research_workspace_run r
                 JOIN public.research_workspace_definition d ON r.definition_version=d.version
                 WHERE r.game_date=%s AND r.observed_at<=%s AND d.payload->>'designation'=ANY(%s)
@@ -554,7 +559,7 @@ def offer_export_plan(db, run_id):
 
 
 def offer_export_game(db, game, minimum, selected):
-    from .market_census import offer_rows
+    from .market_census import offer_rows, read_summaries, summarize_coverage
 
     entry = {key:game.get(key) for key in ("game_id", "title", "status", "checkpoint_id", "exclusions")}
     if game["status"] not in ("captured", "reconstructed"):
@@ -567,7 +572,9 @@ def offer_export_game(db, game, minimum, selected):
     for offer in offers:
         key = game["game_id"], offer["offer_index"]
         offer["selected_tickets"] = {name:rows[key] for name, rows in selected.items() if key in rows}
-    return dict(entry, receipt_sha256=checkpoint["snapshot"].get("receipt_sha256"), decision_at=at, offers=offers)
+    summary = summarize_coverage(game.get("coverage"), derived=read_summaries(db, [identity]).get(identity))
+    return dict(entry, receipt_sha256=checkpoint["snapshot"].get("receipt_sha256"), decision_at=at,
+                market_summary=summary, offers=offers)
 
 
 def offer_export(db, run_id):

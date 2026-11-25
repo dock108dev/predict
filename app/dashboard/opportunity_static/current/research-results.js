@@ -1,5 +1,6 @@
 import {count, details, label, link, node, pairs, pct, stack, table, time, usd} from './workspace-ui.js';
 import {selection, venue} from './workspace-format.js';
+import {qualityComparison} from './research-quality.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
 const reportStates = {
@@ -141,7 +142,9 @@ function captureDescription(game, summary) {
   const state = captureStates[game.capture_status] || label(game.capture_status);
   const description = captured(game) ? (summary?.tickets ? '' : 'Zero qualifying trades')
     : ['pending', 'claimed'].includes(game.capture_status) ? 'Capture outstanding' : 'No retained T−10 evidence';
-  return [state, description].filter(Boolean).join(' · ');
+  const original = game.original_capture_status && game.original_capture_status !== game.capture_status
+    ? `Original task ${label(game.original_capture_status)}` : null;
+  return [state, description, original].filter(Boolean).join(' · ');
 }
 
 function gamesView(report, portfolio, navigation) {
@@ -149,6 +152,7 @@ function gamesView(report, portfolio, navigation) {
   const content = node('div'), controls = node('div', undefined, 'workspace-form');
   const gameFilter = [
     ['all', 'All games'], ['traded', 'Games with trades'], ['zero', 'Zero qualifying trades'],
+    ['frozen', 'Frozen T−10 only'], ['reconstructed', 'Retrospective reconstructions only'],
     ['missing', 'Missing capture'], ['unresolved', 'Unresolved trades'],
   ];
   panel.append(node('h3', 'Games'), controls, content);
@@ -157,6 +161,8 @@ function gamesView(report, portfolio, navigation) {
     const summary = portfolio.by_game[game.game_id];
     if (navigation.filter === 'traded') return summary?.tickets;
     if (navigation.filter === 'zero') return captured(game) && !summary?.tickets;
+    if (navigation.filter === 'frozen') return ['captured', 'frozen'].includes(game.capture_status);
+    if (navigation.filter === 'reconstructed') return game.capture_status === 'reconstructed';
     if (navigation.filter === 'missing') return !captured(game) && !['pending', 'claimed'].includes(game.capture_status);
     if (navigation.filter === 'unresolved') return summary?.unresolved;
     return true;
@@ -165,9 +171,11 @@ function gamesView(report, portfolio, navigation) {
   else content.append(table(['Game', 'Score / status', 'Trades', 'Staked', 'Returned', 'P/L', 'Capture status'], games.map(game => {
     const summary = portfolio.by_game[game.game_id];
     const gameLink = node('div');
+    const usable = captured(game);
     gameLink.append(link(game.title, navigation.href({game:game.game_id, trade:null})), node('small', time(game.starts_at)));
     return [gameLink, scoreCell(game.result),
-      count(summary?.tickets || 0), money(summary?.stake_usd), money(summary?.return_usd), money(summary?.pnl_usd),
+      usable ? count(summary?.tickets || 0) : 'Unavailable', money(usable ? summary?.stake_usd : null),
+      money(usable ? summary?.return_usd : null), money(usable ? summary?.pnl_usd : null),
       captureDescription(game, summary)];
   })));
   return panel;
@@ -206,11 +214,14 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   panel.append(link('All games', navigation.href({game:null, trade:null, trade_filter:null})), headline,
     node('p', resultStatus === scoreLine ? scoreLine : `${resultStatus} · ${scoreLine}`, 'results-score'),
     node('p', `${time(game.starts_at)} · ${captureDescription(game, summary)}`, 'workspace-caption'));
+  if (navigation.coverageHref) panel.append(link('Game coverage and issue decisions', navigation.coverageHref(game)));
   if (!trade) panel.append(resultEvidence(game.result));
   if (game.capture_reason) panel.append(node('p', label(game.capture_reason), 'workspace-caption'));
   if (!allTickets.length) {
-    panel.append(node('p', captured(game) ? 'No trades qualified under this portfolio’s frozen selection rules.'
-      : 'This saved game contributed no trades because its T−10 evidence was unavailable.'));
+    const message = captured(game) ? 'No trades qualified under this portfolio’s saved selection rules.'
+      : ['pending', 'claimed'].includes(game.capture_status) ? 'T−10 evidence is still pending for this game.'
+      : 'T−10 evidence is unavailable. The number of opportunities and modeled outcome are unknown.';
+    panel.append(node('p', message));
     return panel;
   }
   const partial = summary?.resolved && summary.unresolved;
@@ -289,13 +300,15 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
     header.append(pairs({Tickets:count(original.count), 'Games with tickets':count(original.unique_games),
       Staked:money(original.turnover_usd), 'Expected profit at entry':money(original.expected_profit_usd)}, 'workspace-stats'));
   }
-  header.append(node('p', 'Paper outcomes use recorded cashflow assumptions. Actual execution, liquidity and venue settlement are unverified.', 'workspace-caption'), resultActions(analysis, navigation));
+  header.append(node('p', 'Paper outcomes use recorded fee and quoted-size assumptions. Actual fees, executable size and venue settlement are unverified. A venue-native contract ID is shown when retained.', 'workspace-caption'), resultActions(analysis, navigation));
   root.replaceChildren(header);
   if (!portfolio) return;
   const game = report.games.find(row => row.game_id === navigation.game);
   if (game) root.append(gameView(game, portfolio, navigation, inspectTrade));
   else {
     if (navigation.game) root.append(node('p', 'That game is unavailable in this report.'));
+    const quality = qualityComparison(analysis.quality);
+    if (quality) root.append(quality);
     root.append(gamesView(report, portfolio, navigation));
   }
   root.append(breakdowns(portfolio));

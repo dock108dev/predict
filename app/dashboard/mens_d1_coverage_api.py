@@ -1,4 +1,4 @@
-"""Read-only daily coverage assembled from retained source and checkpoint evidence."""
+"""Daily coverage and adjudications over retained source and checkpoint evidence."""
 
 import asyncio
 from collections import Counter
@@ -8,9 +8,9 @@ from urllib.parse import urlencode
 from aiohttp import web
 
 from app.owned_work import joined_thread
-from app.research import experiment, market_census, paper_evidence, workspace
+from app.research import experiment, issue_dispositions, market_census, paper_evidence, workspace
 from app.storage.store import connect, encoded, stamp
-from .local_security import HEADERS, PublicRequestError
+from .local_security import HEADERS, PublicRequestError, read_json
 from .pipeline import serial
 
 
@@ -67,7 +67,7 @@ def _checkpoint_rows(db, day, provider_ids):
         ORDER BY (g.event->>'starts_at')::timestamptz,g.id""", (sorted(provider_ids), day)))
 
 
-def _capture(row, as_of):
+def _capture(row, as_of, derived=None):
     if not row or row["task_state"] is None:
         return dict(state="no_task", reason="No retained T−10 capture task")
     state, reason = row["task_state"], row["last_reason"]
@@ -89,7 +89,7 @@ def _capture(row, as_of):
                 frozen_requested_at=row["checkpoint_requested_at"], frozen_received_at=row["checkpoint_received_at"],
                 frozen_known_at=row["checkpoint_known_at"],
                 frozen_persisted_at=row["checkpoint_persisted_at"], frozen_coverage=row["checkpoint_coverage"],
-                market_summary=market_census.summarize_coverage(row["checkpoint_coverage"]))
+                market_summary=market_census.summarize_coverage(row["checkpoint_coverage"], derived=derived))
 
 
 def _provider_row(row):
@@ -120,38 +120,44 @@ def _row_id(row):
     return f'source:{row["source_game_id"]}' if row.get("source_game_id") else f'provider:{row["provider_event_id"]}'
 
 
-def _saved_game(game, run, tickets):
+def _saved_game(game, run, tickets, derived=None):
     if game is None:
         return None
     base = f'/api/research/workspace/runs/{run["id"]}/evidence/{game["game_id"]}'
     qualifying = {variant:len(rows) for variant, rows in tickets.items()} if game["status"] in ("captured", "reconstructed") else None
-    return dict(**game, qualifying=qualifying, market_summary=market_census.summarize_coverage(game.get("coverage")),
+    return dict(**game, qualifying=qualifying, market_summary=market_census.summarize_coverage(game.get("coverage"), derived=derived),
                 evidence_export=base + "?export=1", original_response_export=base + "?raw=1" if game["checkpoint_id"] else None)
 
 
 def _facets(row, in_scope):
     scope, match = row.get("scope_state"), row.get("match_state")
     source = row.get("source_game_id") is not None
+    other_date = row.get("day_applicability") == "other_date"
     facets = []
     if source and not row.get("removed") and not row.get("result_only") and row.get("gender") in ("men", "male", "mens", "m"):
         facets.append("source_mens")
-    if scope in ("eligible", "excluded", "unresolved") and source:
-        facets.append({"eligible":"expected","excluded":"excluded","unresolved":"membership_unresolved"}[scope])
+    if other_date:
+        facets.append("other_date")
+    elif scope in ("eligible", "excluded", "unresolved") and source:
+        if scope != "eligible" or in_scope:
+            facets.append({"eligible":"expected","excluded":"excluded","unresolved":"membership_unresolved"}[scope])
     retained = row.get("retained_scope") or {}
-    if retained.get("state") in ("eligible", "excluded", "unresolved"):
+    if not other_date and retained.get("state") in ("eligible", "excluded", "unresolved"):
         facets.append("retained_" + retained["state"])
     provider_scope = (row.get("provider_membership") or {}).get("state")
-    if provider_scope in ("eligible", "excluded", "unresolved"):
+    if not other_date and provider_scope in ("eligible", "excluded", "unresolved"):
         facets.append("provider_scope_" + provider_scope)
     if match in ("source_only", "provider_only", "provider_conflict", "identity_conflict", "schedule_conflict", "site_conflict", "no_market", "result_only"):
         facets.append(match)
-    if scope == "eligible" and match in ("matched", "no_market"):
+    if in_scope and row.get("operational_schedule_state") == "resolved_source_schedule_disagreement":
+        facets.append("schedule_corroborated")
+    if in_scope and match in ("matched", "no_market"):
         facets.append("matched")
     capture, saved = row["capture"], row.get("saved") or {}
     # Include the original task disposition even if a later calculation recovered the response.
     if in_scope:
         facets.append("result_ledger")
-        if capture.get("frozen_id") or saved.get("status") == "captured":
+        if (capture["state"] == "captured" and capture.get("frozen_id")) or saved.get("status") == "captured":
             facets.append("frozen")
         if capture["state"] == "captured" and capture.get("frozen_id"):
             facets.append("current_market_evidence")
@@ -172,14 +178,27 @@ def _facets(row, in_scope):
     for variant in ("best_venue", "all_venues"):
         if (saved.get("qualifying") or {}).get(variant, 0):
             facets.append("qualifying_" + variant)
-    if scope == "eligible":
+    if in_scope and scope == "eligible":
         result = row.get("result_state")
         facets.append({"final":"final", "conflicting":"conflicting", "pending":"result_pending"}.get(result, "result_unresolved"))
-    if (row.get("provider_results") or [{}])[0].get("status") == "final":
+    if not other_date and (row.get("provider_results") or [{}])[0].get("status") == "final":
         facets.append("provider_final")
     if row.get("result_state") in ("provider_pending", "provider_result_unresolved"):
         facets.append(row["result_state"])
     return facets
+
+
+def _operational_schedule(game):
+    raw = game.get("match_state")
+    game["raw_occurrence_match_state"] = raw
+    game["raw_occurrence_match_reason"] = game.get("match_reason")
+    schedule = game.get("occurrence_schedule") or {}
+    if schedule.get("state") == "official_provider_clock_corroborated":
+        game["operational_schedule_state"] = "resolved_source_schedule_disagreement"
+        game["match_state"] = "matched" if (game.get("provider_evidence") or {}).get("market_observed") else "no_market"
+        game["match_reason"] = "official_and_provider_start_corroborated_original_source_clock_retained"
+    else:
+        game["operational_schedule_state"] = schedule.get("state")
 
 
 def _eligible_occurrence(game, day):
@@ -219,6 +238,48 @@ def _sporting_state(game):
     if state in ("conflicting", "disputed"):
         return "disputed"
     return "missing"
+
+
+def _paper_usability(game, as_of, saved_at=None):
+    capture, saved = game["capture"], game.get("saved") or {}
+    if saved:
+        status = saved["status"]
+        if status == "no_task" and saved.get("starts_at") and saved_at and stamp(saved["starts_at"]) > stamp(saved_at):
+            return "pending"
+        return {"reconstructed":"reconstructed", "captured":"frozen", "pending":"pending", "upcoming":"pending",
+                "due":"pending", "claimed":"pending"}.get(status, "missing")
+    if capture["state"] == "captured" and capture.get("frozen_id"):
+        return "frozen"
+    if capture["state"] in ("upcoming", "due", "claimed") or (
+            game.get("starts_at") and stamp(game["starts_at"]) > stamp(as_of)):
+        return "pending"
+    return "missing"
+
+
+def _reconciliation(value, games, run, issues):
+    if "occurrences" not in value or not games and not run:
+        return None
+    current = [game for game in games if game["research_scope"] == "eligible"]
+    reviewed = [game for game in games if game.get("saved")] if run else current
+    cohort_ids = {game["id"] for game in reviewed}
+    usable = [game for game in reviewed if game["paper_usability"] in ("frozen", "reconstructed")]
+    evaluated = [(game.get("saved") or {}).get("qualifying") for game in usable]
+    qualifiers = [row["all_venues"] for row in evaluated if row and row.get("all_venues") is not None]
+    original_states = Counter(game["capture"]["state"] for game in reviewed)
+    return dict(cohort_name=f'{value["date"]} Eastern · reconciled observed men’s D1 vs D1 cohort',
+        reviewed_games=len(reviewed), usable_games=len(usable),
+        frozen_games=sum(game["paper_usability"] == "frozen" for game in usable),
+        reconstructed_games=sum(game["paper_usability"] == "reconstructed" for game in usable),
+        games_with_trades=sum(count > 0 for count in qualifiers) if run else None,
+        games_without_qualifiers=qualifiers.count(0) if run else None,
+        historical_gaps=sum(game["paper_usability"] == "missing" for game in reviewed),
+        accepted_historical_gaps=sum(issue["kind"] == "capture" and issue["game_id"] in cohort_ids
+            and issue["active"] and issue["status"] == issue_dispositions.GAP for issue in issues),
+        finals=sum(_sporting_state(game) == "final" for game in reviewed),
+        excluded_games=sum(game["research_scope"] == "excluded" for game in games),
+        other_date_games=sum(game["research_scope"] == "other_date" for game in games),
+        corroborated_schedule_disagreements=sum("schedule_corroborated" in game["facets"] for game in current),
+        original_capture_states=dict(original_states), exhaustive_slate=value.get("expected_games") is not None)
 
 
 def _gap(evidence, consequence, cause, classification, remedy, **location):
@@ -304,9 +365,9 @@ def _market_gaps(census, game):
         missing = offer.get("reference_gap")
         if missing:
             causes = ", ".join(missing["causes"]) or missing["reason"]
-            recoverable = "normalization_or_projection_gap" in missing["causes"]
+            recoverable = "normalization_or_projection_gap" in missing["causes"] or not missing["frozen_disposition_matches"]
             gaps.append(_gap("Trusted exact-line reference evidence", "The offer is excluded from reference-backed paper EV.",
-                             causes, "recoverable_engineering" if recoverable else "external_source_limitation",
+                             causes, "recoverable_engineering" if recoverable else missing["assessment"],
                              "Inspect exact book and side evidence in this market census.", venue=offer["venue"],
                              market=offer["family"], outcome=offer["outcome"], line=offer["line"], **location))
         elif offer.get("price_state") == "explicitly_unavailable" or offer.get("disposition") == "price_withdrawn":
@@ -325,7 +386,7 @@ def _market_gaps(census, game):
     return gaps
 
 
-def _coverage_summary(value, games, run, report):
+def _coverage_summary(value, games, run, report, censuses=None, *, issues=()):
     from app.storage.mens_d1_coverage import EASTERN
 
     provider = [game for game in games if (game.get("provider_membership") or {}).get("state") == "eligible"
@@ -349,13 +410,18 @@ def _coverage_summary(value, games, run, report):
         exclusions.update(game.get("exclusions") or {})
     reference = {reason: amount for reason, amount in exclusions.items() if reason.startswith("reference_")}
     states = Counter(game["capture"]["state"] for game in current)
-    retrieval = Counter(summary["retrieval_state"] for game in captured
-                        if (summary := market_census.summarize_coverage(game.get("coverage"))))
-    retrieval["unknown_completeness"] += len(captured) - sum(retrieval.values())
+    market_summaries = [market_census.summarize_coverage(game.get("coverage"),
+        derived=(censuses or {}).get(game.get("checkpoint_id"))) or {} for game in captured]
+    retrieval = Counter(summary.get("retrieval_state", "unknown_completeness") for summary in market_summaries)
     result_states = Counter(_sporting_state(game) for game in current)
     matches = counts.get("matches", {})
-    market_summaries = [market_census.summarize_coverage(game.get("coverage")) for game in captured]
-    countable_markets = [summary for summary in market_summaries if summary is not None]
+    countable_markets = [summary for summary in market_summaries if summary.get("returned_cells") is not None
+                         and summary.get("requested_cells") is not None]
+    original_markets = [summary for summary in market_summaries if summary.get("version") == market_census.VERSION]
+    offer_accounting, reference_accounting = Counter(), Counter()
+    for summary in original_markets:
+        offer_accounting.update(summary["offer_accounting"])
+        reference_accounting.update(summary["reference_accounting"])
     return dict(
         population=dict(as_of=value["as_of"], observed_at=value.get("source_observed_at"),
                         revision=value.get("population_revision"), expected_games=expected,
@@ -366,14 +432,19 @@ def _coverage_summary(value, games, run, report):
                         source_returned_mens_games=counts.get("source_returned_mens_games"),
                         source_eligible_known_before_tminus10=sum(game.get("known_before_tminus10") is True
                                                                   for game in source_eligible) if value.get("population_revision") else None,
-                        matched_games=counts.get("provider_matches"),
+                        matched_games=sum("matched" in game["facets"] for game in current) if "occurrences" in value
+                            else counts.get("provider_matches"),
+                        raw_source_provider_matches=counts.get("provider_matches"),
+                        raw_source_unresolved_membership=counts.get("unresolved_membership"),
+                        reconciled_eligible_games=len(current) if "occurrences" in value else None,
                         provider_known_games=len(provider), occurrence_games=len(games),
                         source_only_games=sum(game.get("match_state") == "source_only" and game.get("scope_state") == "eligible"
                                               and game.get("day_applicability") != "other_date" for game in games),
                         provider_only_games=sum(game.get("match_state") == "provider_only" for game in current),
                         unresolved_membership_games=sum(game.get("scope_state") == "unresolved" for game in games),
-                        schedule_disputes=sum(game.get("match_state") in ("schedule_conflict", "site_conflict") for game in games),
-                        date_disputes=counts.get("source_official_eastern_date_conflicts"),
+                        schedule_disputes=sum(game.get("match_state") in ("schedule_conflict", "site_conflict") and
+                            game.get("day_applicability") != "other_date" for game in games),
+                        date_disputes=sum(game.get("day_applicability") == "disputed" for game in games),
                         unresolved_date_games=sum(game.get("day_applicability") == "disputed" for game in games),
                         source_match_states=matches),
         capture=dict(as_of=value["as_of"], current_denominator=len(current),
@@ -393,20 +464,30 @@ def _coverage_summary(value, games, run, report):
                      current_as_of=value["as_of"],
                      observed_offer_games=sum(n is not None for n in observed_counts),
                      observed_offers=sum(observed_counts) if captured and None not in observed_counts else None,
-                     cell_counts_games=sum(summary.get("returned_cells") is not None for summary in countable_markets),
-                     requested_cells=sum(summary["requested_cells"] for summary in countable_markets if summary.get("returned_cells") is not None),
-                     returned_cells=sum(summary["returned_cells"] for summary in countable_markets if summary.get("returned_cells") is not None),
+                     cell_counts_games=len(countable_markets), original_census_games=len(original_markets),
+                     requested_cells=sum(summary["requested_cells"] for summary in countable_markets) if countable_markets else None,
+                     returned_cells=sum(summary["returned_cells"] for summary in countable_markets) if countable_markets else None,
+                     unreturned_cells=sum(summary["unreturned_cells"] for summary in countable_markets
+                                          if summary.get("unreturned_cells") is not None) if countable_markets else None,
+                     no_provider_odds_cells=sum(summary["no_provider_odds_cells"] for summary in original_markets)
+                                            if original_markets else None,
+                     offer_accounting=dict(offer_accounting) if original_markets else None,
+                     offer_accounting_minimum_ev=market_census.BASELINE_MINIMUM if original_markets else None,
+                     request_states=dict(Counter(summary.get("request_state", "unknown_completeness")
+                                                 for summary in market_summaries)),
                      venue_inventory="unknown", traversal_states=dict(Counter(
-                         (summary or {}).get("traversal", "unknown") for summary in market_summaries))),
+                         summary.get("traversal", "unknown") for summary in market_summaries))),
         reference=dict(as_of=report.get("as_of"), observed_offers=sum(observed_counts) if captured and None not in observed_counts else None,
                        evaluated_offers=sum(evaluated_counts) if captured and None not in evaluated_counts else None,
                        reference_gaps=sum(reference.values()) if captured else None,
-                       exclusions=dict(exclusions), reference_exclusions=reference),
+                       exclusions=dict(exclusions), reference_exclusions=reference,
+                       verified_method_accounting=dict(reference_accounting) if original_markets else None),
         trade=dict(as_of=report.get("as_of"), variants={name: paper_evidence.clock_counts(portfolio["tickets"])
                    for name, portfolio in report.get("portfolios", {}).items()}, fees="unknown", size="unknown",
                    contract_identity="provider_market_keys_retained_venue_contract_may_be_unknown"),
         results=dict(as_of=value["as_of"], denominator=len(current),
                      states={state: result_states[state] for state in ("final", "pending", "disputed", "missing")}),
+        reconciliation=_reconciliation(value, games, run, issues),
     )
 
 
@@ -414,6 +495,7 @@ def coverage_view(db, day, run_id, selection):
     from app.storage.mens_d1_coverage import read_coverage
 
     value = read_coverage(db, day)
+    value.setdefault("date", day)
     runs, run, report = _saved(db, day, run_id)
     population = report.get("population") or {}
     retained_sources = {row["source_game_id"]:row for row in population.get("games", []) if row.get("source_game_id")}
@@ -436,6 +518,8 @@ def coverage_view(db, day, run_id, selection):
     source_ids = {row["source_game_id"] for row in games if row.get("source_game_id")}
     checkpoints = _checkpoint_rows(db, day, attached | set(retained_providers))
     stored = {row["source_event_id"]:row for row in checkpoints}
+    censuses = market_census.read_summaries(db, [*(row["late_id"] for row in checkpoints),
+        *(game.get("checkpoint_id") for game in saved_games.values())])
     named = attached | {identity for game in games for identity in game.get("provider_event_ids", [])}
     games.extend(_provider_row(row) for event_id,row in stored.items() if event_id not in named)
     retained_occurrences = {row["occurrence_id"]:row for row in population.get("games", []) if row.get("occurrence_id")}
@@ -453,19 +537,20 @@ def coverage_view(db, day, run_id, selection):
         selected = _matches_id(game, selection)
         row = stored.get(game.get("provider_event_id"))
         _provider_result_disposition(game, row, value["as_of"])
+        _operational_schedule(game)
         retained = retained_occurrences.get(game.get("occurrence_id")) or retained_sources.get(game.get("source_game_id"))
         provider_scope = retained_providers.get(game.get("provider_event_id"))
         if retained is None and provider_scope and provider_scope.get("source_game_id") not in source_ids:
             retained = provider_scope
         if retained:
             game["retained_scope"] = dict(state=retained["scope_state"], reason=retained["scope_reason"], teams=retained.get("teams"))
-        game["capture"] = _capture(row, value["as_of"])
+        game["capture"] = _capture(row, value["as_of"], censuses.get(row["late_id"]) if row else None)
         game["saved"] = None
         saved_game_id = retained.get("game_id") if retained else row["id"] if row and not population else None
         saved = saved_games.get(saved_game_id)
         if saved:
             matches = {name:items.get(saved_game_id, []) for name,items in tickets.items()}
-            game["saved"] = _saved_game(saved, run, matches)
+            game["saved"] = _saved_game(saved, run, matches, censuses.get(saved.get("checkpoint_id")))
             if selected:
                 game["ticket_clocks"] = {name:[{key:ticket.get(key) for key in ("id","label","venue","times")}
                     for ticket in items] for name,items in matches.items()}
@@ -480,6 +565,10 @@ def coverage_view(db, day, run_id, selection):
         in_scope = (_eligible_occurrence(game, day) if "occurrences" in value else (game.get("scope_state") == "eligible"
                     or (game.get("provider_membership") or {}).get("state") == "eligible"
                     or bool(retained and retained["scope_state"] == "eligible")))
+        game["research_scope"] = ("other_date" if game.get("day_applicability") == "other_date" else
+            "eligible" if in_scope else "unresolved" if game.get("day_applicability") == "disputed" else
+            game["scope_state"] if game.get("scope_state") in ("excluded", "unresolved") else "not_eligible")
+        game["paper_usability"] = _paper_usability(game, value["as_of"], report.get("as_of")) if in_scope or saved else None
         game["facets"] = _facets(game, in_scope)
     facets = Counter(facet for game in games for facet in game["facets"])
     evaluated = [game["saved"]["evaluated_offers"] for game in games if "evaluated" in game["facets"]]
@@ -488,12 +577,31 @@ def coverage_view(db, day, run_id, selection):
         facet = "qualifying_" + variant
         offers[facet] = sum(game["saved"]["qualifying"][variant] for game in games if facet in game["facets"])
     games.sort(key=lambda row:((row.get("schedule") or {}).get("starts_at") or row.get("starts_at") or "~", row["id"]))
+    issues, issue_counts = issue_dispositions.list_issues(db, value, games, run)
+    by_game = {}
+    for issue in issues:
+        by_game.setdefault(issue["game_id"], []).append(issue["id"])
+    for game in games:
+        game["issues"] = by_game.get(game["id"], [])
     return {**{key:val for key,val in value.items() if key not in ("games","provider_only","occurrences")},
         "games":games,"facets":dict(facets),"offer_counts":offers,
         "run":run if run_id else None,"runs":runs,"analysis_run":run,"run_population":report.get("population"),
         "missing_items":_coverage_gaps(value, games),
-        "coverage_summary":_coverage_summary(value, games, run, report),
+        "issues":issues,"issue_counts":issue_counts,
+        "coverage_summary":_coverage_summary(value, games, run, report, censuses, issues=issues),
         "provider_requests":0,"orders_submitted":0}
+
+
+def decide_issue(db, day, body):
+    issue_dispositions.lock(db, body["id"])
+    view = coverage_view(db, day, body.get("run"), None)
+    issue = next((item for item in view["issues"] if item["id"] == body["id"]), None)
+    if issue is None:
+        raise web.HTTPNotFound(reason="The selected issue is unavailable for this date.")
+    issue_dispositions.require_current(issue, body)
+    # The private app has one owner identity at the authenticated proxy.
+    return issue_dispositions.record(db, day, issue, body["status"], body["reason"], "owner",
+                                     evidence_url=body["evidence_url"])
 
 
 def _matches_id(row, identity):
@@ -512,14 +620,21 @@ def market_view(db, day, run_id, game_id, version, raw=False):
     if not checkpoint:
         raise web.HTTPNotFound(reason="There is no retained T−10 market evidence for this selection.")
     minimum = (value.get("run") or {}).get("minimum_ev") if version == "saved" else None
-    census = market_census.for_checkpoint(db, checkpoint, include_rows=not raw, minimum=minimum or "1/25")
+    derived = market_census.read_summaries(db, [checkpoint]).get(checkpoint)
+    census = (derived if raw and derived else
+              market_census.for_checkpoint(db, checkpoint, include_rows=not raw,
+                  minimum=minimum or market_census.BASELINE_MINIMUM))
     if raw:
         from app.collection.original_receipts import read
 
         original = census["original_response"]
         if original["state"] != "retained":
             raise web.HTTPNotFound(reason="The original odds response is unavailable for this capture.")
-        return read(original["id"])
+        try:
+            return read(original["id"])
+        except (KeyError, OSError, ValueError):
+            raise web.HTTPNotFound(reason="The original odds response is unavailable for this capture.") from None
+    census = market_census.apply_summary(census, derived)
     saved = game.get("saved") or {}
     return dict(census, date=day, game=game_id, title=game.get("title"), basis=version,
                 missing_items=_market_gaps(census, game),
@@ -554,10 +669,11 @@ def _provider_result_receipt(db, identity):
 def mount(app):
     gate = asyncio.Semaphore(2)
 
-    async def read(operation, *args):
+    async def work(operation, *args, read_only=True):
         def query():
             with connect() as db, db.transaction():
-                db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+                if read_only:
+                    db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
                 db.execute("SET LOCAL statement_timeout='10s'")
                 return operation(db, *args)
         try:
@@ -581,11 +697,23 @@ def mount(app):
             raise PublicRequestError("Select a saved run identity.")
         if game is not None and (len(game) > 512 or not game.startswith(("source:", "provider:"))):
             raise PublicRequestError("Select a coverage game identity.")
-        value = await read(coverage_view, day, run_id, game)
+        value = await work(coverage_view, day, run_id, game)
         if query.get("summary"):
-            fields = ("date", "as_of", "coverage_summary", "provider_requests", "orders_submitted", "run", "runs", "analysis_run")
+            fields = ("date", "as_of", "coverage_summary", "issue_counts", "provider_requests", "orders_submitted", "run", "runs", "analysis_run")
             value = {key: value[key] for key in fields if key in value}
         return _response(value, f"predict-mens-d1-{day}.json" if query.get("export") else None)
+
+    async def issue(request):
+        if request.query:
+            raise PublicRequestError("Issue decision options belong in the JSON body.")
+        try:
+            body = issue_dispositions.validate(await read_json(request))
+            day = workspace.game_day(body["date"])
+            return _response(await work(decide_issue, day, body, read_only=False))
+        except (workspace.SelectionError, issue_dispositions.InvalidDecision) as exc:
+            raise PublicRequestError(str(exc)) from None
+        except issue_dispositions.StaleDecision as exc:
+            raise web.HTTPConflict(reason=str(exc)) from None
 
     async def market(request):
         query = request.query
@@ -601,7 +729,7 @@ def mount(app):
             day = workspace.game_day(query.get("date"))
         except workspace.SelectionError as exc:
             raise PublicRequestError(str(exc)) from None
-        value = await read(market_view, day, run_id, game, version, raw is not None)
+        value = await work(market_view, day, run_id, game, version, raw is not None)
         if raw:
             metadata, body = value
             return web.Response(body=body, content_type="application/json", headers={**HEADERS,
@@ -614,7 +742,7 @@ def mount(app):
 
         if request.query:
             raise PublicRequestError("Daily collection status takes no filters.")
-        value = await read(read_status)
+        value = await work(read_status)
         return _response(dict(value, provider_requests=0, orders_submitted=0))
 
     async def receipt(request):
@@ -624,7 +752,7 @@ def mount(app):
         if request.query or not workspace.HASH.fullmatch(identity):
             raise PublicRequestError("Select an original source receipt.")
         try:
-            value = await read(read_receipt, identity)
+            value = await work(read_receipt, identity)
         except ValueError as exc:
             if str(exc) == "mens_d1_receipt_unknown":
                 raise web.HTTPNotFound(reason="Original source receipt was not retained.") from None
@@ -636,11 +764,12 @@ def mount(app):
         identity = request.match_info["result_id"]
         if request.query or not workspace.HASH.fullmatch(identity):
             raise PublicRequestError("Select a retained provider result.")
-        metadata, body = await read(_provider_result_receipt, identity)
+        metadata, body = await work(_provider_result_receipt, identity)
         return web.Response(body=body, content_type="application/json", headers={**HEADERS,
             "Content-Disposition":f'attachment; filename="predict-original-{metadata["receipt_sha256"]}.json"'})
 
     app.router.add_get(BASE, coverage)
+    app.router.add_post(BASE + "/issues", issue)
     app.router.add_get(BASE + "/market-census", market)
     app.router.add_get(BASE + "/status", status)
     app.router.add_get(BASE + "/receipts/{receipt_id}", receipt)

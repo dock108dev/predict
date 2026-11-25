@@ -2,7 +2,7 @@ import {byId, card, count, details, label, link, list, node, pairs, pct, readJSO
 import {renderRun, renderSavedEvidence} from './research-run.js';
 import {renderResults} from './research-results.js';
 import {campaignList,campaignForm,renderCampaign} from './research-campaigns.js';
-import {coverageContext, experimentCoverage, readDailyCoverage} from './mens-d1-coverage.js';
+import {coverageContext, coverageURL, experimentCoverage, readDailyCoverage, reconciliationSummary} from './mens-d1-coverage.js';
 import {renderWorkspaceNavigation} from './workspace-nav.js';
 
 const endpoint = '/api/research/workspace';
@@ -432,7 +432,9 @@ async function openResults(mount, selected, query, context, variant, requestVers
   const runs = definitionRuns(selected.definition);
   const navigation = {
     variant, href, go:overrides => navigate(href(overrides)), game:params.game, trade:params.trade, pinned:Boolean(params.result),
-    filter:['traded', 'zero', 'missing', 'unresolved'].includes(params.filter) ? params.filter : 'all',
+    coverageHref:context.scope ? game => coverageURL(new URLSearchParams({...context, run:id, variant}),
+      {coverage_game:game.occurrence_id || game.game_id}) + '#mens-d1-issues' : null,
+    filter:['traded', 'zero', 'missing', 'unresolved', 'frozen', 'reconstructed'].includes(params.filter) ? params.filter : 'all',
     tradeFilter:['win', 'loss', 'push', 'void', 'unresolved'].includes(params.trade_filter) ? params.trade_filter : 'all',
     dates:[...new Set([selected.run.date, ...runs.map(run => run.date)])].sort().reverse(),
     changeDate:day => {
@@ -480,11 +482,12 @@ async function openResults(mount, selected, query, context, variant, requestVers
 async function experiments(query, requestVersion) {
   if (!query.get('run') && query.get('campaign')) {
     root.replaceChildren(node('p','Reading daily and weekly results…'));
+    const edit = query.get('view') === 'revise';
     let timer, stopped=false;
     const refresh=async()=>{
       if(stopped||version!==requestVersion)return;
-      try { if(!root.querySelector('form')) await renderCampaign(root,query.get('campaign'),query.get('variant')==='all_venues'?'all_venues':'best_venue',()=>!stopped&&version===requestVersion); }
-      finally { if(!stopped&&version===requestVersion)timer=setTimeout(()=>refresh().catch(()=>{}),20000); }
+      try { if(!root.querySelector('form')) await renderCampaign(root,query.get('campaign'),query.get('variant')==='all_venues'?'all_venues':'best_venue',()=>!stopped&&version===requestVersion,{edit}); }
+      finally { if(!edit&&!stopped&&version===requestVersion)timer=setTimeout(()=>refresh().catch(()=>{}),20000); }
     };
     stopResultRefresh=()=>{stopped=true;clearTimeout(timer);};
     await refresh();
@@ -511,6 +514,10 @@ async function experiments(query, requestVersion) {
     const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
     const nav = node('div', undefined, 'workspace-links');
     if (selected.definition.campaign_id) nav.append(link('Back to daily & weekly results',url('experiments',{campaign:selected.definition.campaign_id,variant})));
+    if (Object.keys(context).length) {
+      const dataContext = new URLSearchParams({...context, run:id, variant});
+      nav.append(link('Daily coverage and issue decisions', coverageURL(dataContext) + '#mens-d1-issues'));
+    }
     nav.append(link(Object.keys(context).length ? 'Current evidence and saved runs' : 'Experiments and runs', url('experiments', dateContext)),
       link('Open research findings', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
     root.replaceChildren(nav);
@@ -522,9 +529,16 @@ async function experiments(query, requestVersion) {
     let audit = root;
     if (paper) {
       const mount = node('div');
+      const reconciliation = node('div');
       audit = node('details', undefined, 'workspace-panel result-audit');
       audit.append(node('summary', 'Original selection and coverage audit'));
-      root.append(mount, audit);
+      root.append(reconciliation, mount, audit);
+      if (Object.keys(context).length && !query.has('game')) {
+        const selectedContext = new URLSearchParams({...context, run:id, variant});
+        readDailyCoverage(selectedContext, {summary:true}).then(value => {
+          if (requestVersion === version) reconciliation.replaceChildren(...reconciliationSummary(value.coverage_summary?.reconciliation, selectedContext));
+        }).catch(() => { /* The coverage link above can be used independently. */ });
+      }
       openResults(mount, selected, query, context, variant, requestVersion);
     }
     const showAudit = () => {

@@ -18,6 +18,36 @@ from app.collection.sportsgameodds_worker import SportsGameOddsWorker
 from tests.sportsgameodds_fixtures import NOW, event
 
 
+@pytest.fixture(autouse=True)
+def acquisition_manifest(monkeypatch):
+    # These scenarios supply provider pages and isolate the cursor owner.
+    monkeypatch.setattr(SportsGameOddsWorker, '_begin_pull', lambda *args: 'discovery-pull')
+    monkeypatch.setattr(SportsGameOddsWorker, '_retain_pull', lambda *args: None)
+    monkeypatch.setattr(SportsGameOddsWorker, '_fail_pull', lambda *args: None)
+    monkeypatch.setattr(SportsGameOddsWorker, '_finish_discovery', lambda *args: None)
+
+
+def test_discovery_retains_unique_members_through_mixed_overlaps(monkeypatch):
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, now=lambda: NOW)
+        finished = []
+        closing = Page((event(4),), (), None, 'c' * 64)
+        worker._fetch = AsyncMock(side_effect=[Page((event(1), event(2)), (), 'next', 'a' * 64),
+            Page((event(2), event(3)), (), 'last', 'b' * 64), closing])
+        worker._finish_discovery = lambda page, traversal, reason: finished.append((page, traversal, reason))
+        monkeypatch.setattr('app.collection.sportsgameodds_worker.aggregate_scope', lambda _: ['NFL'])
+        await worker.cycle()
+        assert [entry.args[0].get('cursor') for entry in worker._fetch.await_args_list] == [None, 'next', 'last']
+        assert worker.metrics['discovery_complete'] == {'NFL': True}
+        [(page, traversal, reason)] = finished
+        assert page == closing and reason.startswith('discovery_cursor_closed')
+        assert traversal._seen_events == {'e1', 'e2', 'e3', 'e4'}
+        assert traversal.duplicate_events == 1
+        assert not traversal.authoritative_absence
+    asyncio.run(scenario())
+
+
 def test_discovery_continues_beyond_first_twenty_events_without_withdrawal():
     async def scenario():
         service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True, globally_stopped=False, paused_sources=set())
