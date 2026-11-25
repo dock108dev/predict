@@ -48,6 +48,41 @@ def test_expected_roi_is_stake_weighted_and_gap_uses_only_graded_trades():
     assert empty['expected_roi'] is None and empty['pnl_vs_expected_exact_usd'] is None
 
 
+def test_posted_odds_buckets_partition_exact_boundaries_and_unavailable_prices():
+    quotes = ('-101', '-100', '+100', '+100.01', '+199.999', '+200', '+300',
+              '+499.999', '+500', '+999.999', '+1000', None, '+99', 'bad')
+    rows = [dict(ticket(str(i), '.05'), posted_odds=quote) for i, quote in enumerate(quotes)]
+    buckets = campaigns.odds_buckets(rows)
+    assert [(b['id'], b['summary']['tickets']) for b in buckets] == [
+        ('favorites', 1), ('even_money', 2), ('plus_100_to_200', 2), ('plus_200_to_300', 1),
+        ('plus_300_to_500', 2), ('plus_500_to_1000', 2), ('plus_1000_and_up', 1), ('unavailable', 3),
+    ]
+    assert sum(F(b['stake_share']) for b in buckets) == 1
+    assert buckets[-1]['stake_share_percent'] == '21.43'
+    assert all(b['stake_share'] is None for b in campaigns.odds_buckets([]))
+
+
+def test_posted_odds_uses_selected_portfolio_and_keeps_unpublished_grades_pending():
+    rows = [dict(ticket('winner', '.06', bet='shared', state='win'), posted_odds='+500',
+                 stake_usd='10', return_exact_usd='20'),
+            dict(ticket('alternate', '.05', bet='shared', venue='novig'), posted_odds='+1000', stake_usd='10'),
+            dict(ticket('pending', '.20'), posted_odds='+550', stake_usd='30', expected_profit_exact_usd='6'),
+            dict(ticket('other_pending', '.10'), posted_odds='+1000', stake_usd='2', expected_profit_exact_usd='1/5')]
+    report = dict(portfolios=dict(best_venue=dict(tickets=[rows[0]])))
+    selected = campaigns.select(rows, F('.04'), 'best_venue')
+    buckets = {b['id']: b for b in campaigns.odds_buckets(campaigns._selection_rows(selected, report, 'best_venue'))}
+    group = buckets['plus_500_to_1000']
+    assert F(group['stake_share']) == F(20, 21)
+    assert group['summary']['tickets'] == 2 and group['summary']['resolved'] == 1
+    assert F(group['summary']['stake_exact_usd']) == 40
+    assert F(group['summary']['expected_roi']) == F(33, 200)
+    assert F(group['summary']['roi_stake_exact_usd']) == 10
+    assert F(group['summary']['roi']) == 1
+    unresolved = buckets['plus_1000_and_up']['summary']
+    assert unresolved['tickets'] == 1 and unresolved['resolved'] == 0
+    assert unresolved['pnl_exact_usd'] is None and unresolved['roi'] is None
+
+
 def test_higher_threshold_reselects_best_venue_from_qualifying_pool():
     rows=[ticket('a','.09',screen='.079',bet='same'),ticket('b','.085',screen='.10',bet='same',venue='novig')]
     assert campaigns.select(rows,F('.04'),'best_venue')[0]['id']=='a'

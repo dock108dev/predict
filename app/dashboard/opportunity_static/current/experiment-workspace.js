@@ -1,7 +1,7 @@
 import {byId,card,count,link,node,pairs,pct,readJSON,table,time,usd} from './workspace-ui.js';
 import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,ruleSummary,sizingTitle} from './research-campaigns.js';
 import {coverageURL,ledgerKeys} from './mens-d1-coverage.js';
-import {renderResults} from './research-results.js';
+import {oddsBreakdown,renderResults} from './research-results.js';
 import {qualityComparison} from './research-quality.js';
 import {renderRun,renderSavedEvidence} from './research-run.js';
 
@@ -181,6 +181,8 @@ function renderCampaignResults(body, reports, config, context) {
     panel.append(dates);
   }
   for (const report of reports) {
+    const odds=oddsBreakdown(report.selection?.odds_buckets,reports.length>1 ? sizingTitle(config,report.mode) : '');
+    if (odds) panel.append(odds);
     if (!report.weekly) continue;
     const analysis=node('details');
     const suffix=reports.length>1 ? ' · '+sizingTitle(config,report.mode) : '';
@@ -258,6 +260,10 @@ function paintDay(body,data,config,context) {
       `${count(pending)} ${pending===1 ? 'game awaiting its' : 'games awaiting their'} T−10 capture in the latest snapshot.`,
       'workspace-caption'));
     body.append(node('p',metricBasis,'workspace-caption'));
+    for (const mode of sizingModes) {
+      const odds=oddsBreakdown(data.modes[mode].selection?.odds_buckets,sizingModes.length>1 ? sizingTitle(config,mode) : '');
+      if (odds) body.append(odds);
+    }
     const history=node('details');
     history.append(node('summary','Saved snapshots'),node('p','Select a published snapshot to inspect its recorded selections and grade history.'));
     for (const mode of sizingModes) {
@@ -333,7 +339,8 @@ async function openDetail(mount,selected,query,context,version) {
   const heading=node('h2',sizingTitle(config,mode)+' · games and trades');
   heading.tabIndex=-1;
   mount.replaceChildren(heading, resultRoot);
-  if (query.get('snapshot')==='1' || (context.latestRun && context.latestRun!==id)) {
+  const savedSnapshot=query.get('snapshot')==='1' || (context.latestRun && context.latestRun!==id);
+  if (savedSnapshot) {
     mount.insertBefore(node('p','Saved snapshot · selections are frozen. The results above use the latest available snapshots.','workspace-notice'),resultRoot);
   }
   const href=overrides=>url({...initial,...overrides});
@@ -385,7 +392,8 @@ async function openDetail(mount,selected,query,context,version) {
           history.pushState(null,'',url(next));
           paint(next);
         },
-        pinned:Boolean(params.result),game:params.game,trade:params.trade,
+        pinned:Boolean(params.result),showSnapshotOdds:!campaign || savedSnapshot || Boolean(params.result),
+        game:params.game,trade:params.trade,
         filter:['traded','zero','missing','unresolved','frozen','reconstructed'].includes(params.filter) ? params.filter : 'all',
         tradeFilter:['win','loss','push','void','unresolved'].includes(params.trade_filter) ? params.trade_filter : 'all',
         modeHref:(target,trade)=>url({...base,mode:target,run:selected.sizing_runs?.[target],

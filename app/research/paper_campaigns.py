@@ -1,4 +1,5 @@
-"""UI-authored daily paper schedules and exact daily/weekly EV comparisons."""
+"""UI-authored daily paper schedules and exact daily/weekly comparisons."""
+from bisect import bisect_right
 from collections import Counter
 from copy import deepcopy
 from datetime import date, datetime, time, timedelta
@@ -20,6 +21,17 @@ EASTERN = ZoneInfo('America/New_York')
 VARIANTS = paper_results.VARIANTS
 MODES = ('fixed_profit', 'kelly')
 AGE_BUCKETS = ('up_to_60', 'over_60_to_300', 'over_300', 'unknown', 'future')
+ODDS_BOUNDARIES = (-100, 100, 200, 300, 500, 1000)
+ODDS_BUCKETS = (
+    ('favorites', 'Favorites (below −100)'),
+    ('even_money', 'Even money (±100)'),
+    ('plus_100_to_200', 'Over +100 to under +200'),
+    ('plus_200_to_300', '+200 to under +300'),
+    ('plus_300_to_500', '+300 to under +500'),
+    ('plus_500_to_1000', '+500 to under +1000'),
+    ('plus_1000_and_up', '+1000 or longer'),
+    ('unavailable', 'Unavailable odds'),
+)
 
 
 def configuration(body):
@@ -256,9 +268,24 @@ def _expected_roi(profit, stake):
                 expected_roi_percent=paper.money(roi * 100) if roi is not None else None)
 
 
-def _selection_summary(tickets, stake, profit):
-    return paper_results._money(dict(tickets=tickets, **_expected_roi(profit, stake)),
-                                stake=stake, expected_profit=profit)
+def _selection_rows(tickets, report, variant):
+    grades = {t['id']: t for t in report['portfolios'][variant]['tickets']} if report else {}
+    for ticket in tickets:
+        if ticket['id'] in grades:
+            yield grades[ticket['id']]
+            continue
+        committed = F(ticket.get('cash_commitment_usd', ticket['stake_usd']))
+        profit = ticket.get('expected_profit_exact_usd')
+        yield dict(game_id=ticket['game_id'], posted_odds=ticket.get('posted_odds'),
+                   grade=dict(state='pending'), stake_exact_usd=str(committed),
+                   expected_profit_exact_usd=str(F(profit) if profit is not None else committed * F(ticket['ev'])))
+
+
+def _selection_summary(tickets):
+    stake = sum((F(t['stake_exact_usd']) for t in tickets), F())
+    profit = sum((F(t['expected_profit_exact_usd']) for t in tickets), F())
+    return paper_results._money(dict(tickets=len(tickets), odds_buckets=odds_buckets(tickets),
+                                    **_expected_roi(profit, stake)), stake=stake, expected_profit=profit)
 
 
 def _analysis_summary(tickets):
@@ -267,6 +294,34 @@ def _analysis_summary(tickets):
     gap = (F(summary['pnl_exact_usd']) - F(summary['resolved_expected_profit_exact_usd'])
            if summary['resolved'] else None)
     return paper_results._money(summary, pnl_vs_expected=gap)
+
+
+def _odds_bucket(value):
+    try:
+        odds = F(str(value))
+    except (ValueError, ZeroDivisionError):
+        return 'unavailable'
+    if abs(odds) < 100:
+        return 'unavailable'
+    if abs(odds) == 100:
+        return 'even_money'
+    return ODDS_BUCKETS[bisect_right(ODDS_BOUNDARIES, odds)][0]
+
+
+def odds_buckets(tickets):
+    """Partition the selected portfolio by the saved target quote's American odds."""
+    groups = {key: [] for key, _ in ODDS_BUCKETS}
+    for ticket in tickets:
+        groups[_odds_bucket(ticket.get('posted_odds'))].append(ticket)
+    buckets = [dict(id=key, label=label, summary=_analysis_summary(groups[key]))
+               for key, label in ODDS_BUCKETS if key != 'unavailable' or groups[key]]
+    stakes = [F(bucket['summary']['stake_exact_usd']) for bucket in buckets]
+    total_stake = sum(stakes, F())
+    for bucket, stake in zip(buckets, stakes):
+        share = stake / total_stake if total_stake else None
+        bucket.update(stake_share=str(share) if share is not None else None,
+                      stake_share_percent=paper.money(share * 100) if share is not None else None)
+    return buckets
 
 
 def analysis(tickets, edges, variant):
@@ -452,8 +507,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
     latest_reports = _snapshot_reports(db, report_ids) if config['version'] == SIZING_VERSION else {}
     edges = config['bucket_edges']
     comparison = Counter()
-    selected_tickets, selected_days = 0, 0
-    selected_stake = selected_expected = F()
+    selected_tickets, selected_days = [], 0
     for day in day_rows:
         current_day = day['game_date']
         in_window = current_day <= today or game_date is not None
@@ -495,17 +549,10 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                     (game.get('coverage') or {}).get('incomplete') is False for game in source['games'])
                 entry['capture_state'] = 'retained' if complete else 'partial'
                 selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant)
-                stake = expected = F()
-                for ticket in selections:
-                    committed = F(ticket.get('cash_commitment_usd', ticket['stake_usd']))
-                    profit = ticket.get('expected_profit_exact_usd')
-                    stake += committed
-                    expected += F(profit) if profit is not None else committed * F(ticket['ev'])
-                entry['selection'] = _selection_summary(len(selections), stake, expected)
+                selected = list(_selection_rows(selections, report, variant))
+                entry['selection'] = _selection_summary(selected)
                 if in_window:
-                    selected_tickets += len(selections)
-                    selected_stake += stake
-                    selected_expected += expected
+                    selected_tickets.extend(selected)
                     selected_days += 1
             else:
                 entry['capture_state'] = 'pending' if pending else 'missing'
@@ -524,7 +571,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
         days.append(entry)
     return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
                 as_of=now.isoformat(),
-                selection=_selection_summary(selected_tickets, selected_stake, selected_expected) if selected_days else None,
+                selection=_selection_summary(selected_tickets) if selected_days else None,
                 weekly=_window_analysis(all_tickets, edges, variant, inputs=versions) if versions else None,
                 comparison=dict(comparison) if comparison else None,
                 reported_days=len(versions),provider_requests=0,orders_submitted=0)

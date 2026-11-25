@@ -35,6 +35,26 @@ const marketContext = ticket => [
     (ticket.period ? label(ticket.period) : 'Period not recorded'),
 ].join(' · ');
 const action = (title, href) => link(title, href, 'research-button');
+export function oddsBreakdown(buckets, sizing = '') {
+  if (!buckets?.length) return null;
+  const title = sizing ? `Posted odds buckets · ${sizing}` : 'Posted odds buckets';
+  const panel = node('details');
+  const headers = ['Posted American odds', 'Selected trades', 'Graded trades', 'Stake', 'Stake share',
+    'Expected paper profit', 'Expected ROI', 'Paper P/L', 'Realized ROI'];
+  const scroll = table(headers, buckets.map(({label, stake_share_percent:share, summary}) => [
+    label, count(summary.tickets), count(summary.resolved), money(summary.stake_usd),
+    share == null ? '—' : `${share}%`, money(summary.expected_profit_usd),
+    summary.expected_roi_percent == null ? '—' : `${summary.expected_roi_percent}%`,
+    money(summary.pnl_usd), summary.roi_percent == null ? '—'
+      : `${summary.roi_percent}% on ${money(summary.roi_stake_usd)} graded stake`,
+  ]));
+  scroll.firstElementChild.setAttribute('aria-label', title);
+  panel.append(node('summary', title), node('p',
+    'Grouped by each selected trade’s posted American odds. Expected ROI uses all selected stake. Realized ROI uses graded stake.',
+    'workspace-caption'), scroll);
+  return panel;
+}
+
 const focusKey = (element, key) => {
   element.dataset.workbenchFocus = key;
   return element;
@@ -619,6 +639,9 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
     if (exclusions) root.append(exclusions);
     return;
   }
+  const odds = usable && (!navigation.embedded || navigation.showSnapshotOdds) &&
+    oddsBreakdown(portfolio.odds_buckets, navigation.showSnapshotOdds && navigation.embedded ? 'Saved result' : '');
+  if (odds) root.append(odds);
   const game = report.games.find(row => row.game_id === navigation.game);
   const showGames = Boolean(navigation.game || navigation.params.ledger_view === 'games' || navigation.filter !== 'all');
   const views = node('nav', undefined, 'workspace-variant result-view-controls');

@@ -210,6 +210,19 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     assert run, db.execute(
                         "SELECT state,last_error FROM public.paper_campaign_day"
                     ).fetchall()
+                await page.reload(wait_until="domcontentloaded")
+                odds_title = "Posted odds buckets · Win $7.51"
+                await page.get_by_text(odds_title, exact=True).click()
+                odds_row = page.get_by_role("table", name=odds_title).get_by_role(
+                    "row", name=re.compile(r"\+300 to under \+500")
+                )
+                await expect(odds_row.locator('[data-label="Selected trades"]')).to_have_text("1")
+                await expect(odds_row.locator('[data-label="Graded trades"]')).to_have_text("0")
+                await expect(odds_row.locator('[data-label="Stake"]')).to_have_text("$2.50")
+                await expect(odds_row.locator('[data-label="Stake share"]')).to_have_text("100.00%")
+                await expect(odds_row.locator('[data-label="Expected ROI"]')).to_have_text("8.00%")
+                await expect(odds_row.locator('[data-label="Paper P/L"]')).to_have_text("—")
+                with connect_web() as db:
                     queue.process_one(db)
                     queue.process_one(db)
                     pending = queue.read(db, run)["version"]["id"]
@@ -263,7 +276,11 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await page.get_by_role("link", name="By day", exact=True).click()
                 await page.get_by_label("Game date (Eastern)").select_option(day)
                 await page.get_by_label("Portfolio", exact=True).select_option("all_venues")
-                comparison=page.locator(".experiment-comparison table")
+                await page.get_by_text(odds_title, exact=True).click()
+                await expect(odds_row.locator('[data-label="Graded trades"]')).to_have_text("1")
+                await expect(odds_row.locator('[data-label="Paper P/L"]')).to_have_text("$7.50")
+                await expect(odds_row.locator('[data-label="Realized ROI"]')).to_have_text("300.00% on $2.50 graded stake")
+                comparison=page.locator(".experiment-comparison table").first
                 await expect(comparison.get_by_role("columnheader", name="Win $7.51")).to_be_visible()
                 await expect(comparison.get_by_role("columnheader", name="Kelly")).to_be_visible()
                 await expect(comparison.get_by_role("row", name=re.compile("^ROI"))).to_contain_text("300.00% on $2.50 graded stake")
@@ -288,6 +305,11 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert F(ticket["return_exact_usd"]) == 10
                 assert F(ticket["pnl_exact_usd"]) == F("7.50")
                 assert data["summary"]["roi"] == "3"
+                exported = await (await page.request.get(api + f"&version={graded}&export=report")).json()
+                saved_odds = exported["report"]["portfolios"]["all_venues"]["odds_buckets"]
+                assert saved_odds == data["odds_buckets"]
+                assert [bucket["summary"]["roi"] for bucket in saved_odds
+                        if bucket["summary"]["tickets"]] == ["3"]
                 async with page.expect_download() as trade_file:
                     await page.get_by_role("link", name="Export trade rows").click()
                 trades = json.loads(

@@ -61,6 +61,9 @@ def read(db, run_id, *, variant, version_id, status_only):
             tickets = paper_campaigns.analysis_tickets(document, report)
             quality = paper_campaigns.quality(tickets, config["payload"]["bucket_edges"], variant,
                                               inputs=version["id"])
+            report = dict(report, portfolios={name: dict(portfolio,
+                odds_buckets=paper_campaigns.odds_buckets(portfolio["tickets"]))
+                for name, portfolio in report["portfolios"].items()})
     if report and versioned_sizing:
         portfolio_status = paper_results.portfolio_status(report, variant)
         if not state.get("error") and not state.get("pending"):

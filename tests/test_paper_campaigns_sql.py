@@ -191,6 +191,9 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 assert F(pending['selection']['expected_profit_exact_usd']) > 0
                 assert F(pending['selection']['expected_roi']) == (
                     F(pending['selection']['expected_profit_exact_usd']) / F(pending['selection']['stake_exact_usd']))
+                bucket = next(b for b in pending['selection']['odds_buckets'] if b['id'] == 'plus_300_to_500')
+                assert bucket['stake_share'] == '1' and bucket['summary']['tickets'] == 1
+                assert bucket['summary']['resolved'] == 0 and bucket['summary']['pnl_usd'] is None
                 assert pending['days'][0]['run_ids'] == {'fixed_profit': primary}
                 assert pending['comparison'] is None and 'comparison' not in pending['days'][0]
                 first = {mode: workspace.run_detail(db, run_id) for mode, run_id in pair.items()}
@@ -254,6 +257,11 @@ class CampaignSQL(ResearchWorkspaceFixture):
                     assert F(rollup['selection']['stake_exact_usd']) == F(trade['stake_exact_usd'])
                     assert F(rollup['selection']['expected_profit_exact_usd']) == F(trade['expected_profit_exact_usd'])
                     assert F(rollup['selection']['expected_roi']) == F(trade['ev'])
+                    odds_buckets = rollup['selection']['odds_buckets']
+                    assert odds_buckets == rollup['days'][0]['selection']['odds_buckets']
+                    assert odds_buckets == report['portfolios'][variant]['odds_buckets']
+                    assert odds_buckets == paper_results_view.export(view, 'report')['report']['portfolios'][variant]['odds_buckets']
+                    assert 'odds_buckets' not in queue.read(db, run_id)['report']['portfolios'][variant]
                     assert F(weekly['pnl_vs_expected_exact_usd']) == (
                         F(trade['pnl_exact_usd']) - F(trade['expected_profit_exact_usd']))
                 assert observed_trade['fixed_profit']['id'] != observed_trade['kelly']['id']
