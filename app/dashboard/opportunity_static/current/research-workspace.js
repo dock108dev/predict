@@ -508,11 +508,11 @@ async function experiments(query, requestVersion) {
       ? {...coverageContext(query, selected.run.date), date:selected.run.date} : {};
     const dateContext = {...context};
     delete dateContext.run;
+    const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
     const nav = node('div', undefined, 'workspace-links');
     if (selected.definition.campaign_id) nav.append(link('Back to daily & weekly results',url('experiments',{campaign:selected.definition.campaign_id,variant})));
     nav.append(link(Object.keys(context).length ? 'Current evidence and saved runs' : 'Experiments and runs', url('experiments', dateContext)),
       link('Open research findings', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
-    const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
     root.replaceChildren(nav);
     const hasPortfolios = selected.report?.portfolios?.best_venue && selected.report?.portfolios?.all_venues;
     const paper = hasPortfolios && String(selected.report.policy?.execution || '').startsWith('paper_only');

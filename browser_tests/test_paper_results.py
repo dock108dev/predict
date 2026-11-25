@@ -107,7 +107,7 @@ def report(revision):
 
 
 def test_paper_results_journey_refresh_and_exact_history():
-    definition = {"version": "fixture-definition", "title": "Paper experiment"}
+    definition = {"version": "fixture-definition", "title": "Paper experiment", "campaign_id": "d" * 64}
     run = {
         "id": RUN,
         "title": "Paper experiment",
@@ -215,6 +215,7 @@ def test_paper_results_journey_refresh_and_exact_history():
             f"{base}/research?section=experiments&definition={definition['version']}"
         )
         summary = page.locator(".paper-result-summary")
+        expect(page.get_by_role('link',name='Back to daily & weekly results')).to_have_attribute('href',__import__('re').compile('campaign='+'d'*64))
         expect(summary).to_contain_text("1 selected ticket graded")
         expect(summary).to_contain_text("1 game without retained T−10 evidence")
         expect(summary).to_contain_text("Complete slate unknown")
