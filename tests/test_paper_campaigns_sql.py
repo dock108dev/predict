@@ -1,5 +1,6 @@
 """Disposable scheduled run publication, immutable inputs and passive rollups."""
 from datetime import timedelta
+from fractions import Fraction as F
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -7,8 +8,8 @@ from app.research import paper, paper_campaigns as campaigns, workspace
 from app.storage import paper_result_queue as queue
 from app.storage.store import hashed, stamp
 from tests.latest_board_fixture import SOCKET
-from tests.test_paper_campaigns import config
-from tests.test_paper_experiments import linear
+from tests.test_paper_campaigns import config, fixed_config
+from tests.test_paper_experiments import frozen_priced, linear
 from tests.test_paper_experiments_sql import ResearchWorkspaceFixture
 
 
@@ -86,6 +87,116 @@ class CampaignSQL(ResearchWorkspaceFixture):
             assert revision['id'] != campaign['id'] and revision['supersedes'] == campaign['id']
             assert campaigns.create(db, revised_config) == revision
             assert campaigns.view(db, campaign['id'], 'best_venue')['days'][0]['run_id'] == replacement
+
+    async def test_paired_sizing_rolls_back_together_and_grades_both_arrival_orders(self):
+        from app.dashboard import paper_results_view
+        from app.research import experiment
+
+        await super().asyncSetUp()
+        with self.connect() as db:
+            event = self.game('paired', '2026-11-23T18:00:00Z')
+            experiment.discover(db, [event], at=self.at)
+            self.capture(db, 'early', event)
+            self.advance(db, stamp('2026-11-23T17:50:00Z'))
+            task = experiment.due(db, at=self.at)[0]
+            offer = frozen_priced('+300', venue='prophetx')
+            record = offer['record']
+            record['event'].update(scheduled_start=event['starts_at'], competition='NCAAB')
+            record['market_identity']['rules'] = 'sportsgameodds-unverified-1'
+            record['result_policy'] = 'sportsgameodds-unverified-1:spread'
+            record['quote']['source'].update(native_event_id='paired', native_outcome_id='points-home-game-sp-home',
+                                             native_line='-3')
+            snapshot = dict(event=dict(home='home', away='away', competition='NCAAB', scheduled_start=event['starts_at']),
+                            source_event=dict(event_id='paired'), offers=[offer], coverage=dict(incomplete=False))
+            assert experiment.capture(db, task['game_id'], 'late', snapshot, token=task['token'],
+                requested_at=self.at, received_at=self.at, known_at=self.at)['state'] == 'captured'
+            body = fixed_config(end_date='2026-11-24')
+            with patch.object(queue, 'utc', return_value=self.at):
+                campaign = campaigns.create(db, body)
+                assert campaigns.create(db, body) == campaign
+            population = dict(kind='reconciled_occurrences', source='fixture', membership_version='fixture',
+                revision='p'*64, observed_at=self.at.isoformat(), expected_games=None,
+                games=[dict(scope_state='eligible', paper_eligible=True, provider_event_id='paired',
+                            occurrence_id='paired', title='Away at paired', starts_at=event['starts_at'])])
+            real_publish = workspace._publish
+
+            def deny_second(db, day, parent, definition, report, *, details):
+                if definition['sizing_mode'] == 'kelly':
+                    raise RuntimeError('fixture failure during second mode publication')
+                return real_publish(db, day, parent, definition, report, details=details)
+
+            with (patch.object(queue, '_late_capture_due', return_value=False),
+                  patch.object(campaigns.mens_d1, 'daily_population', return_value=population),
+                  patch.object(campaigns.mens_d1, 'daily_recovery', return_value={})):
+                with patch.object(queue, 'utc', return_value=self.at), patch.object(workspace, '_publish', deny_second):
+                    assert campaigns.tick(db) is None
+                assert db.execute('SELECT count(*) n FROM public.research_workspace_run').fetchone()['n'] == 0
+                assert campaigns.view(db, campaign['id'])['days'][0]['state'] == 'failed'
+                self.advance(db, stamp('2026-11-23T18:10:00Z'))
+                with self.connect() as restarted, patch.object(queue, 'utc', return_value=self.at):
+                    primary = campaigns.tick(restarted)
+                assert primary, campaigns.view(db, campaign['id'])['days'][0]
+                first_day, future_day = campaigns.view(db, campaign['id'])['days']
+                pair = first_day['run_ids']
+                assert first_day['run_id'] == pair['fixed_profit'] == primary
+                assert future_day['state'] == 'scheduled' and not future_day['run_ids']
+                assert stamp(future_day['next_check_at']) == stamp('2026-11-24T00:00:00-05:00')
+                assert first_day['comparison']['jointly_qualifying_quotes'] == 1
+                first = {mode: workspace.run_detail(db, run_id) for mode, run_id in pair.items()}
+                assert all(run['sizing_runs'] == pair for run in first.values())
+                assert len({run['report']['as_of'] for run in first.values()}) == 1
+                assert len({run['report']['games'][0]['checkpoint_id'] for run in first.values()}) == 1
+                assert first['fixed_profit']['definition']['policy']['target_profit_usd'] == '10'
+                assert first['kelly']['definition']['policy']['kelly_multiplier'] == '1/40'
+                assert 'kelly_multiplier' not in first['fixed_profit']['definition']['policy']
+                assert queue.process_one(db) and queue.process_one(db)
+                assert all(queue.read(db, run_id)['report']['games'][0]['result']['state'] == 'pending'
+                           for run_id in pair.values())
+                self.advance(db, stamp('2026-11-23T20:00:00Z'))
+                observed = self.at.isoformat()
+                final = dict(event, source='sportsgameodds', final=True, result='completed', home_score=92,
+                             away_score=80, received_at=observed, knowledge_at=observed,
+                             receipt_sha256=hashed(['paired-result', 92]))
+                assert experiment.observe_outcomes(db, [final], at=self.at)['matched'] == 1
+                assert queue.dispatch(db) == 1
+                assert queue.process_one(db) and queue.process_one(db)
+                new_config = fixed_config(name='Different date range and target', end_date='2026-11-23',
+                                          target_profit_usd='13', portfolios=['all_venues'])
+                with patch.object(queue, 'utc', return_value=self.at):
+                    assert campaigns.tick(db) == primary
+                    second = campaigns.create(db, new_config)
+                    assert campaigns.tick(db)
+                assert queue.process_one(db) and queue.process_one(db)
+                assert queue.process_one(db) is None
+                second_day = campaigns.view(db, second['id'])['days'][0]
+                assert campaigns.view(db, second['id'])['variant'] == 'all_venues'
+                revised_config = dict(new_config, supersedes=second['id'], target_profit_usd='17')
+                revision = campaigns.create(db, revised_config)
+                assert (revision['supersedes'], revision['target_profit_usd']) == (second['id'], '17')
+                assert campaigns.create(db, revised_config) == revision
+
+            for identity, run_ids, variant in ((campaign['id'], pair, 'best_venue'),
+                                              (second['id'], second_day['run_ids'], 'all_venues')):
+                observed_trade = {}
+                for mode, run_id in run_ids.items():
+                    view = paper_results_view.read(db, run_id, variant=variant, version_id=None, status_only=False)
+                    report = view['report']
+                    assert report['status'] == 'graded', report['portfolios'][variant]['tickets']
+                    assert report['sizing_policy']['sizing_mode'] == mode
+                    trade = paper_results_view.export(view, 'trades')['rows'][0]
+                    observed_trade[mode] = trade
+                    rollup = campaigns.view(db, identity, variant, mode=mode)
+                    assert rollup['reported_days'] == 1
+                    daily = rollup['days'][0]['analysis']['summary']
+                    weekly = rollup['weekly']['summary']
+                    for field in ('stake_exact_usd', 'return_exact_usd', 'pnl_exact_usd'):
+                        assert trade[field] == daily[field] == weekly[field]
+                    assert F(weekly['roi']) == F(trade['pnl_exact_usd']) / F(trade['stake_exact_usd'])
+                assert observed_trade['fixed_profit']['id'] != observed_trade['kelly']['id']
+                assert observed_trade['fixed_profit']['frozen_quote_id'] == observed_trade['kelly']['frozen_quote_id']
+                fixed = observed_trade['fixed_profit']
+                assert F(fixed['pnl_exact_usd']) == F(fixed['sizing']['modeled_win_profit_usd'])
+                assert fixed['sizing']['target_profit_usd'] == ('10' if identity == campaign['id'] else '13')
 
     def test_last_game_date_has_next_day_finals_and_correction_jobs(self):
         from app.collection import mens_d1_jobs

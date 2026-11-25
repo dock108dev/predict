@@ -56,6 +56,13 @@ function subsetSummary(tickets) {
   };
 }
 
+export function requestedTrade(tickets, params) {
+  if (params.trade) return tickets.find(ticket => ticket.id === params.trade);
+  return (params.sizing_quote && tickets.find(ticket => ticket.frozen_quote_id === params.sizing_quote))
+    || (params.sizing_bet && tickets.find(ticket => ticket.equivalent_bet_id === params.sizing_bet))
+    || null;
+}
+
 export function ledgerViewModel(tickets, originals, buckets, params) {
   const sort = tradeSorts.some(([value]) => value === params.trade_sort) ? params.trade_sort : 'ev_desc';
   const grade = gradeFilters.some(([value]) => value === params.trade_filter) ? params.trade_filter : 'all';
@@ -74,7 +81,8 @@ export function ledgerViewModel(tickets, originals, buckets, params) {
   const ranked = filtered.map(ticket => ({ticket, amount:exact(ticket[sortField])})).sort((left, right) =>
     compareAmount(left.amount, right.amount, direction) ||
     (left.ticket.id < right.ticket.id ? -1 : left.ticket.id > right.ticket.id ? 1 : 0));
-  const selectedIndex = ranked.findIndex(({ticket}) => ticket.id === params.trade);
+  const requested = requestedTrade(filtered, params);
+  const selectedIndex = ranked.findIndex(({ticket}) => ticket.id === requested?.id);
   const selectionPage = selectedIndex < 0 ? null : Math.floor(selectedIndex / ledgerPageSize) + 1;
   const pageCount = Math.max(1, Math.ceil(ranked.length / ledgerPageSize));
   const requestedPage = /^[1-9]\d*$/.test(params.trade_page || '') ? Number(params.trade_page) : null;
@@ -85,7 +93,8 @@ export function ledgerViewModel(tickets, originals, buckets, params) {
     sort, grade, bucket, page, pageCount, offset, rows, selectionPage,
     total: ranked.length,
     selected: ranked[selectedIndex]?.ticket || rows[0] || null,
-    missingSelection: Boolean(params.trade && selectedIndex < 0),
+    missingSelection: Boolean((params.trade || params.sizing_quote || params.sizing_bet) && selectedIndex < 0),
+    changedVenue: Boolean(requested && !params.trade && params.sizing_quote && requested.frozen_quote_id !== params.sizing_quote),
     subset: grade !== 'all' || bucket ? subsetSummary(filtered) : null,
   };
 }

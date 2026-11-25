@@ -1,6 +1,7 @@
 """UI-authored daily paper schedules and exact daily/weekly EV comparisons."""
 from collections import Counter
-from datetime import date, timedelta
+from copy import deepcopy
+from datetime import date, datetime, time, timedelta
 from fractions import Fraction as F
 from zoneinfo import ZoneInfo
 
@@ -11,17 +12,49 @@ from app.storage.store import encoded, hashed
 from . import mens_d1, paper, paper_evidence, paper_results, records, workspace
 
 VERSION = 'ncaab-paper-campaign-1'
+SIZING_VERSION = 'ncaab-paper-campaign-2'
 QUALITY_VERSION = 'paper-quote-age-at-receipt-1'
 EASTERN = ZoneInfo('America/New_York')
 VARIANTS = paper_results.VARIANTS
+MODES = ('fixed_profit', 'kelly')
 AGE_BUCKETS = ('up_to_60', 'over_60_to_300', 'over_300', 'unknown', 'future')
 
 
 def configuration(body):
-    fields = {'name', 'start_date', 'end_date', 'minimum_ev', 'kelly_multiplier',
-              'reference_bankroll_usd', 'bucket_edges'}
-    if not isinstance(body, dict) or set(body) != fields:
-        raise workspace.SelectionError('Provide dates, name, EV minimum, bankroll, Kelly fraction and bucket boundaries.')
+    if not isinstance(body, dict):
+        raise workspace.SelectionError('Provide an experiment configuration.')
+    fields = {'name', 'start_date', 'end_date', 'minimum_ev', 'bucket_edges'}
+    kelly_fields = {'kelly_multiplier', 'reference_bankroll_usd'}
+    legacy = set(body) == fields | kelly_fields
+    sizing = {}
+    portfolios = list(VARIANTS)
+    if not legacy:
+        mode = body.get('sizing_mode')
+        if mode not in MODES or body.get('scope') != mens_d1.SCOPE:
+            raise workspace.SelectionError('Choose a supported experiment scope and sizing mode.')
+        fields |= {'sizing_mode', 'scope', 'portfolios'}
+        selected = body.get('portfolios')
+        if (not isinstance(selected, list) or not selected or any(v not in VARIANTS for v in selected)
+                or len(selected) != len(set(selected))):
+            raise workspace.SelectionError('Choose one or both supported venue portfolios.')
+        portfolios = [v for v in VARIANTS if v in selected]
+        sizing['sizing_mode'] = mode
+        if mode == 'fixed_profit':
+            fields |= {'target_profit_usd', 'kelly_comparison'}
+            comparison = body.get('kelly_comparison')
+            if not isinstance(comparison, bool):
+                raise workspace.SelectionError('Choose whether to include a Kelly comparison.')
+            try:
+                target = workspace.assumptions({'reference_bankroll_usd': body.get('target_profit_usd')})
+            except workspace.SelectionError:
+                raise workspace.SelectionError('Enter a positive fixed profit target in dollars.') from None
+            sizing.update(kelly_comparison=comparison, target_profit_usd=target['reference_bankroll_usd'],
+                          sizing_rule=paper.FIXED_PROFIT_RULE)
+        if mode == 'kelly' or sizing.get('kelly_comparison'):
+            fields |= kelly_fields
+            sizing['kelly_rule'] = paper.KELLY_RULE
+        if set(body) != fields:
+            raise workspace.SelectionError('Provide the dates, EV rules and inputs for the selected sizing modes.')
     start, end = map(date.fromisoformat, (workspace.game_day(body['start_date']), workspace.game_day(body['end_date'])))
     if end < start:
         raise workspace.SelectionError('End date must be on or after start date.')
@@ -29,7 +62,7 @@ def configuration(body):
         raise workspace.SelectionError('Choose an experiment period of up to one year.')
     if not isinstance(body['name'], str) or not 1 <= len(body['name'].strip()) <= 120:
         raise workspace.SelectionError('Use an experiment name of 1–120 characters.')
-    values = workspace.assumptions({k: body[k] for k in workspace.ASSUMPTIONS})
+    values = workspace.assumptions({k: body[k] for k in workspace.ASSUMPTIONS if k in body})
     edges = body['bucket_edges']
     if not isinstance(edges, list) or not edges or len(edges) > 12:
         raise workspace.SelectionError('Provide between one and twelve ascending EV boundaries.')
@@ -40,9 +73,19 @@ def configuration(body):
     if (len(boundaries) != len(edges) or boundaries != sorted(set(boundaries))
             or boundaries[0] != F(values['minimum_ev']) or boundaries[-1] > 100):
         raise workspace.SelectionError('EV boundaries must increase from the selected minimum, with no gaps.')
-    return dict(version=VERSION, name=body['name'].strip(), start_date=str(start), end_date=str(end),
-                **values, bucket_edges=[str(v) for v in boundaries], timezone='America/New_York',
-                scope=mens_d1.SCOPE, portfolios=list(VARIANTS), execution='paper_only')
+    return dict(version=VERSION if legacy else SIZING_VERSION, name=body['name'].strip(),
+                start_date=str(start), end_date=str(end), **values, **sizing,
+                bucket_edges=[str(v) for v in boundaries], timezone='America/New_York',
+                scope=mens_d1.SCOPE, portfolios=portfolios, execution='paper_only')
+
+
+def modes(config):
+    primary = config.get('sizing_mode', 'kelly')
+    return [primary, 'kelly'] if config.get('kelly_comparison') else [primary]
+
+
+def _initial_check(day, now):
+    return max(now, datetime.combine(day, time.min, EASTERN))
 
 
 def create(db, body):
@@ -59,7 +102,9 @@ def create(db, body):
             if previous is None:
                 raise workspace.UnknownSelection('Unknown experiment to revise.')
             prior_config = previous['payload']
-            if config == {k: v for k, v in prior_config.items() if k != 'supersedes'}:
+            prior = {k: v for k, v in prior_config.items() if k != 'supersedes'}
+            if (config == prior or prior['version'] == VERSION
+                    and config == dict(prior, version=SIZING_VERSION, sizing_mode='kelly', kelly_rule=paper.KELLY_RULE)):
                 return dict(id=ancestor, **prior_config)
             config['supersedes'] = ancestor
         identity = hashed(config)
@@ -69,11 +114,43 @@ def create(db, body):
         db.execute('INSERT INTO public.paper_campaign VALUES (%s,DEFAULT,%s,%s) ON CONFLICT DO NOTHING',
                    (identity, Jsonb(config), len(encoded(config))))
         day, end = date.fromisoformat(config['start_date']), date.fromisoformat(config['end_date'])
+        now = queue.utc()
         while day <= end:
-            db.execute('INSERT INTO public.paper_campaign_day(campaign_id,game_date) VALUES (%s,%s) ON CONFLICT DO NOTHING',
-                       (identity, day))
+            db.execute('''INSERT INTO public.paper_campaign_day(campaign_id,game_date,next_check_at)
+                VALUES (%s,%s,%s) ON CONFLICT DO NOTHING''', (identity, day, _initial_check(day, now)))
             day += timedelta(days=1)
     return dict(id=identity, **config)
+
+
+def _definition(parent, job, population, recovery, fingerprint, mode):
+    config = job['config']
+    values = {key: config[key] for key in workspace.ASSUMPTIONS if key in config}
+    proposed = workspace._changed_definition(parent, values)
+    definition = mens_d1.definition(proposed, population, 'scheduled_paper_campaign', recovery=recovery)
+    definition.update(id=job['campaign_id'], title=config['name'], campaign_id=job['campaign_id'],
+                      supersedes=parent['version'], template_version=parent['version'])
+    threshold = F(config['minimum_ev']) * 100
+    if mode == 'kelly':
+        sizing = f"using {F(config['kelly_multiplier'])*100}% of full Kelly"
+    else:
+        sizing = f"targeting {paper.money(F(config['target_profit_usd']))} USD net win profit"
+    definition['question'] = f'Which men’s D1 T−10 paper opportunities qualify at {threshold}% minimum EV {sizing}?'
+    if config['version'] == VERSION:
+        definition['version'] = hashed([definition['version'], job['campaign_id']])
+        return definition
+    policy = definition['policy']
+    policy.update(sizing_mode=mode, portfolios=config['portfolios'])
+    if mode == 'fixed_profit':
+        for key in ('reference_bankroll_usd', 'kelly_multiplier', 'sizing_scale_usd'):
+            policy.pop(key, None)
+        policy.update(target_profit_usd=config['target_profit_usd'], sizing_rule=config['sizing_rule'],
+                      baseline=None)
+    else:
+        policy['sizing_rule'] = config['kelly_rule']
+    definition.update(sizing_mode=mode, campaign_snapshot=fingerprint,
+                      kelly_comparison=config.get('kelly_comparison', False))
+    definition['version'] = hashed([definition['version'], job['campaign_id'], fingerprint, policy])
+    return definition
 
 
 def tick(db):
@@ -95,6 +172,7 @@ def tick(db):
         db.execute('UPDATE public.paper_campaign_day SET lease_until=%s WHERE campaign_id=%s AND game_date=%s',
                    (lease_until, *key))
     state, error, run_id, fingerprint = 'waiting_for_evidence', None, job['run_id'], job['fingerprint']
+    replays = []
     try:
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
@@ -112,30 +190,26 @@ def tick(db):
                     today > job['game_date']])
                 if fingerprint != job['fingerprint'] or not run_id:
                     parent = workspace._definition(db, workspace.PILOT_VERSION)
-                    proposed = workspace._changed_definition(parent, {k:job['config'][k] for k in workspace.ASSUMPTIONS})
-                    definition = mens_d1.definition(proposed, population, 'scheduled_paper_campaign', recovery=recovery)
-                    definition.update(id=job['campaign_id'], title=job['config']['name'], campaign_id=job['campaign_id'])
-                    definition.update(supersedes=parent['version'], template_version=parent['version'])
-                    definition['question'] = f"Which men’s D1 T−10 paper opportunities qualify at {F(job['config']['minimum_ev'])*100}% minimum EV using {F(job['config']['kelly_multiplier'])*100}% of full Kelly?"
-                    definition['version'] = hashed([definition['version'],job['campaign_id']])
-                    report = paper.report(db, day, evidence=True, policy=definition['policy'], population=population)
-                else:
-                    report = None
+                    for mode in modes(job['config']):
+                        definition = _definition(parent, job, population, recovery, fingerprint, mode)
+                        report = paper.report(db, day, evidence=True, policy=definition['policy'],
+                                              population=deepcopy(population), as_of=now.isoformat())
+                        replays.append((definition, report))
                 state = 'published'
-            else:
-                report = None
         with db.transaction():
-            if report is not None:
+            if replays:
                 records._writer_lock(db)
             owned = db.execute('''SELECT 1 FROM public.paper_campaign_day WHERE campaign_id=%s
                 AND game_date=%s AND lease_until=%s AND lease_until>%s FOR UPDATE''',
                 (*key, lease_until, queue.utc())).fetchone()
             if not owned:
                 return None
-            if report is not None and queue._late_capture_due(db, queue.utc()):
+            if replays and queue._late_capture_due(db, queue.utc()):
                 state, fingerprint = 'deferred_for_capture', job['fingerprint']
-            elif report is not None:
-                run_id = workspace._publish(db, day, parent, definition, report)['run']['id']
+            elif replays:
+                run_ids = [workspace._publish(db, day, parent, definition, report, details=False)
+                           for definition, report in replays]
+                run_id = run_ids[0]
             _finish(db, job, lease_until, state, run_id, fingerprint, error)
     except Exception as exc:
         from app.diagnostics import failure
@@ -164,7 +238,7 @@ def select(tickets, minimum, variant):
     best = {}
     for ticket in eligible:
         key = ticket['equivalent_bet_id']
-        if key not in best or (-F(ticket['ev']),ticket['venue'],ticket['id']) < (-F(best[key]['ev']),best[key]['venue'],best[key]['id']):
+        if key not in best or paper.best_order(ticket) < paper.best_order(best[key]):
             best[key] = ticket
     return list(best.values())
 
@@ -200,11 +274,14 @@ def analysis_tickets(document, report):
     tickets = []
     for ticket in report['portfolios']['all_venues']['tickets']:
         original = source[ticket['id']]
-        witness = witnesses.get(ticket['id'])
-        calculation = workspace._sized_calculation(witness) if witness else {}
+        reference_age_bucket = original.get('reference_age_bucket')
+        if reference_age_bucket is None:
+            witness = witnesses.get(ticket['id'])
+            calculation = workspace._sized_calculation(witness) if witness else {}
+            reference_age_bucket = _age_bucket(paper_evidence.reference_age(calculation))
         tickets.append(dict(ticket, screen_ev=original['screen_ev'],
             target_age_bucket=_age_bucket(paper_evidence.age_at_receipt(original.get('times') or {})),
-            reference_age_bucket=_age_bucket(paper_evidence.reference_age(calculation))))
+            reference_age_bucket=reference_age_bucket))
     return tickets
 
 
@@ -227,45 +304,170 @@ def _window_analysis(tickets, edges, variant, *, inputs):
     return dict(result, quality=quality(tickets, edges, variant, inputs=inputs))
 
 
-def view(db, identity, variant):
-    if variant not in VARIANTS:
+def _history(db, identity):
+    history = {}
+    for run in db.execute('''SELECT r.id,r.game_date,r.recorded_at,d.payload->>'campaign_snapshot' snapshot,
+        COALESCE(d.payload->>'sizing_mode','kelly') mode FROM public.research_workspace_run r
+        JOIN public.research_workspace_definition d ON r.definition_version=d.version
+        WHERE d.payload->>'campaign_id'=%s ORDER BY r.recorded_at DESC,r.id''', (identity,)):
+        history.setdefault(run['game_date'], []).append(run)
+    return history
+
+
+def _mode_runs(rows, primary_run, primary_mode):
+    if not primary_run:
+        return {}
+    primary = next((row for row in rows if row['id'] == primary_run), None)
+    if not primary or not primary['snapshot']:
+        return {primary_mode: primary_run}
+    return {row['mode']: row['id'] for row in rows if row['snapshot'] == primary['snapshot']}
+
+
+def _snapshot_reports(db, run_ids):
+    if not run_ids:
+        return {}
+    rows = db.execute('''SELECT r.id,r.payload#>'{report,portfolios,all_venues,tickets}' tickets,
+        (SELECT jsonb_agg(jsonb_build_object('status',game->'status',
+            'coverage',jsonb_build_object('incomplete',game#>'{coverage,incomplete}'),
+            'sizing_exclusions',game->'sizing_exclusions')) FROM
+            jsonb_array_elements(r.payload#>'{report,games}') game) games
+        FROM public.research_workspace_run r WHERE r.id=ANY(%s)''', (list(run_ids),))
+    return {row['id']: dict(games=row['games'] or [], portfolios=dict(all_venues=dict(tickets=row['tickets'])))
+            for row in rows}
+
+
+def snapshot_document(db, run_id):
+    return dict(report=_snapshot_reports(db, [run_id])[run_id])
+
+
+def sizing_comparison(reports, minimum, variant, *, details=False):
+    if not all(mode in reports and any(g['status'] in paper_results.CAPTURED for g in reports[mode]['games'])
+               for mode in MODES):
+        return None
+    pools = {mode: reports[mode]['portfolios']['all_venues']['tickets'] for mode in MODES}
+    qualified = {mode: {ticket['frozen_quote_id']: ticket for ticket in pools[mode]} for mode in MODES}
+    selected = {mode: {ticket['frozen_quote_id']: ticket for ticket in select(pools[mode], minimum, variant)}
+                for mode in MODES}
+    fixed, kelly = (qualified[mode].keys() for mode in MODES)
+    fixed_selected, kelly_selected = (selected[mode].keys() for mode in MODES)
+    by_bet = {mode: {ticket['equivalent_bet_id']: ticket['venue'] for ticket in selected[mode].values()}
+              for mode in MODES}
+    fixed_bets, kelly_bets = (by_bet[mode] for mode in MODES)
+    counts = dict(jointly_qualifying_quotes=len(fixed & kelly),
+        fixed_profit_only_qualifying_quotes=len(fixed - kelly), kelly_only_qualifying_quotes=len(kelly - fixed),
+        jointly_selected_quotes=len(fixed_selected & kelly_selected),
+        fixed_profit_only_selected_quotes=len(fixed_selected - kelly_selected),
+        kelly_only_selected_quotes=len(kelly_selected - fixed_selected),
+        venue_changes=sum(fixed_bets[bet] != kelly_bets[bet] for bet in fixed_bets.keys() & kelly_bets.keys())
+            if variant == 'best_venue' else 0)
+    if not details:
+        return counts
+    exclusions = {mode: {row['frozen_quote_id']: row for game in reports[mode]['games']
+                         for row in (game.get('sizing_exclusions') or [])} for mode in MODES}
+    changes = []
+    for quote in sorted(fixed | kelly):
+        across = {mode: qualified[mode].get(quote) for mode in MODES}
+        if (all(across.values()) and across['fixed_profit']['ev'] == across['kelly']['ev']
+                and (quote in fixed_selected) == (quote in kelly_selected)):
+            continue
+        original = across['fixed_profit'] or across['kelly']
+        row = {key: original[key] for key in ('frozen_quote_id', 'equivalent_bet_id', 'game_id',
+                                              'family', 'line', 'label', 'venue')}
+        for mode, ticket in across.items():
+            unavailable = exclusions[mode].get(quote, {})
+            row[mode] = (dict(qualifies=True, selected=quote in selected[mode], ev=ticket['ev'],
+                              venue=ticket['venue'], ticket_id=ticket['id']) if ticket
+                         else dict(qualifies=False, selected=False, venue=original['venue'],
+                                   ev=unavailable.get('sized_ev'),
+                                   reason=unavailable.get('reason', 'not_in_qualifying_pool')))
+        changes.append(row)
+    return dict(counts=counts, changes=changes)
+
+
+def sizing_run_detail(db, run, definition, report):
+    if not definition['kelly_comparison']:
+        return dict(sizing_runs={definition['sizing_mode']: run['id']})
+    related = {row['mode']: row['id'] for row in db.execute('''SELECT r.id,d.payload->>'sizing_mode' mode
+        FROM public.research_workspace_run r JOIN public.research_workspace_definition d
+          ON r.definition_version=d.version
+        WHERE r.game_date=%s AND d.payload->>'campaign_id'=%s
+          AND d.payload->>'campaign_snapshot'=%s''',
+        (run['game_date'], definition['campaign_id'], definition['campaign_snapshot']))}
+    other_reports = _snapshot_reports(db, [identity for identity in related.values() if identity != run['id']])
+    reports = {mode: report if identity == run['id'] else other_reports[identity]
+               for mode, identity in related.items()}
+    minimum = F(report['policy']['minimum_ev'])
+    return dict(sizing_runs=related, sizing_comparison={v: sizing_comparison(reports, minimum, v, details=True)
+                                                     for v in report['policy']['portfolios']})
+
+
+def view(db, identity, variant=None, mode=None):
+    if variant is not None and variant not in VARIANTS:
         raise workspace.SelectionError('Select Best venue or All qualifying venues.')
+    if mode is not None and mode not in MODES:
+        raise workspace.SelectionError('Select fixed profit or Kelly sizing.')
     row = db.execute('SELECT * FROM public.paper_campaign WHERE id=%s',(identity,)).fetchone()
     if not row:
         raise workspace.UnknownSelection('Unknown scheduled experiment.')
     config, days, all_tickets, versions = row['payload'], [], [], []
-    history = {}
-    for run in db.execute('''SELECT r.id,r.game_date,r.recorded_at FROM public.research_workspace_run r
-        JOIN public.research_workspace_definition d ON r.definition_version=d.version
-        WHERE d.payload->>'campaign_id'=%s ORDER BY r.recorded_at DESC,r.id''', (identity,)):
-        history.setdefault(run['game_date'], []).append(dict(id=run['id'], recorded_at=run['recorded_at'].isoformat()))
+    available_modes = modes(config)
+    mode = mode if mode in available_modes else available_modes[0]
+    variant = variant if variant in config['portfolios'] else config['portfolios'][0]
+    history = _history(db, identity)
+    day_rows = list(db.execute('SELECT * FROM public.paper_campaign_day WHERE campaign_id=%s ORDER BY game_date', (identity,)))
+    run_ids = {day['game_date']: _mode_runs(history.get(day['game_date'], []), day['run_id'], available_modes[0])
+               for day in day_rows}
+    latest_reports = (_snapshot_reports(db, {run_id for runs in run_ids.values() for run_id in runs.values()})
+                      if config['version'] == SIZING_VERSION else {})
     edges = config['bucket_edges']
-    for day in db.execute('SELECT * FROM public.paper_campaign_day WHERE campaign_id=%s ORDER BY game_date',(identity,)):
-        entry = dict(date=str(day['game_date']),run_id=day['run_id'],state=day['state'],error=day['last_error'],
-                     next_check_at=day['next_check_at'].isoformat(), checked_at=day['updated_at'].isoformat(),
-                     snapshots=history.get(day['game_date'], []),
-                     retrospective=day['game_date'] <= row['created_at'].astimezone(EASTERN).date())
-        if day['run_id']:
-            state = queue.read(db,day['run_id'])
+    comparison = Counter()
+    for day in day_rows:
+        game_date = day['game_date']
+        runs = run_ids[game_date]
+        run_id = runs.get(mode)
+        snapshots = [dict(id=r['id'], recorded_at=r['recorded_at'].isoformat())
+                     for r in history.get(game_date, []) if r['mode'] == mode]
+        entry = dict(date=str(game_date), run_id=run_id, run_ids=runs, state=day['state'], error=day['last_error'],
+                     next_check_at=max(day['next_check_at'], datetime.combine(game_date, time.min, EASTERN)).isoformat(),
+                     checked_at=day['updated_at'].isoformat(), snapshots=snapshots,
+                     retrospective=game_date <= row['created_at'].astimezone(EASTERN).date(),
+                     capture_state='scheduled' if day['state'] == 'scheduled' else 'awaiting_evidence')
+        if config.get('kelly_comparison'):
+            entry['comparison'] = sizing_comparison({m: latest_reports[r] for m, r in runs.items()},
+                                                    F(edges[0]), variant)
+            if entry['comparison'] is not None:
+                comparison.update(entry['comparison'])
+        if run_id:
+            state = queue.read(db, run_id, include_history=False)
             report = (state or {}).get('report')
             entry.update(result_state=(state or {}).get('state','collecting'), result_pending=(state or {}).get('pending',True))
-            document = workspace._run(db,day['run_id'])['payload']
+            document = (dict(report=latest_reports[run_id]) if run_id in latest_reports else
+                        workspace._run(db,run_id)['payload'])
             source = document['report']
             entry['captures'] = dict(Counter(g['status'] for g in source['games']))
+            usable = sum(entry['captures'].get(s, 0) for s in paper_results.CAPTURED)
+            pending = sum(entry['captures'].get(s, 0) for s in ('pending', 'claimed'))
+            if usable:
+                complete = usable == len(source['games']) and all(
+                    (game.get('coverage') or {}).get('incomplete') is False for game in source['games'])
+                entry['capture_state'] = 'retained' if complete else 'partial'
+            else:
+                entry['capture_state'] = 'pending' if pending else 'missing'
+            if not usable and not pending:
+                entry['result_state'] = 'no_usable_capture'
             if report:
                 entry['result_id'] = state['version']['id']
-                usable = any(entry['captures'].get(s) for s in paper_results.CAPTURED)
-                if usable and (report['status'] not in ('collecting', 'awaiting_results')
-                               or report['portfolios']['all_venues']['tickets']):
+                if usable and (not pending or report['portfolios']['all_venues']['tickets']):
                     tickets = analysis_tickets(document, report)
                     all_tickets.extend(tickets)
                     versions.append(entry['result_id'])
                     entry['analysis'] = _window_analysis(tickets, edges, variant, inputs=entry['result_id'])
-                elif not usable and report['status'] == 'no_selected_tickets':
-                    entry['result_state'] = 'no_usable_capture'
+                    if config['version'] == SIZING_VERSION and not state['pending'] and not state['error']:
+                        entry['result_state'] = paper_results.portfolio_status(report, variant)
         days.append(entry)
-    return dict(id=identity,config=config,variant=variant,days=days,
+    return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
                 weekly=_window_analysis(all_tickets, edges, variant, inputs=versions) if versions else None,
+                comparison=dict(comparison) if comparison else None,
                 reported_days=sum('analysis' in d for d in days),provider_requests=0,orders_submitted=0)
 
 

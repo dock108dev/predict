@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.research import paper, paper_campaigns as campaigns, paper_evidence, workspace
+from app.research import paper, paper_campaigns as campaigns, paper_evidence, paper_results, workspace
 from tests.test_paper_experiments import AT, linear, priced
 from tests.test_ev_movement import checkpoint
 
@@ -13,6 +13,11 @@ def config():
     return dict(name='NCAAB week',start_date='2026-11-23',end_date='2026-11-29',
                 minimum_ev='.04',kelly_multiplier='.025',reference_bankroll_usd='10000',
                 bucket_edges=['.04','.08','.15','.25'])
+
+
+def fixed_config(**overrides):
+    return dict(dict(config(), scope='mens-d1', portfolios=['best_venue', 'all_venues'],
+                     sizing_mode='fixed_profit', target_profit_usd='10', kelly_comparison=True), **overrides)
 
 
 def ticket(identity,ev,*,screen=None,bet=None,venue='kalshi',state='loss'):
@@ -77,3 +82,65 @@ def test_schedule_configuration_is_versioned_and_rejects_missing_boundaries():
     for edges in (['.05','.08'],['.04','.04'],['.08','.04'],[]):
         with pytest.raises(workspace.SelectionError):
             campaigns.configuration(dict(config(),bucket_edges=edges))
+
+
+def test_other_targets_kelly_only_and_portfolios_normalize_saved_configuration():
+    value = campaigns.configuration(fixed_config(target_profit_usd='12.50', portfolios=['all_venues']))
+    assert value['target_profit_usd'] == '25/2'
+    assert campaigns.modes(value) == ['fixed_profit', 'kelly']
+    assert value['portfolios'] == ['all_venues']
+    assert F(value['kelly_multiplier']) == F(1, 40)
+    assert value['sizing_rule'] == paper.FIXED_PROFIT_RULE
+    fixed_only = {key: val for key, val in fixed_config(kelly_comparison=False).items()
+                  if key not in ('kelly_multiplier', 'reference_bankroll_usd')}
+    assert campaigns.modes(campaigns.configuration(fixed_only)) == ['fixed_profit']
+    kelly_only = dict(config(), sizing_mode='kelly', scope='mens-d1', portfolios=['best_venue'])
+    assert campaigns.modes(campaigns.configuration(kelly_only)) == ['kelly']
+    for invalid in (fixed_config(target_profit_usd='0'), fixed_config(kelly_comparison='true'),
+                    fixed_config(scope='unsupported'), fixed_config(portfolios=[]), fixed_config(portfolios=[{}]),
+                    fixed_config(kelly_comparison=False), dict(kelly_only, target_profit_usd='10')):
+        with pytest.raises(workspace.SelectionError):
+            campaigns.configuration(invalid)
+
+
+def test_comparison_uses_frozen_quote_and_reselects_best_from_full_pool():
+    def row(identity, quote, ev, *, bet='same', venue='kalshi'):
+        return dict(ticket(identity, ev, bet=bet, venue=venue), frozen_quote_id=quote,
+                    label='Home -3', family='spread', line='-3')
+
+    def report(rows, exclusions=()):
+        return dict(games=[dict(status='captured', sizing_exclusions=exclusions)],
+                    portfolios=dict(all_venues=dict(tickets=rows)))
+
+    kalshi, novig = row('k1', 'a', '.1'), row('k2', 'b', '.05', venue='novig')
+    fixed_other = row('f2', 'b', '.05', venue='novig')
+    fixed_extra = row('f3', 'c', '.06', bet='another')
+    paired = dict(fixed_profit=report([fixed_other, fixed_extra],
+                                    [dict(frozen_quote_id='a', reason='sized_ev_below_4pct')]),
+                  kelly=report([kalshi, novig]))
+    best = campaigns.sizing_comparison(paired, F('.04'), 'best_venue', details=True)
+    assert best['counts'] == dict(jointly_qualifying_quotes=1, fixed_profit_only_qualifying_quotes=1,
+        kelly_only_qualifying_quotes=1, jointly_selected_quotes=0, fixed_profit_only_selected_quotes=2,
+        kelly_only_selected_quotes=1, venue_changes=1)
+    assert best['changes'][0]['fixed_profit']['reason'] == 'sized_ev_below_4pct'
+    assert best['changes'][1]['fixed_profit']['ticket_id'] == 'f2'
+    assert best['changes'][1]['kelly']['qualifies'] and not best['changes'][1]['kelly']['selected']
+    all_venues = campaigns.sizing_comparison(paired, F('.04'), 'all_venues', details=True)
+    assert all_venues['counts']['jointly_selected_quotes'] == 1
+    assert all_venues['counts']['venue_changes'] == 0
+
+
+def test_portfolio_status_explains_independent_grading_and_zero_trade_evidence():
+    graded = ticket('settled', '.04')
+    pending = dict(ticket('pending', '.04', state='pending'), return_exact_usd=None)
+    report = dict(games=[dict(capture_status='captured')], portfolios={
+        'best_venue': dict(summary=paper_results._summary([graded])),
+        'all_venues': dict(summary=paper_results._summary([graded, pending]))})
+    assert paper_results.portfolio_status(report, 'best_venue') == 'graded'
+    assert paper_results.portfolio_status(report, 'all_venues') == 'partially_graded'
+    report['portfolios']['best_venue']['summary'] = paper_results._summary([])
+    assert paper_results.portfolio_status(report, 'best_venue') == 'no_selected_tickets'
+    report['games'].append(dict(capture_status='claimed'))
+    assert paper_results.portfolio_status(report, 'best_venue') == 'collecting'
+    report['games'] = [dict(capture_status='missed')]
+    assert paper_results.portfolio_status(report, 'best_venue') == 'no_usable_capture'

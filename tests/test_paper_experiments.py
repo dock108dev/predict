@@ -10,9 +10,11 @@ import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
+from app.comparison import fee_mode, fixed_profit
 from app.dashboard.paper_api import mount
 from app.dashboard.request_guard import dashboard_guard
 from app.research import paper, paper_evidence
+from app.storage.store import stamp
 from tests.test_ev_movement import offer, checkpoint
 
 AT = "2026-11-23T17:50:00Z"
@@ -39,6 +41,123 @@ def linear(record, reference, fee, *, at, game_key, amount):
 def entries(*rows):
     with patch.object(paper.math,"calculate",side_effect=linear):
         return paper.candidates(checkpoint(*rows), game_id="g",checkpoint_id="late-frozen",at=AT)
+
+
+def frozen_priced(odds, *, venue="prophetx", ev=".08", rule=None, fee=None, grid=None):
+    row = priced(odds, ev=ev, venue=venue)
+    record = row["record"]
+    quote = record["quote"]
+    quote["source"].update(native_market_id="market", native_outcome_id="home", native_side="bookmaker_outcome")
+    if grid:
+        quote["source"].update(provider=venue, native_side="Long")
+        quote["original"].update(units="usd_per_contract", value="0.2")
+        record["comparison_source_metadata"]["public_retail_observation"] = dict(
+            market_id="market", instrument_id="home", material_sha256="x" * 64,
+            values=dict(minimumTradeQty=grid[0], orderPriceMinTickSize=grid[1]))
+    ref = row["calculation_payload"]["reference"]
+    ref.update(fair_decimal_odds=str(1/F(ref["probability"])), fair_odds="fair")
+    if fee is None:
+        fee = dict(available=True, classification="fixture", evidence=dict(database_fee_rule=rule)) if rule else (
+            fee_mode.zero_fee(record, fee_mode.state(False)))
+    row.update(fee_input=fee, calculation_payload=paper.math.calculate(
+        record, ref, fee, at=stamp(AT), game_key="g"))
+    return row
+
+
+def fixed_policy(target="10"):
+    return dict(paper.POLICY, sizing_mode="fixed_profit", target_profit_usd=target,
+                sizing_rule=paper.FIXED_PROFIT_RULE)
+
+
+@pytest.mark.parametrize("odds,target,ideal,stake,won", [
+    ("-110", "10", "11", "11", "10"), ("+500", "10", "2", "2", "10"),
+    ("+300", "10", "10/3", "3.33", "9.99"), ("+200", ".03", ".015", ".01", ".02"),
+    ("+200", ".01", ".005", ".01", ".02"),
+])
+def test_fixed_profit_at_saved_stake_grid(odds, target, ideal, stake, won):
+    tickets, gaps = paper.candidates(checkpoint(frozen_priced(odds)), game_id="g", checkpoint_id="frozen",
+                                      at=AT, policy=fixed_policy(target))
+    ticket, = tickets
+    assert not gaps
+    assert ticket["sizing"]["rule"] == paper.FIXED_PROFIT_RULE
+    assert F(ticket["sizing"]["ideal_purchase_usd"]) == F(ideal)
+    assert F(ticket["cash_commitment_usd"]) == F(stake)
+    assert F(ticket["sizing"]["modeled_win_profit_usd"]) == F(won)
+    assert F(ticket["sizing"]["profit_difference_usd"]) == F(won) - F(target)
+    assert ticket["kelly_budget_usd"] is None
+    fee = ticket["witness"]["sized_calculation"]["fee"]
+    assert F(fee["cashflows"]["win"]["net_receipt_usd"]) == F(stake) + F(won)
+    assert F(fee["cashflows"]["loss"]["net_profit_usd"]) == -F(stake)
+
+
+def test_fixed_profit_uses_captured_native_price_and_quantity_grid():
+    row = frozen_priced("+400", venue="polymarket_us", grid=("0.25", "0.01"))
+    model = fixed_profit.calculate(row, at=stamp(AT), game_key="g", target=F("1.1"))
+    assert F(model["sizing"]["quantity_increment"]) == F("0.25")
+    assert F(model["sizing"]["price_increment"]) == F("0.01")
+    assert F(model["sizing"]["modeled_win_profit_usd"]) == F(1)
+    assert F(model["fee"]["quantity"]) == F("1.25")
+    row["record"]["comparison_source_metadata"]["public_retail_observation"]["values"]["orderPriceMinTickSize"] = "0.03"
+    with pytest.raises(ValueError, match="price_or_quantity_grid_conflict"):
+        fixed_profit.calculate(row, at=stamp(AT), game_key="g", target=F("1.1"))
+
+
+def test_fixed_profit_reprices_frozen_fees_and_handles_nonmonotone_win_grid():
+    rule = dict(formula="polymarket_taker", rate="0.09", quantity_step="0.01")
+    row = frozen_priced("+100", venue="polymarket_us", rule=rule)
+    model = fixed_profit.calculate(row, at=stamp(AT), game_key="g", target=F("0.11"))
+    fee = model["fee"]
+    # 22 ticks gross $0.11 with no fee. Tick 23 adds $0.005 gross and
+    # moves the fee from zero to one cent. Tick 24 also nets $0.11.
+    assert F(fee["quantity"]) == F("0.22")
+    assert F(fee["entry_usd"]) == 0
+    assert F(row["calculation_payload"]["fee"]["entry_usd"]) > 0
+    assert F(fee["cashflows"]["win"]["net_profit_usd"]) == F("0.11")
+
+
+def test_fixed_profit_can_cross_large_quantity_intervals_at_the_same_rounded_fee():
+    rule = dict(formula="polymarket_taker", rate="0.09", quantity_step="0.000000001")
+    row = frozen_priced("+100", venue="polymarket_us", rule=rule)
+    model = fixed_profit.calculate(row, at=stamp(AT), game_key="g", target=F("0.125"))
+    assert F(model["fee"]["quantity"]) == F("0.27")
+    assert F(model["fee"]["entry_usd"]) == F("0.01")
+    assert F(model["sizing"]["modeled_win_profit_usd"]) == F("0.125")
+
+
+def test_fixed_profit_reprices_winning_commission_on_the_actual_stake():
+    rule = dict(formula="prophetx_commission", rate="0.025", quantity_step="1")
+    row = frozen_priced("+300", rule=rule)
+    model = fixed_profit.calculate(row, at=stamp(AT), game_key="g", target=F(10))
+    fee, sizing = model["fee"], model["sizing"]
+    # At $3.42, $10.26 gross profit incurs $0.26 rounded winning commission.
+    assert F(fee["committed_usd"]) == F("3.42")
+    assert F(fee["cashflows"]["win"]["settlement_fee_usd"]) == F("0.26")
+    assert F(fee["cashflows"]["win"]["net_receipt_usd"]) == F("13.42")
+    assert F(fee["cashflows"]["loss"]["net_receipt_usd"]) == 0
+    assert F(sizing["modeled_win_profit_usd"]) == 10
+
+
+def test_post_size_ev_and_venue_selection_use_entire_frozen_candidate_pool():
+    rule = dict(formula="polymarket_taker", rate="0.09", quantity_step="0.01")
+    a = frozen_priced("+100", venue="polymarket_us", ev=".088", rule=rule)
+    b = frozen_priced("+100", venue="prophetx", ev=".041")
+    snapshot = checkpoint(a, b)
+    kelly_policy = dict(paper.POLICY, sizing_mode="kelly", sizing_scale_usd="250")
+    kelly, _ = paper.candidates(snapshot, game_id="g", checkpoint_id="frozen", at=AT, policy=kelly_policy)
+    counts = {"evaluated_offers": 0}
+    fixed, gaps = paper.candidates(snapshot, game_id="g", checkpoint_id="frozen", at=AT,
+                                    policy=fixed_policy(".12"), counts=counts)
+    assert paper.portfolios(kelly, as_of=AT)["best_venue"]["tickets"][0]["venue"] == "polymarket_us"
+    assert paper.portfolios(fixed, as_of=AT)["best_venue"]["tickets"][0]["venue"] == "prophetx"
+    assert gaps == {"sized_ev_below_4pct": 1}
+    match = {ticket["venue"]: ticket for ticket in kelly}
+    assert fixed[0]["frozen_quote_id"] == match["prophetx"]["frozen_quote_id"]
+    assert fixed[0]["id"] != match["prophetx"]["id"]
+    assert counts["sizing_exclusions"][0]["frozen_quote_id"] == match["polymarket_us"]["frozen_quote_id"]
+    del b["calculation_payload"]["fee"]["quantity_increment"]
+    rejected, gaps = paper.candidates(snapshot, game_id="g", checkpoint_id="frozen", at=AT,
+                                       policy=fixed_policy(".12"))
+    assert not rejected and gaps["fixed_profit_quantity_increment_unavailable"] == 1
 
 
 @pytest.mark.parametrize("odds,expected", [("-110","110"),("+300","33.33"),("+3000","3.33")])

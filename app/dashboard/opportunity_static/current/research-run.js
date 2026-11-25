@@ -1,5 +1,6 @@
 import {card, count, details, label, link, list, node, pairs, pct, stack, table, text, time, usd} from './workspace-ui.js';
 import {number, selection, venue} from './workspace-format.js';
+import {exactMoney, fixedProfitFields} from './research-campaigns.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
 const validity = {
@@ -104,7 +105,11 @@ export function renderRun(root, {run, definition, report, comparison}, navigatio
   const policy = report?.policy || definition?.policy || {};
   if (policy.recovered_checkpoints) methods.append(node('p', 'Retrospective recovery: the original pilot is preserved. Recovered probabilities and EV were calculated after the game from the original response, under an explicit $0-fee assumption. These are hypothetical opportunities, not evidence that EV was displayed at T−10.'));
   const feeModes = [...new Set((report?.games || []).filter(game => game.fee_mode).map(game => capturedFee(game.fee_mode)))];
-  methods.append(node('p', `The game date uses Eastern time. Screening requires ${policy.recovered_checkpoints ? 'an original frozen checkpoint or an explicitly reconstructed T−10 response' : 'a valid frozen T−10 checkpoint'} and unrounded EV of at least ${pct(policy.minimum_ev)}. The replay uses ${pct(policy.kelly_multiplier)} of Kelly against a fixed ${usd(policy.reference_bankroll_usd)} sizing reference, without an aggregate budget cap or intraday compounding.`));
+  const sizing=policy.sizing_mode==='fixed_profit'
+    ? `The replay targets ${exactMoney(policy.target_profit_usd)} net profit on each win. If the target is between achievable amounts, it takes the closest positive profit and breaks ties at the lower commitment.`
+    : `The replay uses ${pct(policy.kelly_multiplier)} of Kelly against a fixed ${usd(policy.reference_bankroll_usd)} sizing reference.`;
+  methods.append(node('p', `The game date uses Eastern time. Screening requires ${policy.recovered_checkpoints ? 'an original frozen checkpoint or an explicitly reconstructed T−10 response' : 'a valid frozen T−10 checkpoint'} and unrounded EV of at least ${pct(policy.minimum_ev)}. ${sizing}`));
+  methods.append(node('p','Paper commitments are sized independently without an aggregate budget cap or intraday compounding.'));
   methods.append(node('p', `Each paper commitment is repriced under the original fee assumption. ${feeModes.length ? feeModes.join(' · ') + '.' : 'No captured fee treatments are recorded for this run.'} Quoted price is assumed available at the modeled size.`));
   methods.append(node('p', 'Paper replay and sporting-result grading are recorded separately. Execution and actual venue settlement are unverified.'), definitionLink);
   intro.append(methods);
@@ -220,6 +225,8 @@ export function renderSavedEvidence(root, value, {ticket, resultReview = false, 
     const cashflows = fee.cashflows || {};
     const trade = evidence.trade || {}, clocks = trade.clocks || {}, quote = trade.quote || {};
     const kelly = trade.kelly || {};
+    const sizing = trade.sizing || item.sizing;
+    const fixed = sizing?.mode === 'fixed_profit';
     const recovered = item.source_kind === 'retrospective_raw_t10';
     if (!resultReview) {
       root.append(node('h3', item.title + ' · ' + selection({ ...item, selection_label:item.label })));
@@ -246,19 +253,33 @@ export function renderSavedEvidence(root, value, {ticket, resultReview = false, 
       'Gross EV at quoted price':pct(trade.gross_ev), 'Screening EV (rounded for display)':pct(item.screen_ev),
       'EV at modeled commitment':pct(item.ev),
     }, {reference, exact_probability:item.probability, exact_screen_ev:item.screen_ev, exact_sized_ev:item.ev});
-    evidenceSection(root, 'Paper sizing and fee treatment', `${capturedFee(item.fee_mode)}. The saved Kelly calculation uses the modeled win and loss returns, then applies the recorded multiplier and bankroll. Quantity and fee rounding determine the final commitment.`, {
+    const rule = fixed
+      ? 'The closest positive modeled win profit wins, with ties going to the lower commitment. Quantity and fees are repriced at the frozen quote.'
+      : 'The saved Kelly calculation uses the modeled win and loss returns, then applies the recorded multiplier and bankroll. Quantity and fee rounding determine the final commitment.';
+    evidenceSection(root, 'Paper sizing and fee treatment', `${capturedFee(item.fee_mode)}. ${rule}`, {
       'Fee evidence for an actual order':trade.fees?.actual_fee_evidence === 'unknown' ? 'Unknown' : trade.fees?.actual_fee_evidence,
       'Executable size at the quoted price':trade.size?.executable_size_evidence === 'unavailable' ? 'Unavailable in captured evidence' : trade.size?.executable_size_evidence,
-      'Reference bankroll':usd(kelly.reference_bankroll_usd), 'Kelly multiplier':pct(kelly.multiplier),
-      'Modeled win / loss net return':`${pct(kelly.outcome_returns?.win)} / ${pct(kelly.outcome_returns?.loss)}`,
-      'Recorded net receipt on win':usd(cashflows.win?.net_receipt_usd),
-      'Recorded net receipt on loss':usd(cashflows.loss?.net_receipt_usd),
-      ...(cashflows.push ? {'Recorded net receipt on push':usd(cashflows.push.net_receipt_usd)} : {}),
-      ...(cashflows.void ? {'Recorded net receipt on void':usd(cashflows.void.net_receipt_usd)} : {}),
-      'Kelly budget':usd(item.kelly_budget_usd), 'Paper commitment':usd(item.stake_usd),
-      'Purchase':usd(item.purchase_usd), Quantity:fee.quantity, 'Modeled entry fee':usd(fee.entry_usd),
-      'Expected profit at entry':usd(item.expected_profit_usd),
-    }, {fee_input:offer.fee_input, sized_calculation:sized, trade_evidence:trade});
+      ...(fixed ? {
+        ...fixedProfitFields(sizing),
+        'Sizing rule':sizing.rule,
+        'Ideal stake before fees and rounding':exactMoney(sizing.ideal_purchase_usd),
+        'Quantity increment':sizing.quantity_increment,
+        'Quantity unit':label(sizing.quantity_unit),
+        'Price increment':sizing.price_increment ?? 'Unavailable in captured evidence',
+        'Sizing grid':label(sizing.grid_basis),
+      } : {
+        'Reference bankroll':usd(kelly.reference_bankroll_usd), 'Kelly multiplier':pct(kelly.multiplier),
+        'Modeled win / loss net return':`${pct(kelly.outcome_returns?.win)} / ${pct(kelly.outcome_returns?.loss)}`,
+        'Kelly budget':usd(item.kelly_budget_usd),
+      }),
+      'Recorded net receipt on win':exactMoney(cashflows.win?.net_receipt_usd),
+      'Recorded net receipt on loss':exactMoney(cashflows.loss?.net_receipt_usd),
+      ...(cashflows.push ? {'Recorded net receipt on push':exactMoney(cashflows.push.net_receipt_usd)} : {}),
+      ...(cashflows.void ? {'Recorded net receipt on void':exactMoney(cashflows.void.net_receipt_usd)} : {}),
+      'Paper commitment':exactMoney(item.stake_usd),
+      'Purchase':exactMoney(item.purchase_usd), Quantity:fee.quantity, 'Modeled entry fee':exactMoney(fee.entry_usd),
+      'Expected profit at entry':exactMoney(item.expected_profit_usd),
+    }, {sizing, fee_input:offer.fee_input, sized_calculation:sized, trade_evidence:trade});
     if (!resultReview) {
       const result = evidence.sporting_result;
       evidenceSection(root, 'Sporting-result grading', 'This grade belongs to the original saved selection.', {

@@ -303,8 +303,8 @@ def posted_fill(terms, amount, cost, fees, rule):
     return best, None
 
 
-def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
-    """Use tested fee, cashflow and score functions; depth never enters this model."""
+def posted_contract(record, fee, *, at, amount):
+    """Frozen contract and model order terms, shared by paper sizing policies."""
     q, market = record["quote"], record["market_identity"]
     from app.storage.current_rows import contract_id
 
@@ -354,9 +354,15 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
     )
     if not stake:
         terms["asks"] = [dict(price=wire(cost), quantity=wire(amount / cost))]
+    return row, cost, terms
+
+
+def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
+    """Use tested fee, cashflow and score functions; depth never enters this model."""
+    row, cost, terms = posted_contract(record, fee, at=at, amount=amount)
     fees, evidence, _ = (fee_mode.zero_order(fee) if fee_mode.assumed_zero(fee)
         else retail_order(row, terms, cost, fee))
-    (committed, legs, wager, entry, reserve, cash, trace), reason = posted_fill(
+    fill, reason = posted_fill(
         terms,
         amount,
         cost,
@@ -365,28 +371,24 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
     )
     # Posted-price normalization accepts the largest legal quantity below $100;
     # the execution preview's fill tolerance is not an eligibility condition.
-    if committed <= 0:
+    if fill[0] <= 0:
         raise ValueError(reason or "fee_comparison_basis_invalid")
+    return posted_calculation(record, ref, fee, at=at, game_key=game_key,
+                              amount=amount, contract=(row, cost, terms), fill=fill, evidence=evidence)
+
+
+def posted_calculation(record, ref, fee, *, at, game_key, amount, contract, fill, evidence):
+    row, cost, terms = contract
+    committed, legs, wager, entry, reserve, cash, trace = fill
+    stake = terms["kind"] == "stake"
     gross = wager / cost if stake else sum(quantity for _, quantity in legs)
-    settlement = dict(
-        venue_rules=dict(cashflow_states={"win": "ordinary_win", "loss": "zero"})
-    )
-    states = {}
-    for state in ("win", "loss"):
-        _, states[state] = _cash_state(
-            state,
-            ordinary_win=gross,
-            stake=wager,
-            committed=committed,
-            entry=entry,
-            reserve=reserve,
-            fee_terms=cash,
-            settlement=settlement,
-        )
+    states = {state: posted_cash_state(state, gross, wager, committed, entry, reserve, cash)
+              for state in ("win", "loss")}
     after = F(states["win"]["net_receipt_usd"]) / committed
     ev, opportunity = None, None
     if ref is not None:
         ev, _, opportunity = cashflow_values(ref, states, committed)
+    q, market = record["quote"], record["market_identity"]
     selection = record["selection"]
     side = outcome(
         market["family"], selection, record["event"]["home"], record["event"]["away"]
@@ -397,7 +399,7 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
     )
     main = main_line(record, ref or {"prices": [{}]})
     result = dict(
-        id=cid,
+        id=row["id"],
         game_key=game_key,
         bet_id=bet,
         venue=q["venue"],
@@ -438,7 +440,7 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
             committed_usd=wire(committed),
             purchase_usd=wire(wager),
             quantity=None if stake else wire(sum(quantity for _, quantity in legs)),
-            quantity_increment=wire(step),
+            quantity_increment=terms["increment"],
         ),
         fee_mode=fee_mode.mode_for_fee(fee),
         raw=dict(
@@ -468,6 +470,11 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
     if offer_input(record).get("pull_id"):
         result["acquisition"] = calculation(record, ref) if ref is not None else validate([offer_input(record)])
     return result
+
+
+def posted_cash_state(state, gross, wager, committed, entry, reserve, cash):
+    return _cash_state(state, ordinary_win=gross, stake=wager, committed=committed, entry=entry,
+                       reserve=reserve, fee_terms=cash, settlement={})[1]
 
 
 def cashflow_values(reference, states, committed):

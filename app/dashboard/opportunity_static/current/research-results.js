@@ -1,8 +1,8 @@
 import {count, details, label, link, node, pairs, pct, stack, table, time, usd} from './workspace-ui.js';
 import {number, selection, venue} from './workspace-format.js';
 import {qualityComparison} from './research-quality.js';
-import {band, workbenchPeriod} from './research-campaigns.js';
-import {gradeFilters, ledgerViewModel, resolvedGrade, tradeSorts} from './research-ledger.js';
+import {band, comparisonCounts, fixedProfitFields, sizingTitle, workbenchPeriod, workbenchSizing} from './research-campaigns.js';
+import {gradeFilters, ledgerViewModel, requestedTrade, resolvedGrade, tradeSorts} from './research-ledger.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
 const reportStates = {
@@ -67,8 +67,13 @@ function statusNotice(analysis, pinned, summary) {
     else if (summary.resolved) reportingState = 'partially_graded';
     else reportingState = summary.grade_counts?.pending ? 'awaiting_results' : 'unresolved';
   }
+  const games=analysis.report?.games;
+  const emptyEvidence=games && !games.some(captured);
+  const awaitingCapture=emptyEvidence && games.some(game=>['pending','claimed'].includes(game.capture_status));
   const message = historical ? `Historical result · ${reportStates[reportingState] || 'Published'}`
-    : analysis.error ? 'Result analysis unavailable' : reportStates[summary ? reportingState : state] || 'Reading result analysis…';
+    : analysis.error ? 'Result analysis unavailable'
+      : emptyEvidence ? awaitingCapture ? 'Awaiting T−10 capture' : 'Missing usable T−10 evidence'
+        : reportStates[summary ? reportingState : state] || 'Reading result analysis…';
   notice.append(node('strong', message));
   if (analysis.error) notice.append(node('p', analysis.error));
   else if (!historical && analysis.status?.stale) notice.append(node('p', 'Retained evidence or grading inputs changed. The previous report is available in result history. Current grades will appear after processing.'));
@@ -237,13 +242,14 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   const allTickets = portfolio.tickets.filter(ticket => ticket.game_id === game.game_id);
   const matching = allTickets.filter(ticket => navigation.tradeFilter === 'all' || (navigation.tradeFilter === 'unresolved'
     ? !resolvedGrade(ticket.grade) : ticket.grade?.state === navigation.tradeFilter));
-  const requested = matching.find(ticket => ticket.id === navigation.trade);
-  const trade = navigation.trade ? requested || matching[0] : null;
+  const requested = requestedTrade(matching,navigation.params);
+  const hasSelection = navigation.trade || navigation.params.sizing_quote || navigation.params.sizing_bet;
+  const trade = hasSelection ? requested || matching[0] : null;
   const headline = node('h3', game.title);
   headline.tabIndex = -1;
   const resultStatus = resultStates[game.result?.state] || 'Result';
   const scoreLine = score(game.result);
-  panel.append(link('All games', navigation.href({game:null, trade:null, ledger_view:'games'})), headline,
+  panel.append(link('All games', navigation.href({game:null, trade:null, sizing_quote:null, sizing_bet:null, ledger_view:'games'})), headline,
     node('p', resultStatus === scoreLine ? scoreLine : `${resultStatus} · ${scoreLine}`, 'results-score'),
     node('p', `${time(game.starts_at)} · ${captureDescription(game, summary)}`, 'workspace-caption'));
   if (navigation.coverageHref) panel.append(link('Game coverage and issue decisions', navigation.coverageHref(game)));
@@ -261,7 +267,7 @@ function gameView(game, portfolio, navigation, inspectTrade) {
     ...(partial ? {'Expected profit · resolved':money(summary.resolved_expected_profit_usd)} : {}),
     [partial ? 'Returned · resolved' : 'Returned']:money(summary?.return_usd),
     [partial ? 'Modeled P/L · resolved' : 'Modeled P/L']:money(summary?.pnl_usd)}, 'workspace-stats'));
-  if (navigation.trade && !requested) panel.append(node('p', trade
+  if (hasSelection && !requested) panel.append(node('p', trade
     ? 'The requested trade is outside this view. Showing an available trade.'
     : 'The requested trade is outside this view.'));
   if (trade) panel.append(tradeView(trade, game, navigation, inspectTrade));
@@ -271,7 +277,7 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   panel.append(node('h4', 'Selected paper trades'), controls);
   if (!matching.length) panel.append(node('p', 'No trades match this view.'));
   else panel.append(table(['Selection', 'Venue', 'Odds', 'Probability', 'EV', 'Stake', 'Expected profit', 'Grade', 'Return', 'P/L'], matching.map(ticket => {
-    const selectionLink = link(ticketSelection(ticket), navigation.href({trade:ticket.id}));
+    const selectionLink = link(ticketSelection(ticket), navigation.href({trade:ticket.id,sizing_quote:null,sizing_bet:null}));
     if (trade?.id === ticket.id) selectionLink.setAttribute('aria-current', 'true');
     return [selectionLink, venue(ticket.venue), ticket.posted_odds, pct(ticket.probability), pct(ticket.ev), money(ticket.stake_usd),
       money(ticket.expected_profit_usd), gradeLabel(ticket), money(ticket.return_usd), money(ticket.pnl_usd)];
@@ -286,7 +292,7 @@ function tradeView(trade, game, navigation, inspectTrade) {
   const headline = node('h4', ticketSelection(trade) + ' · ' + venue(trade.venue));
   headline.tabIndex = -1;
   const calculation = node('div');
-  panel.append(link('Back to game trades', navigation.href({trade:null})), headline,
+  panel.append(link('Back to game trades', navigation.href({trade:null,sizing_quote:null,sizing_bet:null})), headline,
     node('p', gradeStates[grade.state] || 'Unresolved', 'results-score'));
   if (grade.explanation || grade.reason) panel.append(node('p', grade.explanation || label(grade.reason)));
   panel.append(pairs({
@@ -317,6 +323,8 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
   panel.append(link('Back to trade ledger', '#trade-ledger-title', 'result-inspector-back'), headline, context);
   if (ledger.missingSelection) {
     panel.append(node('p', 'The requested trade is outside this view. Showing an available trade.', 'workspace-caption'));
+  } else if (ledger.changedVenue) {
+    panel.append(node('p', 'Showing a different venue for the same exact bet. The original quote is outside this view.', 'workspace-caption'));
   } else if (ledger.selectionPage && ledger.selectionPage !== ledger.page) {
     panel.append(link('Show selected trade in ledger', navigation.href({trade_page:ledger.selectionPage})));
   }
@@ -337,7 +345,11 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
       link('Game result and coverage', navigation.href({game:game.game_id, ledger_view:'games', trade:trade.id})));
   }
   const witness = node('div', undefined, 'result-inspector-provenance');
-  witness.append(pairs({'T−10 origin':label(trade.capture_origin)}));
+  const sizing = trade.sizing;
+  witness.append(pairs({
+    ...(sizing?.mode==='fixed_profit' ? fixedProfitFields(sizing) : {}),
+    'T−10 origin':label(trade.capture_origin),
+  }));
   panel.append(witness);
 
   const evidence = node('details', undefined, 'result-inspector-evidence'), calculation = node('div');
@@ -351,10 +363,13 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
   panel.append(evidence, resultEvidence(game?.result, grade), details('Exact grading inputs and ticket identity', trade));
   const showWitness = value => {
     const {kelly, clocks} = value.evidence?.trade || {};
+    const actualSizing = value.evidence?.trade?.sizing || value.ticket?.sizing || sizing;
     const age = clocks?.quote_age_at_receipt_seconds;
     witness.replaceChildren(pairs({
-      'Kelly fraction':kelly?.multiplier ? `${kelly.multiplier} full Kelly` : 'Unknown',
-      'Bankroll reference':kelly?.reference_bankroll_usd == null ? 'Unknown' : usd(kelly.reference_bankroll_usd),
+      ...(actualSizing?.mode==='fixed_profit' ? fixedProfitFields(actualSizing) : {
+        'Kelly fraction':kelly?.multiplier ? `${kelly.multiplier} full Kelly` : 'Unknown',
+        'Bankroll reference':kelly?.reference_bankroll_usd == null ? 'Unknown' : usd(kelly.reference_bankroll_usd),
+      }),
       'T−10 origin':label(trade.capture_origin),
       'Quote age at receipt':age != null ? `${Number(age).toFixed(3)} seconds`
         : clocks?.quote_age_state === 'future' ? 'Source timestamp after receipt' : 'Unknown',
@@ -375,7 +390,7 @@ function ledgerTable(ledger, games, navigation) {
     const exactSelection = ticketSelection(ticket);
     const selectionName = ticketSelection({...ticket, line:null});
     const pick = focusKey(link(exactSelection, navigation.href({
-      game:null, ledger_view:null, trade:ticket.id, trade_page:ledger.page,
+      game:null, ledger_view:null, trade:ticket.id, sizing_quote:null, sizing_bet:null, trade_page:ledger.page,
     }), 'result-ledger-selection'), 'trade-' + ticket.id);
     if (exactSelection !== selectionName) {
       const line = node('span', exactSelection.slice(selectionName.length + 1), 'result-ledger-exact-line');
@@ -483,28 +498,60 @@ function breakdowns(portfolio) {
   return panel;
 }
 
+function sizingComparison(value, navigation) {
+  const panel=node('details',undefined,'workspace-panel workspace-card');
+  panel.append(node('summary','Sizing qualification and venue changes'),pairs(comparisonCounts(value.counts)));
+  if(!value.changes?.length)return panel;
+  const modes=['fixed_profit','kelly'];
+  const headers=['Frozen quote',...modes.map(mode=>sizingTitle(navigation.config,mode))];
+  panel.append(table(headers,value.changes.map(change=>{
+    const selection=change.label ? ticketSelection(change) : change.frozen_quote_id?.slice(0,12) || 'Recorded quote';
+    const title=`${selection} · ${venue(change.venue)}`;
+    return [title,...modes.map(mode=>{
+      const item=change[mode];
+      if(!item)return 'Sizing unavailable';
+      if(!item.qualifies) {
+        const reason=item.reason ? label(item.reason) : 'Sizing unavailable';
+        return item.ev==null ? reason : `${pct(item.ev)} · ${reason}`;
+      }
+      const caption=`${venue(item.venue)} · ${pct(item.ev)} · ${item.selected ? 'Selected' : 'Qualified'}`;
+      if(!item.selected)return caption;
+      const destination=mode===navigation.mode
+        ? navigation.href({trade:item.ticket_id,sizing_quote:null,sizing_bet:null,trade_page:null,game:null,ledger_view:null,filter:null})
+        : navigation.modeHref(mode,change);
+      return link(caption,destination);
+    })];
+  })));
+  return panel;
+}
+
 export function renderResults(root, selected, analysis, navigation, inspectTrade) {
   const header = node('section', undefined, 'workspace-panel workspace-card paper-result-summary');
   const dayHeader = node('div', undefined, 'result-day-header'), title = node('div');
   const policy = selected.report.policy || {};
+  const report = navigation.pinned || !analysis.status?.stale ? analysis.report : null;
+  const portfolio = report?.portfolios?.[navigation.variant];
+  const usable = report?.games.some(captured);
   const context = [`${selected.run.date} Eastern`, 'Paper results',
-    policy.minimum_ev && `EV ≥${pct(policy.minimum_ev)}`, policy.kelly_multiplier && `${policy.kelly_multiplier} Kelly`];
+    policy.minimum_ev && `EV ≥${pct(policy.minimum_ev)}`,
+    navigation.mode==='fixed_profit' ? sizingTitle(navigation.config,navigation.mode)
+      : policy.kelly_multiplier && `${policy.kelly_multiplier} full Kelly`];
   title.append(node('h2', selected.run.title), node('p', context.filter(Boolean).join(' · '), 'workspace-caption'));
   const controls = node('div', undefined, 'results-controls');
   const dates = node('div', undefined, 'workspace-form result-date-control');
   dates.append(dropdown('Game date (Eastern)', navigation.dates.map(day => [day, day]), selected.run.date, navigation.changeDate, 'game-date'));
   const variantsNav = node('nav', undefined, 'workspace-variant');
   variantsNav.setAttribute('aria-label', 'Paper portfolios');
-  for (const [name, title] of Object.entries(variants)) {
-    const entry = focusKey(action(title, navigation.href({variant:name})), 'portfolio-' + name);
+  for (const name of navigation.config.portfolios || Object.keys(variants)) {
+    const entry = focusKey(action(variants[name], navigation.href({variant:name})), 'portfolio-' + name);
     if (name === navigation.variant) entry.setAttribute('aria-current', 'true');
     variantsNav.append(entry);
   }
   if (navigation.weeklyHref) controls.append(workbenchPeriod(navigation.href({view:null}), navigation.weeklyHref, 'daily'));
+  const chosen=requestedTrade(portfolio?.tickets || [],navigation.params);
+  const sizing=workbenchSizing(navigation.config,navigation.sizingModes,navigation.mode,mode=>navigation.modeHref(mode,chosen));
+  if(sizing) controls.append(sizing);
   controls.append(dates, variantsNav);
-  const report = navigation.pinned || !analysis.status?.stale ? analysis.report : null;
-  const portfolio = report?.portfolios?.[navigation.variant];
-  const usable = report?.games.some(captured);
   dayHeader.append(title, statusNotice(analysis, navigation.pinned, portfolio?.summary));
   header.append(dayHeader, controls);
   if (portfolio && usable) header.append(summaryView(portfolio.summary, report.games.length));
@@ -524,6 +571,7 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   header.append(coverageLine(report?.coverage || selected.run.coverage || {}, report?.games));
   const tools = node('div', undefined, 'result-report-tools');
   tools.append(resultActions(analysis, navigation), assumptions);
+  if(navigation.editHref)tools.append(link('Edit as a new version',navigation.editHref));
   root.replaceChildren(header);
   if (!portfolio) {
     header.append(tools);
@@ -549,6 +597,8 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   }
   root.append(tools);
   if (usable) {
+    const comparison=selected.sizing_comparison?.[navigation.variant];
+    if(comparison?.counts)root.append(sizingComparison(comparison,navigation));
     const quality = qualityComparison(analysis.quality);
     if (quality) root.append(quality);
     root.append(breakdowns(portfolio));

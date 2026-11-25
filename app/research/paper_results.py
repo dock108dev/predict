@@ -382,6 +382,8 @@ def _ticket(run_id, ticket, witness, game, known):
     row = {key: ticket.get(key) for key in ("id", "game_id", "label", "venue", "posted_odds", "probability",
            "ev", "family", "period", "side", "line", "exact_bet_id", "equivalent_bet_id", "checkpoint_id",
            "decision_at", "times")}
+    if "sizing" in ticket:
+        row.update(frozen_quote_id=ticket["frozen_quote_id"], sizing=ticket["sizing"])
     row.update(grade=grade, occurrence_id=game["occurrence_id"], quote_receipt_sha256=quote_hashes,
                capture_origin="reconstructed" if game["capture_status"] == "reconstructed" else "frozen")
     return _money(row, stake=stake, expected_profit=expected, return_=returned,
@@ -412,6 +414,22 @@ def _breakdown(tickets, key, categories=()):
     for ticket in tickets:
         groups.setdefault(ticket[key], []).append(ticket)
     return {category: _summary(values) for category, values in groups.items()}
+
+
+def portfolio_status(report, variant):
+    summary = report["portfolios"][variant]["summary"]
+    if summary["tickets"]:
+        if not summary["unresolved"]:
+            return "graded"
+        if summary["resolved"]:
+            return "partially_graded"
+        return "awaiting_results" if summary["grade_counts"].get("pending") else "unresolved"
+    games = report["games"]
+    if any(game["capture_status"] in ("pending", "claimed") for game in games):
+        return "collecting"
+    if any(game["capture_status"] in CAPTURED for game in games):
+        return "no_selected_tickets"
+    return "no_usable_capture"
 
 
 def build_report(run, contexts):
@@ -447,12 +465,18 @@ def build_report(run, contexts):
         status = "collecting" if not summary["tickets"] and coverage.get("pending_games") else "awaiting_results"
     else:
         status = "unresolved" if summary["tickets"] else "no_selected_tickets"
-    return dict(schema=SCHEMA, grading_rule=VERSION, run_id=run["id"], date=original["date"],
+    report = dict(schema=SCHEMA, grading_rule=VERSION, run_id=run["id"], date=original["date"],
                 original_report_revision=run["report_revision"], status=status,
                 evidence_revision=hashed([(g["game_id"], g["occurrence_id"], g["result"]) for g in games]),
                 result_observed_at=max((g["result"]["observed_at"] for g in games if g["result"]["observed_at"]),
                                        key=stamp, default=None),
                 coverage=coverage, games=games, portfolios=portfolios, provider_requests=0, orders_submitted=0)
+    policy = original["policy"]
+    if "sizing_mode" in policy:
+        report["sizing_policy"] = {key: policy[key] for key in ("sizing_mode", "sizing_rule", "target_profit_usd",
+            "reference_bankroll_usd", "kelly_multiplier", "sizing_scale_usd", "minimum_ev", "portfolios")
+            if key in policy}
+    return report
 
 
 def build(db, run):

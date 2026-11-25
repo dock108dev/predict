@@ -71,10 +71,26 @@
  .paper-quality .workspace-table,.research-page .workspace-card > .catalog-scroll .workspace-table { min-width:0; }
  #data-mens-d1 .workspace-table, #data-mens-d1 .workspace-table td { min-width:0; }
 }
-.campaign-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:1rem; }
+.campaign-list { display:grid; gap:.7rem; padding-inline-start:0; list-style:none; }
+.campaign-list li { border-top:1px solid var(--line); padding-block-start:.65rem; }
+.campaign-list li p { margin:.25rem 0 0; color:var(--muted); font-size:.9375rem; }
+.campaign-form { max-width:54rem; margin-block:1rem; }
+.campaign-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr)); gap:1rem; }
+.campaign-form [hidden] { display:none; }
 .campaign-form label { display:flex; flex-direction:column; gap:.4rem; font-weight:500; }
-.campaign-form input { padding:.65rem; min-width:0; width:100%; border:1px solid var(--line); border-radius:4px; background:var(--paper); }
-.campaign-form > p { grid-column:1/-1; }
+.campaign-form :is(input,select):not([type=checkbox]) {
+  box-sizing:border-box; font:inherit; color:inherit; padding:.65rem; min-width:0; width:100%;
+  border:1px solid var(--line); border-radius:4px; background:var(--paper);
+}
+.campaign-fields > fieldset { min-width:0; grid-column:1/-1; border:1px solid var(--line); border-radius:.4rem; padding:.75rem; }
+.campaign-form legend { font-weight:650; padding-inline:.35rem; }
+.campaign-form .campaign-check { flex-direction:row; align-items:center; }
+.campaign-portfolios p { margin:.35rem 0 0; color:var(--muted); }
+.campaign-form > button { margin-block-start:1rem; }
+.campaign-form p[role=status]:empty { display:none; }
+.campaign-review { border-top:1px solid var(--line); margin-block-start:1rem; padding-block-start:.75rem; }
+.campaign-review h3:focus { outline:none; }
+.campaign-review .research-detail-grid { grid-template-columns: minmax(6.5rem,1fr) minmax(0,3fr); }
 
 .workbench-page .workspace-sections { margin-bottom:.85rem; }
 .workbench-page .workspace-sections a { min-height:40px; padding-block:.35rem; font-size:.9375rem; }

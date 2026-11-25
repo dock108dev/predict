@@ -153,7 +153,10 @@ def _register_definition(db, template, proposed, registration):
 
 
 def _compact_report(report):
+    from .paper_campaigns import _age_bucket
+
     reconciled = (report.get("population") or {}).get("kind") == "reconciled_occurrences"
+    versioned_sizing = "sizing_mode" in report["policy"]
     witnesses = {}
     for portfolio in report["portfolios"].values():
         compact = []
@@ -169,6 +172,10 @@ def _compact_report(report):
                         encoded_calculation=payload_codec.encode(encoded(calculation).decode()))
                 else:
                     witnesses[identity] = dict(offer_index=offer_index, sized_calculation=calculation)
+                if versioned_sizing:
+                    witnesses[identity]["reference_age_bucket"] = _age_bucket(paper_evidence.reference_age(calculation))
+            if versioned_sizing:
+                ticket["reference_age_bucket"] = witnesses[identity]["reference_age_bucket"]
             compact.append(ticket)
         portfolio["tickets"] = compact
     # The exact sporting result stays under its immutable source ID.
@@ -428,7 +435,7 @@ def save_mens_d1_provider_snapshot(db, day):
     return _publish(db, day, parent, definition, report)
 
 
-def _publish(db, day, parent, definition, report):
+def _publish(db, day, parent, definition, report, *, details=True):
     document = _compact_report(report)
     revision = hashed(dict(document, report={k: v for k, v in report.items() if k != "as_of"}))
     run_id = hashed([definition["version"], day, revision])
@@ -438,7 +445,7 @@ def _publish(db, day, parent, definition, report):
     with db.transaction():
         records._writer_lock(db)
         if db.execute("SELECT 1 FROM public.research_workspace_run WHERE id=%s", (run_id,)).fetchone():
-            return run_detail(db, run_id)
+            return run_detail(db, run_id) if details else run_id
         create_definition = definition["version"] != parent["version"] and db.execute(
             "SELECT 1 FROM public.research_workspace_definition WHERE version=%s",
             (definition["version"],)).fetchone() is None
@@ -455,7 +462,9 @@ def _publish(db, day, parent, definition, report):
             prior = db.execute("""SELECT r.id FROM public.research_workspace_run r
                 JOIN public.research_workspace_definition d ON r.definition_version=d.version
                 WHERE r.game_date=%s AND d.payload->>'campaign_id'=%s
-                ORDER BY r.recorded_at DESC,r.id LIMIT 1""", (day, definition["campaign_id"])).fetchone()
+                AND COALESCE(d.payload->>'sizing_mode','kelly')=%s
+                ORDER BY r.recorded_at DESC,r.id LIMIT 1""",
+                (day, definition["campaign_id"], definition.get("sizing_mode", "kelly"))).fetchone()
         elif definition.get("designation") == mens_d1.RECONCILED:
             prior = db.execute("""SELECT r.id FROM public.research_workspace_run r
                 JOIN public.research_workspace_definition d ON r.definition_version=d.version
@@ -476,7 +485,7 @@ def _publish(db, day, parent, definition, report):
                 (version,id,run_id,payload_bytes,payload) VALUES (%s,%s,%s,%s,%s)""",
                 [(version, identity, run_id, len(encoded(payload)), Jsonb(payload))
                  for identity, version, payload in findings])
-    return run_detail(db, run_id)
+    return run_detail(db, run_id) if details else run_id
 
 
 def _run(db, run_id):
@@ -528,6 +537,10 @@ def run_detail(db, run_id, *, export=False):
     report = row["payload"]["report"]
     result = dict(schema=SCHEMA, run=_run_summary(row), definition=definition, findings=findings, report=report,
                   provider_requests=0, orders_submitted=0)
+    if definition.get("campaign_snapshot"):
+        from .paper_campaigns import sizing_run_detail
+
+        result.update(sizing_run_detail(db, row, definition, report))
     if definition.get("designation") == mens_d1.RECONCILED and row["supersedes"]:
         prior = db.execute("SELECT payload->'report' report FROM public.research_workspace_run WHERE id=%s",
                            (row["supersedes"],)).fetchone()["report"]
@@ -552,13 +565,18 @@ def offer_export_plan(db, run_id):
     witnesses = row["payload"]["witnesses"]
     selected = {name: {(ticket["game_id"], witnesses[ticket["id"]]["offer_index"]):ticket["id"]
                        for ticket in portfolio["tickets"]} for name, portfolio in report["portfolios"].items()}
+    policy = report["policy"]
     fields = dict(date=report["date"], as_of=report["as_of"], run_id=run_id,
-                  report_revision=row["report_revision"], minimum_ev=report["policy"]["minimum_ev"],
+                  report_revision=row["report_revision"], minimum_ev=policy["minimum_ev"],
                   provider_requests=0, orders_submitted=0)
+    if policy.get("sizing_mode"):
+        fields["sizing"] = {key: policy[key] for key in (
+            "sizing_mode", "sizing_rule", "target_profit_usd", "kelly_multiplier", "reference_bankroll_usd", "portfolios"
+        ) if key in policy}
     return fields, report["games"], selected
 
 
-def offer_export_game(db, game, minimum, selected):
+def offer_export_game(db, game, minimum, selected, *, sizing=None):
     from .market_census import offer_rows, read_summaries, summarize_coverage
 
     entry = {key:game.get(key) for key in ("game_id", "title", "status", "checkpoint_id", "exclusions")}
@@ -569,9 +587,19 @@ def offer_export_game(db, game, minimum, selected):
     checkpoint = experiment._value(index[identity], index)
     at = checkpoint["received_at"] if game["status"] == "reconstructed" else experiment.clock(index[identity]["recorded_at"])
     offers = offer_rows(checkpoint, game_id=game["game_id"], minimum=minimum, at=at)
+    sizing_exclusions = {item["offer_index"]: item for item in game.get("sizing_exclusions", ())}
+    portfolios = sizing.get("portfolios", selected) if sizing else selected
     for offer in offers:
-        key = game["game_id"], offer["offer_index"]
-        offer["selected_tickets"] = {name:rows[key] for name, rows in selected.items() if key in rows}
+        position = offer["offer_index"]
+        key = game["game_id"], position
+        offer["selected_tickets"] = {name: selected[name][key] for name in portfolios if key in selected[name]}
+        if sizing and position in sizing_exclusions:
+            failure = sizing_exclusions[position]
+            offer["sizing"] = dict(state="excluded", frozen_quote_id=failure["frozen_quote_id"],
+                                   reason=failure["reason"])
+        elif sizing and key in selected["all_venues"]:
+            offer["sizing"] = dict(state="qualified",
+                                   frozen_quote_id=hashed([identity, position, offer["exact_bet_id"]]))
     summary = summarize_coverage(game.get("coverage"), derived=read_summaries(db, [identity]).get(identity))
     return dict(entry, receipt_sha256=checkpoint["snapshot"].get("receipt_sha256"), decision_at=at,
                 market_summary=summary, offers=offers)
@@ -579,7 +607,8 @@ def offer_export_game(db, game, minimum, selected):
 
 def offer_export(db, run_id):
     fields, games, selected = offer_export_plan(db, run_id)
-    value = dict(fields, games=[offer_export_game(db, game, fields["minimum_ev"], selected) for game in games])
+    value = dict(fields, games=[offer_export_game(db, game, fields["minimum_ev"], selected,
+                                                sizing=fields.get("sizing")) for game in games])
     return dict(value, evidence_sha256=hashed(value))
 
 

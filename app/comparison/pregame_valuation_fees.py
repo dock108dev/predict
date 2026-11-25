@@ -3,7 +3,7 @@ from fractions import Fraction as F
 from hashlib import sha256
 import json
 
-from app.fees.engine import Registry, calculate
+from app.fees.engine import Registry, calculate, kalshi_terms, quadratic_fee
 
 from .cashflows import exact_wire as wire
 from .current_dependencies import instant
@@ -52,6 +52,7 @@ def retail_order(row, terms, cost, fee):
                 cash['reserve_release'] = {state: wire(F(value) / reserve)
                                            for state, value in audit['reserve_released_usd'].items()}
             return F(audit['at_fill_usd']), reserve, cash, audit.get('rounding_trace')
+        evaluated.win_fee_bounds = lambda: _estimated_win_fee_bounds(row, fee, cost)
         return evaluated, evidence, None
     if venue == 'novig' and provider == 'sportsgameodds' and fee.get('classification') == 'exact_public':
         # This reviewed pregame zero is independent of amount. _leg_fee
@@ -62,7 +63,10 @@ def retail_order(row, terms, cost, fee):
         if proof['available'] and F(proof['at_fill_usd']) == 0 and (
                 (evidence.get('catalog_fee_terms') or {}).get('charged') == 'WHEN_LIVE'
                 or evidence.get('basis') == 'reviewed_retail_pregame_straight'):
-            return lambda _legs, _stake: (F(0), F(0), {}, proof['rounding_trace']), evidence, F(0)
+            def evaluated(_legs, _stake):
+                return F(0), F(0), {}, proof['rounding_trace']
+            evaluated.win_fee_bounds = lambda: (F(0), F(0))
+            return evaluated, evidence, F(0)
     if terms.get('order_type') != 'taker' or fee.get('liquidity_role') != 'taker':
         raise ValueError('unit_fee_order_type_unverified')
     if venue == provider == 'polymarket_us' and evidence.get('order_inserted_at'):
@@ -84,6 +88,8 @@ def retail_order(row, terms, cost, fee):
             return _same_entry([order_fee(evidence['market_id'], inserted_at=when,
                 evaluated_at=when, fills=_fills(levels), tier=tier,grid=grid) for tier in tiers], 'entry_fees',
                 conservative=estimated)
+        coefficient = F('0.0695') if instant(when) < instant(CUTOVER) else max(map(F, tiers))
+        evaluated.win_fee_bounds = lambda: (quadratic_fee(coefficient, F(1), cost), F('0.005'))
         # Cost upper bounds suffice to find the legal fill. If fees differ
         # across public tiers there, report the missing tier instead.
         if len(tiers) > 1 and not estimated:
@@ -115,6 +121,12 @@ def retail_order(row, terms, cost, fee):
                 raise ValueError('unit_fee_schedule_unverified')
             return max(F(audit['entry_cash_requirement']) for audit in receipts) - stake, F(0), {}, receipts[0]['trace']
         evaluated.sizing_bound = bounded
+        def win_fee_bounds():
+            rule = registry.select('kalshi', 'event_contract', context['trade_time'])
+            multiplier = F(kalshi_terms(context, context['trade_time'])['fee_multiplier'])
+            rate = quadratic_fee(F(rule['coefficient']), F(1), cost, multiplier)
+            return rate, max(map(F, precisions)) + F('0.000001')
+        evaluated.win_fee_bounds = win_fee_bounds
         return evaluated, dict(evidence, balance_precisions_considered=list(precisions)), None
     if venue == 'prophetx' and row['league'] == 'NHL' and evidence.get('nhl_taker_coefficient'):
         def evaluated(levels, stake):
@@ -123,5 +135,23 @@ def retail_order(row, terms, cost, fee):
             if not model['available']:
                 raise ValueError('unit_fee_schedule_unverified')
             return F(model['trade_fee_usd']), F(0), {}, model['details']['rounding_trace']
+        evaluated.win_fee_bounds = lambda: _estimated_win_fee_bounds(row, fee, cost)
         return evaluated, evidence, None
     raise ValueError('unit_fee_schedule_unverified')
+
+
+def _estimated_win_fee_bounds(row, fee, cost):
+    evidence, cashflows = fee['evidence'], fee['fee_cashflows']
+    venue = row['venue']
+    if cashflows.get('held_reserve_usd') and F(cashflows['held_reserve_usd']):
+        raise ValueError('fixed_profit_fee_rounding_unverified')
+    if venue == 'prophetx':
+        if 'winning_settlement_usd' in cashflows:
+            return F(evidence['fee_rate']) * (1 - cost), F('0.01')
+        if row['league'] == 'NHL' and evidence.get('nhl_taker_coefficient') is not None:
+            return quadratic_fee(F(evidence['nhl_taker_coefficient']), F(1), cost), F('0.005')
+    if (venue == 'novig' and row['source']['provider'] == 'sportsgameodds'
+            and (evidence.get('basis') == 'reviewed_retail_pregame_straight'
+                 or (evidence.get('catalog_fee_terms') or {}).get('charged') == 'WHEN_LIVE')):
+        return F(0), F(0)
+    raise ValueError('fixed_profit_fee_rounding_unverified')

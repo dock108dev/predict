@@ -16,11 +16,15 @@ EXPORTS = ("report", "games", "trades")
 
 
 def read(db, run_id, *, variant, version_id, status_only):
-    run = db.execute("""SELECT id, report_revision, game_date,
+    run = db.execute("""SELECT id, report_revision, game_date, payload#>'{report,policy}' policy,
         public.paper_result_is_run(payload) AS paper
         FROM public.research_workspace_run WHERE id=%s""", (run_id,)).fetchone()
     if run is None or not run["paper"]:
         raise workspace.UnknownSelection("Unknown saved paper run.")
+    policy = run["policy"] or {}
+    versioned_sizing = "sizing_mode" in policy
+    if versioned_sizing and variant not in policy["portfolios"]:
+        raise workspace.SelectionError("Choose a portfolio saved for this experiment.")
     try:
         state = paper_result_queue.read(db, run_id, result_id=version_id, status_only=status_only)
     except KeyError:
@@ -52,10 +56,17 @@ def read(db, run_id, *, variant, version_id, status_only):
             JOIN public.research_workspace_run r ON r.definition_version=d.version
             WHERE r.id=%s""", (run_id,)).fetchone()
         if config:
-            document = workspace._run(db, run_id)["payload"]
+            document = (paper_campaigns.snapshot_document(db, run_id) if versioned_sizing else
+                        workspace._run(db, run_id)["payload"])
             tickets = paper_campaigns.analysis_tickets(document, report)
             quality = paper_campaigns.quality(tickets, config["payload"]["bucket_edges"], variant,
                                               inputs=version["id"])
+    if report and versioned_sizing:
+        portfolio_status = paper_results.portfolio_status(report, variant)
+        if not state.get("error") and not state.get("pending"):
+            status = portfolio_status
+        report = dict(report, status=portfolio_status,
+                      portfolios={name: report["portfolios"][name] for name in policy["portfolios"]})
     return serial(dict(schema=SCHEMA, run_id=run_id, date=run["game_date"],
         report_revision=run["report_revision"], variant=variant,
         status=dict(state=status, reason=reason, stale=stale, updated_at=state.get("updated_at"),
@@ -71,6 +82,8 @@ def export(view, kind):
     result = {name: view[name] for name in ("run_id", "date", "report_revision", "version",
                                             "provider_requests", "orders_submitted")}
     result.update(schema=SCHEMA, export=kind, variant=variant)
+    if "sizing_policy" in report:
+        result["sizing_policy"] = report["sizing_policy"]
     if kind == "report":
         result["report"] = report
         if view.get("quality") is not None:

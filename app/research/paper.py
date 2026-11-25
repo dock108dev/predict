@@ -11,6 +11,7 @@ from fractions import Fraction as F
 from zoneinfo import ZoneInfo
 
 from app.comparison import current_pregame as math
+from app.comparison import fixed_profit
 from app.comparison.pregame_valuation import decimal_display, score
 from app.storage.store import hashed, stamp
 from .ev_movement import exact_bet_identity, offer_measurements
@@ -31,6 +32,8 @@ POLICY = dict(
 POLICY_ID = hashed(POLICY)
 SCALE = F(POLICY["sizing_scale_usd"])
 MINIMUM = F(POLICY["minimum_ev"])
+FIXED_PROFIT_RULE = fixed_profit.RULE
+KELLY_RULE = "iterative-posted-fees-cent-budget-1"
 
 
 def cents(value):
@@ -109,11 +112,19 @@ def grade(identity, outcome, sized):
 
 
 def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None, counts=None):
-    policy_id, scale = POLICY_ID, SCALE
+    policy_id, scale, mode, target_profit = POLICY_ID, SCALE, None, None
     if policy is not None:
-        policy_id, minimum, scale = hashed(policy), F(policy["minimum_ev"]), F(policy["sizing_scale_usd"])
+        policy_id, minimum = hashed(policy), F(policy["minimum_ev"])
+        mode = policy.get("sizing_mode")
+        if mode == "fixed_profit":
+            if policy.get("sizing_rule") != FIXED_PROFIT_RULE:
+                raise ValueError("fixed_profit_rule_unsupported")
+            target_profit = F(policy["target_profit_usd"])
+        else:
+            scale = F(policy["sizing_scale_usd"])
     tickets, excluded, conflicts = {}, Counter(), set()
     for index, offer in enumerate(snapshot.get("offers", [])):
+        sizing_stage = False
         try:
             identity = exact_bet_identity(offer["record"], event_identity=game_id)
             measurement = offer_measurements(offer, offer_index=index, captured_at=at)
@@ -126,11 +137,22 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
             if F(raw_ev) < minimum or F(raw_ev) <= 0:
                 excluded["below_minimum_ev"] += 1
                 continue
-            if policy is not None or minimum == MINIMUM:
+            key = identity["id"]
+            quote_id = hashed([checkpoint_id, index, key]) if mode else None
+            sizing_stage = True
+            if mode == "fixed_profit":
+                if not isinstance(offer.get("fee_input"), dict):
+                    raise ValueError("captured_fee_inputs_unavailable")
+                sized = fixed_profit.calculate(offer, at=stamp(at), game_key=game_id, target=target_profit)
+                target = None
+                if F(sized["raw"]["net_ev"]) < minimum:
+                    reason = "sized_ev_below_4pct" if minimum == MINIMUM else "sized_ev_below_minimum"
+                    raise ValueError(reason)
+            elif policy is not None or minimum == MINIMUM:
                 sized, target = sized_offer(offer, at=at, game_id=game_id, minimum=minimum, scale=scale)
             else:
                 sized, target = offer["calculation_payload"], None
-            key = identity["id"]
+            sizing_stage = False
             if key in conflicts:
                 excluded["conflicting_duplicate_offer"] += 1
                 continue
@@ -157,6 +179,12 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                 times=measurement["times"], identity=identity,
                 grading=grade(identity, outcome, sized),
                 witness=dict(original_offer=offer, sized_calculation=sized))
+            if mode:
+                sizing = (sized["sizing"] if mode == "fixed_profit" else dict(mode="kelly",
+                    rule=policy.get("sizing_rule", KELLY_RULE), kelly_budget_usd=str(target),
+                    reference_bankroll_usd=policy.get("reference_bankroll_usd"),
+                    kelly_multiplier=policy.get("kelly_multiplier")))
+                ticket.update(frozen_quote_id=quote_id, sizing=sizing)
             if key in tickets:
                 # Conflicting duplicate rows are incomplete evidence, not two bets.
                 if tickets[key]["witness"] != ticket["witness"]:
@@ -168,17 +196,24 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                 if policy is not None:
                     ticket["offer_index"] = index
                 tickets[key] = ticket
-        except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
-            excluded[str(exc) if isinstance(exc, ValueError) else "sizing_inputs_incomplete"] += 1
+        except (ValueError, KeyError, TypeError, ArithmeticError, OSError) as exc:
+            reason = str(exc) if isinstance(exc, ValueError) else "sizing_inputs_incomplete"
+            excluded[reason] += 1
+            if sizing_stage and counts is not None and mode:
+                counts.setdefault("sizing_exclusions", []).append(dict(frozen_quote_id=quote_id,
+                    offer_index=index, exact_bet_id=key, reason=reason))
     return list(tickets.values()), dict(excluded)
+
+
+def best_order(ticket):
+    return -F(ticket["ev"]), ticket["venue"], ticket.get("frozen_quote_id") or ticket["id"]
 
 
 def portfolios(tickets, *, as_of):
     best = {}
     for ticket in tickets:
         key = ticket["equivalent_bet_id"]
-        if key not in best or (-F(ticket["ev"]), ticket["venue"], ticket["id"]) < (
-                -F(best[key]["ev"]), best[key]["venue"], best[key]["id"]):
+        if key not in best or best_order(ticket) < best_order(best[key]):
             best[key] = ticket
     return {name: summarize(values, as_of=as_of) for name, values in
             (("best_venue", list(best.values())), ("all_venues", tickets))}
@@ -246,13 +281,13 @@ def scoped_candidates(entry, checkpoint, policy):
     return tickets, gaps
 
 
-def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, population=None):
+def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, population=None, as_of=None):
     """Passive backtest, independent of early-positive retention and live prices."""
     from . import experiment as owner
     from .mens_d1 import in_paper_cohort
     date.fromisoformat(day)
     frozen_policy = policy or POLICY
-    at = datetime.now(timezone.utc).isoformat()
+    at = (stamp(as_of) if as_of is not None else datetime.now(timezone.utc)).isoformat()
     reconciled = population is not None and population["kind"] == "reconciled_occurrences"
     games = list(db.execute("""SELECT g.* FROM public.ev_experiment_game g
         WHERE event->>'league'=%s AND

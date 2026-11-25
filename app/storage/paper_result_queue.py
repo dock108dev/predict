@@ -194,7 +194,7 @@ def _version(row):
         evidence_revision=row["evidence_revision"], grading_rule_version=row["grading_rule"], status=row["status"])
 
 
-def read(db, run_id, result_id=None, *, status_only=False):
+def read(db, run_id, result_id=None, *, status_only=False, include_history=True):
     """Read the publication and dirty state without doing any grading or acquisition."""
     from app.research import paper_results
 
@@ -218,7 +218,7 @@ def read(db, run_id, result_id=None, *, status_only=False):
                or job["generation"] != job["processed_generation"])
     state = "failed" if job["last_error"] else "update_pending" if pending else current["status"]
     version = _version(current) if current else None
-    versions = [] if status_only else [_version(row) for row in db.execute(f"""
+    versions = [] if status_only or not include_history else [_version(row) for row in db.execute(f"""
         SELECT {VERSION_FIELDS} FROM public.paper_result_report r
         WHERE r.run_id=%s ORDER BY r.processed_at DESC,r.id""", (run_id,))]
     return dict(state=state, pending=pending, error=job["last_error"],

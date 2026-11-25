@@ -68,6 +68,13 @@ def inspect(ticket, checkpoint, offer, sized, policy):
     commitment = Fraction(fee["committed_usd"]) if fee.get("committed_usd") else None
     returns = {state: str(Fraction(value["net_receipt_usd"]) / commitment - 1)
                for state, value in cashflows.items() if commitment and value.get("net_receipt_usd") is not None}
+    sizing = ticket.get("sizing")
+    kelly = None if (sizing or {}).get("mode") == "fixed_profit" else dict(
+        reference_bankroll_usd=policy.get("reference_bankroll_usd"),
+        multiplier=policy.get("kelly_multiplier"), sizing_scale_usd=policy.get("sizing_scale_usd"),
+        outcome_returns=returns, budget_usd=ticket.get("kelly_budget_usd"),
+        commitment_usd=ticket.get("cash_commitment_usd"),
+        aggregate_budget_cap_usd=policy.get("budget_cap"), compounding=policy.get("intraday_compounding"))
     # The SGO normalizer synthesizes its native_market_id from event and line.
     # Keep the provider's odd ID and that binding distinct from a venue contract.
     return dict(version=VERSION,
@@ -90,11 +97,7 @@ def inspect(ticket, checkpoint, offer, sized, policy):
                     captured_at=(snapshot.get("times") or {}).get("captured_at"),
                     decision_at=ticket.get("decision_at"), reconstructed_at=ticket.get("reconstructed_at")),
         probability=probability, gross_ev=gross_ev, screening_ev=ticket.get("screen_ev"), modeled_ev=ticket.get("ev"),
-        kelly=dict(reference_bankroll_usd=policy.get("reference_bankroll_usd"),
-                   multiplier=policy.get("kelly_multiplier"), sizing_scale_usd=policy.get("sizing_scale_usd"),
-                   outcome_returns=returns, budget_usd=ticket.get("kelly_budget_usd"),
-                   commitment_usd=ticket.get("cash_commitment_usd"),
-                   aggregate_budget_cap_usd=policy.get("budget_cap"), compounding=policy.get("intraday_compounding")),
+        kelly=kelly, sizing=sizing, frozen_quote_id=ticket.get("frozen_quote_id"),
         fees=dict(paper_assumption=fee_state, actual_fee_evidence="unknown", modeled_entry_usd=fee.get("entry_usd")),
         size=dict(paper_assumption="quoted_price_at_modeled_stake", executable_size_evidence="unavailable",
                   executable_size_usd=None))

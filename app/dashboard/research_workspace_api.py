@@ -76,10 +76,13 @@ def mount(app):
 
     async def campaign(request):
         query = request.query
-        if set(query)-{'variant','export'} or query.get('export') not in (None,'1'):
-            raise PublicRequestError('Select a campaign portfolio.')
-        value = await work(paper_campaigns.view, _identity(request.match_info['campaign_id']), query.get('variant','best_venue'))
-        return _response(value,filename=f'predict-week-{value["config"]["start_date"]}-{value["variant"]}.json' if query.get('export') else None)
+        if (set(query) - {'variant', 'mode', 'export'} or len(query) != len(set(query))
+                or query.get('export') not in (None, '1')):
+            raise PublicRequestError('Select an experiment sizing mode and portfolio.')
+        value = await work(paper_campaigns.view, _identity(request.match_info['campaign_id']),
+                           query.get('variant'), mode=query.get('mode'))
+        name = f'predict-week-{value["config"]["start_date"]}-{value["mode"]}-{value["variant"]}.json'
+        return _response(value, filename=name if query.get('export') else None)
 
     async def run(request):
         query = dict(request.query)
@@ -136,7 +139,8 @@ def mount(app):
             await response.write(prefix)
             for position, game in enumerate(games):
                 async with dated_export:
-                    value = await work(workspace.offer_export_game, game, fields["minimum_ev"], selected, timeout=None)
+                    value = await work(workspace.offer_export_game, game, fields["minimum_ev"], selected,
+                                       sizing=fields.get("sizing"), timeout=None)
                 body = (b"," if position else b"") + encoded(value)
                 digest.update(body)
                 await response.write(body)

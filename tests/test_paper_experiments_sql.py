@@ -69,9 +69,10 @@ class ResearchWorkspaceFixture(LatestBoardFixture):
 
         self.at = stamp("2026-11-23T17:00:00Z")
         with self.connect() as db:
-            db.execute("CREATE TABLE public.workspace_fixture_clock(at timestamptz NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS public.workspace_fixture_clock(at timestamptz NOT NULL)")
+            db.execute("TRUNCATE public.workspace_fixture_clock")
             db.execute("INSERT INTO public.workspace_fixture_clock VALUES (%s)", (self.at,))
-            db.execute("""CREATE FUNCTION public.workspace_fixture_now() RETURNS timestamptz
+            db.execute("""CREATE OR REPLACE FUNCTION public.workspace_fixture_now() RETURNS timestamptz
                 LANGUAGE SQL AS 'SELECT at FROM public.workspace_fixture_clock'""")
             db.execute("""ALTER TABLE public.ev_experiment_record ALTER COLUMN recorded_at
                 SET DEFAULT public.workspace_fixture_now()""")

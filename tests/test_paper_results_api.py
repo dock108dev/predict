@@ -49,7 +49,7 @@ def test_result_status_history_and_exact_variant_exports():
             if self.campaign:
                 return None
             return dict(id=run, report_revision="d" * 64, game_date=date(2026, 11, 23),
-                        paper=True)
+                        paper=True, policy=dict(execution="paper_only"))
 
     def read_queue(_db, run_id, *, result_id, status_only):
         assert run_id == run

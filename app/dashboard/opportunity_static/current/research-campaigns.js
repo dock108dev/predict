@@ -1,11 +1,14 @@
 import {card,count,label,link,node,pairs,pct,readJSON,table,time,usd} from './workspace-ui.js';
 import {qualityComparison} from './research-quality.js';
 import {number} from './workspace-format.js';
+import {rational} from './comparison-board.js';
 
 const API='/api/research/workspace/campaigns';
 const titles={best_venue:'Best venue only',all_venues:'All qualifying venues'};
+const allPortfolios=Object.keys(titles);
+const modes={fixed_profit:'Win fixed profit',kelly:'Kelly'};
 export const campaignHref=(id,variant='best_venue',context={})=>'/research?'+new URLSearchParams({
-  section:'experiments',campaign:id,variant,...context,
+  section:'experiments',campaign:id,variant,...Object.fromEntries(Object.entries(context).filter(([,value])=>value!=null)),
 });
 const href=campaignHref;
 const money=value=>value==null?'—':usd(value);
@@ -23,6 +26,47 @@ export function workbenchPeriod(daily, weekly, active) {
     nav.append(tab);
   }
   return nav;
+}
+
+export function workbenchSizing(config, available, active, destination) {
+  if (available.length<2 || !destination) return null;
+  const nav=node('nav',undefined,'workspace-variant');
+  nav.setAttribute('aria-label','Sizing mode');
+  for (const mode of available) {
+    const tab=link(sizingTitle(config,mode),destination(mode),'research-button');
+    if (mode===active) tab.setAttribute('aria-current','page');
+    nav.append(tab);
+  }
+  return nav;
+}
+
+export function sizingTitle(config, mode=config.sizing_mode || 'kelly') {
+  if (mode!=='fixed_profit') return 'Kelly';
+  const amount=number(config.target_profit_usd);
+  return amount==null ? modes.fixed_profit : 'Win '+(Number.isInteger(amount) ? '$'+amount.toLocaleString('en-US') : exactMoney(config.target_profit_usd));
+}
+
+export function exactMoney(value) {
+  if(value==null)return 'Unavailable';
+  const [numerator,denominator]=rational(String(value).replace(/^(-?)\./,(_,sign)=>sign+'0.'));
+  return 100n*numerator%denominator ? `${usd(value)} (${value} USD exact)` : usd(value);
+}
+
+export function fixedProfitFields(sizing) {
+  return {
+    'Target win profit':exactMoney(sizing.target_profit_usd),
+    'Modeled net profit on a win':exactMoney(sizing.modeled_win_profit_usd),
+    'Modeled profit minus target':exactMoney(sizing.profit_difference_usd),
+  };
+}
+
+export function configuredModes(config) {
+  return config.kelly_comparison ? ['fixed_profit','kelly'] : [config.sizing_mode || 'kelly'];
+}
+
+export function configuredPortfolio(config, requested) {
+  const portfolios=config?.portfolios || allPortfolios;
+  return portfolios.includes(requested) ? requested : portfolios[0];
 }
 
 function rescale(input, numerator, denominator) {
@@ -58,46 +102,178 @@ const decimalRate=value=>{
 
 export function campaignList(values){
   const root=card('Daily & weekly experiments');
-  root.append(node('p','Paper-only schedules, daily results and EV comparisons.'));
-  for(const c of values||[])root.append(node('p'),link(`${c.name} · ${c.start_date}–${c.end_date} · ${percent(c.kelly_multiplier)}% Kelly`,href(c.id,'best_venue',{view:'daily'}),'research-button'));
-  root.append(link('Create a scheduled experiment','/research?section=experiments&view=schedule','research-button'));
+  root.append(link('Create experiment','/research?section=experiments&view=schedule','research-button'));
+  const entries=node('ul',undefined,'campaign-list');
+  for(const c of values||[]) {
+    const item=node('li');
+    item.append(link(c.name,href(c.id,configuredPortfolio(c,'best_venue'),{view:'daily'})),
+      node('p',`${c.start_date}–${c.end_date} Eastern · ${configuredModes(c).map(mode=>sizingTitle(c,mode)).join(' + ')}`));
+    entries.append(item);
+  }
+  if(entries.childElementCount)root.append(entries);
   return root;
 }
 
-export function campaignForm(root,config=null,revision=null,variant='best_venue'){
-  const panel=card(config?'Create a revised experiment':'Create a daily paper experiment');
-  panel.append(node('p','Changes create a separate experiment. Earlier definitions and runs remain available. Dates use Eastern time.'));
-  const form=node('form',undefined,'campaign-form'), inputs={};
+function ruleSummary(config) {
+  const fixed=config.sizing_mode==='fixed_profit';
+  const kelly=config.kelly_multiplier!=null
+    ? `${percent(config.kelly_multiplier)}% of full Kelly on a ${usd(config.reference_bankroll_usd)} reference bankroll` : null;
+  return {
+    'Game scope':'Men’s NCAA Division I vs. Division I',
+    'Game dates':`${config.start_date} through ${config.end_date}, inclusive (Eastern)`,
+    'Primary sizing':fixed ? `${sizingTitle(config)} per winning paper trade, using the nearest achievable positive net profit` : kelly,
+    ...(fixed&&config.kelly_comparison ? {'Kelly comparison':kelly} : {}),
+    'Minimum EV':`${percent(config.minimum_ev)}% unrounded, including after sizing`,
+    'EV buckets':config.bucket_edges.map((minimum,i,edges)=>band({minimum,maximum:edges[i+1]})).join(', '),
+    Portfolios:(config.portfolios || allPortfolios).map(portfolio=>titles[portfolio]).join(' and '),
+    Evidence:'Final eligible T−10 observation in the capture window, with exact-line reference probabilities',
+  };
+}
+
+export function campaignForm(root,config=null,revision=null,variant='best_venue',context={}){
+  const panel=card(config?'Revise experiment':'Create experiment');
+  panel.append(node('p',config?'Saving changes creates a new version. Earlier reports remain available.':'Save a paper experiment to replay retained evidence and schedule upcoming game dates.'));
+  const form=node('form',undefined,'campaign-form'), fields=node('div',undefined,'campaign-fields'), inputs={};
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
   const get=type=>parts.find(p=>p.type===type).value;
   const monday=new Date(`${get('year')}-${get('month')}-${get('day')}T12:00:00Z`);monday.setUTCDate(monday.getUTCDate()-(monday.getUTCDay()+6)%7);
   const sunday=new Date(monday);sunday.setUTCDate(sunday.getUTCDate()+6);
-  const defaults={name:'NCAAB daily experiment',start_date:monday.toISOString().slice(0,10),end_date:sunday.toISOString().slice(0,10),minimum_ev:'4',kelly_multiplier:'2.5',reference_bankroll_usd:'10000',bucket_edges:'4, 8, 15, 25'};
-  if(config)Object.assign(defaults,config,{minimum_ev:percent(config.minimum_ev),kelly_multiplier:percent(config.kelly_multiplier),bucket_edges:config.bucket_edges.map(percent).join(', ')});
-  for(const [key,title,type] of [['name','Experiment name','text'],['start_date','First game date','date'],['end_date','Last game date','date'],['minimum_ev','Minimum EV (%)','text'],['kelly_multiplier','Full Kelly used (%)','text'],['reference_bankroll_usd','Sizing reference ($)','text'],['bucket_edges','EV bucket boundaries (%)','text']]){
-    const lab=node('label',title),input=node('input');input.name=key;input.type=type;input.value=defaults[key];input.required=true;
-    lab.append(input);form.append(lab);inputs[key]=input;
+  const defaults={
+    name:'', scope:'mens-d1', start_date:monday.toISOString().slice(0,10), end_date:sunday.toISOString().slice(0,10),
+    minimum_ev:'4', sizing_mode:'fixed_profit', target_profit_usd:'10', kelly_comparison:false,
+    kelly_multiplier:'2.5', reference_bankroll_usd:'10000', bucket_edges:'4, 8, 15, 25', portfolios:allPortfolios,
+  };
+  if(config)Object.assign(defaults,config,{
+    sizing_mode:config.sizing_mode || 'kelly', minimum_ev:percent(config.minimum_ev),
+    target_profit_usd:config.target_profit_usd==null ? defaults.target_profit_usd : rescale(config.target_profit_usd,1n,1n),
+    kelly_multiplier:config.kelly_multiplier==null ? defaults.kelly_multiplier : percent(config.kelly_multiplier),
+    reference_bankroll_usd:config.reference_bankroll_usd==null ? defaults.reference_bankroll_usd : rescale(config.reference_bankroll_usd,1n,1n),
+    bucket_edges:config.bucket_edges.map(percent).join(', '),
+  });
+  function field(parent,key,title,{type='text',options}={}) {
+    const lab=node('label',title), input=node(options ? 'select' : 'input');
+    input.name=key;
+    if(options) input.append(...Object.entries(options).map(([value,text])=>new Option(text,value)));
+    else input.type=type;
+    if(type==='checkbox') {
+      lab.className='campaign-check';
+      input.checked=Boolean(defaults[key]);
+      lab.prepend(input);
+    } else {
+      input.value=defaults[key];
+      input.required=true;
+      lab.append(input);
+      if(type==='text')input.maxLength=key==='name' ? 120 : key==='bucket_edges' ? 420 : 32;
+    }
+    parent.append(lab);
+    inputs[key]=input;
+    return input;
   }
-  const preview=node('p'),feedback=node('p');feedback.setAttribute('role','status');
-  const explain=()=>{const scale=number(inputs.reference_bankroll_usd.value)*number(inputs.kelly_multiplier.value)/100;preview.textContent=`At −110 and 4% EV, this sizing commits about ${usd(scale*.04/(100/110))}. No portfolio budget cap or intraday compounding. Both venue variants are recorded.`;};
-  form.addEventListener('input',explain);explain();
-  const submit=node('button','Save and schedule experiment');submit.type='submit';
-  form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;feedback.textContent='Saving schedule…';
-    try{const body=Object.fromEntries(Object.entries(inputs).map(([k,v])=>[k,v.value]));
-      for(const key of ['minimum_ev','kelly_multiplier'])body[key]=decimalRate(body[key]);
-      body.bucket_edges=body.bucket_edges.split(',').map(decimalRate);
-      if(revision)body.supersedes=revision;
-      const value=await readJSON(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      location.href=href(value.id,variant);
-    }catch(error){feedback.textContent=error.message;submit.disabled=false;}};
-  form.append(preview,submit,feedback);panel.append(form);
-  panel.append(revision?link('Back to daily & weekly results',href(revision,variant)):link('Back to experiments','/research?section=experiments'));
+  field(fields,'name','Experiment name');
+  field(fields,'scope','Game scope',{options:{'mens-d1':'Men’s NCAA Division I vs. Division I'}});
+  field(fields,'start_date','First game date (Eastern)',{type:'date'});
+  field(fields,'end_date','Last game date (Eastern)',{type:'date'});
+  field(fields,'sizing_mode','Sizing method',{options:modes});
+  const fixed=node('fieldset',undefined,'campaign-fields');
+  fixed.append(node('legend','Fixed profit settings'));
+  field(fixed,'target_profit_usd','Target win profit ($)');
+  field(fixed,'kelly_comparison','Compare with Kelly',{type:'checkbox'});
+  const kelly=node('fieldset',undefined,'campaign-fields');
+  kelly.append(node('legend','Kelly settings'));
+  field(kelly,'kelly_multiplier','Full Kelly used (%)');
+  field(kelly,'reference_bankroll_usd','Reference bankroll ($)');
+  fields.append(fixed,kelly);
+  field(fields,'minimum_ev','Minimum EV (%)');
+  const edges=field(fields,'bucket_edges','EV bucket boundaries (%)');
+  edges.setAttribute('aria-describedby','campaign-ev-help');
+  const edgeHelp=node('small','Separate boundaries with commas. Start with the minimum EV.');
+  edgeHelp.id='campaign-ev-help';
+  edges.parentElement.append(edgeHelp);
+  const portfolios=node('fieldset',undefined,'campaign-portfolios'), picks=[];
+  portfolios.append(node('legend','Portfolios'));
+  for(const [id,title] of Object.entries(titles)) {
+    const lab=node('label',title,'campaign-check'), input=node('input');
+    input.type='checkbox';input.value=id;input.checked=defaults.portfolios.includes(id);
+    lab.prepend(input);portfolios.append(lab);picks.push(input);
+  }
+  portfolios.append(node('p','Best venue keeps one qualifying venue per exact bet. Different lines stay separate.'));
+  fields.append(portfolios);
+  function updateFields(){
+    const isFixed=inputs.sizing_mode.value==='fixed_profit';
+    fixed.hidden=fixed.disabled=!isFixed;
+    kelly.hidden=kelly.disabled=isFixed&&!inputs.kelly_comparison.checked;
+  }
+  inputs.sizing_mode.onchange=inputs.kelly_comparison.onchange=updateFields;
+  updateFields();
+  const review=node('section',undefined,'campaign-review'), feedback=node('p');
+  const reviewHeading=node('h3','Review experiment');
+  reviewHeading.tabIndex=-1;
+  review.setAttribute('aria-label','Review experiment');
+  review.hidden=true;
+  feedback.setAttribute('role','status');
+  const next=node('button','Review'), back=node('button','Edit settings'), save=node('button','Save and run');
+  next.type=save.type='submit';back.type='button';
+  const actions=node('div',undefined,'workspace-links');
+  actions.append(back,save);
+  function build(){
+    const body=Object.fromEntries(Object.entries(inputs).filter(([,input])=>!input.closest('fieldset:disabled'))
+      .map(([key,input])=>[key,input.type==='checkbox' ? input.checked : input.value.trim()]));
+    if(!body.name)throw Error('Enter an experiment name.');
+    if(body.end_date<body.start_date)throw Error('Choose a last game date on or after the first.');
+    if((Date.parse(body.end_date)-Date.parse(body.start_date))/86400000>=366)throw Error('Choose an experiment period of up to one year.');
+    for(const key of ['minimum_ev','kelly_multiplier'])if(body[key]!=null)body[key]=decimalRate(body[key]);
+    body.bucket_edges=body.bucket_edges.split(',').map(decimalRate);
+    const boundaryPairs=body.bucket_edges.map(rational);
+    if(body.bucket_edges.length>12 || body.bucket_edges[0]!==body.minimum_ev ||
+       boundaryPairs.some(([a,b],i,pairs)=>i>0&&a*pairs[i-1][1]<=b*pairs[i-1][0])) {
+      throw Error('Enter up to twelve increasing EV boundaries, beginning at the minimum EV.');
+    }
+    if(number(body.minimum_ev)<=0)throw Error('Enter a positive minimum EV.');
+    if(body.kelly_multiplier!=null&&!(number(body.kelly_multiplier)>0&&number(body.kelly_multiplier)<=1)) {
+      throw Error('Enter a Kelly fraction greater than 0% and at most 100%.');
+    }
+    for(const [key,title] of [['target_profit_usd','win profit target'],['reference_bankroll_usd','reference bankroll']]) {
+      if(body[key]!=null && (!(number(body[key])>0) || !/^(\d+(\.\d+)?|\.\d+|\d+\/\d+)$/.test(body[key]))) {
+        throw Error(`Enter a positive ${title}.`);
+      }
+    }
+    body.portfolios=picks.filter(input=>input.checked).map(input=>input.value);
+    if(!body.portfolios.length)throw Error('Choose at least one portfolio.');
+    if(revision)body.supersedes=revision;
+    return body;
+  }
+  let reviewed;
+  back.onclick=()=>{
+    reviewed=null;review.hidden=true;fields.hidden=next.hidden=false;
+    feedback.textContent='';inputs.name.focus();
+  };
+  form.onsubmit=async event=>{
+    event.preventDefault();
+    if(save.disabled)return;
+    feedback.textContent='';
+    try{
+      if(!reviewed){
+        const body=build();
+        review.replaceChildren(reviewHeading,node('p',body.name),pairs(ruleSummary(body)),
+          node('p','Elapsed dates replay automatically from retained evidence. Future dates wait for their capture windows. All results are paper only.'),actions);
+        reviewed=body;fields.hidden=next.hidden=true;review.hidden=false;
+        reviewHeading.focus();
+        return;
+      }
+      save.disabled=back.disabled=true;feedback.textContent='Saving experiment…';
+      const value=await readJSON(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(reviewed)});
+      location.href=href(value.id,configuredPortfolio(reviewed,variant),{view:'weekly',mode:reviewed.sizing_mode});
+    }catch(error){feedback.textContent=error.message;save.disabled=back.disabled=false;}
+  };
+  form.append(fields,next,review,feedback);panel.append(form);
+  panel.append(revision?link('Back to experiment',href(revision,variant,{...context,view:'weekly'}))
+    :link('Back to experiments','/research?section=experiments'));
   root.append(panel);
 }
 
-export function readCampaign(id,variant) {
-  return readJSON(`${API}/${encodeURIComponent(id)}?`+new URLSearchParams({variant}))
-    .then(data=>({...data,variant}));
+export function readCampaign(id,variant,mode) {
+  return readJSON(`${API}/${encodeURIComponent(id)}?`+new URLSearchParams({variant,...(mode ? {mode}: {})}))
+    .then(data=>({...data,variant:data.variant||variant,mode:data.mode||data.config.sizing_mode||'kelly'}));
 }
 
 export function campaignDays(campaign) {
@@ -110,27 +286,64 @@ export function campaignDays(campaign) {
   return days;
 }
 
-function campaignHeader(config,variant,period,portfolioHref) {
+function campaignHeader(data,period,portfolioHref,modeHref) {
+  const {config,variant,mode}=data;
   const heading=card(config.name);
   heading.classList.add('paper-workbench-header');
-  heading.append(node('p',`${config.start_date}–${config.end_date} Eastern · Men’s D1 NCAAB · Paper experiment`,'workspace-caption'));
+  heading.append(node('p',`${config.start_date}–${config.end_date} Eastern · Men’s D1 vs. D1 · ${sizingTitle(config,mode)} · Paper experiment`,'workspace-caption'));
   const controls=node('div',undefined,'results-controls');
+  controls.append(period);
+  const sizing=workbenchSizing(config,data.available_modes || configuredModes(config),mode,modeHref);
+  if(sizing)controls.append(sizing);
   const portfolios=node('nav',undefined,'workspace-variant');
   portfolios.setAttribute('aria-label','Paper portfolios');
-  for(const [key,title] of Object.entries(titles)){
-    const a=link(title,portfolioHref(key),'research-button');
+  for(const key of config.portfolios || allPortfolios){
+    const a=link(titles[key],portfolioHref(key),'research-button');
     if(key===variant)a.setAttribute('aria-current','true');
     portfolios.append(a);
   }
-  controls.append(period,portfolios);
+  controls.append(portfolios);
   heading.append(controls);
   return heading;
 }
 
-export function renderScheduledDay(root,data,day,{daily,weekly,dayHref,portfolioHref}) {
+const dayStatus={
+  scheduled:'Scheduled',
+  waiting_for_evidence:'Waiting for capture evidence',
+  deferred_for_capture:'Waiting for T−10 capture',
+  no_usable_capture:'Missing usable T−10 evidence',
+  no_selected_tickets:'Valid zero-trade result',
+  awaiting_results:'Awaiting sporting results',
+  partially_graded:'Partially graded',
+  graded:'Graded',
+  collecting:'Capture in progress',
+  unresolved:'Grading unresolved',
+  published:'Replay published',
+};
+
+function statusText(day) {
+  if(day.error) return 'Replay failed';
+  return [dayStatus[day.result_state] || dayStatus[day.state] || label(day.state),
+    day.capture_state==='partial' ? 'Partial T−10 coverage' : null,
+    day.result_pending ? 'Grading update pending' : null, day.retrospective ? 'Retrospective replay' : null].filter(Boolean).join(' · ');
+}
+
+export function comparisonCounts(counts) {
+  return {
+    'Qualify in both modes':count(counts.jointly_qualifying_quotes),
+    'Qualify only at fixed profit':count(counts.fixed_profit_only_qualifying_quotes),
+    'Qualify only at Kelly size':count(counts.kelly_only_qualifying_quotes),
+    'Selected in both modes':count(counts.jointly_selected_quotes),
+    'Selected only at fixed profit':count(counts.fixed_profit_only_selected_quotes),
+    'Selected only at Kelly size':count(counts.kelly_only_selected_quotes),
+    'Best venue changes':count(counts.venue_changes),
+  };
+}
+
+export function renderScheduledDay(root,data,day,{daily,weekly,dayHref,portfolioHref,modeHref,editHref}) {
   const snapshot=JSON.stringify(day), previous=rendered.get(root);
   if(previous?.heading===root.firstElementChild&&previous.snapshot===snapshot)return;
-  const heading=campaignHeader(data.config,data.variant,workbenchPeriod(daily,weekly,'daily'),portfolioHref);
+  const heading=campaignHeader(data,workbenchPeriod(daily,weekly,'daily'),portfolioHref,modeHref);
   const dateLabel=node('label','Game date (Eastern)'), select=node('select');
   select.append(...data.days.map(entry=>new Option(entry.date,entry.date)));
   select.value=day.date;
@@ -141,33 +354,35 @@ export function renderScheduledDay(root,data,day,{daily,weekly,dayHref,portfolio
   heading.querySelector('.results-controls').append(form);
   const notice=node('div',undefined,'workspace-notice results-status');
   notice.setAttribute('role','status');
-  notice.append(node('strong',day.error?'Daily report unavailable':label(day.state)),
+  notice.append(node('strong',statusText(day)),
     node('p',day.error || 'Awaiting retained capture evidence. Paper financials are unavailable.'),
     ...(day.next_check_at ? [node('p',`Next evidence check ${time(day.next_check_at)}`)] : []));
-  heading.append(notice,link('Daily coverage and issue decisions','/data?'+new URLSearchParams({
+  const actions=node('div',undefined,'workspace-links');
+  actions.append(link('Daily coverage and issue decisions','/data?'+new URLSearchParams({
     evidence:'mens-d1',scope:'mens-d1',date:day.date,variant:data.variant,
-  })+'#mens-d1-issues'));
+  })+'#mens-d1-issues'),link('Edit as a new version',editHref,'research-button'));
+  heading.append(notice,actions);
   root.replaceChildren(heading);
   rendered.set(root,{heading,snapshot});
 }
 
-export function renderCampaign(root,data,{edit=false,daily,weekly,dayHref,portfolioHref}={}){
-  const {id,variant,config,weekly:weekData}=data;
-  if(edit){root.replaceChildren();campaignForm(root,config,id,variant);return;}
+export function renderCampaign(root,data,{edit=false,daily,weekly,dayHref,portfolioHref,modeHref,editHref,context}={}){
+  const {id,variant,config,mode,weekly:weekData}=data;
+  if(edit){root.replaceChildren();campaignForm(root,config,id,variant,context);return;}
   const snapshot=JSON.stringify(data), previous=rendered.get(root);
   if(previous?.heading===root.firstElementChild&&previous.snapshot===snapshot)return;
   const qualityOpened=root.querySelector('.paper-quality')?.open;
   root.replaceChildren();
-  const heading=campaignHeader(config,variant,workbenchPeriod(daily,weekly,'weekly'),portfolioHref);
+  const heading=campaignHeader(data,workbenchPeriod(daily,weekly,'weekly'),portfolioHref,modeHref);
   const policy=node('details');
-  policy.append(node('summary','Experiment rules'),node('p',`${percent(config.kelly_multiplier)}% of full Kelly on ${usd(config.reference_bankroll_usd)}; minimum EV ${percent(config.minimum_ev)}%. Historical days are retrospective replays. New dates are automatically recorded from retained T−10 evidence.`));
+  policy.append(node('summary','Experiment rules'),pairs(ruleSummary(config)));
   heading.append(policy);
   const actions=node('div',undefined,'workspace-links');
-  actions.append(link('Export daily, weekly and EV analysis',`${API}/${id}?`+new URLSearchParams({variant,export:'1'})),
+  actions.append(link('Export daily, weekly and EV analysis',`${API}/${id}?`+new URLSearchParams({variant,mode,export:'1'})),
     link('Collection and results jobs','/settings#mens-d1-jobs'));
   if(config.supersedes)actions.append(link('Open previous experiment version',href(config.supersedes,variant)));
   const revise=node('button','Edit as a new version');
-  revise.onclick=()=>{location.href=href(id,variant)+'&view=revise';};
+  revise.onclick=()=>{location.href=editHref;};
   actions.append(revise);heading.append(actions);root.append(heading);
   rendered.set(root,{heading,snapshot});
   const week=card('Week / experiment total');week.append(node('p',`${data.reported_days} of ${data.days.length} daily reports available. Pending days and ungraded trades are not zero-result days. Only the latest run for each day is counted.`));
@@ -178,6 +393,11 @@ export function renderCampaign(root,data,{edit=false,daily,weekly,dayHref,portfo
   const quality=available&&qualityComparison(weekData.quality);
   if(quality){quality.open=Boolean(qualityOpened);week.append(quality);}
   root.append(week);
+  if(data.comparison) {
+    const comparison=card('Win profit and Kelly comparison');
+    comparison.append(node('p','Counts use dates with both replays available and match the same frozen quotes and exact bets.'),pairs(comparisonCounts(data.comparison)));
+    root.append(comparison);
+  }
   const days=card('Daily results');days.append(table(['Game date','Recording / results','Next evidence check','Frozen / rebuilt / missing / pending',...headers],data.days.map(day=>{
     const c=day.captures||{}, dateCell=node('div');
     dateCell.append(link(day.date,dayHref(day.date,day.run_id)));
@@ -190,7 +410,7 @@ export function renderCampaign(root,data,{edit=false,daily,weekly,dayHref,portfo
       }
       dateCell.append(history);
     }
-    const description=day.error||`${label(day.state)} · ${label(day.result_state||'waiting for day')}${day.result_pending?' · updating':''}${day.retrospective?' · retrospective':''}`;
+    const description=day.error ? `Replay failed · ${day.error}` : statusText(day);
     const financials=day.analysis?summaryRows(day.analysis.summary):Array(headers.length).fill(day.result_state==='no_usable_capture'?'Unavailable':'Pending');
     return [dateCell,description,day.next_check_at?time(day.next_check_at):'—',
       day.captures?`${c.captured||0} / ${c.reconstructed||0} / ${(c.missed||0)+(c.failed||0)+(c.refused||0)+(c.no_task||0)} / ${(c.pending||0)+(c.claimed||0)}`:'Awaiting evidence', ...financials];
