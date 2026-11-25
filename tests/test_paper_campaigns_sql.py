@@ -44,6 +44,13 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 campaigns.WIN_10_CAMPAIGN, archived['id'], current['id'], revised['id']}
             assert campaigns.view(db, current['id'])['config']['target_profit_usd'] == '10'
             assert len(campaigns.view(db, archived['id'])['days']) == 7
+            with_floor = campaigns.create(db, fixed_config(name='Win $10', minimum_stake_usd='1.00',
+                                                            supersedes=campaigns.WIN_10_CAMPAIGN))
+            newer = campaigns.create(db, fixed_config(name='Created afterward'))
+            assert [campaign['id'] for campaign in campaigns.index(db, active_only=True)] == [
+                with_floor['id'], newer['id'], revised['id']]
+            assert campaigns.view(db, with_floor['id'])['config']['minimum_stake_usd'] == '1'
+            assert 'minimum_stake_usd' not in campaigns.view(db, campaigns.WIN_10_CAMPAIGN)['config']
 
     async def test_ui_configuration_queues_seven_days_and_publishes_repriced_snapshot_once(self):
         await super().asyncSetUp()

@@ -1,7 +1,7 @@
 import {count, details, label, link, node, pairs, pct, stack, table, time, usd} from './workspace-ui.js';
 import {number, selection, venue} from './workspace-format.js';
 import {qualityComparison} from './research-quality.js';
-import {band, comparisonCounts, fixedProfitFields, sizingTitle, workbenchPeriod, workbenchSizing} from './research-campaigns.js';
+import {band, comparisonCounts, exactMoney, fixedProfitFields, sizingTitle, workbenchPeriod, workbenchSizing} from './research-campaigns.js';
 import {gradeFilters, ledgerViewModel, requestedTrade, resolvedGrade, tradeSorts} from './research-ledger.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
@@ -531,6 +531,7 @@ const sizingExclusionReasons = {
   kelly_sizing_did_not_converge:'Kelly sizing did not converge',
   sized_ev_below_4pct:'Net EV after sizing fell below 4%',
   sized_ev_below_minimum:'Net EV after sizing fell below the minimum',
+  sized_stake_below_minimum:'Stake below minimum after sizing',
   sizing_inputs_incomplete:'Sizing inputs incomplete',
   unsupported_cashflow_states:'Captured cashflows do not describe a supported bet',
 };
@@ -546,9 +547,11 @@ function sizingExclusions(selected) {
   if (!counts.size) return null;
   const reasons = [...counts.entries()].sort(([a, x], [b, y]) => y - x || a.localeCompare(b));
   const panel = node('details', undefined, 'workspace-panel workspace-card');
+  const minimum = selected.report.policy?.minimum_stake_usd;
   panel.append(node('summary', 'Sizing exclusions'),
-    node('p', 'These frozen quotes were excluded while sizing this day’s paper trades. Counts are for the current sizing mode across the full day.'),
-    table(['Reason', 'Quotes'], reasons.map(([reason, total]) => [reason, count(total)])),
+    node('p', 'These frozen quotes were excluded while sizing this day’s paper trades. Counts are for the current sizing mode across the full day.'));
+  if (minimum != null) panel.append(node('p', `Minimum stake for this run is ${exactMoney(minimum)} after sizing and modeled fees.`));
+  panel.append(table(['Reason', 'Quotes'], reasons.map(([reason, total]) => [reason, count(total)])),
     link('Export dated offer ledger', '/api/research/workspace/runs/' + encodeURIComponent(selected.run.id) + '/offers'));
   return panel;
 }
@@ -589,6 +592,7 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   const usable = report?.games.some(captured);
   const context = [`${selected.run.date} Eastern`, 'Paper results',
     policy.minimum_ev && `EV ≥${pct(policy.minimum_ev)}`,
+    policy.minimum_stake_usd != null && `Stake ≥${exactMoney(policy.minimum_stake_usd)}`,
     navigation.mode==='fixed_profit' ? sizingTitle(navigation.config,navigation.mode)
       : policy.kelly_multiplier && `${policy.kelly_multiplier} full Kelly`];
   if (!navigation.embedded) title.append(node('h2', selected.run.title));

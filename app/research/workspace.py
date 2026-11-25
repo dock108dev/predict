@@ -571,7 +571,8 @@ def offer_export_plan(db, run_id):
                   provider_requests=0, orders_submitted=0)
     if policy.get("sizing_mode"):
         fields["sizing"] = {key: policy[key] for key in (
-            "sizing_mode", "sizing_rule", "target_profit_usd", "kelly_multiplier", "reference_bankroll_usd", "portfolios"
+            "sizing_mode", "sizing_rule", "target_profit_usd", "kelly_multiplier", "reference_bankroll_usd",
+            "minimum_stake_usd", "portfolios"
         ) if key in policy}
     return fields, report["games"], selected
 
@@ -595,8 +596,9 @@ def offer_export_game(db, game, minimum, selected, *, sizing=None):
         offer["selected_tickets"] = {name: selected[name][key] for name in portfolios if key in selected[name]}
         if sizing and position in sizing_exclusions:
             failure = sizing_exclusions[position]
-            offer["sizing"] = dict(state="excluded", frozen_quote_id=failure["frozen_quote_id"],
-                                   reason=failure["reason"])
+            offer["sizing"] = dict(state="excluded", **{name: failure[name] for name in (
+                "frozen_quote_id", "reason", "cash_commitment_usd", "minimum_stake_usd", "sized_ev"
+            ) if name in failure})
         elif sizing and key in selected["all_venues"]:
             offer["sizing"] = dict(state="qualified",
                                    frozen_quote_id=hashed([identity, position, offer["exact_bet_id"]]))

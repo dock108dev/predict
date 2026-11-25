@@ -56,13 +56,15 @@ def read(db, run_id, *, variant, version_id, status_only):
             JOIN public.research_workspace_run r ON r.definition_version=d.version
             WHERE r.id=%s""", (run_id,)).fetchone()
         if config:
+            settings = config["payload"]
             document = (paper_campaigns.snapshot_document(db, run_id) if versioned_sizing else
                         workspace._run(db, run_id)["payload"])
             tickets = paper_campaigns.analysis_tickets(document, report)
-            quality = paper_campaigns.quality(tickets, config["payload"]["bucket_edges"], variant,
+            quality = paper_campaigns.quality(tickets, settings["bucket_edges"], variant,
                                               inputs=version["id"])
+            odds_edges = settings.get("odds_bucket_edges", paper_campaigns.DEFAULT_ODDS_EDGES)
             report = dict(report, portfolios={name: dict(portfolio,
-                odds_buckets=paper_campaigns.odds_buckets(portfolio["tickets"]))
+                odds_buckets=paper_campaigns.odds_buckets(portfolio["tickets"], odds_edges))
                 for name, portfolio in report["portfolios"].items()})
     if report and versioned_sizing:
         portfolio_status = paper_results.portfolio_status(report, variant)

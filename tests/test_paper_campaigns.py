@@ -62,6 +62,25 @@ def test_posted_odds_buckets_partition_exact_boundaries_and_unavailable_prices()
     assert all(b['stake_share'] is None for b in campaigns.odds_buckets([]))
 
 
+def test_settings_normalize_minimum_stake_and_custom_odds_boundaries():
+    defaults = campaigns.configuration(fixed_config())
+    assert campaigns.configuration(fixed_config(odds_bucket_edges=['+200', '300', '500', '1000'])) == defaults
+    configured = campaigns.configuration(fixed_config(minimum_stake_usd='1.25', odds_bucket_edges=['+275', '750']))
+    assert configured['minimum_stake_usd'] == '5/4'
+    assert configured['odds_bucket_edges'] == ['275', '750']
+    rows = [dict(ticket(str(i), '.05'), posted_odds=value) for i, value in enumerate(('+274.9', '+275', '+750'))]
+    buckets = campaigns.odds_buckets(rows, configured['odds_bucket_edges'])
+    assert [(b['id'], b['summary']['tickets']) for b in buckets if b['summary']['tickets']] == [
+        ('plus_100_to_275', 1), ('plus_275_to_750', 1), ('plus_750_and_up', 1),
+    ]
+    for minimum in ('0', '-1', '1/0', 1):
+        with pytest.raises(workspace.SelectionError, match='positive minimum stake'):
+            campaigns.configuration(fixed_config(minimum_stake_usd=minimum))
+    for edges in ([], ['100'], ['+200', '200'], ['300', '250'], ['+300.25'], [200], ['1234567890']):
+        with pytest.raises(workspace.SelectionError, match='whole-number odds boundaries'):
+            campaigns.configuration(fixed_config(odds_bucket_edges=edges))
+
+
 def test_posted_odds_uses_selected_portfolio_and_keeps_unpublished_grades_pending():
     rows = [dict(ticket('winner', '.06', bet='shared', state='win'), posted_odds='+500',
                  stake_usd='10', return_exact_usd='20'),

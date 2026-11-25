@@ -474,7 +474,8 @@ def build_report(run, contexts):
     policy = original["policy"]
     if "sizing_mode" in policy:
         report["sizing_policy"] = {key: policy[key] for key in ("sizing_mode", "sizing_rule", "target_profit_usd",
-            "reference_bankroll_usd", "kelly_multiplier", "sizing_scale_usd", "minimum_ev", "portfolios")
+            "reference_bankroll_usd", "kelly_multiplier", "sizing_scale_usd", "minimum_ev", "minimum_stake_usd",
+            "portfolios")
             if key in policy}
     return report
 

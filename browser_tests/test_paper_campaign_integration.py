@@ -187,7 +187,16 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await page.get_by_label("Last game date (Eastern)").fill("2026-11-21")
                 await page.get_by_label("Target win profit ($)").fill("7.51")
                 await page.get_by_label("Compare with Kelly").check()
+                minimum = page.get_by_label("Minimum stake ($)")
+                edges = page.get_by_label("Posted odds bucket boundaries (American odds)")
+                await expect(minimum).to_have_value("1.00")
+                await expect(edges).to_have_value("+200, +300, +500, +1000")
+                await minimum.fill("2.50")
+                await edges.fill("+175, +300, +500, +1000")
                 await page.get_by_role("button", name="Review", exact=True).click()
+                review = page.get_by_role("region", name="Review experiment")
+                await expect(review).to_contain_text("$2.50 per trade after sizing")
+                await expect(review).to_contain_text("+175, +300, +500, +1000")
                 async with page.expect_response(
                     lambda res: (
                         res.request.method == "POST"
@@ -201,6 +210,11 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert response.ok, response.status
                 await page.wait_for_url(re.compile(r"[?&]campaign=[0-9a-f]{64}"))
                 campaign = parse_qs(urlsplit(page.url).query)["campaign"][0]
+                config = (await (await page.request.get(str(
+                    server.make_url(f"{BASE}/campaigns/{campaign}")
+                ))).json())["config"]
+                assert F(config["minimum_stake_usd"]) == F("2.50")
+                assert config["odds_bucket_edges"] == ["175", "300", "500", "1000"]
 
                 # Publication precedes the fixture's final. A different connection
                 # processes the sport input and the same saved run after the final.
@@ -213,7 +227,9 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await page.reload(wait_until="domcontentloaded")
                 odds_title = "Posted odds buckets · Win $7.51"
                 await page.get_by_text(odds_title, exact=True).click()
-                odds_row = page.get_by_role("table", name=odds_title).get_by_role(
+                odds_table = page.get_by_role("table", name=odds_title)
+                await expect(odds_table.get_by_text("+175 to under +300", exact=True)).to_be_visible()
+                odds_row = odds_table.get_by_role(
                     "row", name=re.compile(r"\+300 to under \+500")
                 )
                 await expect(odds_row.locator('[data-label="Selected trades"]')).to_have_text("1")
@@ -308,6 +324,7 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 exported = await (await page.request.get(api + f"&version={graded}&export=report")).json()
                 saved_odds = exported["report"]["portfolios"]["all_venues"]["odds_buckets"]
                 assert saved_odds == data["odds_buckets"]
+                assert any(bucket["label"] == "+175 to under +300" for bucket in saved_odds)
                 assert [bucket["summary"]["roi"] for bucket in saved_odds
                         if bucket["summary"]["tickets"]] == ["3"]
                 async with page.expect_download() as trade_file:
@@ -337,4 +354,32 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert excluded["sizing"]["reason"] == "captured_fee_inputs_unavailable"
                 assert report["provider_requests"] == report["orders_submitted"] == 0
                 await expect(page).to_have_url(re.compile(f"campaign={campaign}.*"))
+
+                await page.get_by_role("link", name="Edit experiment", exact=True).click()
+                await expect(minimum).to_have_value("2.5")
+                await expect(edges).to_have_value("+175, +300, +500, +1000")
+                await minimum.fill("2.51")
+                await page.get_by_role("button", name="Review", exact=True).click()
+                async with page.expect_response(
+                    lambda res: res.request.method == "POST" and res.url.endswith(BASE + "/campaigns")
+                ) as revised:
+                    await page.get_by_role("button", name="Save and run", exact=True).click()
+                assert (await revised.value).ok
+                await page.wait_for_url(re.compile(rf"[?&]campaign=(?!{campaign})[0-9a-f]{{64}}"))
+                revision_id = parse_qs(urlsplit(page.url).query)["campaign"][0]
+                revision = (await (await page.request.get(str(
+                    server.make_url(f"{BASE}/campaigns/{revision_id}")
+                ))).json())["config"]
+                assert revision["supersedes"] == campaign
+                assert F(revision["minimum_stake_usd"]) == F("2.51")
+                assert revision["odds_bucket_edges"] == config["odds_bucket_edges"]
+                with connect_web() as db:
+                    revised_run = paper_campaigns.tick(db)
+                    assert revised_run and revised_run != run
+                await page.reload(wait_until="domcontentloaded")
+                await page.get_by_role("link", name="Inspect games and trades").first.click()
+                await expect(page.get_by_text("Stake ≥$2.51", exact=False)).to_be_visible()
+                await page.get_by_text("Sizing exclusions", exact=True).click()
+                await expect(page.get_by_text("Stake below minimum after sizing", exact=True)).to_be_visible()
+                assert (await (await page.request.get(api + f"&version={graded}&export=report")).json()) == exported
                 await browser.close()

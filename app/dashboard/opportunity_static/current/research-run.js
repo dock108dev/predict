@@ -109,6 +109,8 @@ export function renderRun(root, {run, definition, report, comparison}, navigatio
     ? `The replay targets ${exactMoney(policy.target_profit_usd)} net profit on each win. If the target is between achievable amounts, it takes the closest positive profit and breaks ties at the lower commitment.`
     : `The replay uses ${pct(policy.kelly_multiplier)} of Kelly against a fixed ${usd(policy.reference_bankroll_usd)} sizing reference.`;
   methods.append(node('p', `The game date uses Eastern time. Screening requires ${policy.recovered_checkpoints ? 'an original frozen checkpoint or an explicitly reconstructed T−10 response' : 'a valid frozen T−10 checkpoint'} and unrounded EV of at least ${pct(policy.minimum_ev)}. ${sizing}`));
+  if (policy.minimum_stake_usd != null) methods.append(node('p',
+    `The minimum stake per trade is ${exactMoney(policy.minimum_stake_usd)} after sizing and modeled fees.`));
   methods.append(node('p','Paper commitments are sized independently without an aggregate budget cap or intraday compounding.'));
   methods.append(node('p', `Each paper commitment is repriced under the original fee assumption. ${feeModes.length ? feeModes.join(' · ') + '.' : 'No captured fee treatments are recorded for this run.'} Quoted price is assumed available at the modeled size.`));
   methods.append(node('p', 'Paper replay and sporting-result grading are recorded separately. Execution and actual venue settlement are unverified.'));

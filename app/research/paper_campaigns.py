@@ -4,6 +4,7 @@ from collections import Counter
 from copy import deepcopy
 from datetime import date, datetime, time, timedelta
 from fractions import Fraction as F
+import re
 from zoneinfo import ZoneInfo
 
 from psycopg.types.json import Jsonb
@@ -21,17 +22,19 @@ EASTERN = ZoneInfo('America/New_York')
 VARIANTS = paper_results.VARIANTS
 MODES = ('fixed_profit', 'kelly')
 AGE_BUCKETS = ('up_to_60', 'over_60_to_300', 'over_300', 'unknown', 'future')
-ODDS_BOUNDARIES = (-100, 100, 200, 300, 500, 1000)
-ODDS_BUCKETS = (
-    ('favorites', 'Favorites (below −100)'),
-    ('even_money', 'Even money (±100)'),
-    ('plus_100_to_200', 'Over +100 to under +200'),
-    ('plus_200_to_300', '+200 to under +300'),
-    ('plus_300_to_500', '+300 to under +500'),
-    ('plus_500_to_1000', '+500 to under +1000'),
-    ('plus_1000_and_up', '+1000 or longer'),
-    ('unavailable', 'Unavailable odds'),
-)
+DEFAULT_ODDS_EDGES = ('200', '300', '500', '1000')
+
+
+def _odds_edges(value):
+    invalid = 'Use one to twelve increasing whole-number odds boundaries above +100.'
+    if not isinstance(value, list) or not 1 <= len(value) <= 12 or any(
+        not isinstance(edge, str) or not re.fullmatch(r'\+?[0-9]{1,9}', edge) for edge in value
+    ):
+        raise workspace.SelectionError(invalid)
+    edges = list(map(int, value))
+    if edges[0] <= 100 or edges != sorted(set(edges)):
+        raise workspace.SelectionError(invalid)
+    return tuple(map(str, edges))
 
 
 def configuration(body):
@@ -67,6 +70,18 @@ def configuration(body):
         if mode == 'kelly' or sizing.get('kelly_comparison'):
             fields |= kelly_fields
             sizing['kelly_rule'] = paper.KELLY_RULE
+        if 'minimum_stake_usd' in body:
+            fields.add('minimum_stake_usd')
+            try:
+                minimum = workspace.assumptions({'reference_bankroll_usd': body['minimum_stake_usd']})
+            except workspace.SelectionError:
+                raise workspace.SelectionError('Enter a positive minimum stake in dollars.') from None
+            sizing['minimum_stake_usd'] = minimum['reference_bankroll_usd']
+        if 'odds_bucket_edges' in body:
+            fields.add('odds_bucket_edges')
+            odds_edges = _odds_edges(body['odds_bucket_edges'])
+            if odds_edges != DEFAULT_ODDS_EDGES:
+                sizing['odds_bucket_edges'] = list(odds_edges)
         if set(body) != fields:
             raise workspace.SelectionError('Provide the dates, EV rules and inputs for the selected sizing modes.')
     start, end = map(date.fromisoformat, (workspace.game_day(body['start_date']), workspace.game_day(body['end_date'])))
@@ -156,6 +171,8 @@ def _definition(parent, job, population, recovery, fingerprint, mode):
         return definition
     policy = definition['policy']
     policy.update(sizing_mode=mode, portfolios=config['portfolios'])
+    if 'minimum_stake_usd' in config:
+        policy['minimum_stake_usd'] = config['minimum_stake_usd']
     if mode == 'fixed_profit':
         for key in ('reference_bankroll_usd', 'kelly_multiplier', 'sizing_scale_usd'):
             policy.pop(key, None)
@@ -281,10 +298,10 @@ def _selection_rows(tickets, report, variant):
                    expected_profit_exact_usd=str(F(profit) if profit is not None else committed * F(ticket['ev'])))
 
 
-def _selection_summary(tickets):
+def _selection_summary(tickets, odds_edges):
     stake = sum((F(t['stake_exact_usd']) for t in tickets), F())
     profit = sum((F(t['expected_profit_exact_usd']) for t in tickets), F())
-    return paper_results._money(dict(tickets=len(tickets), odds_buckets=odds_buckets(tickets),
+    return paper_results._money(dict(tickets=len(tickets), odds_buckets=odds_buckets(tickets, odds_edges),
                                     **_expected_roi(profit, stake)), stake=stake, expected_profit=profit)
 
 
@@ -296,25 +313,34 @@ def _analysis_summary(tickets):
     return paper_results._money(summary, pnl_vs_expected=gap)
 
 
-def _odds_bucket(value):
+def _odds_bucket(value, boundaries):
     try:
         odds = F(str(value))
     except (ValueError, ZeroDivisionError):
-        return 'unavailable'
+        return -1
     if abs(odds) < 100:
-        return 'unavailable'
+        return -1
     if abs(odds) == 100:
-        return 'even_money'
-    return ODDS_BUCKETS[bisect_right(ODDS_BOUNDARIES, odds)][0]
+        return 1
+    if odds < 0:
+        return 0
+    return 2 + bisect_right(boundaries, odds)
 
 
-def odds_buckets(tickets):
+def odds_buckets(tickets, edges=DEFAULT_ODDS_EDGES):
     """Partition the selected portfolio by the saved target quote's American odds."""
-    groups = {key: [] for key, _ in ODDS_BUCKETS}
+    boundaries = tuple(map(int, edges))
+    bands = [('favorites', 'Favorites (below −100)'), ('even_money', 'Even money (±100)')]
+    for low, high in zip((100, *boundaries), boundaries):
+        label = 'Over +100' if low == 100 else f'+{low}'
+        bands.append((f'plus_{low}_to_{high}', f'{label} to under +{high}'))
+    bands.extend([(f'plus_{boundaries[-1]}_and_up', f'+{boundaries[-1]} or longer'),
+                  ('unavailable', 'Unavailable odds')])
+    groups = [[] for _ in bands]
     for ticket in tickets:
-        groups[_odds_bucket(ticket.get('posted_odds'))].append(ticket)
-    buckets = [dict(id=key, label=label, summary=_analysis_summary(groups[key]))
-               for key, label in ODDS_BUCKETS if key != 'unavailable' or groups[key]]
+        groups[_odds_bucket(ticket.get('posted_odds'), boundaries)].append(ticket)
+    buckets = [dict(id=key, label=label, summary=_analysis_summary(group))
+               for (key, label), group in zip(bands, groups) if key != 'unavailable' or group]
     stakes = [F(bucket['summary']['stake_exact_usd']) for bucket in buckets]
     total_stake = sum(stakes, F())
     for bucket, stake in zip(buckets, stakes):
@@ -506,6 +532,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
     report_ids = {run for runs in run_ids.values() for key, run in runs.items() if key == mode or compare}
     latest_reports = _snapshot_reports(db, report_ids) if config['version'] == SIZING_VERSION else {}
     edges = config['bucket_edges']
+    odds_edges = config.get('odds_bucket_edges', DEFAULT_ODDS_EDGES)
     comparison = Counter()
     selected_tickets, selected_days = [], 0
     for day in day_rows:
@@ -550,7 +577,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                 entry['capture_state'] = 'retained' if complete else 'partial'
                 selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant)
                 selected = list(_selection_rows(selections, report, variant))
-                entry['selection'] = _selection_summary(selected)
+                entry['selection'] = _selection_summary(selected, odds_edges)
                 if in_window:
                     selected_tickets.extend(selected)
                     selected_days += 1
@@ -571,7 +598,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
         days.append(entry)
     return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
                 as_of=now.isoformat(),
-                selection=_selection_summary(selected_tickets) if selected_days else None,
+                selection=_selection_summary(selected_tickets, odds_edges) if selected_days else None,
                 weekly=_window_analysis(all_tickets, edges, variant, inputs=versions) if versions else None,
                 comparison=dict(comparison) if comparison else None,
                 reported_days=len(versions),provider_requests=0,orders_submitted=0)
@@ -597,6 +624,9 @@ def index(db, *, active_only=False):
         return campaigns
     visible = [campaign for campaign in campaigns
                if campaign['id'] == WIN_10_CAMPAIGN or campaign.get('discoverable') is True]
-    superseded = {campaign.get('supersedes') for campaign in visible}
-    return sorted((campaign for campaign in visible if campaign['id'] not in superseded),
-                  key=lambda campaign: campaign['id'] != WIN_10_CAMPAIGN)
+    successors = {campaign['supersedes']: campaign['id'] for campaign in reversed(visible) if 'supersedes' in campaign}
+    preferred = WIN_10_CAMPAIGN
+    while preferred in successors:
+        preferred = successors[preferred]
+    return sorted((campaign for campaign in visible if campaign['id'] not in successors),
+                  key=lambda campaign: campaign['id'] != preferred)

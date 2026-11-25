@@ -160,6 +160,43 @@ def test_post_size_ev_and_venue_selection_use_entire_frozen_candidate_pool():
     assert not rejected and gaps["fixed_profit_quantity_increment_unavailable"] == 1
 
 
+def test_minimum_stake_compares_exact_cash_commitment_including_modeled_fees():
+    rule = dict(formula="polymarket_taker", rate="0.09", quantity_step="0.01")
+    floor = dict(fixed_policy(), minimum_stake_usd="1")
+    for odds, expected in (("+1095", F(5978, 5975)), ("+1100", F(299, 300))):
+        snapshot = checkpoint(frozen_priced(odds, venue="polymarket_us", ev=".25", rule=rule))
+        inputs = dict(game_id="g", checkpoint_id="frozen", at=AT)
+        [unrestricted], _ = paper.candidates(snapshot, **inputs, policy=fixed_policy())
+        fee = unrestricted["witness"]["sized_calculation"]["fee"]
+        assert F(fee["purchase_usd"]) < 1
+        assert F(unrestricted["cash_commitment_usd"]) == expected
+        assert unrestricted["stake_usd"] == "1.00"
+        counts = {"evaluated_offers": 0}
+        tickets, gaps = paper.candidates(snapshot, **inputs, policy=floor, counts=counts)
+        if expected >= 1:
+            assert len(tickets) == 1 and F(tickets[0]["cash_commitment_usd"]) == expected
+            assert not gaps
+        else:
+            assert not tickets and gaps == {"sized_stake_below_minimum": 1}
+            [excluded] = counts["sizing_exclusions"]
+            assert excluded == dict(frozen_quote_id=unrestricted["frozen_quote_id"], offer_index=0,
+                exact_bet_id=unrestricted["exact_bet_id"], reason="sized_stake_below_minimum",
+                cash_commitment_usd=str(expected), minimum_stake_usd="1", sized_ev=unrestricted["ev"])
+
+
+def test_minimum_stake_reselects_best_venue_and_keeps_stake_exactly_at_floor():
+    snapshot = checkpoint(frozen_priced("+1500", venue="prophetx", ev=".15"),
+                          frozen_priced("+1000", venue="polymarket_us", ev=".06"))
+    inputs = dict(game_id="g", checkpoint_id="frozen", at=AT)
+    unrestricted, _ = paper.candidates(snapshot, **inputs, policy=fixed_policy())
+    assert len(unrestricted) == 2
+    assert paper.portfolios(unrestricted, as_of=AT)["best_venue"]["tickets"][0]["venue"] == "prophetx"
+    limited, gaps = paper.candidates(snapshot, **inputs, policy=dict(fixed_policy(), minimum_stake_usd="1"))
+    [trade] = paper.portfolios(limited, as_of=AT)["best_venue"]["tickets"]
+    assert trade["venue"] == "polymarket_us" and trade["cash_commitment_usd"] == "1"
+    assert gaps == {"sized_stake_below_minimum": 1}
+
+
 @pytest.mark.parametrize("odds,expected", [("-110","110"),("+300","33.33"),("+3000","3.33")])
 def test_agreed_kelly_scale_at_4pct(odds,expected):
     tickets,gaps=entries(priced(odds))

@@ -202,7 +202,6 @@ function renderCampaignResults(body, reports, config, context) {
     const title=reports.length>1 ? 'Export '+sizingTitle(config,report.mode)+' campaign results' : 'Export campaign results';
     links.append(action(title,campaignPath(context.campaign,context.variant,report.mode,{export:'1'})));
   }
-  if (context.visible) links.append(link('Edit as a new version',url({...context.base,view:'revise'})));
   body.replaceChildren(panel,campaignRules(config,context),links);
 }
 
@@ -237,6 +236,7 @@ function showResults(config, visible, context) {
   refresh.type='button';
   refresh.onclick=()=>render({keepComparison:true});
   controls.append(refresh);
+  if (visible) controls.append(action('Edit experiment',url({...context.base,view:'revise'})));
   panel.append(controls);
   const body=node('div');
   body.id='experiment-comparison-body';
@@ -282,7 +282,7 @@ function paintDay(body,data,config,context) {
     }
     const links=node('div',undefined,'workspace-links');
     const [day]=days;
-    if (context.campaign===win10Campaign) {
+    if (sizingModes.length===1) {
       if (day.analysis && day.result_id) links.append(action('Export results',runAPI(day.run_id)+'/results?'+new URLSearchParams({
         variant:context.variant,version:day.result_id,export:'report',
       })));
@@ -292,7 +292,6 @@ function paintDay(body,data,config,context) {
         variant:context.variant,export:'1',
       })));
     }
-    if (context.visible) links.append(link('Edit as a new version',url({...context.base,view:'revise'})));
     body.append(gameRules,history,links);
   } else {
     body.replaceChildren(node('p','Reading retained captures and grades…','workspace-caption'),gameRules);

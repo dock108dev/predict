@@ -112,9 +112,11 @@ def grade(identity, outcome, sized):
 
 
 def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None, counts=None):
-    policy_id, scale, mode, target_profit = POLICY_ID, SCALE, None, None
+    policy_id, scale, mode, target_profit, minimum_stake = POLICY_ID, SCALE, None, None, None
     if policy is not None:
         policy_id, minimum = hashed(policy), F(policy["minimum_ev"])
+        if policy.get("minimum_stake_usd") is not None:
+            minimum_stake = F(policy["minimum_stake_usd"])
         mode = policy.get("sizing_mode")
         if mode == "fixed_profit":
             if policy.get("sizing_rule") != FIXED_PROFIT_RULE:
@@ -125,6 +127,7 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
     tickets, excluded, conflicts = {}, Counter(), set()
     for index, offer in enumerate(snapshot.get("offers", [])):
         sizing_stage = False
+        exclusion_details = None
         try:
             identity = exact_bet_identity(offer["record"], event_identity=game_id)
             measurement = offer_measurements(offer, offer_index=index, captured_at=at)
@@ -138,7 +141,7 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                 excluded["below_minimum_ev"] += 1
                 continue
             key = identity["id"]
-            quote_id = hashed([checkpoint_id, index, key]) if mode else None
+            quote_id = hashed([checkpoint_id, index, key]) if mode or minimum_stake is not None else None
             sizing_stage = True
             if mode == "fixed_profit":
                 if not isinstance(offer.get("fee_input"), dict):
@@ -152,6 +155,12 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                 sized, target = sized_offer(offer, at=at, game_id=game_id, minimum=minimum, scale=scale)
             else:
                 sized, target = offer["calculation_payload"], None
+            if minimum_stake is not None:
+                commitment = F(sized["fee"]["committed_usd"])
+                if commitment < minimum_stake:
+                    exclusion_details = dict(cash_commitment_usd=str(commitment),
+                        minimum_stake_usd=str(minimum_stake), sized_ev=str(F(sized["raw"]["net_ev"])))
+                    raise ValueError("sized_stake_below_minimum")
             sizing_stage = False
             if key in conflicts:
                 excluded["conflicting_duplicate_offer"] += 1
@@ -199,9 +208,9 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
         except (ValueError, KeyError, TypeError, ArithmeticError, OSError) as exc:
             reason = str(exc) if isinstance(exc, ValueError) else "sizing_inputs_incomplete"
             excluded[reason] += 1
-            if sizing_stage and counts is not None and mode:
+            if sizing_stage and counts is not None and quote_id is not None:
                 counts.setdefault("sizing_exclusions", []).append(dict(frozen_quote_id=quote_id,
-                    offer_index=index, exact_bet_id=key, reason=reason))
+                    offer_index=index, exact_bet_id=key, reason=reason, **(exclusion_details or {})))
     return list(tickets.values()), dict(excluded)
 
 

@@ -7,6 +7,8 @@ const API='/api/research/workspace/campaigns';
 const titles={best_venue:'Best venue only',all_venues:'All qualifying venues'};
 const allPortfolios=Object.keys(titles);
 const modes={fixed_profit:'Win fixed profit',kelly:'Kelly'};
+const defaultOddsEdges=['200','300','500','1000'];
+const oddsEdgeList=edges=>edges.map(edge=>'+'+edge).join(', ');
 export const campaignHref=(id,variant='best_venue',context={})=>'/research?'+new URLSearchParams({
   section:'experiments',campaign:id,variant,...Object.fromEntries(Object.entries(context).filter(([,value])=>value!=null)),
 });
@@ -130,7 +132,9 @@ export function ruleSummary(config) {
     'Primary sizing':fixed ? `${sizingTitle(config)} per winning paper trade, using the nearest achievable positive net profit` : kelly,
     ...(fixed&&config.kelly_comparison ? {'Kelly comparison':kelly} : {}),
     'Minimum EV':`${percent(config.minimum_ev)}% unrounded, including after sizing`,
+    'Minimum stake':config.minimum_stake_usd == null ? 'No minimum' : `${exactMoney(config.minimum_stake_usd)} per trade after sizing`,
     'EV buckets':config.bucket_edges.map((minimum,i,edges)=>band({minimum,maximum:edges[i+1]})).join(', '),
+    'Posted odds bucket boundaries':oddsEdgeList(config.odds_bucket_edges || defaultOddsEdges),
     Portfolios:(config.portfolios || allPortfolios).map(portfolio=>titles[portfolio]).join(' and '),
     ...evidenceRules,
   };
@@ -146,15 +150,18 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   const sunday=new Date(monday);sunday.setUTCDate(sunday.getUTCDate()+6);
   const defaults={
     name:'', scope:'mens-d1', start_date:monday.toISOString().slice(0,10), end_date:sunday.toISOString().slice(0,10),
-    minimum_ev:'4', sizing_mode:'fixed_profit', target_profit_usd:'10', kelly_comparison:false,
+    minimum_ev:'4', minimum_stake_usd:'1.00', sizing_mode:'fixed_profit', target_profit_usd:'10', kelly_comparison:false,
     kelly_multiplier:'2.5', reference_bankroll_usd:'10000', bucket_edges:'4, 8, 15, 25', portfolios:allPortfolios,
+    odds_bucket_edges:oddsEdgeList(defaultOddsEdges),
   };
   if(config)Object.assign(defaults,config,{
     sizing_mode:config.sizing_mode || 'kelly', minimum_ev:percent(config.minimum_ev),
+    minimum_stake_usd:config.minimum_stake_usd == null ? '' : rescale(config.minimum_stake_usd,1n,1n),
     target_profit_usd:config.target_profit_usd==null ? defaults.target_profit_usd : rescale(config.target_profit_usd,1n,1n),
     kelly_multiplier:config.kelly_multiplier==null ? defaults.kelly_multiplier : percent(config.kelly_multiplier),
     reference_bankroll_usd:config.reference_bankroll_usd==null ? defaults.reference_bankroll_usd : rescale(config.reference_bankroll_usd,1n,1n),
     bucket_edges:config.bucket_edges.map(percent).join(', '),
+    odds_bucket_edges:oddsEdgeList(config.odds_bucket_edges || defaultOddsEdges),
   });
   const handoff=options.dataFilters;
   if (handoff) {
@@ -164,7 +171,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     defaults.end_date=useDate(['end_date','date_to','date'], date || '');
     if (handoff.get('scope') !== 'mens-d1') defaults.scope='';
   }
-  function field(parent,key,title,{type='text',options}={}) {
+  function field(parent,key,title,{type='text',options,required=true,maxLength=32}={}) {
     const lab=node('label'), caption=node('span',title), input=node(options ? 'select' : 'input');
     input.name=key;
     caption.id='campaign-field-'+key;
@@ -178,15 +185,15 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
       lab.prepend(input);
     } else {
       input.value=defaults[key];
-      input.required=true;
+      input.required=required;
       lab.append(input);
-      if(type==='text')input.maxLength=key==='name' ? 120 : key==='bucket_edges' ? 420 : 32;
+      if(type==='text')input.maxLength=maxLength;
     }
     parent.append(lab);
     inputs[key]=input;
     return input;
   }
-  field(fields,'name','Experiment name');
+  field(fields,'name','Experiment name',{maxLength:120});
   field(fields,'scope','Game scope',{options:{'':'Choose game scope','mens-d1':'Men’s NCAA Division I vs. Division I'}});
   field(fields,'start_date','First game date (Eastern)',{type:'date'});
   field(fields,'end_date','Last game date (Eastern)',{type:'date'});
@@ -203,12 +210,22 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   field(kelly,'kelly_multiplier','Full Kelly used (%)');
   field(kelly,'reference_bankroll_usd','Reference bankroll ($)');
   fields.append(fixed,kelly);
+  const minimumStake=field(fields,'minimum_stake_usd','Minimum stake ($)',{required:false});
+  minimumStake.setAttribute('aria-describedby','campaign-minimum-stake-help');
+  const stakeHelp=node('small','Applied after sizing and modeled fees. Leave blank for no minimum.');
+  stakeHelp.id='campaign-minimum-stake-help';
+  minimumStake.parentElement.append(stakeHelp);
   field(fields,'minimum_ev','Minimum EV (%)');
-  const edges=field(fields,'bucket_edges','EV bucket boundaries (%)');
+  const edges=field(fields,'bucket_edges','EV bucket boundaries (%)',{maxLength:420});
   edges.setAttribute('aria-describedby','campaign-ev-help');
   const edgeHelp=node('small','Separate boundaries with commas. Start with the minimum EV.');
   edgeHelp.id='campaign-ev-help';
   edges.parentElement.append(edgeHelp);
+  const oddsEdges=field(fields,'odds_bucket_edges','Posted odds bucket boundaries (American odds)',{maxLength:144});
+  oddsEdges.setAttribute('aria-describedby','campaign-odds-help');
+  const oddsHelp=node('small','Enter increasing whole-number odds above +100, separated by commas. Favorites and even money have fixed buckets.');
+  oddsHelp.id='campaign-odds-help';
+  oddsEdges.parentElement.append(oddsHelp);
   const portfolios=node('fieldset',undefined,'campaign-portfolios'), picks=[];
   portfolios.append(node('legend','Portfolios'));
   for(const [id,title] of Object.entries(titles)) {
@@ -267,11 +284,22 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
        boundaryPairs.some(([a,b],i,pairs)=>i>0&&a*pairs[i-1][1]<=b*pairs[i-1][0])) {
       throw Error('Enter up to twelve increasing EV boundaries, beginning at the minimum EV.');
     }
+    const oddsInputs=body.odds_bucket_edges.split(',').map(value=>value.trim());
+    const oddsBoundaries=oddsInputs.map(Number);
+    if (oddsInputs.length>12 || oddsInputs.some(value=>!/^\+?\d{1,9}$/.test(value)) ||
+        oddsBoundaries.some((value,i)=>value<=(oddsBoundaries[i-1] ?? 100))) {
+      throw Error('Enter one to twelve increasing whole-number odds boundaries above +100.');
+    }
+    const normalizedOdds=oddsBoundaries.map(String);
+    if (normalizedOdds.join(',')===defaultOddsEdges.join(','))delete body.odds_bucket_edges;
+    else body.odds_bucket_edges=normalizedOdds;
     if(number(body.minimum_ev)<=0)throw Error('Enter a positive minimum EV.');
     if(body.kelly_multiplier!=null&&!(number(body.kelly_multiplier)>0&&number(body.kelly_multiplier)<=1)) {
       throw Error('Enter a Kelly fraction greater than 0% and at most 100%.');
     }
-    for(const [key,title] of [['target_profit_usd','win profit target'],['reference_bankroll_usd','reference bankroll']]) {
+    if(body.minimum_stake_usd==='')delete body.minimum_stake_usd;
+    for(const [key,title] of [['target_profit_usd','win profit target'],['reference_bankroll_usd','reference bankroll'],
+      ['minimum_stake_usd','minimum stake']]) {
       if(body[key]!=null && (!(number(body[key])>0) || !/^(\d+(\.\d+)?|\.\d+|\d+\/\d+)$/.test(body[key]))) {
         throw Error(`Enter a positive ${title}.`);
       }
