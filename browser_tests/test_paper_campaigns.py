@@ -47,12 +47,13 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
             assert query["comparison"] == ["0"]
             mode, variant = query["mode"][0], query["variant"][0]
             published = dict(date=day, run_id=fixed_run, result_state="graded", analysis=result,
-                             selection=dict(tickets=1, stake_usd="10.00"))
+                             selection=dict(tickets=1, stake_usd="10.00", expected_profit_usd="0.80", expected_roi_percent="8.00"))
             waiting = dict(date="2026-11-25", run_id="e" * 64, result_pending=True,
-                           selection=dict(tickets=1, stake_usd="20.00"))
+                           selection=dict(tickets=1, stake_usd="20.00", expected_profit_usd="2.20", expected_roi_percent="11.00"))
             route.fulfill(json=dict(mode=mode, as_of="2026-11-25T20:00:00Z",
                 days=[published, waiting, dict(date="2026-11-26", replay_state="scheduled")],
-                selection=dict(tickets=2, stake_usd="30.00"), weekly=result, variant=variant))
+                selection=dict(tickets=2, stake_usd="30.00", expected_profit_usd="3.00", expected_roi_percent="10.00"),
+                weekly=result, variant=variant))
         else:
             route.fulfill(status=404)
 
@@ -68,11 +69,15 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         expect(table.get_by_role("row", name=re.compile("^Ungraded trades"))).to_contain_text("1")
         expect(table.get_by_role("row", name=re.compile("^Stake"))).to_contain_text("$30.00")
         expect(table.get_by_role("row", name=re.compile("^ROI"))).to_contain_text("on $10.00 graded stake")
+        expect(table.get_by_role("row", name=re.compile("^Expected paper profit"))).to_contain_text("$3.00")
+        expect(table.get_by_role("row", name=re.compile("^Expected ROI"))).to_contain_text("10.00%")
+        expect(table.get_by_role("row", name="P/L vs expected (graded)")).to_contain_text("-$10.80")
         expect(page.get_by_role("link", name="Nov 26, 2026")).to_have_count(0)
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         page.get_by_role("link", name="Nov 24, 2026").click()
         expect(headers).to_have_text(["Paper results", "Win $10"])
         expect(page.get_by_label("Game date (Eastern)")).to_have_value(day)
+        expect(table.get_by_role("row", name=re.compile("^Expected ROI"))).to_contain_text("8.00%")
         expect(table.get_by_role("link", name="Inspect games and trades")).to_have_attribute(
             "href", re.compile(r"mode=fixed_profit&run=" + fixed_run)
         )

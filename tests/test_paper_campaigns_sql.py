@@ -188,6 +188,9 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 assert pending['selection'] == pending['days'][0]['selection']
                 assert pending['selection']['tickets'] == 1
                 assert F(pending['selection']['stake_exact_usd']) > 0
+                assert F(pending['selection']['expected_profit_exact_usd']) > 0
+                assert F(pending['selection']['expected_roi']) == (
+                    F(pending['selection']['expected_profit_exact_usd']) / F(pending['selection']['stake_exact_usd']))
                 assert pending['days'][0]['run_ids'] == {'fixed_profit': primary}
                 assert pending['comparison'] is None and 'comparison' not in pending['days'][0]
                 first = {mode: workspace.run_detail(db, run_id) for mode, run_id in pair.items()}
@@ -249,6 +252,10 @@ class CampaignSQL(ResearchWorkspaceFixture):
                     assert F(weekly['roi']) == F(trade['pnl_exact_usd']) / F(trade['stake_exact_usd'])
                     assert rollup['selection']['tickets'] == 1
                     assert F(rollup['selection']['stake_exact_usd']) == F(trade['stake_exact_usd'])
+                    assert F(rollup['selection']['expected_profit_exact_usd']) == F(trade['expected_profit_exact_usd'])
+                    assert F(rollup['selection']['expected_roi']) == F(trade['ev'])
+                    assert F(weekly['pnl_vs_expected_exact_usd']) == (
+                        F(trade['pnl_exact_usd']) - F(trade['expected_profit_exact_usd']))
                 assert observed_trade['fixed_profit']['id'] != observed_trade['kelly']['id']
                 assert observed_trade['fixed_profit']['frozen_quote_id'] == observed_trade['kelly']['frozen_quote_id']
                 fixed = observed_trade['fixed_profit']

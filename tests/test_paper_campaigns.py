@@ -34,6 +34,20 @@ def test_continuous_buckets_and_overlapping_thresholds_use_unrounded_ev():
     assert sum(F(b['summary']['stake_exact_usd']) for b in value['buckets'])==F(value['summary']['stake_exact_usd'])
 
 
+def test_expected_roi_is_stake_weighted_and_gap_uses_only_graded_trades():
+    graded = dict(ticket('graded', '.10', state='win'), return_exact_usd='12')
+    pending = dict(ticket('pending', '.20', state='pending'), stake_exact_usd='30',
+                   expected_profit_exact_usd='6', return_exact_usd=None)
+    summary = campaigns.analysis([graded, pending], ['.04'], 'all_venues')['summary']
+    assert F(summary['expected_profit_exact_usd']) == 7
+    assert F(summary['expected_roi']) == F(7, 40)
+    assert summary['expected_roi_percent'] == '17.50'
+    assert F(summary['resolved_expected_profit_exact_usd']) == 1
+    assert F(summary['pnl_vs_expected_exact_usd']) == 1
+    empty = campaigns.analysis([], ['.04'], 'all_venues')['summary']
+    assert empty['expected_roi'] is None and empty['pnl_vs_expected_exact_usd'] is None
+
+
 def test_higher_threshold_reselects_best_venue_from_qualifying_pool():
     rows=[ticket('a','.09',screen='.079',bet='same'),ticket('b','.085',screen='.10',bet='same',venue='novig')]
     assert campaigns.select(rows,F('.04'),'best_venue')[0]['id']=='a'

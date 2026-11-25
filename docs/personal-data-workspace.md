@@ -41,9 +41,11 @@ bytes are shown separately from a stored normalized record.
 Experiments opens **Campaign to date** for Win $10. Choose a portfolio for the
 running totals and daily breakdown. Open a date or select **By day** to inspect
 one day's results. The rules show the saved scope, capture timing,
-reference and fee assumptions, EV threshold and sizing. Stake includes selected
-trades. Return, paper P/L and ROI use graded trades. ROI includes the graded
-stake denominator.
+reference and fee assumptions, EV threshold and sizing. Expected paper profit
+uses the frozen entry EV for each selected trade. Expected ROI divides that
+profit by all selected stake. The realized ROI denominator uses graded stake.
+P/L vs expected compares realized profit with the entry expectation for those
+same graded trades.
 
 Open a game or trade to trace the exact quote, eligibility, sizing, grade and
 supporting source evidence. A current result can change as grades arrive. A

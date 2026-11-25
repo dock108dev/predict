@@ -82,10 +82,14 @@ function roi(summary) {
 function metrics(summary, selection=summary) {
   return [
     quantity(selection?.tickets),quantity(summary?.resolved ?? (selection ? 0 : null)),
-    money(selection?.stake_usd),money(summary?.return_usd),money(summary?.pnl_usd),roi(summary),
+    money(selection?.stake_usd),money(selection?.expected_profit_usd),
+    selection?.expected_roi_percent == null ? '—' : selection.expected_roi_percent+'%',
+    money(summary?.return_usd),money(summary?.pnl_usd),roi(summary),money(summary?.pnl_vs_expected_usd),
   ];
 }
-const metricLabels=['Selected trades','Graded trades','Stake','Return on graded trades','Paper P/L','ROI'];
+const metricLabels=['Selected trades','Graded trades','Stake','Expected paper profit','Expected ROI',
+  'Return on graded trades','Paper P/L','ROI','P/L vs expected (graded)'];
+const metricBasis='Expected profit and ROI use entry EV and all selected stake. Return, paper P/L, realized ROI and P/L vs expected use graded trades.';
 
 function summaryTable(config, modes, rows) {
   const cells=(tag, values)=>values.map(value=>{
@@ -114,7 +118,7 @@ function comparisonTable(data, context) {
   const {config,modes}=data;
   const values=Object.fromEntries(context.sizingModes.map(mode=>{
     const day=modes[mode], summary=day.analysis?.summary;
-    return [mode,metrics(summary,summary || day.selection)];
+    return [mode,metrics(summary,day.selection || summary)];
   }));
   return summaryTable(config,context.sizingModes,[
     ['Status',mode=>{
@@ -158,7 +162,7 @@ function renderCampaignResults(body, reports, config, context) {
         return quantity(selected == null ? null : selected-(report.weekly?.summary.resolved || 0));
       }],
     ]));
-    panel.append(node('p','Stake includes every selected trade. Return, paper P/L and ROI use graded trades.','workspace-caption'));
+    panel.append(node('p',metricBasis,'workspace-caption'));
   }
   if (!days.length || reports.every(report=>!report.selection && !report.weekly)) {
     panel.append(node('p','Waiting for the first saved selections.'));
@@ -253,7 +257,7 @@ function paintDay(body,data,config,context) {
     if (pending) body.append(node('p',
       `${count(pending)} ${pending===1 ? 'game awaiting its' : 'games awaiting their'} T−10 capture in the latest snapshot.`,
       'workspace-caption'));
-    body.append(node('p','Stake includes every selected trade. Return, paper P/L and ROI use graded trades.','workspace-caption'));
+    body.append(node('p',metricBasis,'workspace-caption'));
     const history=node('details');
     history.append(node('summary','Saved snapshots'),node('p','Select a published snapshot to inspect its recorded selections and grade history.'));
     for (const mode of sizingModes) {

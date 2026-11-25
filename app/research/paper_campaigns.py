@@ -250,6 +250,25 @@ def select(tickets, minimum, variant):
     return list(best.values())
 
 
+def _expected_roi(profit, stake):
+    roi = profit / stake if stake else None
+    return dict(expected_roi=str(roi) if roi is not None else None,
+                expected_roi_percent=paper.money(roi * 100) if roi is not None else None)
+
+
+def _selection_summary(tickets, stake, profit):
+    return paper_results._money(dict(tickets=tickets, **_expected_roi(profit, stake)),
+                                stake=stake, expected_profit=profit)
+
+
+def _analysis_summary(tickets):
+    summary = paper_results._summary(tickets)
+    summary.update(_expected_roi(F(summary['expected_profit_exact_usd']), F(summary['stake_exact_usd'])))
+    gap = (F(summary['pnl_exact_usd']) - F(summary['resolved_expected_profit_exact_usd'])
+           if summary['resolved'] else None)
+    return paper_results._money(summary, pnl_vs_expected=gap)
+
+
 def analysis(tickets, edges, variant):
     edges = list(map(F,edges))
     selected = select(tickets, edges[0], variant)
@@ -258,9 +277,9 @@ def analysis(tickets, edges, variant):
         upper = edges[i+1] if i+1<len(edges) else None
         group = [t for t in selected if F(t['screen_ev'])>=lower and (upper is None or F(t['screen_ev'])<upper)]
         buckets.append(dict(minimum=str(lower),maximum=str(upper) if upper else None,
-                            summary=paper_results._summary(group)))
-    thresholds = [dict(minimum=str(edge), summary=paper_results._summary(select(tickets,edge,variant))) for edge in edges]
-    return dict(summary=paper_results._summary(selected), buckets=buckets, thresholds=thresholds)
+                            summary=_analysis_summary(group)))
+    thresholds = [dict(minimum=str(edge), summary=_analysis_summary(select(tickets,edge,variant))) for edge in edges]
+    return dict(summary=_analysis_summary(selected), buckets=buckets, thresholds=thresholds)
 
 
 def _age_bucket(age):
@@ -433,7 +452,8 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
     latest_reports = _snapshot_reports(db, report_ids) if config['version'] == SIZING_VERSION else {}
     edges = config['bucket_edges']
     comparison = Counter()
-    selected_tickets, selected_days, selected_stake = 0, 0, F()
+    selected_tickets, selected_days = 0, 0
+    selected_stake = selected_expected = F()
     for day in day_rows:
         current_day = day['game_date']
         in_window = current_day <= today or game_date is not None
@@ -475,12 +495,17 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                     (game.get('coverage') or {}).get('incomplete') is False for game in source['games'])
                 entry['capture_state'] = 'retained' if complete else 'partial'
                 selections = select(source['portfolios']['all_venues']['tickets'], F(edges[0]), variant)
-                stake = sum((F(ticket.get('cash_commitment_usd', ticket['stake_usd']))
-                             for ticket in selections), F())
-                entry['selection'] = dict(tickets=len(selections), stake_usd=paper.money(stake), stake_exact_usd=str(stake))
+                stake = expected = F()
+                for ticket in selections:
+                    committed = F(ticket.get('cash_commitment_usd', ticket['stake_usd']))
+                    profit = ticket.get('expected_profit_exact_usd')
+                    stake += committed
+                    expected += F(profit) if profit is not None else committed * F(ticket['ev'])
+                entry['selection'] = _selection_summary(len(selections), stake, expected)
                 if in_window:
                     selected_tickets += len(selections)
                     selected_stake += stake
+                    selected_expected += expected
                     selected_days += 1
             else:
                 entry['capture_state'] = 'pending' if pending else 'missing'
@@ -499,8 +524,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
         days.append(entry)
     return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
                 as_of=now.isoformat(),
-                selection=dict(tickets=selected_tickets, stake_usd=paper.money(selected_stake),
-                               stake_exact_usd=str(selected_stake)) if selected_days else None,
+                selection=_selection_summary(selected_tickets, selected_stake, selected_expected) if selected_days else None,
                 weekly=_window_analysis(all_tickets, edges, variant, inputs=versions) if versions else None,
                 comparison=dict(comparison) if comparison else None,
                 reported_days=len(versions),provider_requests=0,orders_submitted=0)
