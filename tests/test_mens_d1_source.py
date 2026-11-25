@@ -34,6 +34,18 @@ def game_card(status='F <span>inal</span>', overtime='OT', scores=(66, 72)):
     </table><a href="{DETAIL}">Box Score</a></div>'''
 
 
+def test_named_non_d1_source_and_provider_teams_share_occurrence_identity():
+    from app.storage.mens_d1_occurrences import _pair
+
+    membership = load_membership(DAY)
+    college = dict(name='Arkansas Baptist', membership=dict(division='non_d1', season='2026-2027', source_team_id='539'))
+    provider = [dict(name=name, membership=membership.lookup(name=name))
+                for name in ('Arkansas Baptist Buffaloes', 'Arkansas Little Rock Trojans')]
+    assert _pair([college, dict(name='Little Rock', canonical_id='NCAAB:M:D1:NCAA32')]) == _pair(provider) == {
+        'NAIA:arkansas-baptist', 'NCAAB:M:D1:NCAA32'}
+    assert college['membership']['source_team_id'] == '539'
+
+
 def test_mixed_schedule_membership_dates_and_cancelled_rows():
     page = schedule(f'''
     <ul><li>{school('virginia-commonwealth', 'VCU')} (4) @ {school('providence', 'Providence')} 9:00pm ET (m)</li>

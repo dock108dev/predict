@@ -1,6 +1,6 @@
 """Reconcile dated occurrences without changing source, task or checkpoint records."""
 from collections import Counter, defaultdict
-from datetime import timedelta, timezone
+from datetime import date, timedelta, timezone
 
 from app.normalization.mens_d1_membership import load_membership
 from app.research import experiment
@@ -21,7 +21,18 @@ def _normalized_clock(value):
 def _team_identity(team):
     membership = team.get('membership') or {}
     if membership.get('division') == 'non_d1':
-        return membership.get('membership_record_id')
+        if identity := membership.get('membership_record_id'):
+            return identity
+        # Some source facts verify a non-D1 school under their own ID without
+        # a common record ID. Join only through an exact reviewed season alias.
+        try:
+            season_start = date.fromisoformat((membership.get('season') or '')[:4] + '-09-01')
+        except ValueError:
+            return None
+        reviewed = load_membership(season_start).lookup(name=team.get('name'))
+        if reviewed['division'] == 'non_d1':
+            return reviewed['membership_record_id']
+        return None
     return team.get('canonical_id') or membership.get('canonical_id')
 
 
