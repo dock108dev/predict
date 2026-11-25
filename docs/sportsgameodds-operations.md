@@ -97,6 +97,14 @@ A refreshed frame does not make an old source quote fresh.
 
 ## Interrupted admission and retained prices
 
+Original HTTP responses have a separate limit of 16,384 manifest entries and
+128 MiB of compressed bodies. The free-disk floor also applies. Retention counts
+time- and scope-specific receipts even when their bodies share a content hash.
+The Research status reports the active bounds, usage, and accumulated gaps.
+When original retention is refused, ordinary prices can still be admitted.
+A batched T−10 capture requires its exact retained response. Increasing
+headroom allows future retention and preserves the historical gaps and files.
+
 A PostgreSQL timeout rolls back the whole page admission. The running collector
 can retry the same settled page once while Stop and pause checks still allow
 it. The retry preserves the original receipt and does not issue a second

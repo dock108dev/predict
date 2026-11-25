@@ -9,6 +9,7 @@ import httpx
 
 from app.collection import mens_d1_cbbd as cbbd
 from app.collection import mens_d1_jobs as jobs
+from app.normalization.mens_d1_membership import membership_for_provider_team
 from app.storage import mens_d1_coverage as coverage
 from app.storage.store import stamp
 
@@ -36,6 +37,30 @@ class DailyAuthority(TestCase):
 
 
 class CollegeBasketballDataAPI(TestCase):
+    def test_reviewed_identity_aliases_preserve_mens_d1_scope(self):
+        day = date(2026, 11, 25)
+        starts_at = '2026-11-25T21:30:00Z'
+        body = [
+            api_game(startDate=starts_at, homeTeamId=323, homeTeam='USC', homeConference='Big Ten',
+                     awayTeamId=266, awayTeam='South Carolina', awayConference='SEC'),
+            api_game(121, startDate=starts_at, homeTeamId=999, homeTeam='USC', homeConference='Big Ten'),
+            api_game(122, startDate=starts_at, homeTeamId=91, homeTeam='Fordham', homeConference='A-10',
+                     awayTeamId=643, awayTeam='Mercy', awayConference=None),
+        ]
+        receipt = cbbd.SourceReceipt(cbbd.source_url(day), stamp(starts_at), stamp(starts_at),
+                                     raw_body=json.dumps(body).encode())
+        correct_usc, unbound_usc, mercy = cbbd.parse_games(receipt, day=day, kind='schedule')
+        self.assertEqual(correct_usc['membership_status'], 'eligible')
+        self.assertEqual(correct_usc['teams'][1]['canonical_id'], 'NCAAB:M:D1:NCAA657')
+        self.assertEqual(unbound_usc['membership_status'], 'unresolved')
+        self.assertEqual(mercy['membership_status'], 'excluded')
+        self.assertEqual(mercy['teams'][0]['membership']['classification'], 'NCAA Division II')
+        for label, expected in (('USC', None), ('Gonzaga Bulldogs', 'NCAAB:M:D1:NCAA260'),
+                                ('Virginia Cavaliers', 'NCAAB:M:D1:NCAA746')):
+            with self.subTest(label=label):
+                self.assertEqual(membership_for_provider_team(None, day=day, label=label)['canonical_id'],
+                                 expected)
+
     def test_keyed_monthly_account_and_eastern_day_filter(self):
         day = date(2026, 11, 1)
         now = lambda: stamp('2026-11-01T08:00:00Z')

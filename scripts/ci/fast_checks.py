@@ -119,6 +119,11 @@ def plan(root, paths):
             scopes.add("collection")
             sql.add("tests/test_experiment_acquisition_sql.py")
         if path in (
+            "app/collection/original_receipts.py",
+            "tests/test_original_receipts.py",
+        ):
+            pure.add("tests/test_original_receipts.py")
+        if path in (
             "app/collection/current_service.py",
             "app/collection/data_runtime.py",
             "app/dashboard/current_state.py",

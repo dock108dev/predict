@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import replace
+from datetime import datetime, timedelta
 from hashlib import sha256
 import json
 from types import SimpleNamespace
@@ -7,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.collection.original_receipts import capture, lookup, read, status
+from app.collection.original_receipts import capture, encoded, lookup, read, status, writable
 from app.collection.sportsgameodds_adapter import parse_page
 from app.collection.sportsgameodds_current_rows import current_rows
 from app.collection.sportsgameodds_transport import PageResponse
@@ -65,6 +66,38 @@ def test_retention_cap_reports_gap_without_deleting_prior_evidence(tmp_path, lim
     assert saved['state'] == 'not_retained' and saved['reason'] == reason
     assert not list(tmp_path.glob('*.json.gz'))
     assert status(root=tmp_path)['gaps'][0]['reason'] == reason
+
+
+def test_retention_resumes_after_previous_count_cap_without_rewriting_history(tmp_path):
+    previous_cap = 4096
+    raw = receipt()
+    saved = capture(PARAMS, raw, root=tmp_path, max_receipts=previous_cap)
+    start = datetime.fromisoformat(raw.received_at)
+
+    def existing_receipts():
+        for offset in range(1, previous_cap):
+            at = (start + timedelta(seconds=offset)).isoformat()
+            identity = sha256(encoded([saved['receipt_sha256'], at, saved['request_scope'],
+                                       saved['parser_version']])).hexdigest()
+            metadata = dict(saved, id=identity, received_at=at)
+            yield identity, saved['receipt_sha256'], at, encoded(metadata).decode()
+
+    with writable(tmp_path) as manifest:
+        manifest.executemany('INSERT INTO receipt VALUES (?,?,?,?)', existing_receipts())
+
+    missed = replace(raw, body=raw.body + b' ', received_at=(start + timedelta(hours=2)).isoformat())
+    assert capture(PARAMS, missed, root=tmp_path, max_receipts=previous_cap)['reason'] == 'receipt_count_cap'
+    next_raw = replace(raw, body=raw.body + b'  ', received_at=(start + timedelta(hours=3)).isoformat())
+    recovered = capture(PARAMS, next_raw, root=tmp_path)
+
+    assert recovered['state'] == 'retained'
+    assert read(recovered['id'], root=tmp_path)[1] == next_raw.body
+    assert read(saved['id'], root=tmp_path) == (saved, raw.body)
+    assert lookup(sha256(missed.body).hexdigest(), root=tmp_path)['state'] == 'not_recorded'
+    current = status(root=tmp_path)
+    assert current['captured_receipts'] == previous_cap + 1
+    assert current['receipt_cap'] == 16_384
+    assert [(gap['reason'], gap['count']) for gap in current['gaps']] == [('receipt_count_cap', 1)]
 
 
 def test_disk_guard_and_corrupt_payload_do_not_claim_reparse(tmp_path):

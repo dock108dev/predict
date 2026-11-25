@@ -16,9 +16,9 @@ separates runtime liveness, actual receipt bounds, calculations and archive
 content/counters; unsupported archive routes and recorded gaps remain explicit.
 
 Original SGO HTTP-200 responses are separately retained by
-`app/collection/original_receipts.py`, outside normalized ingress. The initial
-allocation is 128 MiB compressed / 4,096 receipts with no automatic eviction;
-these are storage bounds, not coverage targets. Safe scope, receipt clock, parser
+`app/collection/original_receipts.py`, outside normalized ingress. The store
+retains up to 128 MiB compressed and 16,384 receipt records with no automatic
+eviction. Safe scope, receipt clock, parser
 version and body SHA-256 link raw bytes to normalized facts. Byte/count/disk
 refusals record gaps without another provider request or changes to accounting.
 Existing normalized history cannot reconstruct response bytes discarded before

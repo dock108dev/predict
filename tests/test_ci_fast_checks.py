@@ -67,6 +67,13 @@ def test_collection_changes_check_financial_guards_and_automatic_acquisition():
     assert "tests/test_experiment_acquisition_sql.py" in command(result, "postgres")
 
 
+@pytest.mark.parametrize(
+    "path", ("app/collection/original_receipts.py", "tests/test_original_receipts.py")
+)
+def test_original_receipt_changes_check_retention(path):
+    assert "tests/test_original_receipts.py" in command(selected(path), "portable")
+
+
 def test_research_changes_check_immutable_inputs_and_reproducible_export():
     pure = command(selected("app/research/experiment_evidence.py"), "portable")
     assert "tests/test_ev_experiment_evidence.py" in pure

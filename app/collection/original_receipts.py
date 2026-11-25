@@ -28,7 +28,7 @@ FORMAT = 'predict-original-response-1'
 PARSER_VERSION = 'sgo-full-game-points-1'
 # A storage allocation, not a coverage/completion target. No automatic deletion.
 MAX_COMPRESSED_BYTES = 128 * 1024 * 1024
-MAX_RECEIPTS = 4096
+MAX_RECEIPTS = 16_384
 MANIFEST_RUNWAY = 64 * 1024
 
 
