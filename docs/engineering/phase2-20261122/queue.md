@@ -1,5 +1,17 @@
 # Phase 2 completion and deferred backlog
 
+## Delivered: Win $10 and Kelly in the Workbench beta
+
+Signed-in create, review, save, replay, revise and results verification passed
+on production revision `8073f25`. The saved November 23–29 experiment is
+running with independent Win $10 and Kelly views. November 23 is graded,
+November 24 is partially graded, November 25 is collecting and November
+26–29 are scheduled. Both historical sizing modes reconcile across trades,
+daily and weekly totals, and exports. This release completes the Workbench
+and fixed-profit implementation entries below.
+[Closeout and production links](../workbench-win10-beta-closeout-20261125.md) ·
+[Required release CI](https://github.com/dock108dev/predict/actions/runs/45552224802)
+
 ## Delivered: unbranded Workbench presentation
 
 Revision `b404e97` installs the unbranded Research, Data and Settings shell,

@@ -4,6 +4,12 @@
 Settings flows are live. The existing November 23–29 men’s D1 paper experiment
 continues automatically on the same campaign. [Weekly research](https://predict.dock108.dev/research?section=experiments&campaign=93b8937a41703ce083609c50e52135019fe36bf082a1f32ecf5a00d54daffeda&variant=best_venue)
 
+## Win $10 Workbench release
+
+The signed-in form now creates and revises fixed-profit and Kelly paper
+experiments. The November 23–29 experiment is running with both sizing modes.
+[Win $10 release, results and operating closeout](workbench-win10-beta-closeout-20261125.md)
+
 ## Workbench release
 
 The unbranded Workbench was installed November 24, 2026 Eastern through the
