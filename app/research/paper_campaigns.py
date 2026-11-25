@@ -620,13 +620,30 @@ def daily(db, identity, game_date, variant=None):
 def index(db, *, active_only=False):
     campaigns = [dict(id=r['id'], **r['payload']) for r in db.execute(
         'SELECT id,payload FROM public.paper_campaign ORDER BY created_at DESC,id')]
-    if not active_only:
-        return campaigns
+    return _discovery(campaigns)['campaigns'] if active_only else campaigns
+
+
+def discovery(db):
+    return _discovery(index(db))
+
+
+def _discovery(campaigns):
+    parents = {campaign['id']: campaign.get('supersedes') for campaign in campaigns}
     visible = [campaign for campaign in campaigns
                if campaign['id'] == WIN_10_CAMPAIGN or campaign.get('discoverable') is True]
-    successors = {campaign['supersedes']: campaign['id'] for campaign in reversed(visible) if 'supersedes' in campaign}
-    preferred = WIN_10_CAMPAIGN
-    while preferred in successors:
-        preferred = successors[preferred]
-    return sorted((campaign for campaign in visible if campaign['id'] not in successors),
-                  key=lambda campaign: campaign['id'] != preferred)
+    replaced = set()
+    for campaign in visible:
+        ancestor = parents[campaign['id']]
+        while ancestor and ancestor not in replaced:
+            replaced.add(ancestor)
+            ancestor = parents.get(ancestor)
+    active = [campaign for campaign in visible if campaign['id'] not in replaced]
+    successors = {}
+    for campaign in active:
+        ancestor = parents[campaign['id']]
+        while ancestor and ancestor not in successors:
+            successors[ancestor] = campaign['id']
+            ancestor = parents.get(ancestor)
+    preferred = successors.get(WIN_10_CAMPAIGN, WIN_10_CAMPAIGN)
+    active.sort(key=lambda campaign: campaign['id'] != preferred)
+    return dict(campaigns=active, successors=successors)

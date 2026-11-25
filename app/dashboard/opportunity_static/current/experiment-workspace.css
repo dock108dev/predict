@@ -15,6 +15,8 @@
 .experiment-comparison .experiment-status { font-size: .9em; }
 .experiment-comparison details { margin-block: 1rem; }
 .experiment-comparison .research-button { display: inline-block; }
+.experiment-version-notice { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-block: .75rem; }
+.experiment-version-notice p { margin: 0; }
 .experiment-detail { margin-block: 1rem; }
 .campaign-evidence-rules dl, .campaign-handoff dl { grid-column: 1 / -1; }
 .campaign-handoff p { grid-column: 1 / -1; margin: 0; }

@@ -51,6 +51,15 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 with_floor['id'], newer['id'], revised['id']]
             assert campaigns.view(db, with_floor['id'])['config']['minimum_stake_usd'] == '1'
             assert 'minimum_stake_usd' not in campaigns.view(db, campaigns.WIN_10_CAMPAIGN)['config']
+            latest = campaigns.create(db, fixed_config(name='Win $10', minimum_stake_usd='2',
+                                                        supersedes=with_floor['id']))
+            discovery = campaigns.discovery(db)
+            assert [campaign['id'] for campaign in discovery['campaigns']] == [
+                latest['id'], newer['id'], revised['id']]
+            assert discovery['successors'] == {
+                campaigns.WIN_10_CAMPAIGN: latest['id'], with_floor['id']: latest['id'],
+                current['id']: revised['id'],
+            }
 
     async def test_ui_configuration_queues_seven_days_and_publishes_repriced_snapshot_once(self):
         await super().asyncSetUp()

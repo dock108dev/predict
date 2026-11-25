@@ -9,7 +9,7 @@ from fractions import Fraction as F
 from pathlib import Path
 from unittest import skipUnless
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 import psycopg
 from aiohttp import web
@@ -376,10 +376,33 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 with connect_web() as db:
                     revised_run = paper_campaigns.tick(db)
                     assert revised_run and revised_run != run
+                    queue.process_one(db)
+                    queue.process_one(db)
                 await page.reload(wait_until="domcontentloaded")
                 await page.get_by_role("link", name="Inspect games and trades").first.click()
                 await expect(page.get_by_text("Stake ≥$2.51", exact=False)).to_be_visible()
                 await page.get_by_text("Sizing exclusions", exact=True).click()
                 await expect(page.get_by_text("Stake below minimum after sizing", exact=True)).to_be_visible()
                 assert (await (await page.request.get(api + f"&version={graded}&export=report")).json()) == exported
+
+                old_query = urlencode(dict(campaign=campaign, date=day, variant="all_venues",
+                    mode="fixed_profit", run=run, trade=ticket["id"], trade_page=1))
+                old_url = str(server.make_url("/experiments?" + old_query))
+                await page.goto(old_url, wait_until="domcontentloaded")
+                await expect(page.get_by_text("This link used previous rules. Showing current results.")).to_be_visible()
+                current = parse_qs(urlsplit(page.url).query)
+                assert current == dict(campaign=[revision_id], date=[day], variant=["all_venues"], ledger_view=["trades"])
+                await expect(page.get_by_text("No selected paper trades in this portfolio.", exact=True)).to_be_visible()
+                await page.reload(wait_until="domcontentloaded")
+                await page.get_by_role("link", name="Open archived snapshot", exact=True).click()
+                await expect(page.get_by_text("Archived experiment · previous rules", exact=True)).to_be_visible()
+                assert parse_qs(urlsplit(page.url).query)["snapshot"] == ["1"]
+                await expect(page.locator(".paper-result-trade")).to_contain_text("$2.50")
+                await page.get_by_role("link", name="Open current results", exact=True).click()
+                await expect(page.get_by_text("No selected paper trades in this portfolio.", exact=True)).to_be_visible()
+
+                await page.goto(old_url + f"&result={graded}", wait_until="domcontentloaded")
+                await expect(page.get_by_text("Archived experiment · previous rules", exact=True)).to_be_visible()
+                await expect(page.locator(".paper-result-trade")).to_contain_text("$2.50")
+                assert parse_qs(urlsplit(page.url).query)["result"] == [graded]
                 await browser.close()

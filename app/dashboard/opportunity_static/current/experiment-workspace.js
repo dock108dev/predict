@@ -35,6 +35,27 @@ function defaultDate(config) {
   return [config.start_date,yesterday.toISOString().slice(0,10),config.end_date].sort()[1];
 }
 
+function wantsDetails(query) {
+  return ['run','result','ticket','evidence',...ledgerKeys].some(key=>query.has(key)) ||
+    (query.get('view')==='daily' && query.has('mode'));
+}
+
+function currentDestination(campaign, query, savedDate) {
+  const details=wantsDetails(query);
+  const requested=query.get('date') || savedDate;
+  const view=query.get('view');
+  const usesDate=details || requested || view==='daily';
+  const date=campaignDays(campaign).includes(requested) ? requested : usesDate ? defaultDate(campaign) : null;
+  return {campaign:campaign.id,date,variant:configuredPortfolio(campaign,query.get('variant')),
+    view:view==='weekly' && !details ? view : null,ledger_view:details ? 'trades' : null};
+}
+
+function versionNotice(message, title, destination) {
+  const notice=node('aside',undefined,'workspace-notice experiment-version-notice');
+  notice.append(node('p',message),action(title,destination));
+  return notice;
+}
+
 function setStatus(message='') {
   status.textContent=message;
   status.hidden=!message;
@@ -174,7 +195,7 @@ function renderCampaignResults(body, reports, config, context) {
     const dates=node('section');
     dates.append(node('h3','Results by date'),table(['Game date (Eastern)','Status',...metricLabels],
       days.map(day=>[
-        link(date(day.date),url({campaign:context.campaign,date:day.date,variant:context.variant})),
+        link(date(day.date),url({...context.base,date:day.date})),
         dayStatus(day),
         ...metrics(day.analysis?.summary,day.selection || day.analysis?.summary),
       ])));
@@ -208,24 +229,28 @@ function renderCampaignResults(body, reports, config, context) {
 function showResults(config, visible, context) {
   const panel=card(config.name);
   panel.classList.add('experiment-comparison');
+  if (context.currentHref) panel.append(versionNotice('Archived experiment · previous rules',
+    'Open current results',context.currentHref));
+  if (context.archiveHref) panel.append(versionNotice('This link used previous rules. Showing current results.',
+    'Open archived snapshot',context.archiveHref));
   const scope=visible ? 'Men’s Division I vs. Division I' : 'Archived experiment';
   panel.append(node('p', scope+' · Paper · T−10 · EV ≥'+pct(config.minimum_ev),'workspace-caption'));
   const dates=campaignDays(config).map(value=>[value,displayDate.format(new Date(value+'T12:00:00Z'))]);
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
   const period=node('nav',undefined,'workspace-variant');
   period.setAttribute('aria-label','Results period');
-  const totalLink=action('Campaign to date',url({campaign:context.campaign,variant:context.variant}));
-  const dailyLink=action('By day',url({campaign:context.campaign,date:context.date,variant:context.variant}));
+  const totalLink=action('Campaign to date',url({...context.base,date:null}));
+  const dailyLink=action('By day',url({...context.base,date:context.date}));
   (context.cumulative ? totalLink : dailyLink).setAttribute('aria-current','page');
   period.append(totalLink,dailyLink);
   panel.append(period);
   const controls=node('div',undefined,'experiment-controls');
   const changeSelection=override=>{
     const latest=new URLSearchParams(location.search);
-    change({campaign:context.campaign,date:context.cumulative ? undefined : latest.get('date') || context.date,
+    change({...context.base,date:context.cumulative ? undefined : latest.get('date') || context.date,
       variant:latest.get('variant') || context.variant,...override});
   };
-  if (context.experiments.length>1) {
+  if (visible && context.experiments.length>1) {
     controls.append(field('Experiment',context.experiments.map(item=>[item.id,item.name]),context.campaign,
       campaign=>change({campaign}), 'experiment-choice'));
   }
@@ -312,7 +337,7 @@ async function sourceDialog(id, query, version) {
   const openedAt=location.pathname+location.search;
   source.onclose=()=>{
     if (openedAt===location.pathname+location.search) {
-      history.replaceState(null,'',detailLink(query,{ticket:null,evidence:null}));
+      history.replaceState(history.state,'',detailLink(query,{ticket:null,evidence:null}));
     }
   };
   if (!source.open) source.showModal();
@@ -339,7 +364,7 @@ async function openDetail(mount,selected,query,context,version) {
   heading.tabIndex=-1;
   mount.replaceChildren(heading, resultRoot);
   const savedSnapshot=query.get('snapshot')==='1' || (context.latestRun && context.latestRun!==id);
-  if (savedSnapshot) {
+  if (savedSnapshot && !context.currentHref) {
     mount.insertBefore(node('p','Saved snapshot · selections are frozen. The results above use the latest available snapshots.','workspace-notice'),resultRoot);
   }
   const href=overrides=>url({...initial,...overrides});
@@ -350,7 +375,7 @@ async function openDetail(mount,selected,query,context,version) {
       ticketLink:ticket=>href({ticket:ticket.id}),
       gameLink:game=>href({evidence:game.game_id}),
       exportLink:runAPI(id)+'?export=1',offerExportLink:runAPI(id)+'/offers',
-      priorRunLink:prior=>href({run:prior,result:null,trade:null}),
+      priorRunLink:prior=>href({run:prior,result:null,trade:null,snapshot:'1'}),
     });
   };
   if (!paper) audit(resultRoot);
@@ -388,7 +413,7 @@ async function openDetail(mount,selected,query,context,version) {
         embedded:true,variant,mode,config,params,href:overrides=>url({...params,...overrides}),
         go:overrides=>{
           const next={...params,...overrides};
-          history.pushState(null,'',url(next));
+          history.pushState(history.state,'',url(next));
           paint(next);
         },
         pinned:Boolean(params.result),showSnapshotOdds:!campaign || savedSnapshot || Boolean(params.result),
@@ -430,7 +455,7 @@ async function showArchive(selected,query,version) {
 
 async function render({keepComparison=false}={}) {
   const version=++requestVersion;
-  const query=new URLSearchParams(location.search);
+  let query=new URLSearchParams(location.search);
   const isCreate=['create','schedule'].includes(query.get('view'));
   if (source.open) source.close();
   if (isCreate) {
@@ -444,12 +469,31 @@ async function render({keepComparison=false}={}) {
   }
   setStatus('Reading experiments…');
   try {
-    const {campaigns}=await readJSON(endpoint+'/campaigns');
+    const {campaigns,successors={}}=await readJSON(endpoint+'/campaigns');
     if (version!==requestVersion) return;
+    const pinned=query.get('snapshot')==='1' || hash.test(query.get('result') || '');
+    const requestedCampaign=query.get('campaign');
+    const knownSuccessor=!pinned && campaigns.some(item=>item.id===successors[requestedCampaign]);
     const run=query.get('run');
     let selected;
-    if (hash.test(run || '')) selected=await readJSON(runAPI(run));
+    if (hash.test(run || '') && (!knownSuccessor || !query.has('date'))) {
+      const readRun=readJSON(runAPI(run));
+      selected=await (knownSuccessor ? readRun.catch(()=>null) : readRun);
+    }
     if (version!==requestVersion) return;
+    const original=requestedCampaign || selected?.definition.campaign_id;
+    const successor=campaigns.find(item=>item.id===successors[original]);
+    const redirected=successor && !pinned;
+    if (redirected) {
+      const editing=query.get('view')==='revise';
+      const destination=currentDestination(successor,query,selected?.run.date);
+      if (editing) Object.assign(destination,{view:'revise',ledger_view:null});
+      const archiveHref=url({...Object.fromEntries(query),campaign:original,snapshot:'1',
+        view:editing ? null : query.get('view')});
+      history.replaceState({experimentRedirect:{campaign:successor.id,archiveHref}},'',url(destination));
+      query=new URLSearchParams(present(destination));
+      selected=null;
+    }
     if (selected && !selected.definition.campaign_id) {
       setStatus();
       await showArchive(selected,query,version);
@@ -469,10 +513,10 @@ async function render({keepComparison=false}={}) {
     const date=dates.includes(wanted) ? wanted : defaultDate(config);
     const variant=configuredPortfolio(config,query.get('variant'));
     const mode=query.get('mode');
-    const oldDetail=(query.get('view')==='daily' && mode) || ledgerKeys.some(key=>query.has(key));
-    const cumulative=!(run || oldDetail || query.get('view')==='daily' || (wanted && query.get('view')!=='weekly'));
-    const base={campaign:id,date:cumulative ? undefined : date,variant};
-    if (query.get('view')==='revise') {
+    const detailRequested=wantsDetails(query);
+    const cumulative=!(detailRequested || query.get('view')==='daily' || (wanted && query.get('view')!=='weekly'));
+    const base={campaign:id,date:cumulative ? undefined : date,variant,...(!known ? {snapshot:'1'} : {})};
+    if (known && query.get('view')==='revise') {
       root.replaceChildren();
       setStatus();
       campaignForm(root,config,id,variant,base,{
@@ -482,8 +526,12 @@ async function render({keepComparison=false}={}) {
       return;
     }
     const sizingModes=id===win10Campaign ? ['fixed_profit'] : configuredModes(config);
-    const context={base,campaign:id,date,variant,config,sizingModes,cumulative,experiments:campaigns,visible:Boolean(known)};
-    let body=keepComparison && root.querySelector('#experiment-comparison-body');
+    const currentHref=successor && !redirected ? url(currentDestination(successor,query,wanted)) : null;
+    const redirect=history.state?.experimentRedirect;
+    const archiveHref=redirect?.campaign===id ? redirect.archiveHref : null;
+    const context={base,campaign:id,date,variant,config,sizingModes,cumulative,experiments:campaigns,
+      visible:Boolean(known),archiveHref,currentHref};
+    let body=keepComparison && !redirected && root.querySelector('#experiment-comparison-body');
     if (!body) {
       const heading=showResults(config,known,context);
       root.replaceChildren(heading);
@@ -501,7 +549,7 @@ async function render({keepComparison=false}={}) {
     paintDay(body,data,config,context);
     setStatus();
     // Archived links can still open the explicitly selected frozen evidence.
-    if (!selected && oldDetail) {
+    if (!selected && detailRequested) {
       const chosen=mode && data.modes[mode] ? mode : sizingModes[0];
       const runId=data.modes[chosen]?.run_id;
       if (runId) selected=await readJSON(runAPI(runId));

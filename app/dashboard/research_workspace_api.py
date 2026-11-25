@@ -72,7 +72,7 @@ def mount(app, *, campaigns_only=False):
         if request.method == 'POST':
             body = await read_json(request)
             return _response(await work(paper_campaigns.create, body, read_only=False))
-        return _response(dict(campaigns=await work(paper_campaigns.index, active_only=True)))
+        return _response(await work(paper_campaigns.discovery))
 
     async def campaign(request):
         query = request.query
