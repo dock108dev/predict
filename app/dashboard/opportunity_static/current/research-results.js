@@ -281,6 +281,7 @@ function gameView(game, portfolio, navigation, inspectTrade) {
 
 function tradeView(trade, game, navigation, inspectTrade) {
   const panel = node('section', undefined, 'workspace-panel workspace-card paper-result-trade');
+  panel.dataset.tradeId = trade.id;
   const grade = trade.grade || {};
   const headline = node('h4', ticketSelection(trade) + ' · ' + venue(trade.venue));
   headline.tabIndex = -1;
@@ -307,6 +308,7 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
   const panel = node('aside', undefined, 'workspace-panel result-inspector paper-result-trade');
   panel.setAttribute('aria-label', 'Trade inspector');
   panel.id = 'trade-inspector';
+  panel.dataset.tradeId = trade.id;
   const headline = node('h3', ticketSelection(trade));
   headline.tabIndex = -1;
   const context = node('div', undefined, 'result-inspector-context');
@@ -347,7 +349,7 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
     panel.append(explanation);
   }
   panel.append(evidence, resultEvidence(game?.result, grade), details('Exact grading inputs and ticket identity', trade));
-  inspectTrade(calculation, trade, value => {
+  const showWitness = value => {
     const {kelly, clocks} = value.evidence?.trade || {};
     const age = clocks?.quote_age_at_receipt_seconds;
     witness.replaceChildren(pairs({
@@ -357,6 +359,10 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
       'Quote age at receipt':age != null ? `${Number(age).toFixed(3)} seconds`
         : clocks?.quote_age_state === 'future' ? 'Source timestamp after receipt' : 'Unknown',
     }));
+  };
+  if (navigation.trade === trade.id) inspectTrade(calculation, trade, showWitness);
+  else evidence.addEventListener('toggle', () => {
+    if (evidence.open && !calculation.hasChildNodes()) inspectTrade(calculation, trade, showWitness);
   });
   return panel;
 }

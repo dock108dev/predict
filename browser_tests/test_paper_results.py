@@ -400,11 +400,19 @@ def test_flat_ledger_exact_order_population_and_inspector_navigation(width):
                 next_page.click()
         assert seen == expected
         assert all(key not in parse_qs(urlsplit(page.url).query) for key in ("game", "ledger_view"))
+        assert not any("/tickets/" in path for _, path in requests)
+        inspector.get_by_text("Trade calculation and frozen evidence",exact=True).click()
+        expect(inspector.get_by_role("heading",name="Frozen quote")).to_be_visible()
+        page.get_by_role("link",name="Previous",exact=True).click()
+        expect(inspector.get_by_role("heading",name="Frozen quote")).to_have_count(0)
+        page.get_by_role("link",name="Next",exact=True).click()
         pick = ledger.locator("a.result-ledger-selection").last
         expect(pick).to_contain_text("-15.5")
         expect(pick).to_contain_text("University of Lower Allegheny State")
         pick.click()
         expect(inspector).to_contain_text("Witness for ticket 00")
+        expect(inspector).to_contain_text("Quote age at receipt")
+        assert [path.rsplit("/",1)[-1] for _, path in requests if "/tickets/" in path] == ["trade-01","trade-00"]
         expect(inspector).to_contain_text("Away 00 at Home 00")
         assert parse_qs(urlsplit(page.url).query)["trade"] == ["trade-00"]
         page.reload()
