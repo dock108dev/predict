@@ -67,3 +67,7 @@
  .paper-result-games .workspace-table,.paper-result-game .workspace-table,.paper-result-summary ~ details .workspace-table { min-width:0; }
  #data-mens-d1 .workspace-table, #data-mens-d1 .workspace-table td { min-width:0; }
 }
+.campaign-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:1rem; }
+.campaign-form label { display:flex; flex-direction:column; gap:.4rem; }
+.campaign-form input { padding:.65rem; min-width:0; width:100%; box-sizing:border-box; }
+.campaign-form > p { grid-column:1/-1; }

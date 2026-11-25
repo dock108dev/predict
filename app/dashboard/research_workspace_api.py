@@ -11,6 +11,7 @@ from app.collection.odds_http import BudgetStop
 from app.diagnostics import failure
 from app.owned_work import joined_thread
 from app.research import mens_d1, workspace
+from app.research import paper_campaigns
 from app.storage.store import connect, encoded
 from . import paper_results_view
 from .local_security import HEADERS, PublicRequestError, read_json
@@ -64,6 +65,21 @@ def mount(app):
         if request.query:
             raise PublicRequestError("The research workspace takes no filters.")
         return _response(await work(workspace.index))
+
+    async def campaigns(request):
+        if request.query:
+            raise PublicRequestError('Campaign options belong in the JSON body.')
+        if request.method == 'POST':
+            body = await read_json(request)
+            return _response(await work(paper_campaigns.create, body, read_only=False))
+        return _response(dict(campaigns=await work(paper_campaigns.index)))
+
+    async def campaign(request):
+        query = request.query
+        if set(query)-{'variant','export'} or query.get('export') not in (None,'1'):
+            raise PublicRequestError('Select a campaign portfolio.')
+        value = await work(paper_campaigns.view, _identity(request.match_info['campaign_id']), query.get('variant','best_venue'))
+        return _response(value,filename=f'predict-week-{value["config"]["start_date"]}-{value["variant"]}.json' if query.get('export') else None)
 
     async def run(request):
         query = dict(request.query)
@@ -213,6 +229,9 @@ def mount(app):
         return _response(value, filename=f"predict-checkpoint-{game[:12]}.json" if query else None)
 
     app.router.add_get(BASE, index)
+    app.router.add_get(BASE + '/campaigns', campaigns)
+    app.router.add_post(BASE + '/campaigns', campaigns)
+    app.router.add_get(BASE + '/campaigns/{campaign_id}', campaign)
     app.router.add_get(BASE + "/result-evidence/{result_id}", result_evidence)
     app.router.add_post(BASE + "/runs", replay)
     app.router.add_get(BASE + "/mens-d1-jobs/{job_id}", replay_status)

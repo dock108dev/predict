@@ -114,6 +114,8 @@ def plan(root, paths):
         if path.startswith(
             (
                 "app/research/paper_result",
+                "app/research/paper_campaign",
+                "tests/test_paper_campaign",
                 "app/storage/paper_result",
                 "app/dashboard/paper_result",
                 "tests/test_paper_result",
@@ -121,11 +123,14 @@ def plan(root, paths):
         ) or path in (
             "app/dashboard/research_workspace_api.py",
             "app/storage/migrations/120_paper_results.sql",
+            "app/storage/migrations/121_paper_campaigns.sql",
         ):
             pure.update(
                 {"tests/test_paper_results.py", "tests/test_paper_results_api.py"}
             )
             sql.add("tests/test_paper_result_queue_sql.py")
+            pure.add("tests/test_paper_campaigns.py")
+            sql.add("tests/test_paper_campaigns_sql.py")
         if path in (
             "app/collection/sgo_game_results.py",
             "app/collection/sportsgameodds_worker.py",

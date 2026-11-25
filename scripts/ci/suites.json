@@ -707,6 +707,7 @@
     "tests": [
       "tests/test_paper_experiments.py",
       "tests/test_paper_results.py",
+      "tests/test_paper_campaigns.py",
       "tests/test_paper_results_api.py",
       "tests/test_t10_recovery.py",
       "tests/test_original_receipts.py",

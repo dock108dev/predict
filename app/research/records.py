@@ -23,7 +23,7 @@ EVALUATION_RECORD_BYTE_CAP = 4 * 1024 * 1024
 # Keep the retired cohort's observation sublimit. Current checkpoint and market
 # witnesses share the wider allocation under the existing SQL and disk guards.
 OBSERVATION_BYTE_CAP = 96 * 1024 * 1024
-TOTAL_BYTE_CAP = 512 * 1024 * 1024
+TOTAL_BYTE_CAP = 2 * 1024 * 1024 * 1024
 # Keep the original single-response memory ceiling independent of disk retention.
 COHORT_EXPORT_PAYLOAD_BYTE_CAP = 128 * 1024 * 1024
 EVIDENCE_RESPONSE_BYTE_CAP = 257 * 1024 * 1024
@@ -122,6 +122,9 @@ def retention_usage(db):
         row['paper_result_bytes'] = int(results['bytes'])
         row['total'] += row['paper_result_bytes']
         row['records'] += results['n']
+    if db.execute("SELECT to_regclass('public.paper_campaign') r").fetchone()['r']:
+        campaign_bytes = db.execute("SELECT pg_total_relation_size('public.paper_campaign') + pg_total_relation_size('public.paper_campaign_day') bytes").fetchone()['bytes']
+        row['total'] += campaign_bytes
     return row
 
 

@@ -102,6 +102,8 @@ def research_http_fixture(serve):
                 url="http://" + handler.headers["Host"] + handler.path,
                 method=handler.command,
             )
+            if handler.command == 'POST':
+                self.request.post_data_json = json.loads(handler.rfile.read(int(handler.headers.get('Content-Length',0))))
 
         def fulfill(self, *, json=None, path=None, status=200, headers=None):
             import json as json_module
@@ -127,6 +129,7 @@ def research_http_fixture(serve):
             serve(Route(self))
 
         do_DELETE = do_GET
+        do_POST = do_GET
 
         def log_message(self, *_):
             pass

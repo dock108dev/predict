@@ -9,6 +9,7 @@ from threading import Event
 from psycopg import Error
 
 from app.research import paper_results
+from app.research import paper_campaigns
 from app.storage import paper_result_queue as queue
 from app.storage.store import connect
 
@@ -31,6 +32,7 @@ def run(stop, *, connector=connect):
                             repair_at = now + REPAIR_INTERVAL
                         queue.dispatch(db)
                         queue.process_one(db)
+                        paper_campaigns.tick(db)
                     stop.wait(POLL_SECONDS)
         except Error as error:
             LOG.warning("Paper result database temporarily unavailable (%s)", type(error).__name__)

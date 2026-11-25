@@ -1,6 +1,7 @@
 import {byId, card, count, details, label, link, list, node, pairs, pct, readJSON, table, time, usd} from './workspace-ui.js';
 import {renderRun, renderSavedEvidence} from './research-run.js';
 import {renderResults} from './research-results.js';
+import {campaignList,campaignForm,renderCampaign} from './research-campaigns.js';
 import {coverageContext, experimentCoverage, readDailyCoverage} from './mens-d1-coverage.js';
 import {renderWorkspaceNavigation} from './workspace-nav.js';
 
@@ -123,7 +124,7 @@ function overview() {
     item.append(action);
     return item;
   }));
-  root.replaceChildren(layout, next);
+  root.replaceChildren(campaignList(workspace.campaigns),layout, next);
 }
 function theories(query) {
   const theoryId = query.get('theory'), claimId = query.get('claim');
@@ -477,6 +478,19 @@ async function openResults(mount, selected, query, context, variant, requestVers
 }
 
 async function experiments(query, requestVersion) {
+  if (!query.get('run') && query.get('campaign')) {
+    root.replaceChildren(node('p','Reading daily and weekly results…'));
+    let timer, stopped=false;
+    const refresh=async()=>{
+      if(stopped||version!==requestVersion)return;
+      try { if(!root.querySelector('form')) await renderCampaign(root,query.get('campaign'),query.get('variant')==='all_venues'?'all_venues':'best_venue',()=>!stopped&&version===requestVersion); }
+      finally { if(!stopped&&version===requestVersion)timer=setTimeout(()=>refresh().catch(()=>{}),20000); }
+    };
+    stopResultRefresh=()=>{stopped=true;clearTimeout(timer);};
+    await refresh();
+    return;
+  }
+  if (query.get('view')==='schedule') {root.replaceChildren();campaignForm(root);return;}
   const requestedDefinition = query.get('definition');
   const matchingRuns = requestedDefinition && query.get('view') !== 'definition' ? definitionRuns(definitionById(requestedDefinition)) : [];
   const definitionRun = matchingRuns.find(run => !query.has('date') || run.date === query.get('date'));
@@ -495,6 +509,7 @@ async function experiments(query, requestVersion) {
     const dateContext = {...context};
     delete dateContext.run;
     const nav = node('div', undefined, 'workspace-links');
+    if (selected.definition.campaign_id) nav.append(link('Back to daily & weekly results',url('experiments',{campaign:selected.definition.campaign_id,variant})));
     nav.append(link(Object.keys(context).length ? 'Current evidence and saved runs' : 'Experiments and runs', url('experiments', dateContext)),
       link('Open research findings', url('results')), link('Browse checkpoint evidence in Data', '/data?evidence=checkpoints'));
     const variant = query.get('variant') === 'all_venues' ? 'all_venues' : 'best_venue';
@@ -563,7 +578,7 @@ async function experiments(query, requestVersion) {
     : (scoped && definitions.find(definition => definition.policy?.scope === 'mens-d1'
         && availableRuns.some(run => run.definition_version === definition.version)))
       || template || definitionById(workspace.pilot?.definition_version) || definitions[0];
-  root.replaceChildren(node('h2', 'Experiment definitions and dated runs'));
+  root.replaceChildren(campaignList(workspace.campaigns),node('h2', 'Experiment definitions and dated runs'));
   root.append(experimentCoverage(query, workspace.pilot?.date, null, () => requestVersion === version, summaryRead));
   if (template) root.append(dailyRunForm(template, query, requestVersion, summaryRead));
   if (selected) {

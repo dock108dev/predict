@@ -91,6 +91,7 @@ def _run_summary(row):
 
 
 def index(db):
+    from . import paper_campaigns
     catalog = list(db.execute("""SELECT * FROM public.research_workspace_catalog
         ORDER BY recorded_at,version"""))
     definitions = [_record(row) for row in db.execute("""SELECT * FROM public.research_workspace_definition
@@ -114,7 +115,7 @@ def index(db):
         theories=[_record(row) for row in catalog if row["kind"] == "theory"],
         claims=[_record(row) for row in catalog if row["kind"] == "claim"],
         definitions=definitions, mens_d1_template=mens_d1.template(pilot),
-        runs=runs, findings=findings, available_dates=available,
+        runs=runs, findings=findings, available_dates=available, campaigns=paper_campaigns.index(db),
         provider_requests=0, orders_submitted=0)
 
 
