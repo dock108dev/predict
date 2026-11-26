@@ -260,9 +260,18 @@ def mount(app, *, campaigns_only=False):
         return web.json_response(value, headers=HEADERS)
 
     async def dashboard(request):
-        if set(request.query) - {'offset', 'limit'}:
-            raise PublicRequestError('Dashboard takes only page settings.')
-        validate(request.query)
+        from app.collection.current_aggregate_policy import MARKET_FAMILIES
+        from app.collection.current_policy import SPORTS
+        from app.comparison.snapshot_fee_outcome import VENUES
+
+        query = request.query
+        paging = {'offset', 'limit'}
+        filters = {'sport': SPORTS, 'family': MARKET_FAMILIES.values(), 'venue': VENUES}
+        if set(query) - paging - filters.keys():
+            raise PublicRequestError('Invalid Dashboard filters.')
+        if any(query.get(name) not in (None, '', *values) for name, values in filters.items()):
+            raise PublicRequestError('Unknown sport, bet type, or venue.')
+        validate({key: query[key] for key in paging if key in query})
 
         def work():
             from datetime import timedelta
@@ -279,7 +288,8 @@ def mount(app, *, campaigns_only=False):
                 horizon = settings['monitor_horizon_seconds']
                 until = at + timedelta(seconds=horizon) if horizon else datetime.max.replace(tzinfo=timezone.utc)
                 packet = read_dashboard(db, at=at, until=until, freshness_seconds=settings['monitor_interval_seconds'],
-                    offset=int(request.query.get('offset', 0)), limit=int(request.query.get('limit', 30)))
+                    offset=int(query.get('offset', 0)), limit=int(query.get('limit', 30)),
+                    **{name: query.get(name) for name in filters})
                 return dict(packet, schema='predict-dashboard-1', read_at=at.isoformat(),
                     provider_requests=0, scheduled_calculations=0)
 

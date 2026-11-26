@@ -1,5 +1,5 @@
 import {byId,card,count,link,node,pairs,pct,readJSON,table,time,usd} from './workspace-ui.js';
-import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,gameScopes,mainFirstRule,ruleSummary,sizingTitle} from './research-campaigns.js';
+import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,ruleSummary,sizingTitle} from './research-campaigns.js';
 import {coverageURL,ledgerKeys} from './mens-d1-coverage.js';
 import {oddsBreakdown,renderResults} from './research-results.js';
 import {qualityComparison} from './research-quality.js';
@@ -13,6 +13,8 @@ const status=byId('experiments-status');
 const source=byId('experiment-source');
 const portfolioTitles={best_venue:'Best venue only',all_venues:'All qualifying venues'};
 const hash=/^[0-9a-f]{64}$/;
+const ledgerPreferences=['ledger_view','filter','game_sport','trade_filter','trade_ev','trade_sort',
+  'trade_sport','trade_family','trade_venue','trade_rows'];
 let requestVersion=0;
 
 const present=values=>Object.fromEntries(Object.entries(values).filter(([,value])=>value!=null));
@@ -38,6 +40,10 @@ function defaultDate(config) {
 function wantsDetails(query) {
   return ['run','result','ticket','evidence',...ledgerKeys].some(key=>query.has(key)) ||
     (query.get('view')==='daily' && query.has('mode'));
+}
+
+function ledgerSelection(query) {
+  return present(Object.fromEntries(ledgerPreferences.map(key=>[key,query.get(key)])));
 }
 
 function currentDestination(campaign, query, savedDate) {
@@ -147,9 +153,6 @@ function comparisonTable(data, context) {
       return node('span',context.visible || day.run_id ? dayStatus(day) : 'No saved snapshot','experiment-status');
     }],
     ...metricLabels.map((label,index)=>[label,mode=>values[mode][index]]),
-    ['Details',mode=>modes[mode].run_id
-      ? action('Inspect games and trades',url({...context.base,mode,run:modes[mode].run_id}))
-      : context.visible ? 'Awaiting saved evidence' : 'Unavailable'],
   ]);
 }
 
@@ -165,42 +168,39 @@ function campaignRules(config, context) {
 }
 
 function renderCampaignResults(body, reports, config, context) {
-  const primary=reports[0];
+  const primary=reports.find(report=>report.mode===context.mode) || reports[0];
   const through=primary.as_of ? gameDate.format(new Date(primary.as_of)) : gameDate.format(new Date());
-  const days=primary.days.filter(day=>day.date<=through);
-  const date=value=>displayDate.format(new Date(value+'T12:00:00Z'));
+  const days=primary.days.filter(day=>day.date<=through).reverse();
   const values=Object.fromEntries(reports.map(report=>[report.mode,
     metrics(report.weekly?.summary,report.selection || report.weekly?.summary)]));
   const panel=node('section');
-  panel.append(node('h3','Campaign to date'));
   if (days.length) {
-    panel.append(node('p',date(config.start_date)+' through '+date(days.at(-1).date)+' (Eastern)','workspace-caption'));
-    panel.append(summaryTable(config,context.sizingModes,[
+    const rows=days.map(day=>{
+      const summary=day.analysis?.summary, selection=day.selection || summary;
+      const realized=summary?.roi == null ? '—' : summary.roi_percent == null ? pct(summary.roi) : summary.roi_percent+'%';
+      const status=dayStatus(day)+(day.capture_state==='partial' ? ' · Partial T−10' : '');
+      return [link(displayDate.format(new Date(day.date+'T12:00:00Z')),
+        url({...context.base,date:day.date,mode:context.mode})),status,
+        selection ? `${count(summary?.resolved ?? 0)} / ${count(selection.tickets)}` : '—',
+        money(summary?.pnl_usd),realized];
+    });
+    const dates=table(['Date (ET)','Status','Graded / selected','Paper P/L','Realized ROI'],rows);
+    dates.classList.add('experiment-date-table');
+    dates.tabIndex=0;
+    dates.setAttribute('role','region');
+    dates.setAttribute('aria-label','Results by date');
+    panel.append(dates);
+    const totals=node('details',undefined,'experiment-totals');
+    totals.append(node('summary','Campaign totals'),summaryTable(config,context.sizingModes,[
       ...metricLabels.map((label,index)=>[label,mode=>values[mode][index]]),
       ['Ungraded trades',mode=>{
         const report=reports.find(value=>value.mode===mode);
         const selected=report.selection?.tickets ?? report.weekly?.summary.tickets;
         return quantity(selected == null ? null : selected-(report.weekly?.summary.resolved || 0));
       }],
-    ]));
-    panel.append(node('p',metricBasis,'workspace-caption'));
-  }
-  if (!days.length || reports.every(report=>!report.selection && !report.weekly)) {
-    panel.append(node('p','Waiting for the first saved selections.'));
-  }
-  if (days.some(day=>day.capture_state==='partial' || day.capture_state==='missing')) {
-    panel.append(node('p','Some dates have missing T−10 captures. Totals use the selections supported by retained evidence.','workspace-caption'));
-  }
-  if (days.length) {
-    const dates=node('section');
-    dates.append(node('h3','Results by date'),table(['Game date (Eastern)','Status',...metricLabels],
-      days.map(day=>[
-        link(date(day.date),url({...context.base,date:day.date})),
-        dayStatus(day),
-        ...metrics(day.analysis?.summary,day.selection || day.analysis?.summary),
-      ])));
-    panel.append(dates);
-  }
+    ]),node('p',metricBasis,'workspace-caption'));
+    panel.append(totals);
+  } else panel.append(node('p','No results yet.','workspace-caption'));
   for (const report of reports) {
     const odds=oddsBreakdown(report.selection?.odds_buckets,reports.length>1 ? sizingTitle(config,report.mode) : '');
     if (odds) panel.append(odds);
@@ -211,7 +211,6 @@ function renderCampaignResults(body, reports, config, context) {
       node('h4','EV buckets'),table(['Screening EV',...metricLabels],
         report.weekly.buckets.map(bucket=>[band(bucket),...metrics(bucket.summary)])),
       node('h4','Minimum EV comparisons'),
-      node('p','Each row applies a different minimum to the same saved offers.'),
       table(['Minimum EV',...metricLabels],
         report.weekly.thresholds.map(bucket=>['≥'+pct(bucket.minimum),...metrics(bucket.summary)])));
     const quality=qualityComparison(report.weekly.quality);
@@ -229,27 +228,28 @@ function renderCampaignResults(body, reports, config, context) {
 function showResults(config, visible, context) {
   const panel=card(config.name);
   panel.classList.add('experiment-comparison');
+  const heading=node('div',undefined,'experiment-heading');
+  heading.append(panel.firstElementChild);
+  panel.prepend(heading);
   if (context.currentHref) panel.append(versionNotice('Archived experiment · previous rules',
     'Open current results',context.currentHref));
   if (context.archiveHref) panel.append(versionNotice('This link used previous rules. Showing current results.',
     'Open archived snapshot',context.archiveHref));
-  const scope=visible ? gameScopes[config.scope || 'mens-d1'] : 'Archived experiment';
-  panel.append(node('p', scope+' · Paper · T−10 · EV ≥'+pct(config.minimum_ev),'workspace-caption'));
-  if (config.portfolio_rule===mainFirstRule.id) panel.append(node('p',mainFirstRule.title,'workspace-caption'));
   const dates=campaignDays(config).map(value=>[value,displayDate.format(new Date(value+'T12:00:00Z'))]);
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
   const period=node('nav',undefined,'workspace-variant');
   period.setAttribute('aria-label','Results period');
-  const totalLink=action('Campaign to date',url({...context.base,date:null}));
-  const dailyLink=action('By day',url({...context.base,date:context.date}));
+  const totalLink=action('Campaign to date',url({...context.base,mode:context.mode,date:null}));
+  const dailyLink=action('By day',url({...context.base,mode:context.mode,date:context.date}));
   (context.cumulative ? totalLink : dailyLink).setAttribute('aria-current','page');
   period.append(totalLink,dailyLink);
-  panel.append(period);
+  heading.append(period);
   const controls=node('div',undefined,'experiment-controls');
   const changeSelection=override=>{
     const latest=new URLSearchParams(location.search);
     change({...context.base,date:context.cumulative ? undefined : latest.get('date') || context.date,
-      variant:latest.get('variant') || context.variant,...override});
+      variant:latest.get('variant') || context.variant,mode:latest.get('mode') || context.mode,
+      ...(!context.cumulative ? ledgerSelection(latest) : {}),...override});
   };
   if (visible && context.experiments.length>1) {
     controls.append(field('Experiment',context.experiments.map(item=>[item.id,item.name]),context.campaign,
@@ -257,7 +257,10 @@ function showResults(config, visible, context) {
   }
   if (!context.cumulative) controls.append(
     field('Game date (Eastern)',dates,context.date,date=>changeSelection({date}),'experiment-date'));
-  controls.append(field('Portfolio',portfolios,context.variant,variant=>changeSelection({variant}),'experiment-portfolio'));
+  if (portfolios.length>1) controls.append(
+    field('Portfolio',portfolios,context.variant,variant=>changeSelection({variant}),'experiment-portfolio'));
+  if (context.sizingModes.length>1) controls.append(field('Sizing',context.sizingModes.map(mode=>[mode,sizingTitle(config,mode)]),
+    context.mode,mode=>changeSelection({mode}),'experiment-sizing'));
   const refresh=node('button','Refresh results');
   refresh.type='button';
   refresh.onclick=()=>render({keepComparison:true});
@@ -266,61 +269,40 @@ function showResults(config, visible, context) {
   panel.append(controls);
   const body=node('div');
   body.id='experiment-comparison-body';
-  body.append(node('p','Reading retained captures and grades…','workspace-caption'));
   panel.append(body);
   return panel;
 }
 
-function paintDay(body,data,config,context) {
+function paintDay(body,data,config,context,detail) {
   const {sizingModes}=context;
-  const gameRules=campaignRules(config,context);
-  if (data) {
-    body.replaceChildren(comparisonTable(data,context));
-    const days=sizingModes.map(mode=>data.modes[mode]);
-    if (days.some(day=>day.capture_state==='partial')) {
-      body.append(node('p','Partial T−10 coverage. Saved results reflect only the usable captures so far.','workspace-caption'));
-    }
-    const captures=days[0]?.captures || {};
-    const pending=(captures.pending || 0)+(captures.claimed || 0);
-    if (pending) body.append(node('p',
-      `${count(pending)} ${pending===1 ? 'game awaiting its' : 'games awaiting their'} T−10 capture in the latest snapshot.`,
-      'workspace-caption'));
-    body.append(node('p',metricBasis,'workspace-caption'));
-    for (const mode of sizingModes) {
-      const odds=oddsBreakdown(data.modes[mode].selection?.odds_buckets,sizingModes.length>1 ? sizingTitle(config,mode) : '');
-      if (odds) body.append(odds);
-    }
-    const history=node('details');
-    history.append(node('summary','Saved snapshots'),node('p','Select a published snapshot to inspect its recorded selections and grade history.'));
-    for (const mode of sizingModes) {
-      history.append(node('h3',sizingTitle(config,mode)));
-      const snapshots=data.modes[mode].snapshots;
-      if (!snapshots.length) history.append(node('p','No snapshot published yet.'));
-      else {
-        const list=node('ul');
-        for (const snapshot of snapshots) {
-          const item=node('li');
-          item.append(link(time(snapshot.recorded_at),url({...context.base,mode,run:snapshot.id,snapshot:'1'})));
-          list.append(item);
-        }
-        history.append(list);
+  const day=data.modes[context.mode] || data.modes[sizingModes[0]];
+  body.replaceChildren(detail || node('p',context.visible ? dayStatus(day) : 'No saved snapshot','workspace-caption'));
+  const totals=node('details',undefined,'experiment-totals');
+  totals.append(node('summary','Daily totals'),comparisonTable(data,context),node('p',metricBasis,'workspace-caption'));
+  const history=node('details');
+  history.append(node('summary','Saved snapshots'));
+  for (const mode of sizingModes) {
+    const odds=oddsBreakdown(data.modes[mode].selection?.odds_buckets,sizingModes.length>1 ? sizingTitle(config,mode) : '');
+    if (odds) totals.append(odds);
+    if (sizingModes.length>1) history.append(node('h3',sizingTitle(config,mode)));
+    const snapshots=data.modes[mode].snapshots;
+    if (!snapshots.length) history.append(node('p','No snapshot published yet.'));
+    else {
+      const list=node('ul');
+      for (const snapshot of snapshots) {
+        const item=node('li');
+        item.append(link(time(snapshot.recorded_at),url({...context.base,mode,run:snapshot.id,snapshot:'1'})));
+        list.append(item);
       }
+      history.append(list);
     }
-    const links=node('div',undefined,'workspace-links');
-    const [day]=days;
-    if (sizingModes.length===1) {
-      if (day.analysis && day.result_id) links.append(action('Export results',runAPI(day.run_id)+'/results?'+new URLSearchParams({
-        variant:context.variant,version:day.result_id,export:'report',
-      })));
-      else if (day.run_id) links.append(action('Export dated offer ledger',runAPI(day.run_id)+'/offers'));
-    } else {
-      links.append(action('Export comparison',campaignAPI(context.campaign)+'/days/'+context.date+'?'+new URLSearchParams({
-        variant:context.variant,export:'1',
-      })));
-    }
-    body.append(gameRules,history,links);
-  } else {
-    body.replaceChildren(node('p','Reading retained captures and grades…','workspace-caption'),gameRules);
+  }
+  body.append(totals,campaignRules(config,context),history);
+  if (sizingModes.length>1) {
+    const destination=campaignAPI(context.campaign)+'/days/'+context.date+'?'+new URLSearchParams({
+      variant:context.variant,export:'1',
+    });
+    body.append(action('Export comparison',destination));
   }
 }
 
@@ -361,12 +343,12 @@ async function openDetail(mount,selected,query,context,version) {
   const base={...context.base,date,campaign,mode,run:id};
   const initial={...Object.fromEntries(query),...base,ticket:null,evidence:null};
   const resultRoot=node('div');
-  const heading=node('h2',sizingTitle(config,mode)+' · games and trades');
-  heading.tabIndex=-1;
-  mount.replaceChildren(heading, resultRoot);
+  mount.tabIndex=-1;
+  mount.setAttribute('aria-label','Games and trades');
+  mount.replaceChildren(resultRoot);
   const savedSnapshot=query.get('snapshot')==='1' || (context.latestRun && context.latestRun!==id);
   if (savedSnapshot && !context.currentHref) {
-    mount.insertBefore(node('p','Saved snapshot · selections are frozen. The results above use the latest available snapshots.','workspace-notice'),resultRoot);
+    mount.insertBefore(node('p','Saved snapshot','workspace-caption'),resultRoot);
   }
   const href=overrides=>url({...initial,...overrides});
   const paper=String(selected.report.policy.execution || '').startsWith('paper_only');
@@ -381,6 +363,7 @@ async function openDetail(mount,selected,query,context,version) {
   };
   if (!paper) audit(resultRoot);
   else {
+    resultRoot.append(node('p','Loading trades…','workspace-caption'));
     const details=node('details',undefined,'workspace-panel');
     details.append(node('summary','Original selection and capture evidence'));
     details.addEventListener('toggle',()=>{if (details.open && details.childElementCount===1) audit(details);});
@@ -413,15 +396,18 @@ async function openDetail(mount,selected,query,context,version) {
       const navigation={
         embedded:true,variant,mode,config,params,href:overrides=>url({...params,...overrides}),
         go:overrides=>{
+          const focus=document.activeElement?.dataset.workbenchFocus;
           const next={...params,...overrides};
           history.pushState(history.state,'',url(next));
           paint(next);
+          if (focus) Array.from(resultRoot.querySelectorAll('[data-workbench-focus]'))
+            .find(element=>element.dataset.workbenchFocus===focus)?.focus({preventScroll:true});
         },
         pinned:Boolean(params.result),showSnapshotOdds:!campaign || savedSnapshot || Boolean(params.result),
         game:params.game,trade:params.trade,
         filter:['traded','zero','missing','missing_results','unresolved','frozen','reconstructed'].includes(params.filter) ? params.filter : 'all',
         tradeFilter:['win','loss','push','void','unresolved'].includes(params.trade_filter) ? params.trade_filter : 'all',
-        modeHref:(target,trade)=>url({...base,mode:target,run:selected.sizing_runs?.[target],
+        modeHref:(target,trade)=>url({...base,...ledgerSelection(new URLSearchParams(present(params))),mode:target,run:selected.sizing_runs?.[target],
           sizing_quote:trade?.frozen_quote_id,sizing_bet:trade?.equivalent_bet_id}),
         coverageHref:game=>game.league && game.league!=='NCAAB' ? null
           : coverageURL(new URLSearchParams(present({...base,scope:'mens-d1'})),
@@ -435,14 +421,15 @@ async function openDetail(mount,selected,query,context,version) {
   if (query.get('trade') || query.get('game')) {
     mount.querySelector('.paper-result-trade h3, .paper-result-trade h4, .paper-result-game h3')?.focus();
   } else if (query.has('run') && !source.open) {
-    heading.focus({preventScroll:true});
+    mount.focus({preventScroll:true});
   }
   await sourceDialog(id,query,version);
 }
 
 function change(overrides) {
+  const focus=document.activeElement;
   history.pushState(null,'',url(overrides));
-  render();
+  render({focus});
 }
 
 async function showArchive(selected,query,version) {
@@ -455,7 +442,7 @@ async function showArchive(selected,query,version) {
   await openDetail(section,selected,query,context,version);
 }
 
-async function render({keepComparison=false}={}) {
+async function render({keepComparison=false,focus=null}={}) {
   const version=++requestVersion;
   let query=new URLSearchParams(location.search);
   const isCreate=['create','schedule'].includes(query.get('view'));
@@ -514,7 +501,6 @@ async function render({keepComparison=false}={}) {
     const wanted=selected?.run.date || query.get('date');
     const date=dates.includes(wanted) ? wanted : defaultDate(config);
     const variant=configuredPortfolio(config,query.get('variant'));
-    const mode=query.get('mode');
     const detailRequested=wantsDetails(query);
     const cumulative=!(detailRequested || query.get('view')==='daily' || (wanted && query.get('view')!=='weekly'));
     const base={campaign:id,date:cumulative ? undefined : date,variant,...(!known ? {snapshot:'1'} : {})};
@@ -528,15 +514,19 @@ async function render({keepComparison=false}={}) {
       return;
     }
     const sizingModes=id===win10Campaign ? ['fixed_profit'] : configuredModes(config);
+    const requestedMode=selected?.definition.sizing_mode || query.get('mode');
+    const mode=sizingModes.includes(requestedMode) ? requestedMode : sizingModes[0];
     const currentHref=successor && !redirected ? url(currentDestination(successor,query,wanted)) : null;
     const redirect=history.state?.experimentRedirect;
     const archiveHref=redirect?.campaign===id ? redirect.archiveHref : null;
-    const context={base,campaign:id,date,variant,config,sizingModes,cumulative,experiments:campaigns,
+    const context={base,campaign:id,date,variant,config,mode,sizingModes,cumulative,experiments:campaigns,
       visible:Boolean(known),archiveHref,currentHref};
     let body=keepComparison && !redirected && root.querySelector('#experiment-comparison-body');
     if (!body) {
       const heading=showResults(config,known,context);
+      const restoreFocus=focus && document.activeElement===focus && root.contains(focus);
       root.replaceChildren(heading);
+      if (restoreFocus && focus.id) byId(focus.id)?.focus({preventScroll:true});
       body=heading.querySelector('#experiment-comparison-body');
     }
     if (cumulative) {
@@ -548,23 +538,16 @@ async function render({keepComparison=false}={}) {
     }
     const data=await readJSON(campaignAPI(id)+'/days/'+date+'?'+new URLSearchParams({variant}));
     if (version!==requestVersion) return;
-    paintDay(body,data,config,context);
+    context.latestRun=data.modes[selected?.definition.sizing_mode || mode]?.run_id;
+    const detail=selected || context.latestRun ? node('section',undefined,'experiment-detail') : null;
+    paintDay(body,data,config,context,detail);
     setStatus();
-    // Archived links can still open the explicitly selected frozen evidence.
-    if (!selected && detailRequested) {
-      const chosen=mode && data.modes[mode] ? mode : sizingModes[0];
-      const runId=data.modes[chosen]?.run_id;
-      if (runId) selected=await readJSON(runAPI(runId));
-    }
+    if (!selected && context.latestRun) selected=await readJSON(runAPI(context.latestRun));
     if (version!==requestVersion || !selected) return;
     if (selected.definition.campaign_id!==id) {
       setStatus('The saved run belongs to another experiment.');
       return;
     }
-    const detail=node('section',undefined,'experiment-detail');
-    root.querySelector('.experiment-detail')?.remove();
-    root.append(detail);
-    context.latestRun=data.modes[selected.definition.sizing_mode || 'kelly']?.run_id;
     await openDetail(detail,selected,query,context,version);
   } catch(error) {
     if (version===requestVersion) setStatus(error.message);

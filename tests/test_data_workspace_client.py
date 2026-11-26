@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[1]
     'rapid_open', 'busy_token_read', 'busy_game_read', 'expired_token_once',
     'expired_game_once', 'direct_back_reload', 'back_during_read',
     'market_exact_reload', 'market_expired_exact', 'legacy_history_view',
-    'historical_market_identity',
+    'historical_market_identity', 'catalog_page_size',
 ])
 def test_data_navigation_request_lifecycle(scenario):
     result=subprocess.run(['node','tests/data_workspace_client.cjs',scenario],cwd=ROOT,

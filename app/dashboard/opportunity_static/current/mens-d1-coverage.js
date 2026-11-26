@@ -50,7 +50,9 @@ export function coverageContext(query, fallbackDate) {
   }).filter(([,value]) => value));
 }
 
-export const ledgerKeys = ['game', 'trade', 'sizing_quote', 'sizing_bet', 'filter', 'trade_filter', 'trade_ev', 'trade_sort', 'trade_page', 'ledger_view'];
+export const ledgerKeys = ['game', 'trade', 'sizing_quote', 'sizing_bet', 'filter', 'game_sport',
+  'trade_sport', 'trade_family', 'trade_venue', 'trade_filter', 'trade_ev', 'trade_sort',
+  'trade_page', 'trade_rows', 'ledger_view'];
 const reviewKeys = ['result', ...ledgerKeys];
 export function workbenchContext(query, keys = [...reviewKeys, 'campaign', 'view', 'mode']) {
   return Object.fromEntries(keys.filter(key => query.has(key)).map(key => [key, query.get(key)]));

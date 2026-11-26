@@ -11,9 +11,14 @@ const notice = byId('dashboard-notice');
 const reload = byId('dashboard-reload');
 const previous = byId('dashboard-previous');
 const next = byId('dashboard-next');
+const filters = byId('dashboard-filters');
+const clear = byId('dashboard-clear');
 const inspector = byId('dashboard-inspector');
 const content = byId('dashboard-inspector-content');
-const pageSize = 30;
+const filterNames = ['sport', 'family', 'venue'];
+const defaultPageSize = '50';
+const field = name => filters.elements.namedItem(name);
+const pageSize = () => Number(field('rows').value);
 let offset = 0;
 let snapshot;
 let read;
@@ -21,6 +26,29 @@ let refreshTimer;
 let closed = false;
 let selectedId;
 let evidenceRead;
+
+function readLocation() {
+  const query = new URLSearchParams(location.search);
+  for (const name of [...filterNames, 'rows']) {
+    const control = field(name);
+    const value = query.get('board_' + name);
+    control.value = [...control.options].some(option => option.value === value)
+      ? value : name === 'rows' ? defaultPageSize : '';
+  }
+  const savedOffset = Number(query.get('board_offset'));
+  offset = Number.isInteger(savedOffset) && savedOffset > 0 && savedOffset <= 2147483647 ? savedOffset : 0;
+  clear.hidden = !filterNames.some(name => field(name).value);
+}
+
+function writeLocation(replace = false) {
+  const url = new URL(location.href);
+  for (const [name, value] of [...filterNames.map(name => [name, field(name).value]),
+    ['rows', field('rows').value === defaultPageSize ? '' : field('rows').value], ['offset', offset]]) {
+    if (value) url.searchParams.set('board_' + name, value);
+    else url.searchParams.delete('board_' + name);
+  }
+  if (url.href !== location.href) history[replace ? 'replaceState' : 'pushState'](null, '', url);
+}
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -180,10 +208,11 @@ function render(packet) {
   if (focused) (rowButton(focused) || reload).focus({preventScroll: true});
 
   const expiring = currentRows.length !== packet.rows.length;
-  const label = currentRows.length === 1 ? 'opportunity' : 'opportunities';
+  const label = packet.total === 1 ? 'opportunity' : 'opportunities';
   status.textContent = currentRows.length
-    ? `${currentRows.length} current ${label} on this page · highest EV first`
-    : expiring ? 'Quotes expired. Reading saved prices…' : dashboardState(packet);
+    ? `${packet.total.toLocaleString()} ${label}`
+    : expiring ? 'Quotes expired. Reading saved prices…'
+      : filterNames.some(name => field(name).value) ? 'No opportunities match these filters.' : dashboardState(packet);
   const stale = packet.availability?.expired_positive;
   const unavailable = packet.availability?.inputs_unavailable;
   const notes = [];
@@ -193,10 +222,10 @@ function render(packet) {
   notice.hidden = !notes.length;
   notice.textContent = notes.join(' ');
 
-  byId('dashboard-pages').hidden = packet.total <= pageSize;
+  byId('dashboard-pages').hidden = packet.total <= pageSize();
   byId('dashboard-page').textContent = `${packet.offset + 1}–${packet.offset + packet.rows.length} of ${packet.total}`;
   previous.disabled = Boolean(read) || offset === 0;
-  next.disabled = Boolean(read) || offset + pageSize >= packet.total;
+  next.disabled = Boolean(read) || offset + pageSize() >= packet.total;
 }
 
 function schedule() {
@@ -228,10 +257,13 @@ async function refresh() {
   previous.disabled = next.disabled = true;
   if (!snapshot) status.textContent = 'Reading stored calculations…';
   try {
-    const params = {limit: pageSize, offset};
+    const params = {limit: pageSize(), offset};
+    for (const name of filterNames) if (field(name).value) params[name] = field(name).value;
     let packet = await get('/api/research/dashboard', params, signal);
+    if (read !== controller || closed) return;
     if (offset && offset >= packet.total) {
       offset = 0;
+      writeLocation(true);
       packet = await get('/api/research/dashboard', {...params, offset}, signal);
     }
     if (read !== controller || closed) return;
@@ -250,15 +282,36 @@ async function refresh() {
       read = undefined;
       reload.disabled = false;
       previous.disabled = !snapshot || offset === 0;
-      next.disabled = !snapshot || offset + pageSize >= snapshot.total;
+      next.disabled = !snapshot || offset + pageSize() >= snapshot.total;
       schedule();
     }
   }
 }
 
 reload.onclick = () => refresh();
-previous.onclick = () => { offset -= pageSize; refresh(); };
-next.onclick = () => { offset += pageSize; refresh(); };
+previous.onclick = () => { offset = Math.max(0, offset - pageSize()); writeLocation(); refresh(); };
+next.onclick = () => { offset += pageSize(); writeLocation(); refresh(); };
+function refreshSelection() {
+  snapshot = undefined;
+  rows.replaceChildren();
+  byId('dashboard-table').hidden = byId('dashboard-pages').hidden = notice.hidden = true;
+  clear.hidden = !filterNames.some(name => field(name).value);
+  refresh();
+}
+filters.addEventListener('submit', event => event.preventDefault());
+filters.addEventListener('change', () => {
+  offset = 0;
+  writeLocation();
+  refreshSelection();
+});
+clear.onclick = () => {
+  for (const name of filterNames) field(name).value = '';
+  offset = 0;
+  writeLocation();
+  field('sport').focus({preventScroll: true});
+  refreshSelection();
+};
+window.addEventListener('popstate', () => { readLocation(); refreshSelection(); });
 const ageTimer = setInterval(() => updateRelativeAges(rows), 1000);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) clearTimeout(refreshTimer);
@@ -278,4 +331,5 @@ window.addEventListener('pagehide', event => {
 window.addEventListener('pageshow', event => {
   if (event.persisted) refresh();
 });
+readLocation();
 refresh();

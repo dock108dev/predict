@@ -128,6 +128,9 @@
 .data-filters .catalog-checkbox input { width:auto; min-height:0; }
 #reference-summary:empty, #fee-mode-summary:empty, #catalog-snapshot:empty { display:none; }
 #reference-summary, #fee-mode-summary, #catalog-status, #catalog-snapshot { margin-block:.35rem; }
+.data-catalog-status { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:.3rem 1rem; }
+.data-catalog-status details { font-size:.9rem; }
+.data-catalog-status details[open] { flex-basis:100%; }
 #catalog .catalog-table th:first-child { width:23%; }
 .market-ev { font-weight:700; font-variant-numeric:tabular-nums; }
 .market-inspector-summary { margin-block:.75rem; padding:.75rem; background:var(--p-alternate); border-radius:4px; }

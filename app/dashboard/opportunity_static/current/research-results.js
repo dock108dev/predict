@@ -3,7 +3,8 @@ import {number, selection, venue} from './workspace-format.js';
 import {qualityComparison} from './research-quality.js';
 import {band, comparisonCounts, exactMoney, fixedProfitFields, mainFirstRule, sizingTitle, workbenchPeriod, workbenchSizing} from './research-campaigns.js';
 import {portfolioSelectionFields} from './research-run.js';
-import {gradeFilters, ledgerViewModel, requestedTrade, resolvedGrade, tradeSorts} from './research-ledger.js';
+import {familyFilters, gameLeague, gradeFilters, ledgerPageSizes, ledgerViewModel, matchesTradeFilters,
+  requestedTrade, selectedSport, sportFilters, tradeFilters, tradeSorts, venueFilters} from './research-ledger.js';
 
 const variants = {best_venue:'Best venue only', all_venues:'All qualifying venues'};
 const reportStates = {
@@ -75,9 +76,18 @@ function dropdown(title, options, current, change, key) {
   return field;
 }
 
-function statusNotice(analysis, pinned, summary) {
+function keyboardScroll(container, name, navigation) {
+  if (navigation.embedded) {
+    container.tabIndex = 0;
+    container.setAttribute('role', 'region');
+    container.setAttribute('aria-label', name);
+  }
+  return container;
+}
+
+function statusNotice(analysis, pinned, summary, compact=false) {
   const state = analysis.status?.state;
-  const notice = node('div', undefined, 'workspace-notice results-status');
+  const notice = node('div', undefined, compact ? 'results-status-compact' : 'workspace-notice results-status');
   notice.setAttribute('role', 'status');
   const historical = pinned && analysis.version && (analysis.status?.stale ||
     (analysis.status?.latest_version && analysis.version.id !== analysis.status.latest_version));
@@ -96,6 +106,10 @@ function statusNotice(analysis, pinned, summary) {
       : emptyEvidence ? awaitingCapture ? 'Awaiting T−10 capture' : 'Missing usable T−10 evidence'
         : reportStates[summary ? reportingState : state] || 'Reading result analysis…';
   notice.append(node('strong', message));
+  if (compact) {
+    if (analysis.error) notice.append(node('span', analysis.error));
+    return notice;
+  }
   if (analysis.error) notice.append(node('p', analysis.error));
   else if (!historical && analysis.status?.stale) notice.append(node('p', 'Retained evidence or grading inputs changed. The previous report is available in result history. Current grades will appear after processing.'));
   else if (!historical && (state === 'collecting' || state === 'update_pending')) notice.append(node('p', 'The background worker will publish this report automatically from retained evidence.'));
@@ -133,7 +147,7 @@ function resultActions(analysis, navigation) {
     }
   }
   if (version) group.append(link('Link to this result version', navigation.href({result:version.id})));
-  if (navigation.pinned) group.append(link('Open latest result', navigation.href({result:null})));
+  if (navigation.pinned && !navigation.embedded) group.append(link('Open latest result', navigation.href({result:null})));
   if (versions?.length || version) {
     const history = node('details'), rows = node('ul');
     history.append(node('summary', 'Result history'));
@@ -205,7 +219,7 @@ function captureDescription(game, summary) {
 
 function gamesView(report, portfolio, navigation) {
   const panel = node('section', undefined, 'workspace-panel paper-result-games');
-  const content = node('div'), controls = node('div', undefined, 'workspace-form');
+  const content = node('div'), controls = node('div', undefined, 'workspace-form result-ledger-controls');
   const gameFilter = [
     ['all', 'All games'], ['traded', 'Games with trades'], ['zero', 'Zero qualifying trades'],
     ['frozen', 'Frozen T−10 only'], ['reconstructed', 'Retrospective reconstructions only'],
@@ -213,10 +227,14 @@ function gamesView(report, portfolio, navigation) {
     ['unresolved', 'Unresolved trades'],
   ];
   panel.append(node('h3', 'Games'), controls, content);
-  controls.append(dropdown('Show games', gameFilter, navigation.filter,
-    filter => navigation.go({filter:filter === 'all' ? null : filter, ledger_view:'games'}), 'game-filter'));
+  const sport = selectedSport(navigation.params.game_sport);
+  controls.append(dropdown('Sport', sportFilters, sport,
+    value => navigation.go({game_sport:value === 'all' ? null : value, ledger_view:'games'}), 'game-sport'),
+    dropdown('Show games', gameFilter, navigation.filter,
+      filter => navigation.go({filter:filter === 'all' ? null : filter, ledger_view:'games'}), 'game-filter'));
   const now = Date.now();
   const games = report.games.filter(game => {
+    if (sport !== 'all' && gameLeague(game, navigation.config) !== sport) return false;
     const summary = portfolio.by_game[game.game_id];
     if (navigation.filter === 'traded') return summary?.tickets;
     if (navigation.filter === 'zero') return captured(game) && !summary?.tickets;
@@ -229,17 +247,17 @@ function gamesView(report, portfolio, navigation) {
     return true;
   });
   if (!games.length) content.append(node('p', 'No games match this view.'));
-  else content.append(table(['Game', 'Score / status', 'Trades', 'Staked', 'Returned', 'P/L', 'Capture status'], games.map(game => {
+  else content.append(keyboardScroll(table(['Game', 'Score / status', 'Trades', 'Staked', 'Returned', 'P/L', 'Capture status'], games.map(game => {
     const summary = portfolio.by_game[game.game_id];
     const gameLink = node('div');
     const usable = captured(game);
     gameLink.append(link(game.title, navigation.href({game:game.game_id, trade:null})),
-      node('small', [game.league, time(game.starts_at)].filter(Boolean).join(' · ')));
+      node('small', [gameLeague(game, navigation.config), time(game.starts_at)].filter(Boolean).join(' · ')));
     return [gameLink, scoreCell(game.result),
       usable ? count(summary?.tickets || 0) : 'Unavailable', money(usable ? summary?.stake_usd : null),
       money(usable ? summary?.return_usd : null), money(usable ? summary?.pnl_usd : null),
       captureDescription(game, summary)];
-  })));
+  })), 'Game rows', navigation));
   return panel;
 }
 
@@ -266,8 +284,8 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   const panel = node('section', undefined, 'workspace-panel paper-result-game');
   const summary = portfolio.by_game[game.game_id];
   const allTickets = portfolio.tickets.filter(ticket => ticket.game_id === game.game_id);
-  const matching = allTickets.filter(ticket => navigation.tradeFilter === 'all' || (navigation.tradeFilter === 'unresolved'
-    ? !resolvedGrade(ticket.grade) : ticket.grade?.state === navigation.tradeFilter));
+  const filters = tradeFilters({...navigation.params, trade_sport:null});
+  const matching = allTickets.filter(ticket => matchesTradeFilters(ticket, filters));
   const requested = requestedTrade(matching,navigation.params);
   const hasSelection = navigation.trade || navigation.params.sizing_quote || navigation.params.sizing_bet;
   const trade = hasSelection ? requested || matching[0] : null;
@@ -275,7 +293,7 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   headline.tabIndex = -1;
   const resultStatus = resultStates[game.result?.state] || 'Result';
   const scoreLine = score(game.result);
-  panel.append(link('All games', navigation.href({game:null, trade:null, sizing_quote:null, sizing_bet:null, ledger_view:'games'})), headline,
+  panel.append(link('Back to games', navigation.href({game:null, trade:null, sizing_quote:null, sizing_bet:null, ledger_view:'games'})), headline,
     node('p', resultStatus === scoreLine ? scoreLine : `${resultStatus} · ${scoreLine}`, 'results-score'),
     node('p', `${time(game.starts_at)} · ${captureDescription(game, summary)}`, 'workspace-caption'));
   const coverage = navigation.coverageHref?.(game);
@@ -304,17 +322,19 @@ function gameView(game, portfolio, navigation, inspectTrade) {
     ? 'The requested trade is outside this view. Showing an available trade.'
     : 'The requested trade is outside this view.'));
   if (trade) panel.append(tradeView(trade, game, navigation, inspectTrade));
-  const controls = node('div', undefined, 'workspace-form');
-  controls.append(dropdown('Show trades', gradeFilters, navigation.tradeFilter,
-    filter => navigation.go({trade_filter:filter === 'all' ? null : filter}), 'game-trade-filter'));
+  const controls = node('div', undefined, 'workspace-form result-ledger-controls');
+  const change = (key, value) => navigation.go({[key]:value === 'all' ? null : value, trade_page:1});
+  controls.append(dropdown('Bet type', familyFilters, filters.family, value => change('trade_family', value), 'game-trade-family'),
+    dropdown('Venue', venueFilters, filters.venue, value => change('trade_venue', value), 'game-trade-venue'),
+    dropdown('Show trades', gradeFilters, filters.grade, value => change('trade_filter', value), 'game-trade-filter'));
   panel.append(node('h4', 'Selected paper trades'), controls);
   if (!matching.length) panel.append(node('p', 'No trades match this view.'));
-  else panel.append(table(['Selection', 'Venue', 'Odds', 'Probability', 'EV', 'Stake', 'Expected profit', 'Grade', 'Return', 'P/L'], matching.map(ticket => {
+  else panel.append(keyboardScroll(table(['Selection', 'Venue', 'Odds', 'Probability', 'EV', 'Stake', 'Expected profit', 'Grade', 'Return', 'P/L'], matching.map(ticket => {
     const selectionLink = link(ticketSelection(ticket), navigation.href({trade:ticket.id,sizing_quote:null,sizing_bet:null}));
     if (trade?.id === ticket.id) selectionLink.setAttribute('aria-current', 'true');
     return [selectionLink, venue(ticket.venue), ticket.posted_odds, pct(ticket.probability), pct(ticket.ev), money(ticket.stake_usd),
       money(ticket.expected_profit_usd), gradeLabel(ticket), money(ticket.return_usd), money(ticket.pnl_usd)];
-  })));
+  })), 'Game trade rows', navigation));
   return panel;
 }
 
@@ -417,11 +437,11 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
   return panel;
 }
 
-function ledgerTable(ledger, games, navigation) {
+function ledgerTable(ledger, games, leagueFor, navigation, showInspector) {
   const headers = ['Selection', 'Venue', 'Odds', 'EV', 'Stake', 'Grade', 'Modeled P/L'];
   const scroll = table(headers, ledger.rows.map(ticket => {
     const game = games.get(ticket.game_id);
-    const selected = ticket.id === ledger.selected?.id;
+    const selected = showInspector && ticket.id === ledger.selected?.id;
     const exactSelection = ticketSelection(ticket);
     const selectionName = ticketSelection({...ticket, line:null});
     const pick = focusKey(link(exactSelection, navigation.href({
@@ -433,8 +453,10 @@ function ledgerTable(ledger, games, navigation) {
     }
     if (selected) pick.setAttribute('aria-current', 'true');
     const selectionCell = node('div');
-    selectionCell.append(pick, node('small', marketContext(ticket), 'result-ledger-line'));
-    if (game) selectionCell.append(node('small', game.title, 'result-ledger-game'));
+    const family = familyFilters.find(([id]) => id === ticket.family)?.[1];
+    const market = ticket.period === 'full_game' && family ? family : marketContext(ticket);
+    const context = [leagueFor(ticket), market, game?.title].filter(Boolean).join(' · ');
+    selectionCell.append(pick, node('small', context, 'result-ledger-game'));
     const grade = gradeLabel(ticket), tone = grade === 'Win' ? 'result-positive' : grade === 'Loss' ? 'result-negative' : '';
     return [selectionCell, venue(ticket.venue), ticket.posted_odds, pct(ticket.ev), money(ticket.stake_usd),
       node('span', grade, tone), moneyCell(ticket.pnl_usd)];
@@ -451,11 +473,15 @@ function ledgerTable(ledger, games, navigation) {
   const sortHeader = {ev_asc:3, ev_desc:3, stake_desc:4, pnl_desc:6}[ledger.sort];
   tableElement.querySelectorAll('th')[sortHeader].setAttribute('aria-sort', direction);
   tableElement.querySelector('a[aria-current]')?.closest('tr')?.classList.add('result-ledger-selected');
-  return scroll;
+  return keyboardScroll(scroll, 'Trade rows', navigation);
 }
 
 function ledgerPagination(ledger, navigation) {
   const footer = node('div', undefined, 'result-ledger-pagination');
+  if (ledger.pageCount === 1) {
+    footer.append(node('p', `${count(ledger.total)} trades`));
+    return footer;
+  }
   const pager = node('nav');
   pager.setAttribute('aria-label', 'Trade pagination');
   for (const [title, page] of [['Previous', ledger.page - 1], ['Next', ledger.page + 1]]) {
@@ -477,32 +503,46 @@ function tradeLedger(report, portfolio, selected, analysis, navigation, inspectT
   const buckets = analysis.quality?.fresh_target_only?.buckets || [];
   const {portfolios} = selected.report;
   const originals = portfolios.all_venues?.tickets || portfolios[navigation.variant]?.tickets || [];
-  const ledger = ledgerViewModel(portfolio.tickets, originals, buckets, navigation.params);
   const games = new Map(report.games.map(game => [game.game_id, game]));
+  const policy = {...navigation.config, ...selected.report.policy};
+  const leagueFor = ticket => gameLeague(games.get(ticket.game_id), policy);
+  const ledger = ledgerViewModel(portfolio.tickets, originals, buckets, navigation.params, leagueFor);
+  const {params} = navigation;
+  const showInspector = ledger.selected && (!navigation.embedded || params.trade || params.sizing_quote || params.sizing_bet);
   const section = node('section', undefined, 'result-workbench');
   const heading = node('div', undefined, 'result-ledger-heading');
   const title = node('h3', 'Trades');
   title.id = 'trade-ledger-title';
   title.tabIndex = -1;
   const controls = node('div', undefined, 'workspace-form result-ledger-controls');
-  const change = (key, value) => navigation.go({[key]:value, trade_page:1});
+  const change = (key, value) => navigation.go({[key]:value === 'all' ? null : value, trade_page:1});
+  controls.append(dropdown('Sport', sportFilters, ledger.filters.sport, value => change('trade_sport', value), 'ledger-sport'),
+    dropdown('Bet type', familyFilters, ledger.filters.family, value => change('trade_family', value), 'ledger-family'),
+    dropdown('Venue', venueFilters, ledger.filters.venue, value => change('trade_venue', value), 'ledger-venue'),
+    dropdown('Grade', gradeFilters, ledger.filters.grade, value => change('trade_filter', value), 'ledger-grade'));
   if (buckets.length > 1) {
     controls.append(dropdown('Screening EV', [['all', 'All EV buckets'], ...buckets.map(bucket => [bucket.minimum, band(bucket)])],
-      ledger.bucket?.minimum || 'all', value => change('trade_ev', value === 'all' ? null : value), 'ledger-ev'));
+      ledger.bucket?.minimum || 'all', value => change('trade_ev', value), 'ledger-ev'));
   }
-  controls.append(dropdown('Grade', gradeFilters, ledger.grade, value => change('trade_filter', value === 'all' ? null : value), 'ledger-grade'),
-    dropdown('Sort trades', tradeSorts, ledger.sort, value => change('trade_sort', value === 'ev_desc' ? null : value), 'ledger-sort'));
+  controls.append(dropdown('Sort trades', tradeSorts, ledger.sort, value => change('trade_sort', value === 'ev_desc' ? null : value), 'ledger-sort'),
+    dropdown('Rows per page', ledgerPageSizes.map(size => [size, size]), String(ledger.pageSize),
+      value => change('trade_rows', value), 'ledger-rows'));
+  if (ledger.subset) {
+    const clear = focusKey(node('button', 'Clear filters', 'research-button'), 'ledger-sport');
+    clear.type = 'button';
+    clear.onclick = () => navigation.go({trade_sport:null, trade_family:null, trade_venue:null, trade_filter:null, trade_ev:null, trade_page:1});
+    controls.append(clear);
+  }
   heading.append(title, views, controls);
   section.append(heading);
-  if (ledger.subset) {
-    const {tickets, resolved, stake, resolvedStake, pnl} = ledger.subset;
+  if (ledger.subset && ledger.total) {
+    const {tickets, resolved, stake, pnl} = ledger.subset;
     const partial = resolved !== tickets;
     const caption = [
-      'Filtered subset',
       `${count(tickets)} of ${count(portfolio.tickets.length)} trades`,
       `Staked ${money(stake)}`,
-      `${partial ? 'Modeled P/L on resolved trades' : 'Modeled P/L'} ${money(pnl)}`,
-      ...(partial ? [`Resolved stake ${money(resolvedStake)}`] : []),
+      `${partial ? 'Graded P/L' : 'P/L'} ${money(pnl)}`,
+      ...(partial ? [`${count(resolved)} graded`] : []),
     ];
     section.append(node('p', caption.join(' · '), 'result-ledger-subset'));
   }
@@ -511,13 +551,15 @@ function tradeLedger(report, portfolio, selected, analysis, navigation, inspectT
       : 'No selected paper trades in this portfolio.'));
     return section;
   }
-  const split = node('div', undefined, 'result-workbench-split');
   const sheet = node('div', undefined, 'result-ledger');
-  if (ledger.selected) sheet.append(link('Selected trade details', '#trade-inspector', 'result-jump-inspector'));
-  sheet.append(ledgerTable(ledger, games, navigation), ledgerPagination(ledger, navigation));
-  split.append(sheet);
-  if (ledger.selected) split.append(tradeInspector(ledger.selected, games.get(ledger.selected.game_id), ledger, navigation, inspectTrade));
-  section.append(split);
+  if (showInspector) sheet.append(link('Selected trade details', '#trade-inspector', 'result-jump-inspector'));
+  sheet.append(ledgerTable(ledger, games, leagueFor, navigation, showInspector));
+  if (!ledger.subset || ledger.pageCount > 1) sheet.append(ledgerPagination(ledger, navigation));
+  if (showInspector) {
+    const split = node('div', undefined, 'result-workbench-split');
+    split.append(sheet, tradeInspector(ledger.selected, games.get(ledger.selected.game_id), ledger, navigation, inspectTrade));
+    section.append(split);
+  } else section.append(sheet);
   return section;
 }
 
@@ -612,11 +654,10 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
     policy.portfolio_rule===mainFirstRule.id && mainFirstRule.title,
     navigation.mode==='fixed_profit' ? sizingTitle(navigation.config,navigation.mode)
       : policy.kelly_multiplier && `${policy.kelly_multiplier} full Kelly`];
-  if (!navigation.embedded) title.append(node('h2', selected.run.title));
-  title.append(node('p', context.filter(Boolean).join(' · '), 'workspace-caption'));
-  dayHeader.append(title, statusNotice(analysis, navigation.pinned, portfolio?.summary));
-  header.append(dayHeader);
   if (!navigation.embedded) {
+    title.append(node('h2', selected.run.title), node('p', context.filter(Boolean).join(' · '), 'workspace-caption'));
+    dayHeader.append(title, statusNotice(analysis, navigation.pinned, portfolio?.summary));
+    header.append(dayHeader);
     const controls = node('div', undefined, 'results-controls');
     const dates = node('div', undefined, 'workspace-form result-date-control');
     dates.append(dropdown('Game date (Eastern)', navigation.dates.map(day => [day, day]), selected.run.date, navigation.changeDate, 'game-date'));
@@ -634,9 +675,9 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
     controls.append(dates, variantsNav);
     header.append(controls);
   }
-  if (portfolio && usable) {
-    if (!navigation.embedded) header.append(summaryView(portfolio.summary, report.games.length));
-  } else if (!navigation.embedded || !portfolio) {
+  if (portfolio && usable && !navigation.embedded) {
+    header.append(summaryView(portfolio.summary, report.games.length));
+  } else if (!navigation.embedded && !usable) {
     const original = selected.report.portfolios[navigation.variant];
     const originalUsable = selected.report.games?.some(game => captured({capture_status:game.status}));
     if (!portfolio && (originalUsable || original.count)) {
@@ -647,22 +688,40 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
       header.append(saved);
     } else header.append(node('p', 'Paper financials require usable T−10 evidence.'));
   }
-  const assumptions = node('details');
-  assumptions.append(node('summary', 'Paper assumptions'), node('p', 'Paper outcomes use recorded fee and quoted-size assumptions. Actual fees, executable size and venue settlement are unverified. A venue-native contract ID is shown when retained.'));
-  header.append(coverageLine(report?.coverage || selected.run.coverage || {}, report?.games));
+  const coverage = coverageLine(report?.coverage || selected.run.coverage || {}, report?.games);
   const tools = node('div', undefined, 'result-report-tools');
-  tools.append(resultActions(analysis, navigation), assumptions);
+  tools.append(resultActions(analysis, navigation));
+  if (!navigation.embedded) {
+    const assumptions = node('details');
+    assumptions.append(node('summary', 'Paper assumptions'), node('p', 'Paper outcomes use recorded fee and quoted-size assumptions. Actual fees, executable size and venue settlement are unverified. A venue-native contract ID is shown when retained.'));
+    tools.append(assumptions);
+    header.append(coverage);
+  }
   if(navigation.editHref)tools.append(link('Edit as a new version',navigation.editHref));
-  root.replaceChildren(header);
+  root.replaceChildren();
+  if (!navigation.embedded) root.append(header);
+  if (navigation.embedded && (!portfolio || !usable || navigation.pinned || analysis.status?.state === 'failed')) {
+    const status = statusNotice(analysis, navigation.pinned, portfolio?.summary, true);
+    if (navigation.pinned) status.append(link('Open latest result', navigation.href({result:null})));
+    root.append(status);
+  }
+  const detailsPanel = node('details', undefined, 'result-metadata');
+  detailsPanel.append(node('summary', 'Coverage, history and exports'));
   const exclusions = sizingExclusions(selected);
   if (!portfolio) {
-    header.append(tools);
-    if (exclusions) root.append(exclusions);
+    if (navigation.embedded) {
+      detailsPanel.append(coverage, tools);
+      if (exclusions) detailsPanel.append(exclusions);
+      root.append(detailsPanel);
+    } else {
+      header.append(tools);
+      if (exclusions) root.append(exclusions);
+    }
     return;
   }
   const odds = usable && (!navigation.embedded || navigation.showSnapshotOdds) &&
     oddsBreakdown(portfolio.odds_buckets, navigation.showSnapshotOdds && navigation.embedded ? 'Saved result' : '');
-  if (odds) root.append(odds);
+  if (odds) (navigation.embedded ? detailsPanel : root).append(odds);
   const game = report.games.find(row => row.game_id === navigation.game);
   const showGames = Boolean(navigation.game || navigation.params.ledger_view === 'games' || navigation.filter !== 'all');
   const views = node('nav', undefined, 'workspace-variant result-view-controls');
@@ -681,8 +740,14 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
   } else {
     root.append(tradeLedger(report, portfolio, selected, analysis, navigation, inspectTrade, views));
   }
-  root.append(tools);
-  if (exclusions) root.append(exclusions);
+  if (navigation.embedded) {
+    detailsPanel.append(coverage, tools);
+    if (exclusions) detailsPanel.append(exclusions);
+    root.append(detailsPanel);
+  } else {
+    root.append(tools);
+    if (exclusions) root.append(exclusions);
+  }
   if (usable && !navigation.embedded) {
     const comparison=selected.sizing_comparison?.[navigation.variant];
     if(comparison?.counts)root.append(sizingComparison(comparison,navigation));

@@ -1,28 +1,100 @@
+#experiments-main > .board-heading {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:.4rem .75rem;
+  padding-block:.75rem .55rem;
+}
+#experiments-main > .board-heading h1 { margin:0; }
+.experiment-comparison { margin-block-end:.75rem; padding:.65rem .8rem; }
+.experiment-comparison .experiment-heading h2 { margin:0; }
+.experiment-comparison .experiment-heading .workspace-variant { gap:.25rem; }
+.experiment-comparison .experiment-heading a[aria-current] {
+  color:var(--p-accent);
+  background:var(--p-active);
+  border-color:var(--p-accent);
+}
 .experiment-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: .75rem 1rem;
-  margin-block: 1rem;
+  gap:.35rem .65rem;
+  margin-block:.55rem;
 }
-
-.experiment-controls label { display: grid; gap: .3rem; }
-.experiment-comparison { margin-block-end: 1rem; }
+.experiment-controls label { min-width:0; display:grid; gap:.15rem; }
+.experiment-controls label:has(#experiment-choice) { flex:0 1 21rem; }
+.experiment-controls :is(select,button,.research-button),
+.experiment-comparison .experiment-heading .research-button { min-height:36px; padding:.3rem .55rem; font-size:.85rem; }
 .experiment-comparison table { width: 100%; border-collapse: collapse; text-align: left; }
-.experiment-comparison :is(th, td) { vertical-align: top; padding: .65rem .55rem; border-bottom: 1px solid var(--border, #7775); }
+.experiment-comparison :is(th, td) { vertical-align:middle; padding:.35rem .5rem; border-bottom:1px solid var(--line); }
 .experiment-comparison tbody th { font-weight: 500; }
 .experiment-comparison td { font-variant-numeric: tabular-nums; }
 .experiment-comparison .experiment-status { font-size: .9em; }
-.experiment-comparison details { margin-block: 1rem; }
+.experiment-comparison details { margin-block:.5rem; }
 .experiment-comparison .research-button { display: inline-block; }
 .experiment-version-notice { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-block: .75rem; }
 .experiment-version-notice p { margin: 0; }
-.experiment-detail { margin-block: 1rem; }
+.experiment-detail { min-width:0; margin-block:.5rem; }
+#experiments-main .experiment-detail .result-workbench { margin-block:.6rem; }
+#experiments-main .experiment-detail .result-ledger-heading { margin-bottom:.4rem; }
+#experiments-main .experiment-detail .result-ledger-subset { margin-bottom:.4rem; }
+#experiments-main .experiment-detail .result-ledger-controls { gap:.35rem .55rem; }
+#experiments-main .experiment-detail .result-ledger-controls :is(select,button) {
+  min-height:36px;
+  padding:.3rem .45rem;
+}
+#experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) :is(th,td) {
+  padding:.35rem .5rem;
+  vertical-align:middle;
+}
+#experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll):focus-visible {
+  outline:2px solid var(--p-accent);
+  outline-offset:2px;
+}
+.experiment-date-table td:first-child { white-space:nowrap; min-width:0; }
+.experiment-date-table :is(th,td):nth-child(n+3) { text-align:right; white-space:nowrap; }
+#experiments-main .result-ledger-table .result-ledger-game { margin-top:.13rem; margin-bottom:0; }
+.experiment-totals > table :is(th,td) { padding-block:.3rem; }
 .campaign-evidence-rules dl, .campaign-handoff dl { grid-column: 1 / -1; }
 .campaign-handoff p { grid-column: 1 / -1; margin: 0; }
 .campaign-handoff .campaign-check { grid-column: 1 / -1; }
 
+@media (max-width: 760px) {
+  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) {
+    overflow-x:auto;
+  }
+  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) table {
+    display:table;
+    min-width:38rem;
+  }
+  #experiments-main .experiment-date-table table { min-width:30rem; }
+  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) thead {
+    display:table-header-group;
+    position:static;
+    width:auto;
+    height:auto;
+    clip-path:none;
+  }
+  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tbody {
+    display:table-row-group;
+  }
+  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tr {
+    display:table-row;
+    width:auto;
+    border:0;
+    margin:0;
+  }
+  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td {
+    display:table-cell;
+    width:auto;
+    border-bottom:1px solid var(--line);
+  }
+  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td::before {
+    content:none;
+  }
+}
 @media (max-width: 480px) {
-  .experiment-comparison :is(th, td) { padding-inline: .3rem; overflow-wrap: anywhere; }
-  .experiment-comparison .research-button { padding-inline: .35rem; }
+  .experiment-comparison { padding-inline:.55rem; }
+  .experiment-controls label:has(#experiment-choice) { flex-basis:100%; }
 }

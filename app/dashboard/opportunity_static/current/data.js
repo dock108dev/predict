@@ -12,6 +12,7 @@ const known=value=>value==null||value===''?'Not recorded':String(value);
 const readable=value=>known(value).replaceAll('_',' ');
 let frame=null,frameKey=null,selectedGame=null,displayedGameId=null,busy=false,loading=false,loadQueued=false,sequence=0,inputCleanup=null,savedCleanup=null,suppressInputClose=false,suppressExperimentClose=false;
 const state=()=>new URLSearchParams(location.search);
+const rowsPerPage=query=>['25','50','100'].includes(query.get('data_rows')) ? query.get('data_rows') : '50';
 function link(text,query){const value=node('a',text,'research-button');value.href='/data?'+query;return value;}
 function navigate(query,replace=false){history[replace?'replaceState':'pushState'](null,'','/data'+(query.size?'?'+query:''));window.dispatchEvent?.(new Event('predict:data-selection'));load();}
 function filters(){const query=new URLSearchParams();for(const [id,key]of Object.entries(fields))if(id!=='view'&&$(id).value.trim())query.set(key,$(id).value.trim());if($('alternates').checked)query.set('include_alternates','1');return query;}
@@ -27,6 +28,7 @@ function sync(){
  if(!query.has('sport')&&query.has('league'))$('sport').value=query.get('league');
  $('alternates').checked=query.get('include_alternates')==='1';
  $('sort').value=query.get('sort')||'ev_desc';
+ $('data-rows').value=rowsPerPage(query);
  $('data-view').value=query.get('view')||'';
  $('provider').placeholder=historyView?'All retained sources':'SportsGameOdds';
  if(!query.has('event_id')&&query.has('source_event'))query.set('event_id',query.get('source_event'));
@@ -50,10 +52,10 @@ function renderGame(value,query){
  root.append(node('p',`${known(game.sport)} · ${dateTime(game.start_at||game.starts_at)}`));
  const identity=node('details');identity.append(node('summary','Source identity and stored read'),node('p',`${readable(game.identity_status)} · ${game.source_events?.map(item=>`${item.provider}: ${item.event_id}`).join('; ')||'No source identity retained'}`));root.append(identity);
  const actions=node('div',undefined,'catalog-actions'),capture=checkpointLink(game);if(capture)actions.append(capture);root.append(actions);
- root.append(node('h3','Received observations · original provenance'),node('p',`${value.total} received prices for this game. Acquisition membership is not established by this view. All calculation statuses are included; book and market filters still apply. Each exact line stays separate.`,'research-muted'));
+ root.append(node('h3','Received observations'));
  table(root,['Book / source','Market / exact bet','Source price','Observation times','Calculation','Inspect'],(value.rows||[]).map(quoteRow));
  if(!value.rows?.length)root.append(node('p','No current source observations match. Frozen experiment evidence remains available when retained.'));
- const paging=node('nav',undefined,'catalog-pagination');paging.setAttribute('aria-label','Game observation pages');const current=Number(query.get('record_offset')||0);for(const [title,target]of [['Previous observations',Math.max(0,current-50)],['Next observations',value.next_offset]]){const button=node('button',title);button.disabled=target==null||title.startsWith('Previous')&&current===0;button.onclick=()=>{const q=state();q.set('record_offset',String(target));q.delete('bet');q.delete('revision');navigate(q);};paging.append(button);}paging.insertBefore(node('span',value.total?`${current+1}–${current+(value.rows||[]).length} of ${value.total}`:'No latest records'),paging.lastChild);root.append(paging);
+ const paging=node('nav',undefined,'catalog-pagination');paging.setAttribute('aria-label','Game observation pages');const current=Number(query.get('record_offset')||0);for(const [title,target]of [['Previous observations',Math.max(0,current-Number(rowsPerPage(query)))],['Next observations',value.next_offset]]){const button=node('button',title);button.disabled=target==null||title.startsWith('Previous')&&current===0;button.onclick=()=>{const q=state();q.set('record_offset',String(target));q.delete('bet');q.delete('revision');navigate(q);};paging.append(button);}paging.insertBefore(node('span',value.total?`${current+1}–${current+(value.rows||[]).length} of ${value.total}`:'No latest records'),paging.lastChild);root.append(paging);
 }
 async function inspectInput(query,version){
  const id=query.get('bet');if(!id)return;if(!query.get('revision')){$('catalog-status').textContent='The saved observation needs its exact revision. Open its game and select the retained observation again.';return;}
@@ -80,7 +82,7 @@ async function runLoad(version){
   }
   savedCleanup?.();savedCleanup=null;
   const legacy=Boolean(query.get('view')==='history'||query.get('game')||query.get('game_key')||query.get('bet')||['bet_id','quote_key','id','line'].some(key=>query.has(key)));
-  const q=filters();if(legacy){q.delete('sort');q.delete('include_alternates');}if(query.get('event_id'))q.set('event_id',query.get('event_id'));q.sort();const key=(legacy?'games:':'markets:')+q.toString(),offset=Number(query.get('offset')||0);q.set('offset',String(offset));q.set('limit','50');const token=query.get('token');
+  const q=filters();if(legacy){q.delete('sort');q.delete('include_alternates');}if(query.get('event_id'))q.set('event_id',query.get('event_id'));q.sort();const limit=rowsPerPage(query),key=(legacy?'games:':'markets:')+q.toString()+':'+limit,offset=Number(query.get('offset')||0);q.set('offset',String(offset));q.set('limit',limit);const token=query.get('token');
   async function readGames(useToken){const request=new URLSearchParams(q);if(useToken&&token)request.set('token',token);else if(frame?.token)request.set('release',frame.token);return get((legacy?'/api/research/games?':'/api/research/markets?')+request);}
   let value;if(token&&frame?.token===token&&frameKey===key&&frame.offset===offset)value=frame;else{try{value=await readGames(true);}catch(error){if(!token||!error.snapshotExpired)throw error;value=await readGames(false);}}
   if(version!==sequence)return;
@@ -110,7 +112,7 @@ async function runLoad(version){
    $('catalog-status').textContent+=' The bookmarked exact observation is no longer in current storage; no substitute has been selected.';
   }
   let game=query.get('game');if(!game&&query.get('game_key'))game='canonical:'+query.get('game_key');
-  if(game){const gameQuery=filters();if(query.get('event_id'))gameQuery.set('event_id',query.get('event_id'));Object.entries({token:value.token,game_id:game,offset:query.get('record_offset')||'0',limit:'50'}).forEach(([k,v])=>gameQuery.set(k,v));let detail;
+  if(game){const gameQuery=filters();if(query.get('event_id'))gameQuery.set('event_id',query.get('event_id'));Object.entries({token:value.token,game_id:game,offset:query.get('record_offset')||'0',limit}).forEach(([k,v])=>gameQuery.set(k,v));let detail;
    try{detail=await get('/api/research/game?'+gameQuery);}catch(error){if(!error.snapshotExpired)throw error;value=await readGames(false);if(version!==sequence)return;showCatalog();gameQuery.set('token',value.token);detail=await get('/api/research/game?'+gameQuery);}
    if(version!==sequence)return;selectedGame=detail.game||value.rows.find(row=>row.id===game);renderGame(detail,query);if(query.get('capture')==='checkpoints'&&selectedGame?.experiment){const e=selectedGame.experiment;await inspectExperiment(e.id,e.revision,query.get('case'),null,{updateURL:false});}}
   await inspectInput(query,version);
@@ -121,13 +123,14 @@ async function runLoad(version){
 $('catalog-filters').onsubmit=event=>{
  event.preventDefault();
  const q=filters(), previous=state();
+ if($('data-rows').value!=='50')q.set('data_rows',$('data-rows').value);
  if($('data-view').value)q.set('view',$('data-view').value);
  if(previous.get('event_id')&&q.get('search')===previous.get('search'))q.set('event_id',previous.get('event_id'));
  if(q.get('provider')&&q.get('provider')!=='sportsgameodds')q.set('reference_scope','all');
  navigate(q);
 };
 $('clear').onclick=()=>navigate(new URLSearchParams());$('refresh').onclick=()=>{const q=state();q.delete('token');navigate(q,true);};
-for(const [id,direction]of [['previous',-1],['next',1]])$(id).onclick=()=>{const q=state(),offset=Number(q.get('offset')||0);q.set('offset',String(direction>0?frame.next_offset:Math.max(0,offset-50)));for(const key of ['market','pull','offer','game','bet','revision','capture','record_offset'])q.delete(key);navigate(q);};
+for(const [id,direction]of [['previous',-1],['next',1]])$(id).onclick=()=>{const q=state(),offset=Number(q.get('offset')||0);q.set('offset',String(direction>0?frame.next_offset:Math.max(0,offset-Number(rowsPerPage(q)))));for(const key of ['market','pull','offer','game','bet','revision','capture','record_offset'])q.delete(key);navigate(q);};
 $('close-game').onclick=()=>{const q=state();for(const key of ['market','pull','offer','game','game_key','bet','revision','capture','record_offset','result_id','game_capture','dataset','saved_bet','selection','line','id','bet_id','quote_key','session','hash','cutoff','contract','candidate','reference','quantity','scenario','probability','basis','rule_version'])q.delete(key);navigate(q);};
 $('close-detail').onclick=()=>$('input-detail').close();
 $('input-detail').addEventListener('close',()=>{inputCleanup?.();inputCleanup=null;if(suppressInputClose){suppressInputClose=false;return;}const q=state();for(const key of ['offer','bet','revision','saved_bet','selection','line','id','bet_id','quote_key','contract'])q.delete(key);if(!hasSavedSession(q))q.delete('capture');history.pushState(null,'','/data?'+q);});

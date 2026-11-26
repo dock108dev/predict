@@ -40,6 +40,7 @@
 <option value="betrivers" label="BetRivers"><option value="hardrockbet" label="Hard Rock Bet"><option value="bookmakereu" label="BookMaker"><option value="betonline" label="BetOnline"><option value="bovada" label="Bovada"><option value="williamhill" label="William Hill">
 </datalist></label>
 <label>Market<select id="family" name="family"><option value="">All markets</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></label>
+<label>Rows per page<select id="data-rows" name="data_rows"><option>25</option><option selected>50</option><option>100</option></select></label>
 <details class="catalog-advanced"><summary>More filters</summary><div class="catalog-advanced-fields">
 <label>View<select id="data-view"><option value="">Market comparisons</option><option value="history">All retained game observations</option></select></label>
 <label class="catalog-checkbox"><input id="alternates" name="include_alternates" type="checkbox" value="1">Include alternates</label>
@@ -48,8 +49,11 @@
 </div></details>
 <div class="catalog-actions"><button id="apply" type="submit">Apply filters</button><button id="clear" type="button">Clear</button><button id="refresh" type="button">Refresh stored data</button></div>
 </form>
-<p id="reference-summary" class="research-muted"></p>
-<p id="fee-mode-summary" class="research-muted"></p><p id="catalog-status" role="status">Reading market comparisons…</p><p id="catalog-snapshot" class="research-muted"></p>
+<div class="data-catalog-status">
+<p id="catalog-status" role="status">Reading market comparisons…</p>
+<details><summary>Source details</summary><p id="reference-summary" class="research-muted"></p>
+<p id="fee-mode-summary" class="research-muted"></p><p id="catalog-snapshot" class="research-muted"></p></details>
+</div>
 <section id="catalog" aria-label="Market comparisons" aria-busy="true" tabindex="-1"><div class="catalog-scroll"><table class="catalog-table"><thead><tr><th>Game / start</th><th>Market / exact offer</th><th>Venue / odds</th><th>Screening EV</th><th>Capture / references</th><th>Offers</th></tr></thead><tbody id="catalog-rows"></tbody></table></div></section>
 <nav id="game-pagination" class="catalog-pagination" aria-label="Game pages"><button id="previous" disabled>Previous markets</button><span id="page"></span><button id="next" disabled>Next markets</button></nav>
 <section id="game-detail" hidden aria-labelledby="game-title"><div class="experiment-heading"><h2 id="game-title">Selected game</h2><button id="close-game" type="button">Back to games</button></div><div id="game-content"></div></section>
@@ -73,7 +77,6 @@
 <div id="data-checkpoints" hidden>
 <section id="experiment" class="workspace-panel" data-lazy aria-labelledby="experiment-heading" aria-busy="true">
 <div class="experiment-heading"><h2 id="experiment-heading">Frozen first-observation and T−10 checkpoints</h2><button id="experiment-refresh" type="button">Refresh comparisons</button></div>
-<p>These retained captures show the exact observations and missing evidence behind early-to-late comparisons. T−10 eligibility for a paper run also depends on its frozen experiment definition.</p>
 <form id="checkpoint-filters" class="workspace-form data-browser-filters">
 <label>Game date (Eastern)<input name="date" type="date"></label>
 <label>Sport<select name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>

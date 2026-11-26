@@ -24,7 +24,14 @@
       <button id="dashboard-reload" type="button">Reload saved prices</button>
     </header>
     <section aria-labelledby="dashboard-opportunities">
-      <h2 id="dashboard-opportunities">Current +EV opportunities</h2>
+      <h2 id="dashboard-opportunities" class="sr-only">Current +EV opportunities</h2>
+      <form id="dashboard-filters" class="dashboard-filters" aria-label="Opportunity filters">
+        <div><label for="dashboard-sport">Sport</label><select id="dashboard-sport" name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></div>
+        <div><label for="dashboard-family">Bet type</label><select id="dashboard-family" name="family"><option value="">All bet types</option><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Total</option></select></div>
+        <div><label for="dashboard-venue">Venue</label><select id="dashboard-venue" name="venue"><option value="">All venues</option><option value="kalshi">Kalshi</option><option value="polymarket_us">Polymarket US</option><option value="novig">Novig</option><option value="prophetx">ProphetX</option></select></div>
+        <div><label for="dashboard-rows-count">Rows per page</label><select id="dashboard-rows-count" name="rows"><option>25</option><option selected>50</option><option>100</option></select></div>
+        <button id="dashboard-clear" type="button" hidden>Clear filters</button>
+      </form>
       <p id="dashboard-status" role="status" aria-live="polite">Reading stored calculations…</p>
       <p id="dashboard-notice" class="research-muted" hidden></p>
       <div id="dashboard-table" class="dashboard-table-wrap" hidden>

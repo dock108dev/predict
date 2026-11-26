@@ -57,7 +57,8 @@ def _offer_guards(filters):
             FROM jsonb_array_elements(o.value#>'{calculation_payload,acquisition,required_inputs}') required)
             <= interval '600 seconds'""",
         "o.value#>>'{main,status}' IN ('main'" + (",'alternate'" if filters.get('include_alternates') == '1' else '') + ")"]
-    args = [list(VENUES)]
+    venue = filters.get('venue')
+    args = [[candidate for candidate in VENUES if not venue or candidate == venue]]
     if filters.get('original_bookmaker_id'):
         candidates.append("COALESCE(o.value#>>'{record,comparison_source_metadata,provider_bookmaker_id}',o.value#>>'{record,quote,venue}')=%s")
         args.append(filters['original_bookmaker_id'])
@@ -87,6 +88,8 @@ NET_EV = """split_part(o.value#>>'{calculation_payload,raw,net_ev}','/',1)::nume
           CASE WHEN position('/' IN o.value#>>'{calculation_payload,raw,net_ev}')>0
             THEN NULLIF(split_part(o.value#>>'{calculation_payload,raw,net_ev}','/',2)::numeric,0) ELSE 1 END"""
 KICKOFF = """COALESCE(s.snapshot#>>'{event,scheduled_start}',s.details#>>'{event,starts_at}')::timestamptz"""
+SPORT = """COALESCE(s.snapshot#>>'{event,competition}',s.snapshot#>>'{event,league}',
+                       s.details#>>'{event,competition}',s.details#>>'{event,league}')"""
 
 
 def _population(filters):
@@ -149,12 +152,14 @@ def markets(db, filters, *, offset=0, limit=50):
     return dict(rows=[row(db, value) for value in rows], total=count)
 
 
-def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30):
+def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=None, family=None, venue=None):
     """Show current main offers from the latest complete covering pull per market."""
     from app.comparison.fee_mode import read as read_fee_mode
     from .pregame_known_withdrawals import phase_closed, reference_known_unavailable
 
-    candidates, args = _offer_guards({})
+    candidates, args = _offer_guards({'venue': venue})
+    filters = [(expression, value) for expression, value in ((SPORT, sport), ('s.family', family)) if value]
+    scope_conditions = ''.join(f' AND {expression}=%s' for expression, _ in filters)
     # Mature compact projections retain the winning reference book and exact side
     # and line even when the individual source IDs live in compressed evidence.
     # Match that same pair when checking a later explicit withdrawal.
@@ -162,16 +167,17 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30):
         COALESCE(NULLIF(split_part(o.value#>>'{display_offer,line}','/',2),''),'1')::numeric)"""
     sql = LATEST_SCOPES + """,
         upcoming AS MATERIALIZED (
-          SELECT s.*, """ + KICKOFF + """ start_at, known.scheduled_start::timestamptz confirmed_start,
+          SELECT s.*, """ + KICKOFF + """ start_at, """ + SPORT + """ league,
+            known.scheduled_start::timestamptz confirmed_start,
             COALESCE(""" + phase_closed('known') + """,false) phase_closed,
             """ + _game_identity_sql('s','s.started_order','s.details') + """ game_id
           FROM current_scope s
           LEFT JOIN public.current_event known
             ON known.provider='sportsgameodds' AND known.native_event_id=s.event_id
-          WHERE """ + KICKOFF + """ BETWEEN %s AND %s
+          WHERE """ + KICKOFF + """ BETWEEN %s AND %s""" + scope_conditions + """
         ), eligible AS MATERIALIZED (
           SELECT s.event_id,s.family,s.period,s.pull_id,s.game_id,s.details,s.snapshot->'event' event,
-            s.start_at,s.state,
+            s.start_at,s.state,s.league,
             winner.best,winner.net_ev,winner.eligible_until,winner.current AND winner.eligible_until>%s current
           FROM upcoming s LEFT JOIN LATERAL (
             SELECT o.value best, """ + NET_EV + """ net_ev,
@@ -211,7 +217,7 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30):
             FROM (SELECT * FROM positive ORDER BY net_ev DESC,event_id,family,best#>>'{display_offer,id}'
               LIMIT %s OFFSET %s) page) entries
         FROM eligible"""
-    data = db.execute(sql, (at, until, at, freshness_seconds, at, read_fee_mode(db)['enabled'],
+    data = db.execute(sql, (at, until, *(value for _, value in filters), at, freshness_seconds, at, read_fee_mode(db)['enabled'],
         *args, at, at, limit, offset)).fetchone()
     rows = []
     for value in data['entries'] or []:
@@ -221,7 +227,7 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30):
         # reopens the immutable pull and refuses a mismatched ID or revision.
         rows.append(dict(id=details['id'], revision=details['revision'], pull_id=value['pull_id'],
             market_id=value['game_id']+'|'+value['family']+'|'+value['period'], game=event.get('title') or value['event_id'],
-            league=event.get('competition') or event.get('league'), eligible_until=value['eligible_until'],
+            league=value['league'], eligible_until=value['eligible_until'],
             kickoff=value['start_at'], family=value['family'], venue=details['venue'], selection_label=details['outcome'],
             line=details['line'], times=details['times'],
             display=(value['best']['calculation_payload'].get('display') or {}),

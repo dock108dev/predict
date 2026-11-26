@@ -98,6 +98,27 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         expect(trigger).to_be_focused()
         expect(table).to_be_visible()
 
+        expect(page.get_by_label('Rows per page')).to_have_value('50')
+        page.get_by_label('Sport', exact=True).select_option('NBA')
+        page.get_by_label('Bet type', exact=True).select_option('spread')
+        page.get_by_label('Venue', exact=True).select_option('prophetx')
+        with page.expect_response(lambda response: urlparse(response.url).path == '/api/research/dashboard'
+                                  and parse_qs(urlparse(response.url).query).get('limit') == ['100']) as result:
+            page.get_by_label('Rows per page').select_option('100')
+        assert parse_qs(urlparse(result.value.url).query) == {
+            'sport': ['NBA'], 'family': ['spread'], 'venue': ['prophetx'], 'limit': ['100'], 'offset': ['0']}
+        assert parse_qs(urlparse(page.url).query) == {'board_sport': ['NBA'], 'board_family': ['spread'],
+                                                     'board_venue': ['prophetx'], 'board_rows': ['100']}
+        page.reload()
+        expect(page.get_by_label('Sport', exact=True)).to_have_value('NBA')
+        expect(page.get_by_label('Bet type', exact=True)).to_have_value('spread')
+        expect(page.get_by_label('Venue', exact=True)).to_have_value('prophetx')
+        expect(table).to_be_visible()
+        page.get_by_role('button', name='Clear filters').click()
+        expect(page.get_by_label('Sport', exact=True)).to_have_value('')
+        expect(page.get_by_label('Rows per page')).to_have_value('100')
+        expect(table).to_be_visible()
+
         status = page.locator('#dashboard-status')
         for state, text in [('expired', 'stale or withdrawn inputs'), ('missing', 'Some calculations are unavailable.'),
                             ('empty', 'No current +EV opportunities'), ('failed', 'Current opportunities are unavailable.')]:

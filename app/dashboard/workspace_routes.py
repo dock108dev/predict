@@ -9,6 +9,7 @@ from .local_security import HEADERS, PublicRequestError, read_json
 
 # Keep local selection context, never an arbitrary redirect target.
 SELECTION_KEYS = frozenset('search sport date date_from date_to family provider original_bookmaker_id calculation_status max_age_minutes view game bet token revision offset record_offset capture id bet_id quote_key line game_key phase game_capture result_id receipt receipt_offset source_event event_id case context include_context mode data_type market venue league dataset selection saved_bet selected_metric pair pair_revision session hash cutoff quantity scenario candidate contract reference research probability basis rule_version competition season period reference_scope book run campaign variant ticket evidence pull scope coverage_game coverage_filter coverage_job result trade filter trade_filter sort include_alternates from sizing_quote sizing_bet trade_ev trade_sort trade_page ledger_view snapshot schema object rows storage views'.split())
+SELECTION_KEYS |= frozenset('game_sport trade_sport trade_family trade_venue trade_rows board_sport board_family board_venue board_offset board_rows data_rows'.split())
 CATALOG_CONTEXT = {'search', 'sport', 'provider', 'original_bookmaker_id', 'book', 'family', 'calculation_status', 'max_age_minutes', 'game', 'bet', 'reference_scope'}
 DATA_PATHS = {'/browse-odds', '/odds', '/raw-odds', '/game', '/replay', '/admin/retained'}
 RETIRED_PATHS = {'/arbs', '/scanner', '/my-bets', '/about', '/trading-fees'}

@@ -1,11 +1,44 @@
 import {rational} from './comparison-board.js';
 
-export const ledgerPageSize = 8;
+const leagueNames = ['NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL'];
+const defaultPageSize = 50;
+export const ledgerPageSizes = ['25', '50', '100'];
+export const sportFilters = [['all', 'All sports'], ...leagueNames.map(league => [league, league])];
+export const familyFilters = [['all', 'All bet types'], ['moneyline', 'Moneyline'], ['spread', 'Spread'], ['total', 'Total']];
+export const venueFilters = [['all', 'All venues'], ['kalshi', 'Kalshi'], ['novig', 'Novig'],
+  ['polymarket_us', 'Polymarket US'], ['prophetx', 'ProphetX']];
 export const resolvedGrade = grade => ['win', 'loss', 'push', 'void'].includes(grade?.state);
 export const gradeFilters = [['all', 'All grades'], ['win', 'Wins'], ['loss', 'Losses'],
   ['push', 'Pushes'], ['void', 'Voids'], ['unresolved', 'Unresolved']];
 export const tradeSorts = [['ev_desc', 'EV, highest first'], ['ev_asc', 'EV, lowest first'],
   ['stake_desc', 'Stake, highest first'], ['pnl_desc', 'Modeled P/L, highest first']];
+
+const selectedOption = (options, value) => options.some(([option]) => option === value) ? value : options[0][0];
+const normalizedVenue = value => ({polymarket:'polymarket_us',prophetexchange:'prophetx'})[value] || value;
+
+export const selectedSport = value => selectedOption(sportFilters, value);
+
+export function gameLeague(game, policy) {
+  if (leagueNames.includes(game?.league)) return game.league;
+  if (leagueNames.includes(policy?.league)) return policy.league;
+  return policy?.scope === 'mens-d1' ? 'NCAAB' : null;
+}
+
+export function tradeFilters(params) {
+  return {
+    sport:selectedSport(params.trade_sport),
+    family:selectedOption(familyFilters, params.trade_family),
+    venue:selectedOption(venueFilters, normalizedVenue(params.trade_venue)),
+    grade:selectedOption(gradeFilters, params.trade_filter),
+  };
+}
+
+export function matchesTradeFilters(ticket, filters, league = null) {
+  return (filters.sport === 'all' || league === filters.sport)
+    && (filters.family === 'all' || ticket.family === filters.family)
+    && (filters.venue === 'all' || normalizedVenue(ticket.venue) === filters.venue)
+    && (filters.grade === 'all' || (filters.grade === 'unresolved' ? !resolvedGrade(ticket.grade) : filters.grade === ticket.grade?.state));
+}
 
 function exact(value) {
   if (value == null) return null;
@@ -51,7 +84,6 @@ function subsetSummary(tickets) {
     tickets: tickets.length,
     resolved: resolved.length,
     stake: tickets.length ? total(tickets, 'stake_exact_usd') : null,
-    resolvedStake: resolved.length ? total(resolved, 'stake_exact_usd') : null,
     pnl: resolved.length ? total(resolved, 'pnl_exact_usd') : null,
   };
 }
@@ -63,15 +95,15 @@ export function requestedTrade(tickets, params) {
     || null;
 }
 
-export function ledgerViewModel(tickets, originals, buckets, params) {
-  const sort = tradeSorts.some(([value]) => value === params.trade_sort) ? params.trade_sort : 'ev_desc';
-  const grade = gradeFilters.some(([value]) => value === params.trade_filter) ? params.trade_filter : 'all';
+export function ledgerViewModel(tickets, originals, buckets, params, leagueFor = () => null) {
+  const sort = selectedOption(tradeSorts, params.trade_sort);
+  const filters = tradeFilters(params);
+  const pageSize = ledgerPageSizes.includes(String(params.trade_rows)) ? Number(params.trade_rows) : defaultPageSize;
   const bucket = buckets.find(({minimum}) => minimum === params.trade_ev);
   const minimum = exact(bucket?.minimum), maximum = exact(bucket?.maximum);
   const screening = minimum ? new Map(originals.map(ticket => [ticket.id, exact(ticket.screen_ev)])) : null;
   const filtered = tickets.filter(ticket => {
-    if (grade === 'unresolved' && resolvedGrade(ticket.grade)) return false;
-    if (grade !== 'all' && grade !== 'unresolved' && grade !== ticket.grade?.state) return false;
+    if (!matchesTradeFilters(ticket, filters, leagueFor(ticket))) return false;
     if (!screening) return true;
     const ev = screening.get(ticket.id);
     return ev && compare(ev, minimum) >= 0 && (!maximum || compare(ev, maximum) < 0);
@@ -83,18 +115,18 @@ export function ledgerViewModel(tickets, originals, buckets, params) {
     (left.ticket.id < right.ticket.id ? -1 : left.ticket.id > right.ticket.id ? 1 : 0));
   const requested = requestedTrade(filtered, params);
   const selectedIndex = ranked.findIndex(({ticket}) => ticket.id === requested?.id);
-  const selectionPage = selectedIndex < 0 ? null : Math.floor(selectedIndex / ledgerPageSize) + 1;
-  const pageCount = Math.max(1, Math.ceil(ranked.length / ledgerPageSize));
-  const requestedPage = /^[1-9]\d*$/.test(params.trade_page || '') ? Number(params.trade_page) : null;
+  const selectionPage = selectedIndex < 0 ? null : Math.floor(selectedIndex / pageSize) + 1;
+  const pageCount = Math.max(1, Math.ceil(ranked.length / pageSize));
+  const requestedPage = /^[1-9]\d{0,8}$/.test(params.trade_page || '') ? Number(params.trade_page) : null;
   const page = Math.min(pageCount, requestedPage || selectionPage || 1);
-  const offset = (page - 1) * ledgerPageSize;
-  const rows = ranked.slice(offset, offset + ledgerPageSize).map(({ticket}) => ticket);
+  const offset = (page - 1) * pageSize;
+  const rows = ranked.slice(offset, offset + pageSize).map(({ticket}) => ticket);
   return {
-    sort, grade, bucket, page, pageCount, offset, rows, selectionPage,
+    sort, filters, bucket, pageSize, page, pageCount, offset, rows, selectionPage,
     total: ranked.length,
     selected: ranked[selectedIndex]?.ticket || rows[0] || null,
     missingSelection: Boolean((params.trade || params.sizing_quote || params.sizing_bet) && selectedIndex < 0),
     changedVenue: Boolean(requested && !params.trade && params.sizing_quote && requested.frozen_quote_id !== params.sizing_quote),
-    subset: grade !== 'all' || bucket ? subsetSummary(filtered) : null,
+    subset: bucket || Object.values(filters).some(value => value !== 'all') ? subsetSummary(filtered) : null,
   };
 }

@@ -105,6 +105,8 @@
 .paper-workbench-header > .workspace-caption { margin-top:0; }
 .paper-result-summary .results-status { max-width:43rem; margin:0; padding:.45rem .7rem; font-size:.9375rem; }
 .paper-result-summary .results-status p { margin:.2rem 0 0; }
+.results-status-compact { display:flex; align-items:baseline; flex-wrap:wrap; gap:.25rem .75rem; margin-block:.35rem; font-size:.9rem; }
+.result-metadata { margin-block:.65rem; }
 .paper-result-summary .results-coverage { margin-block:.55rem 0; padding:.5rem .7rem; border-inline-start:3px solid var(--workbench-warning); background:var(--p-alternate); }
 .paper-result-summary .workspace-links { margin-block:.6rem 0; }
 .result-report-tools { display:flex; flex-wrap:wrap; align-items:baseline; gap:.6rem 1rem; margin-block:1rem; }

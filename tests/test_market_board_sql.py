@@ -159,6 +159,11 @@ class MarketBoardSQL(LatestBoardFixture):
             high, = first['rows']
             low, = second['rows']
             self.assertEqual((high['venue'], low['venue']), ('novig', 'kalshi'))
+            filtered = market_board.dashboard(db, **options, sport='NBA', family='spread', venue='kalshi', limit=1)
+            self.assertEqual((filtered['total'], filtered['rows']), (1, [low]))
+            self.assertEqual(market_board.dashboard(db, **options, sport='NHL')['total'], 0)
+            self.assertEqual(market_board.dashboard(db, **options, family='total')['total'], 0)
+            self.assertEqual(market_board.dashboard(db, **options, venue='prophetx')['total'], 0)
             self.assertEqual(stamp(high['kickoff']), stamp('2026-11-23T01:00:00Z'))
             original = market_board.detail(db, market_id=high['market_id'], pull_id=high['pull_id'],
                                           offer_id=high['id'], revision=high['revision'])
