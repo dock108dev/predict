@@ -177,6 +177,19 @@ def plan(root, paths):
             sql.add(
                 "tests/test_ev_experiment_sql.py::ExperimentSQL::test_ordinary_terminal_dispute_supersedes_a_final_until_corrected"
             )
+        if path in (
+            "app/collection/sgo_game_results.py",
+            "app/collection/sgo_nhl_scoring.py",
+            "app/collection/sportsgameodds_adapter.py",
+            "app/research/experiment.py",
+            "app/research/paper_results.py",
+            "tests/test_sgo_nhl_scoring.py",
+            "tests/test_paper_results.py",
+        ):
+            pure.add("tests/test_sgo_nhl_scoring.py")
+            sql.add(
+                "tests/test_ev_experiment_sql.py::ExperimentSQL::test_same_score_nhl_outcomes_retain_new_period_proof_without_losing_it_on_repeats"
+            )
         if path in ("app/research/recovery.py", "tests/test_t10_recovery.py"):
             pure.add("tests/test_t10_recovery.py")
             sql.add("tests/test_t10_recovery.py::RecoverySQL")

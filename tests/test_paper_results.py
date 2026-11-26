@@ -193,18 +193,20 @@ def test_archived_nhl_shootout_credits_one_goal_for_spreads_and_totals(monkeypat
     picks = [ticket("under", league="NHL", family="total", side="under", line="4.5"),
              ticket("over", league="NHL", family="total", side="over", line="5.5"),
              ticket("away", league="NHL", side="away", line="0.5"),
-             ticket("home", league="NHL", venue="polymarket_us", side="home", line="-0.5")]
+             ticket("home", league="NHL", venue="polymarket_us", side="home", line="-0.5"),
+             ticket("unknown_terms", league="NHL", venue="example_venue", side="home", line="-0.5")]
     saved = run(*picks)
     saved["payload"]["report"]["games"] = [entry]
     report = results.build_report(saved, [context(entry, frozen, [proof])])
     assert report["grading_rule"] == results.NHL_VERSION
     assert report["games"][0]["result"]["nhl_scoring"] == checked
     rows = report["portfolios"]["all_venues"]["tickets"]
-    assert [row["grade"]["state"] for row in rows] == ["loss", "loss", "loss", "win"]
-    assert all("including one goal for the shootout winner" in row["grade"]["explanation"] for row in rows)
+    assert [row["grade"]["state"] for row in rows] == ["loss", "loss", "loss", "win", "unsupported"]
+    assert rows[-1]["grade"]["reason"] == "unsupported_scoring_terms"
+    assert all("including one goal for the shootout winner" in row["grade"]["explanation"] for row in rows[:-1])
     with_missing_receipt = results.build_report(saved, [context(entry, frozen, [item])])
     assert all(row["grade"]["reason"] == "shootout_score_basis_unverified"
-               for row in with_missing_receipt["portfolios"]["all_venues"]["tickets"])
+               for row in with_missing_receipt["portfolios"]["all_venues"]["tickets"][:-1])
 
 
 def test_canonical_participant_binding_can_use_reversed_source_display_order():

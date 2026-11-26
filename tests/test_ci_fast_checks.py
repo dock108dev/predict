@@ -80,6 +80,14 @@ def test_research_changes_check_immutable_inputs_and_reproducible_export():
     assert "tests/test_experiment_api.py" in pure
 
 
+@pytest.mark.parametrize("path", ["app/collection/sgo_nhl_scoring.py", "app/research/paper_results.py"])
+def test_nhl_scoring_changes_check_exact_scores_and_later_period_proof(path):
+    result = selected(path)
+    assert "tests/test_sgo_nhl_scoring.py" in command(result, "portable")
+    assert any("test_same_score_nhl_outcomes_retain_new_period_proof" in target
+               for target in command(result, "postgres"))
+
+
 @pytest.mark.parametrize(
     "path",
     (
