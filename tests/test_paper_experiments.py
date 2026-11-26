@@ -200,6 +200,54 @@ def test_minimum_stake_reselects_best_venue_and_keeps_stake_exactly_at_floor():
     assert gaps == {"sized_stake_below_minimum": 1}
 
 
+def test_market_scope_keeps_main_spreads_and_totals_and_only_shorter_alternates():
+    main = frozen_priced("+550", line="-3.5")
+    total = frozen_priced("-110", line="42.5")
+    total_record = total["record"]
+    total_record["market_identity"]["family"] = "total"
+    total_record["selection"]["predicate"] = "over"
+    moneyline = frozen_priced("-125")
+    moneyline["record"]["market_identity"]["family"] = "moneyline"
+    partial = frozen_priced("-110", line="-6.5")
+    partial["record"]["market_identity"]["period"] = "first_half"
+    unknown = frozen_priced("+300", line="-17.5")
+    del unknown["record"]["comparison_source_metadata"]["alternate"]
+    snapshot = checkpoint(moneyline, partial, main, total, unknown,
+                          frozen_priced("-140", line="-2.5", main=False),
+                          frozen_priced("+399", line="-8.5", main=False),
+                          frozen_priced("+400", line="-9.5", main=False),
+                          frozen_priced("+401", line="-10.5", main=False))
+    policy = dict(fixed_policy("25"), market_scope=paper.MAIN_SPREADS_TOTALS)
+    inputs = dict(game_id="g", checkpoint_id="late", at=AT)
+
+    main_only, _ = paper.candidates(snapshot, **inputs, policy=policy)
+    assert [(ticket["family"], ticket["line"]) for ticket in main_only] == [("spread", "-3.5"), ("total", "42.5")]
+
+    with_alternates, exclusions = paper.candidates(snapshot, **inputs, policy=dict(policy, alternate_odds_below="400"))
+    assert [ticket["offer_index"] for ticket in with_alternates] == [2, 3, 5, 6]
+    assert all(ticket["sizing"]["target_profit_usd"] == "25" for ticket in with_alternates)
+    assert exclusions == dict(outside_selected_market_scope=2, line_role_outside_selected_market_scope=1,
+                              alternate_posted_odds_at_or_above_limit=2)
+
+
+def test_alternate_odds_boundary_uses_frozen_price_before_display_rounding():
+    rows = []
+    for line, odds in (("-4.5", "4.999"), ("-5.5", "5.001")):
+        row = frozen_priced("+400", line=line, main=False)
+        record = row["record"]
+        record["quote"]["original"].update(units="decimal_odds", value=odds)
+        row["calculation_payload"] = paper.math.calculate(record, row["calculation_payload"]["reference"],
+                                                           row["fee_input"], at=stamp(AT), game_key="g")
+        assert row["calculation_payload"]["display"]["posted_odds"] == "+400"
+        rows.append(row)
+    policy = dict(fixed_policy("25"), market_scope=paper.MAIN_SPREADS_TOTALS, alternate_odds_below="400")
+
+    tickets, exclusions = paper.candidates(checkpoint(*rows), game_id="g", checkpoint_id="late", at=AT, policy=policy)
+
+    assert [ticket["line"] for ticket in tickets] == ["-4.5"]
+    assert exclusions == {"alternate_posted_odds_at_or_above_limit": 1}
+
+
 def test_one_per_game_prefers_probable_main_bet_then_resolves_best_equivalent_quote():
     snapshot = checkpoint(
         frozen_priced("-110", ev=".06"),

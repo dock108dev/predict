@@ -209,11 +209,13 @@ function gamesView(report, portfolio, navigation) {
   const gameFilter = [
     ['all', 'All games'], ['traded', 'Games with trades'], ['zero', 'Zero qualifying trades'],
     ['frozen', 'Frozen T−10 only'], ['reconstructed', 'Retrospective reconstructions only'],
-    ['missing', 'Missing capture'], ['unresolved', 'Unresolved trades'],
+    ['missing', 'Missing capture'], ['missing_results', 'Started games without a usable final'],
+    ['unresolved', 'Unresolved trades'],
   ];
   panel.append(node('h3', 'Games'), controls, content);
   controls.append(dropdown('Show games', gameFilter, navigation.filter,
     filter => navigation.go({filter:filter === 'all' ? null : filter, ledger_view:'games'}), 'game-filter'));
+  const now = Date.now();
   const games = report.games.filter(game => {
     const summary = portfolio.by_game[game.game_id];
     if (navigation.filter === 'traded') return summary?.tickets;
@@ -221,6 +223,8 @@ function gamesView(report, portfolio, navigation) {
     if (navigation.filter === 'frozen') return ['captured', 'frozen'].includes(game.capture_status);
     if (navigation.filter === 'reconstructed') return game.capture_status === 'reconstructed';
     if (navigation.filter === 'missing') return !captured(game) && !['pending', 'claimed'].includes(game.capture_status);
+    if (navigation.filter === 'missing_results') return Date.parse(game.starts_at) <= now &&
+      ['pending','missing','unresolved','conflicting','conflict'].includes(game.result?.state);
     if (navigation.filter === 'unresolved') return summary?.unresolved;
     return true;
   });
@@ -229,7 +233,8 @@ function gamesView(report, portfolio, navigation) {
     const summary = portfolio.by_game[game.game_id];
     const gameLink = node('div');
     const usable = captured(game);
-    gameLink.append(link(game.title, navigation.href({game:game.game_id, trade:null})), node('small', time(game.starts_at)));
+    gameLink.append(link(game.title, navigation.href({game:game.game_id, trade:null})),
+      node('small', [game.league, time(game.starts_at)].filter(Boolean).join(' · ')));
     return [gameLink, scoreCell(game.result),
       usable ? count(summary?.tickets || 0) : 'Unavailable', money(usable ? summary?.stake_usd : null),
       money(usable ? summary?.return_usd : null), money(usable ? summary?.pnl_usd : null),
@@ -273,7 +278,8 @@ function gameView(game, portfolio, navigation, inspectTrade) {
   panel.append(link('All games', navigation.href({game:null, trade:null, sizing_quote:null, sizing_bet:null, ledger_view:'games'})), headline,
     node('p', resultStatus === scoreLine ? scoreLine : `${resultStatus} · ${scoreLine}`, 'results-score'),
     node('p', `${time(game.starts_at)} · ${captureDescription(game, summary)}`, 'workspace-caption'));
-  if (navigation.coverageHref) panel.append(link('Game coverage and issue decisions', navigation.coverageHref(game)));
+  const coverage = navigation.coverageHref?.(game);
+  if (coverage) panel.append(link('Game coverage and issue decisions', coverage));
   if (!trade) panel.append(resultEvidence(game.result));
   if (game.capture_reason) panel.append(node('p', label(game.capture_reason), 'workspace-caption'));
   if (game.selection_audit) {

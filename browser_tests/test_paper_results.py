@@ -104,6 +104,7 @@ def report(revision):
             {
                 "game_id": "no-capture",
                 "title": "Missing at Capture",
+                "starts_at": "2026-11-23T22:00:00Z",
                 "capture_status": "missed",
                 "result": {"state": "pending"},
             },
@@ -266,6 +267,9 @@ def test_paper_results_journey_refresh_and_exact_history():
         expect(page.get_by_role("link", name=TITLE)).to_have_count(0)
         page.get_by_label("Show games").select_option("missing")
         expect(page.get_by_role("link", name="Missing at Capture")).to_be_visible()
+        page.get_by_label("Show games").select_option("missing_results")
+        expect(page.get_by_role("link", name="Missing at Capture")).to_be_visible()
+        expect(page.get_by_role("link", name="Visitor at Host")).to_have_count(0)
         expect(page.get_by_role("link", name=TITLE)).to_have_count(0)
         page.get_by_label("Show games").select_option("zero")
         page.get_by_role("link", name="Visitor at Host").click()

@@ -17,6 +17,61 @@ from browser_tests.test_pregame_current import ASSETS
 from tests.test_paper_campaigns import config, fixed_config, ticket
 
 
+def test_create_all_sports_with_an_exclusive_alternate_price_cutoff():
+    endpoint = "/api/research/workspace/campaigns"
+    identity = "d" * 64
+    saved = []
+
+    def serve(route):
+        target = urlsplit(route.request.url)
+        if target.path == "/experiments":
+            route.fulfill(path=ASSETS / "experiment-workspace.html")
+        elif target.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(target.path).name)
+        elif target.path == "/api/workspace/collection":
+            route.fulfill(json={})
+        elif target.path == endpoint and route.request.method == "POST":
+            saved.append(dict(configuration(route.request.post_data_json), id=identity))
+            route.fulfill(json=saved[-1])
+        elif target.path == endpoint:
+            route.fulfill(json=dict(campaigns=saved))
+        elif target.path == f"{endpoint}/{identity}":
+            route.fulfill(json=dict(days=[], mode="fixed_profit"))
+        else:
+            route.fulfill(status=404)
+
+    with research_http_fixture(serve) as base, sync_playwright() as runtime:
+        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        page = browser.new_page(viewport={"width": 390, "height": 850})
+        page.goto(f"{base}/experiments?view=create")
+        page.get_by_label("Experiment name").fill("Win $25 · All sports")
+        page.get_by_label("Game scope").select_option("all-sports")
+        page.get_by_label("First game date").fill("2026-11-23")
+        page.get_by_label("Last game date").fill("2026-12-07")
+        alternate = page.get_by_label("Alternate-line odds below", exact=False)
+        expect(alternate).to_be_hidden()
+        page.get_by_label("Eligible markets").select_option("main_spreads_totals")
+        alternate.fill("+400")
+        page.get_by_label("Target win profit ($)").fill("25")
+        page.get_by_label("Minimum stake ($)").fill("")
+        page.get_by_label("Best venue only").uncheck()
+        page.get_by_role("button", name="Review", exact=True).click()
+        preview = page.get_by_role("region", name="Review experiment")
+        expect(preview).to_contain_text("alternates priced below +400")
+        expect(preview).to_contain_text("No minimum")
+        page.get_by_role("button", name="Save and run").click()
+        expect(page).to_have_url(re.compile(f"campaign={identity}&variant=all_venues$"))
+        expect(page.get_by_role("heading", name="Win $25 · All sports")).to_be_visible()
+        assert saved[0]["start_date"] == "2026-11-23"
+        assert saved[0]["end_date"] == "2026-12-07"
+        assert saved[0]["minimum_ev"] == "1/25"
+        assert saved[0]["target_profit_usd"] == "25"
+        assert saved[0]["alternate_odds_below"] == "400"
+        assert saved[0]["portfolios"] == ["all_venues"]
+        assert "minimum_stake_usd" not in saved[0] and "portfolio_rule" not in saved[0]
+        browser.close()
+
+
 def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
     day = "2026-11-24"
     other, fixed_run, kelly_run, grade = (character * 64 for character in "abcd")
@@ -503,7 +558,9 @@ def test_create_fixed_profit_compare_same_bet_and_repeat_with_another_target():
         page.on("pageerror", lambda error: errors.append(str(error)))
 
         def create(name, start, end, target):
-            page.get_by_role("link", name="Experiments", exact=True).click()
+            page.get_by_role("navigation", name="Research sections").get_by_role(
+                "link", name="Experiments", exact=True
+            ).click()
             page.get_by_role("link", name="Create experiment", exact=True).click()
             page.get_by_label("Experiment name").fill(name)
             page.get_by_label("First game date").fill(start)

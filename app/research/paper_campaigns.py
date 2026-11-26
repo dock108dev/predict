@@ -9,12 +9,15 @@ from zoneinfo import ZoneInfo
 
 from psycopg.types.json import Jsonb
 
+from app.collection.current_policy import SPORTS
 from app.storage import paper_result_queue as queue
 from app.storage.store import encoded, hashed
 from . import mens_d1, paper, paper_evidence, paper_results, records, workspace
 
 VERSION = 'ncaab-paper-campaign-1'
 SIZING_VERSION = 'ncaab-paper-campaign-2'
+ALL_SPORTS = 'all-sports'
+ALL_SPORTS_VERSION = 'all-sports-paper-campaign-1'
 QUALITY_VERSION = 'paper-quote-age-at-receipt-1'
 REPLAY_FAILED = 'paper_campaign_replay_failed'
 WIN_10_CAMPAIGN = '521543a8363cd0a945e792726e387a23b2003e743fe7364945cd2ebfb5d65864'
@@ -43,13 +46,30 @@ def configuration(body):
     fields = {'name', 'start_date', 'end_date', 'minimum_ev', 'bucket_edges'}
     kelly_fields = {'kelly_multiplier', 'reference_bankroll_usd'}
     legacy = set(body) == fields | kelly_fields
+    scope = mens_d1.SCOPE
+    scope_options = {}
     sizing = {}
     portfolios = list(VARIANTS)
     if not legacy:
         mode = body.get('sizing_mode')
-        if mode not in MODES or body.get('scope') != mens_d1.SCOPE:
+        scope = body.get('scope')
+        if mode not in MODES or scope not in (mens_d1.SCOPE, ALL_SPORTS):
             raise workspace.SelectionError('Choose a supported experiment scope and sizing mode.')
         fields |= {'sizing_mode', 'scope', 'portfolios'}
+        if scope == ALL_SPORTS:
+            scope_options['leagues'] = list(SPORTS)
+        if 'market_scope' in body:
+            fields.add('market_scope')
+            if body['market_scope'] != paper.MAIN_SPREADS_TOTALS:
+                raise workspace.SelectionError('Choose a supported experiment market scope.')
+            scope_options['market_scope'] = paper.MAIN_SPREADS_TOTALS
+        if 'alternate_odds_below' in body:
+            fields.add('alternate_odds_below')
+            cap = body['alternate_odds_below']
+            if ('market_scope' not in scope_options or not isinstance(cap, str)
+                    or not re.fullmatch(r'\+?[0-9]{1,9}', cap) or int(cap) <= 100):
+                raise workspace.SelectionError('Enter whole-number alternate odds above +100 for spreads and totals.')
+            scope_options['alternate_odds_below'] = str(int(cap))
         selected = body.get('portfolios')
         if (not isinstance(selected, list) or not selected or any(v not in VARIANTS for v in selected)
                 or len(selected) != len(set(selected))):
@@ -107,10 +127,11 @@ def configuration(body):
     if (len(boundaries) != len(edges) or boundaries != sorted(set(boundaries))
             or boundaries[0] != F(values['minimum_ev']) or boundaries[-1] > 100):
         raise workspace.SelectionError('EV boundaries must increase from the selected minimum, with no gaps.')
-    return dict(version=VERSION if legacy else SIZING_VERSION, name=body['name'].strip(),
-                start_date=str(start), end_date=str(end), **values, **sizing,
+    version = ALL_SPORTS_VERSION if scope == ALL_SPORTS else SIZING_VERSION
+    return dict(version=VERSION if legacy else version, name=body['name'].strip(),
+                start_date=str(start), end_date=str(end), **values, **sizing, **scope_options,
                 bucket_edges=[str(v) for v in boundaries], timezone='America/New_York',
-                scope=mens_d1.SCOPE, portfolios=portfolios, execution='paper_only')
+                scope=scope, portfolios=portfolios, execution='paper_only')
 
 
 def modes(config):
@@ -162,7 +183,16 @@ def _definition(parent, job, population, recovery, fingerprint, mode):
     config = job['config']
     values = {key: config[key] for key in workspace.ASSUMPTIONS if key in config}
     proposed = workspace._changed_definition(parent, values)
-    definition = mens_d1.definition(proposed, population, 'scheduled_paper_campaign', recovery=recovery)
+    if config['scope'] == ALL_SPORTS:
+        policy = dict(proposed['policy'], **recovery, league=ALL_SPORTS, leagues=config['leagues'],
+                      scope=ALL_SPORTS, scope_version=ALL_SPORTS_VERSION, defer_results=True)
+        definition = dict(proposed, policy=policy, designation='scheduled_paper_campaign',
+                          registration='Replays the retained provider-tracked schedule across the selected leagues.')
+        definition.pop('recorded_at', None)
+        subject = 'all-sport'
+    else:
+        definition = mens_d1.definition(proposed, population, 'scheduled_paper_campaign', recovery=recovery)
+        subject = 'men’s D1'
     definition.update(id=job['campaign_id'], title=config['name'], campaign_id=job['campaign_id'],
                       supersedes=parent['version'], template_version=parent['version'])
     threshold = F(config['minimum_ev']) * 100
@@ -170,13 +200,14 @@ def _definition(parent, job, population, recovery, fingerprint, mode):
         sizing = f"using {F(config['kelly_multiplier'])*100}% of full Kelly"
     else:
         sizing = f"targeting {paper.money(F(config['target_profit_usd']))} USD net win profit"
-    definition['question'] = f'Which men’s D1 T−10 paper opportunities qualify at {threshold}% minimum EV {sizing}?'
+    definition['question'] = f'Which {subject} T−10 paper opportunities qualify at {threshold}% minimum EV {sizing}?'
     if config['version'] == VERSION:
         definition['version'] = hashed([definition['version'], job['campaign_id']])
         return definition
     policy = definition['policy']
     policy.update(sizing_mode=mode, portfolios=config['portfolios'])
-    policy.update({key: config[key] for key in ('minimum_stake_usd', 'portfolio_rule') if key in config})
+    policy.update({key: config[key] for key in ('minimum_stake_usd', 'portfolio_rule', 'market_scope',
+                                               'alternate_odds_below') if key in config})
     if config.get('portfolio_rule') == paper.MAIN_FIRST_ONE_PER_GAME:
         policy['duplicates'] = 'One trade per game; retain the best qualifying venue for the ranked bet.'
     if mode == 'fixed_profit':
@@ -190,6 +221,15 @@ def _definition(parent, job, population, recovery, fingerprint, mode):
                       kelly_comparison=config.get('kelly_comparison', False))
     definition['version'] = hashed([definition['version'], job['campaign_id'], fingerprint, policy])
     return definition
+
+
+def _daily_tasks(db, day, now, leagues):
+    return list(db.execute('''SELECT g.id,g.schedule_id,g.late_id,t.state,t.last_reason,
+        (t.state IN ('pending','claimed') AND t.deadline_at<%s) AS window_closed
+        FROM public.ev_experiment_game g JOIN public.ev_experiment_task t ON t.game_id=g.id
+        WHERE t.checkpoint='late' AND g.event->>'league'=ANY(%s)
+        AND ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s''',
+        (now, leagues, day)))
 
 
 def tick(db):
@@ -220,15 +260,18 @@ def tick(db):
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
             day = str(job['game_date'])
-            population = mens_d1.daily_population(db, day)
-            if population is not None:
-                tasks = list(db.execute('''SELECT g.id,g.schedule_id,g.late_id,t.state,t.last_reason,
-                    (t.state IN ('pending','claimed') AND t.deadline_at<%s) AS window_closed
-                    FROM public.ev_experiment_game g JOIN public.ev_experiment_task t ON t.game_id=g.id
-                    WHERE t.checkpoint='late' AND g.event->>'league'='NCAAB'
-                    AND ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s''', (now,day)))
-                recovery = mens_d1.daily_recovery(db, day, population)
-                fingerprint = hashed([population['revision'], sorted(tasks,key=lambda t:t['id']), recovery,
+            all_sports = job['config']['scope'] == ALL_SPORTS
+            if all_sports:
+                tasks = _daily_tasks(db, day, now, job['config']['leagues'])
+                d1_population = mens_d1.daily_population(db, day) if tasks else None
+                population = None
+            else:
+                population = d1_population = mens_d1.daily_population(db, day)
+                tasks = _daily_tasks(db, day, now, ['NCAAB']) if population is not None else []
+            if tasks or population is not None or (all_sports and run_id):
+                recovery = mens_d1.daily_recovery(db, day, d1_population) if d1_population is not None else {}
+                fingerprint = hashed([population['revision'] if population is not None else None,
+                    sorted(tasks,key=lambda t:t['id']), recovery,
                     # A pending task can expire without a write.
                     today > job['game_date']])
                 if fingerprint != job['fingerprint'] or not run_id:
@@ -537,7 +580,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                for day in day_rows}
     compare = include_comparison and config.get('kelly_comparison')
     report_ids = {run for runs in run_ids.values() for key, run in runs.items() if key == mode or compare}
-    latest_reports = _snapshot_reports(db, report_ids) if config['version'] == SIZING_VERSION else {}
+    latest_reports = _snapshot_reports(db, report_ids) if config['version'] != VERSION else {}
     edges = config['bucket_edges']
     odds_edges = config.get('odds_bucket_edges', DEFAULT_ODDS_EDGES)
     portfolio_rule = config.get('portfolio_rule')
@@ -602,7 +645,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                         versions.append(entry['result_id'])
                     entry['analysis'] = _window_analysis(tickets, edges, variant, inputs=entry['result_id'],
                                                          portfolio_rule=portfolio_rule)
-                    if config['version'] == SIZING_VERSION and not state['pending'] and not state['error']:
+                    if config['version'] != VERSION and not state['pending'] and not state['error']:
                         entry['result_state'] = paper_results.portfolio_status(report, variant)
         days.append(entry)
     return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,

@@ -156,7 +156,8 @@ def _register_definition(db, template, proposed, registration):
 def _compact_report(report):
     from .paper_campaigns import _age_bucket
 
-    reconciled = (report.get("population") or {}).get("kind") == "reconciled_occurrences"
+    compact_evidence = ((report.get("population") or {}).get("kind") == "reconciled_occurrences"
+                        or "leagues" in report["policy"])
     versioned_sizing = "sizing_mode" in report["policy"]
     witnesses = {}
     for portfolio in report["portfolios"].values():
@@ -168,7 +169,7 @@ def _compact_report(report):
             offer_index = ticket.pop("offer_index")
             if identity not in witnesses:
                 calculation = witness["sized_calculation"]
-                if reconciled:
+                if compact_evidence:
                     witnesses[identity] = dict(offer_index=offer_index,
                         encoded_calculation=payload_codec.encode(encoded(calculation).decode()))
                 else:
@@ -181,7 +182,7 @@ def _compact_report(report):
         portfolio["tickets"] = compact
     # The exact sporting result stays under its immutable source ID.
     report.pop("outcome_evidence")
-    if reconciled:
+    if compact_evidence:
         # Detailed rejected quotes and exact lines remain on the frozen checkpoint.
         for game in report["games"]:
             if game.get("coverage"):
@@ -565,19 +566,21 @@ def offer_export_plan(db, run_id):
     """Find the immutable games, policy and selected offer indices for this run."""
     row = _run(db, run_id)
     report = row["payload"]["report"]
-    if not report.get("population"):
-        raise UnknownSelection("Select a dated men’s D1 analysis to export its observed offers.")
+    policy = report["policy"]
+    if not (report.get("population") or policy.get("leagues")):
+        raise UnknownSelection("Select a dated campaign or men’s D1 analysis to export its observed offers.")
     witnesses = row["payload"]["witnesses"]
     selected = {name: {(ticket["game_id"], witnesses[ticket["id"]]["offer_index"]):ticket["id"]
                        for ticket in portfolio["tickets"]} for name, portfolio in report["portfolios"].items()}
-    policy = report["policy"]
     fields = dict(date=report["date"], as_of=report["as_of"], run_id=run_id,
                   report_revision=row["report_revision"], minimum_ev=policy["minimum_ev"],
                   provider_requests=0, orders_submitted=0)
+    if policy.get("leagues"):
+        fields.update(scope=policy["scope"], leagues=policy["leagues"])
     if policy.get("sizing_mode"):
         fields["sizing"] = {key: policy[key] for key in (
             "sizing_mode", "sizing_rule", "target_profit_usd", "kelly_multiplier", "reference_bankroll_usd",
-            "minimum_stake_usd", "portfolio_rule", "portfolios"
+            "minimum_stake_usd", "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below"
         ) if key in policy}
     if policy.get("portfolio_rule") == paper.MAIN_FIRST_ONE_PER_GAME:
         selected["portfolio_selection"] = {
@@ -590,6 +593,8 @@ def offer_export_game(db, game, minimum, selected, *, sizing=None):
     from .market_census import offer_rows, read_summaries, summarize_coverage
 
     entry = {key:game.get(key) for key in ("game_id", "title", "status", "checkpoint_id", "exclusions")}
+    if "league" in game:
+        entry["league"] = game["league"]
     if game["status"] not in ("captured", "reconstructed"):
         return dict(entry, offers=None)
     identity = game["checkpoint_id"]
@@ -600,14 +605,15 @@ def offer_export_game(db, game, minimum, selected, *, sizing=None):
     sizing_exclusions = {item["offer_index"]: item for item in game.get("sizing_exclusions", ())}
     portfolios = sizing.get("portfolios", selected) if sizing else selected
     selection_evidence = selected.get("portfolio_selection")
+    show_line_role = selection_evidence is not None or (sizing and sizing.get("market_scope"))
     for offer in offers:
         position = offer["offer_index"]
         key = game["game_id"], position
         offer["selected_tickets"] = {name: selected[name][key] for name in portfolios if key in selected[name]}
-        if selection_evidence is not None:
+        if show_line_role:
             offer["source_line_role"] = _role(checkpoint["snapshot"]["offers"][position]["record"])
-            if key in selection_evidence:
-                offer["portfolio_selection"] = selection_evidence[key]
+        if selection_evidence is not None and key in selection_evidence:
+            offer["portfolio_selection"] = selection_evidence[key]
         if sizing and position in sizing_exclusions:
             failure = sizing_exclusions[position]
             offer["sizing"] = dict(state="excluded", **{name: failure[name] for name in (

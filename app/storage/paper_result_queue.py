@@ -19,7 +19,8 @@ VERSION_FIELDS = "r.id,r.supersedes,r.processed_at,r.observed_at,r.evidence_revi
 
 # CBBD occurrence reconciliation considers adjacent Eastern dates. Provider
 # signals also resolve by exact frozen game or source ID for every sport.
-MATCH = """((input.game_date BETWEEN job.game_date - 1 AND job.game_date + 1 AND job.league='NCAAB')
+MATCH = """((input.game_date BETWEEN job.game_date - 1 AND job.game_date + 1
+        AND job.league IN ('NCAAB','all-sports'))
     OR EXISTS (SELECT 1 FROM public.paper_result_dependency dependency
         WHERE dependency.run_id=job.run_id
           AND dependency.dependency IN (input.game_key,input.provider_key)))"""

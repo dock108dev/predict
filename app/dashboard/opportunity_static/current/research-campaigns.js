@@ -7,6 +7,8 @@ const API='/api/research/workspace/campaigns';
 const titles={best_venue:'Best venue only',all_venues:'All qualifying venues'};
 const allPortfolios=Object.keys(titles);
 const modes={fixed_profit:'Win fixed profit',kelly:'Kelly'};
+export const gameScopes={'mens-d1':'Men’s NCAA Division I vs. Division I','all-sports':'All supported sports'};
+const mainSpreadsTotals='main_spreads_totals';
 export const mainFirstRule={
   id:'main_first_one_per_game',title:'One bet per game, main lines first',
   description:'Rank qualifying main lines by fair win probability, then net EV. If none qualify, consider eligible alternate lines closest to a recorded main line.',
@@ -131,9 +133,14 @@ export function ruleSummary(config) {
   const kelly=config.kelly_multiplier!=null
     ? `${percent(config.kelly_multiplier)}% of full Kelly on a ${usd(config.reference_bankroll_usd)} reference bankroll` : null;
   const mainFirst=config.portfolio_rule===mainFirstRule.id;
+  const marketRules=config.market_scope===mainSpreadsTotals
+    ? {'Eligible markets':config.alternate_odds_below
+      ? `Full-game main spreads and totals plus alternates priced below +${config.alternate_odds_below}`
+      : 'Full-game main spreads and totals only'} : {};
   return {
-    'Game scope':'Men’s NCAA Division I vs. Division I',
+    'Game scope':gameScopes[config.scope] || gameScopes['mens-d1'],
     'Game dates':`${config.start_date} through ${config.end_date}, inclusive (Eastern)`,
+    ...marketRules,
     'Primary sizing':fixed ? `${sizingTitle(config)} per winning paper trade, using the nearest achievable positive net profit` : kelly,
     ...(fixed&&config.kelly_comparison ? {'Kelly comparison':kelly} : {}),
     'Minimum EV':`${percent(config.minimum_ev)}% unrounded, including after sizing`,
@@ -158,7 +165,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     name:'', scope:'mens-d1', start_date:monday.toISOString().slice(0,10), end_date:sunday.toISOString().slice(0,10),
     minimum_ev:'4', minimum_stake_usd:'1.00', sizing_mode:'fixed_profit', target_profit_usd:'10', kelly_comparison:false,
     kelly_multiplier:'2.5', reference_bankroll_usd:'10000', bucket_edges:'4, 8, 15, 25', portfolios:allPortfolios,
-    odds_bucket_edges:oddsEdgeList(defaultOddsEdges), portfolio_rule:'',
+    odds_bucket_edges:oddsEdgeList(defaultOddsEdges), portfolio_rule:'', market_scope:'', alternate_odds_below:'',
   };
   if(config)Object.assign(defaults,config,{
     sizing_mode:config.sizing_mode || 'kelly', minimum_ev:percent(config.minimum_ev),
@@ -175,7 +182,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     const useDate=(keys,fallback)=>keys.map(key=>handoff.get(key)).find(value=>value && /^\d{4}-\d{2}-\d{2}$/.test(value)) || fallback;
     defaults.start_date=useDate(['start_date','date_from','date'], date || '');
     defaults.end_date=useDate(['end_date','date_to','date'], date || '');
-    if (handoff.get('scope') !== 'mens-d1') defaults.scope='';
+    defaults.scope=Object.hasOwn(gameScopes,handoff.get('scope')) ? handoff.get('scope') : '';
   }
   function field(parent,key,title,{type='text',options,required=true,maxLength=32}={}) {
     const lab=node('label'), caption=node('span',title), input=node(options ? 'select' : 'input');
@@ -200,9 +207,23 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     return input;
   }
   field(fields,'name','Experiment name',{maxLength:120});
-  field(fields,'scope','Game scope',{options:{'':'Choose game scope','mens-d1':'Men’s NCAA Division I vs. Division I'}});
+  field(fields,'scope','Game scope',{options:{'':'Choose game scope',...gameScopes}});
   field(fields,'start_date','First game date (Eastern)',{type:'date'});
   field(fields,'end_date','Last game date (Eastern)',{type:'date'});
+  const marketScope=field(fields,'market_scope','Eligible markets',{
+    options:{'':'All supported markets',[mainSpreadsTotals]:'Spreads and totals'},required:false,
+  });
+  const alternateOdds=field(fields,'alternate_odds_below','Alternate-line odds below (American odds)',{
+    required:false,maxLength:10,
+  });
+  const alternateHelp=node('small','Leave blank for main lines only. The odds cutoff applies only to alternate lines.');
+  alternateHelp.id='campaign-alternate-odds-help';
+  alternateOdds.setAttribute('aria-describedby',alternateHelp.id);
+  alternateOdds.parentElement.append(alternateHelp);
+  marketScope.onchange=()=>{
+    alternateOdds.disabled=alternateOdds.parentElement.hidden=marketScope.value!==mainSpreadsTotals;
+  };
+  marketScope.onchange();
   const retained=node('fieldset',undefined,'campaign-fields campaign-evidence-rules');
   retained.append(node('legend','Captured data and assumptions'), pairs(evidenceRules));
   fields.append(retained);
@@ -253,12 +274,12 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
       book:'Venue',original_bookmaker_id:'Venue',market:'Market',family:'Market',calculation_status:'Calculation',
       pull:'Original pull',receipt:'Original raw response',event_id:'Source event',competition:'Competition',include_alternates:'Alternate lines',
       reference_scope:'Reference scope',max_age_minutes:'Maximum quote age'};
-    if (handoff.has('scope') && handoff.get('scope') !== 'mens-d1') dataFilters.scope='Scope';
+    if (handoff.has('scope') && !Object.hasOwn(gameScopes,handoff.get('scope'))) dataFilters.scope='Scope';
     const unsupported=Object.entries(dataFilters).filter(([key])=>handoff.get(key));
     if (unsupported.length) {
       const disclosure=node('fieldset',undefined,'campaign-fields campaign-handoff');
       disclosure.append(node('legend','Review filters from Data'),
-        node('p','These Data filters limit what you were browsing. The paper engine evaluates every supported market and venue in the experiment’s game scope and dates.'),
+        node('p','These filters apply to the Data view. Choose the markets and portfolios for this experiment below.'),
         pairs(Object.fromEntries(unsupported.map(([key,title])=>[title,handoff.get(key)]))));
       const acceptance=node('label','Use the experiment’s game scope and dates','campaign-check');
       acceptFilters=node('input');acceptFilters.type='checkbox';acceptFilters.required=true;
@@ -324,6 +345,13 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     }
     if(body.minimum_stake_usd==='')delete body.minimum_stake_usd;
     if(!body.portfolio_rule)delete body.portfolio_rule;
+    if(!body.market_scope)delete body.market_scope;
+    if(alternateOdds.disabled || !body.alternate_odds_below)delete body.alternate_odds_below;
+    else {
+      const odds=body.alternate_odds_below;
+      if(!/^\+?\d{1,9}$/.test(odds) || Number(odds)<=100)throw Error('Enter alternate-line odds as a whole number above +100.');
+      body.alternate_odds_below=String(Number(odds));
+    }
     for(const [key,title] of [['target_profit_usd','win profit target'],['reference_bankroll_usd','reference bankroll'],
       ['minimum_stake_usd','minimum stake']]) {
       if(body[key]!=null && (!(number(body[key])>0) || !/^(\d+(\.\d+)?|\.\d+|\d+\/\d+)$/.test(body[key]))) {
@@ -385,7 +413,8 @@ function campaignHeader(data,period,portfolioHref,modeHref) {
   const {config,variant,mode}=data;
   const heading=card(config.name);
   heading.classList.add('paper-workbench-header');
-  heading.append(node('p',`${config.start_date}–${config.end_date} Eastern · Men’s D1 vs. D1 · ${sizingTitle(config,mode)} · Paper experiment`,'workspace-caption'));
+  const scope=config.scope==='all-sports' ? gameScopes[config.scope] : 'Men’s D1 vs. D1';
+  heading.append(node('p',`${config.start_date}–${config.end_date} Eastern · ${scope} · ${sizingTitle(config,mode)} · Paper experiment`,'workspace-caption'));
   const controls=node('div',undefined,'results-controls');
   controls.append(period);
   const sizing=workbenchSizing(config,data.available_modes || configuredModes(config),mode,modeHref);
@@ -461,9 +490,10 @@ export function renderScheduledDay(root,data,day,{daily,weekly,dayHref,portfolio
       : day.error || 'Awaiting retained capture evidence. Paper financials are unavailable.'),
     ...(day.next_check_at ? [node('p',`Next evidence check ${time(day.next_check_at)}`)] : []));
   const actions=node('div',undefined,'workspace-links');
-  actions.append(link('Daily coverage and issue decisions','/data?'+new URLSearchParams({
+  if (config.scope!=='all-sports') actions.append(link('Daily coverage and issue decisions','/data?'+new URLSearchParams({
     evidence:'mens-d1',scope:'mens-d1',date:day.date,variant:data.variant,
-  })+'#mens-d1-issues'),link('Edit as a new version',editHref,'research-button'));
+  })+'#mens-d1-issues'));
+  actions.append(link('Edit as a new version',editHref,'research-button'));
   heading.append(notice,actions);
   root.replaceChildren(heading);
   rendered.set(root,{heading,snapshot});
@@ -482,7 +512,7 @@ export function renderCampaign(root,data,{edit=false,daily,weekly,dayHref,portfo
   heading.append(policy);
   const actions=node('div',undefined,'workspace-links');
   actions.append(link('Export daily, weekly and EV analysis',`${API}/${id}?`+new URLSearchParams({variant,mode,export:'1'})),
-    link('Collection and results jobs','/settings#mens-d1-jobs'));
+    config.scope==='all-sports' ? link('Collection controls','/settings') : link('Collection and results jobs','/settings#mens-d1-jobs'));
   if(config.supersedes)actions.append(link('Open previous experiment version',href(config.supersedes,variant)));
   const revise=node('button','Edit as a new version');
   revise.onclick=()=>{location.href=editHref;};

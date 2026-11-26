@@ -136,7 +136,8 @@ def mount(app, *, campaigns_only=False):
             raise PublicRequestError("The saved offer export takes no filters.")
         identity = _identity(request.match_info["run_id"])
         fields, games, selected = await work(workspace.offer_export_plan, identity)
-        filename = f'predict-mens-d1-offers-{fields["date"]}-{identity[:12]}.json'
+        scope = fields.get("scope", "mens-d1")
+        filename = f'predict-{scope}-offers-{fields["date"]}-{identity[:12]}.json'
         response = web.StreamResponse(headers={**HEADERS, "Content-Type": "application/json",
             "Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store, no-transform"})
         before = {key:value for key, value in fields.items() if key < "games"}

@@ -35,6 +35,7 @@ MINIMUM = F(POLICY["minimum_ev"])
 FIXED_PROFIT_RULE = fixed_profit.RULE
 KELLY_RULE = "iterative-posted-fees-cent-budget-1"
 MAIN_FIRST_ONE_PER_GAME = "main_first_one_per_game"
+MAIN_SPREADS_TOTALS = "main_spreads_totals"
 
 
 def cents(value):
@@ -166,6 +167,29 @@ def _selection_evidence(identity, line_role, anchors):
                 anchor=dict(line=str(line), venue=anchor_venue, offer_index=offer_index))
 
 
+def _market_exclusion(record, alternate_price_floor):
+    market = record["market_identity"]
+    if market["period"] != "full_game" or market["family"] not in ("spread", "total"):
+        return "outside_selected_market_scope"
+    role = _role(record)["status"]
+    if role == "main":
+        return None
+    if role != "alternate" or alternate_price_floor is None:
+        return "line_role_outside_selected_market_scope"
+    quote = record["quote"]
+    try:
+        if quote["original"]["units"] not in ("american_odds", "decimal_odds", "cents_per_contract", "usd_per_contract"):
+            return "alternate_posted_odds_unavailable"
+        price = math.price(quote)
+    except (ValueError, KeyError, TypeError, ArithmeticError):
+        return "alternate_posted_odds_unavailable"
+    if not 0 < price < 1:
+        return "alternate_posted_odds_unavailable"
+    if price <= alternate_price_floor:
+        return "alternate_posted_odds_at_or_above_limit"
+    return None
+
+
 def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None, counts=None):
     policy_id, scale, mode, target_profit, minimum_stake = POLICY_ID, SCALE, None, None, None
     if policy is not None:
@@ -181,11 +205,18 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
             scale = F(policy["sizing_scale_usd"])
     anchors = (_main_anchors(snapshot, game_id)
                if policy and policy.get("portfolio_rule") == MAIN_FIRST_ONE_PER_GAME else None)
+    limit_market = policy and policy.get("market_scope") == MAIN_SPREADS_TOTALS
+    alternate_odds = policy.get("alternate_odds_below") if limit_market else None
+    # Winning $400 profit on $100 stake implies an exact contract price of 1/5.
+    alternate_price_floor = 100 / (100 + F(alternate_odds)) if alternate_odds is not None else None
     tickets, excluded, conflicts = {}, Counter(), set()
     for index, offer in enumerate(snapshot.get("offers", [])):
         sizing_stage = False
         exclusion_details = None
         try:
+            if limit_market and (reason := _market_exclusion(offer["record"], alternate_price_floor)):
+                excluded[reason] += 1
+                continue
             identity = exact_bet_identity(offer["record"], event_identity=game_id)
             measurement = offer_measurements(offer, offer_index=index, captured_at=at)
             raw_ev = measurement["screen"]["ev"]
@@ -386,12 +417,14 @@ def _replay_games(db, day, at, policy, population):
 
     frozen_policy = policy or POLICY
     reconciled = population is not None and population["kind"] == "reconciled_occurrences"
+    leagues = frozen_policy.get("leagues")
     games = list(db.execute("""SELECT g.* FROM public.ev_experiment_game g
-        WHERE event->>'league'=%s AND
+        WHERE event->>'league'=ANY(%s) AND
         ((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
         AND (NOT %s OR EXISTS (SELECT 1 FROM public.ev_experiment_task t
             WHERE t.game_id=g.id AND t.checkpoint='late'))
-        ORDER BY (event->>'starts_at')::timestamptz,id""", (frozen_policy["league"], day, reconciled)))
+        ORDER BY (event->>'starts_at')::timestamptz,id""",
+        (list(leagues) if leagues is not None else [frozen_policy["league"]], day, reconciled or leagues is not None)))
     untracked = []
     if population is not None:
         by_provider = {game["event"]["source_event_id"]: game["id"] for game in games}
@@ -427,6 +460,8 @@ def _replay_games(db, day, at, policy, population):
         status = checkpoint["status"]
         entry = dict(game_id=game["id"], title=game["event"]["title"], starts_at=game["event"]["starts_at"],
                      status=status, reason=checkpoint.get("reason"), checkpoint_id=checkpoint.get("id"), tickets=0)
+        if leagues is not None:
+            entry["league"] = game["event"]["league"]
         if status in ("pending", "claimed") and stamp(checkpoint["deadline_at"]) < stamp(at):
             entry.update(status="missed", reason="capture_window_closed")
         if policy is not None:
@@ -442,13 +477,13 @@ def _replay_games(db, day, at, policy, population):
         yield None, entry, None, None
 
 
-def scoped_reports(db, day, policies, *, population, as_of=None, evidence=False):
+def scoped_reports(db, day, policies, *, population=None, as_of=None, evidence=False):
     """Price each sizing mode on the same frozen checkpoint before advancing to the next game."""
     date.fromisoformat(day)
     at = (stamp(as_of) if as_of is not None else datetime.now(timezone.utc)).isoformat()
     shared = policies[0]
     frozen = shared or POLICY
-    binding_fields = ("league", "recovered_checkpoints", "defer_results")
+    binding_fields = ("league", "leagues", "recovered_checkpoints", "defer_results")
     if any(policy is None or any(policy.get(key) != frozen.get(key) for key in binding_fields)
            for policy in policies[1:]):
         raise ValueError("paper_replay_checkpoint_policy_mismatch")

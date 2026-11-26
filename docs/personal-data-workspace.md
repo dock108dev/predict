@@ -52,11 +52,15 @@ supporting source evidence. A current result can change as grades arrive. A
 saved snapshot opens with its own IDs and clocks. Pending results and capture
 gaps have separate states.
 
-Creation uses the engine's supported Men's Division I T−10 workflow. New
-experiments can choose dates, minimum EV and bucket boundaries, fixed-profit
-or Kelly sizing, and Best or All venue portfolios. The fixed capture, reference
-and fee policies are displayed with the editable choices. Results stay paper
-only. Exact legacy run links still open saved evidence.
+New experiments can use the reconciled Men's Division I slate or tracked
+T−10 captures from all six supported leagues (NFL, NCAAF, NBA, NCAAB, MLB and
+NHL). Choose dates, eligible markets, minimum EV, fixed-profit or Kelly sizing,
+and Best or All venue portfolios. The spreads and totals filter includes main
+lines and can admit verified alternate lines below an exclusive American odds
+cutoff. The cutoff applies only to alternates. The Games view can show started
+games without a usable final. The fixed capture, reference and fee policies are
+displayed with the editable choices. Results stay paper only. Exact legacy run
+links still open saved evidence.
 [Paper experiment rules](paper-experiments.md)
 
 ## Collection controls

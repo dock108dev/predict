@@ -19,7 +19,8 @@ from tests.test_paper_experiments_sql import ResearchWorkspaceFixture
 class CampaignSQL(ResearchWorkspaceFixture):
     async def asyncSetUp(self):
         with self.connect() as db:
-            db.execute('TRUNCATE public.ev_experiment_game,public.ev_experiment_record,public.paper_campaign CASCADE')
+            db.execute('''TRUNCATE public.ev_experiment_game,public.ev_experiment_record,public.paper_campaign,
+                public.research_workspace_run,public.paper_result_input CASCADE''')
             db.execute('INSERT INTO public.ev_experiment_accounting(singleton) VALUES (true) ON CONFLICT DO NOTHING')
 
     async def test_discovery_keeps_canonical_and_new_revisions_and_leaves_archived_rows(self):
@@ -285,6 +286,86 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 fixed = observed_trade['fixed_profit']
                 assert F(fixed['pnl_exact_usd']) == F(fixed['sizing']['modeled_win_profit_usd'])
                 assert fixed['sizing']['target_profit_usd'] == ('10' if identity == campaign['id'] else '13')
+
+    async def test_all_sports_campaign_replays_other_leagues_and_keeps_results_separate(self):
+        from app.research import experiment
+
+        await super().asyncSetUp()
+        nba = dict(self.game('NBA game', '2026-11-23T18:00:00Z'), league='NBA')
+        college = self.game('D1 game', '2026-11-23T18:05:00Z')
+        offers = [frozen_priced('+550', line='-3'), frozen_priced('+399', line='-4', main=False),
+                  frozen_priced('+400', line='-5', main=False)]
+        for offer in offers:
+            record = offer['record']
+            record['event'].update(scheduled_start=nba['starts_at'], competition='NBA')
+            record['market_identity']['rules'] = 'sportsgameodds-unverified-1'
+            record['result_policy'] = 'sportsgameodds-unverified-1:spread'
+            record['quote']['source'].update(native_event_id=nba['source_event_id'],
+                native_outcome_id='points-home-game-sp-home', native_line=record['selection']['signed_line'])
+        snapshot = dict(event=dict(home='home', away='away', competition='NBA', scheduled_start=nba['starts_at']),
+                        source_event=dict(event_id=nba['source_event_id']), offers=offers, coverage=dict(incomplete=False))
+        config = fixed_config(name='Win $25 across all sports', end_date='2026-12-07',
+                              scope=campaigns.ALL_SPORTS, market_scope=paper.MAIN_SPREADS_TOTALS,
+                              alternate_odds_below='+400', target_profit_usd='25',
+                              kelly_comparison=False, portfolios=['all_venues'])
+        for field in ('kelly_multiplier', 'reference_bankroll_usd'):
+            config.pop(field)
+        with self.connect() as db, patch.object(queue, '_late_capture_due', return_value=False):
+            experiment.discover(db, [nba], at=self.at)
+            for checkpoint, at in (('early', self.at), ('late', stamp('2026-11-23T17:50:00Z'))):
+                self.advance(db, at)
+                task, = experiment.due(db, at=self.at)
+                assert task['checkpoint'] == checkpoint
+                assert experiment.capture(db, task['game_id'], checkpoint, snapshot, token=task['token'],
+                    requested_at=at, received_at=at, known_at=at)['state'] == 'captured'
+            experiment.discover(db, [college], at=self.at)
+            self.advance(db, stamp('2026-11-23T18:01:00Z'))
+            # The basketball slate does not have to exist for the provider-tracked replay.
+            with patch.object(queue, 'utc', return_value=self.at):
+                campaign = campaigns.create(db, config)
+                assert campaign == campaigns.create(db, dict(config, alternate_odds_below='400'))
+                assert len(campaigns.view(db, campaign['id'])['days']) == 15
+                run_id = campaigns.tick(db)
+            assert run_id
+            run = workspace.run_detail(db, run_id)['report']
+            assert run['policy']['leagues'] == campaign['leagues']
+            assert run['policy']['alternate_odds_below'] == '400'
+            assert run['policy']['budget_cap'] is None and 'minimum_stake_usd' not in run['policy']
+            assert {game['title'] for game in run['games']} == {nba['title'], college['title']}
+            tickets = run['portfolios']['all_venues']['tickets']
+            assert {F(ticket['posted_odds']) for ticket in tickets} == {399, 550}
+            assert all(ticket['sizing']['target_profit_usd'] == '25' for ticket in tickets)
+
+            # A final attaches via the result queue while the opportunity snapshot stays fixed.
+            assert queue.process_one(db)
+            self.advance(db, stamp('2026-11-23T20:00:00Z'))
+            observed = self.at.isoformat()
+            final = dict(nba, source='sportsgameodds', final=True, result='completed', home_score=92,
+                         away_score=80, received_at=observed, knowledge_at=observed,
+                         receipt_sha256=hashed(['nba-result', 92]))
+            assert experiment.observe_outcomes(db, [final], at=self.at)['matched'] == 1
+            assert queue.dispatch(db) == 1
+            assert queue.process_one(db)
+            report = queue.read(db, run_id)['report']
+            assert {game['title']: game['result']['state'] for game in report['games']} == {
+                nba['title']: 'final', college['title']: 'pending',
+            }
+            assert {ticket['grade']['state'] for ticket in report['portfolios']['all_venues']['tickets']} == {'win'}
+            with patch.object(queue, 'utc', return_value=self.at):
+                assert campaigns.tick(db) == run_id
+
+            self.advance(db, self.at + timedelta(minutes=16))
+            moved = [dict(event, starts_at=event['starts_at'].replace('11-23', '11-24'))
+                     for event in (nba, college)]
+            assert experiment.discover(db, moved, at=self.at)['rescheduled'] == 2
+            with patch.object(queue, 'utc', return_value=self.at):
+                replacement = campaigns.tick(db)
+                campaign_view = campaigns.view(db, campaign['id'])
+            assert replacement and replacement != run_id
+            assert workspace._run(db, replacement)['supersedes'] == run_id
+            assert workspace.run_detail(db, replacement)['report']['games'] == []
+            assert len(workspace.run_detail(db, run_id)['report']['games']) == 2
+            assert campaign_view['selection'] is None
 
     def test_last_game_date_has_next_day_finals_and_correction_jobs(self):
         from app.collection import mens_d1_jobs

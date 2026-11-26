@@ -474,7 +474,7 @@ async function openResults(mount, selected, query, context, variant, requestVers
     Object.assign(navigation, {
       params, game:params.game, trade:params.trade,
       weeklyHref:campaign ? href({view:'weekly'}) : null,
-      filter:['traded', 'zero', 'missing', 'unresolved', 'frozen', 'reconstructed'].includes(params.filter) ? params.filter : 'all',
+      filter:['traded', 'zero', 'missing', 'missing_results', 'unresolved', 'frozen', 'reconstructed'].includes(params.filter) ? params.filter : 'all',
       tradeFilter:['win', 'loss', 'push', 'void', 'unresolved'].includes(params.trade_filter) ? params.trade_filter : 'all',
     });
   }

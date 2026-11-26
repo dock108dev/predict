@@ -201,6 +201,8 @@ def _game_context(game, source, known, current, occurrence, evidence):
                 result=_game_result(roles, names, evidence, unavailable))
     if "selection_audit" in game:
         result["selection_audit"] = game["selection_audit"]
+    if "league" in game:
+        result["league"] = game["league"]
     return result
 
 
@@ -218,7 +220,8 @@ def _lookup_games(db, run):
     retained = experiment._closure(db, roots)
     at = db.execute("SELECT transaction_timestamp() AS at").fetchone()["at"]
     occurrences = []
-    if report["policy"].get("league") == "NCAAB" and games:
+    if games and (report["policy"].get("league") == "NCAAB" or
+                  any(game.get("league") == "NCAAB" for game in games)):
         providers = d1._providers(db, day, at, neighbors=True)
         occurrences = occurrence_ledger(db, day, at, providers, include_history=False)
     by_occurrence = {occurrence["occurrence_id"]: occurrence for occurrence in occurrences}
@@ -492,7 +495,7 @@ def build_report(run, contexts):
     if "sizing_mode" in policy:
         report["sizing_policy"] = {key: policy[key] for key in ("sizing_mode", "sizing_rule", "target_profit_usd",
             "reference_bankroll_usd", "kelly_multiplier", "sizing_scale_usd", "minimum_ev", "minimum_stake_usd",
-            "portfolio_rule", "portfolios")
+            "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below")
             if key in policy}
     return report
 
