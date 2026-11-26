@@ -145,6 +145,54 @@ class PaperResultQueueSQL(ResearchWorkspaceFixture):
             self.assertTrue(queue.read(db, run_id, status_only=True)["pending"])
             self.assertEqual(queue.dispatch(db), 1)
 
+    def test_nhl_grading_rule_requeues_only_runs_with_nhl_lines(self):
+        hockey = dict(game_id="nhl-game", league="NHL")
+        basketball = dict(game_id="college-game", league="NCAAB")
+        cases = {
+            "all-sports-nhl-spread": ("all-sports", [hockey], [dict(game_id="nhl-game", family="spread")]),
+            "all-sports-other-spread": ("all-sports", [hockey, basketball], [
+                dict(game_id="nhl-game", family="moneyline"), dict(game_id="college-game", family="spread"),
+            ]),
+            "nhl-total-legacy": ("NHL", [], [dict(game_id="nhl-game", identity=dict(family="total"))]),
+            "d1-spread": ("NCAAB", [basketball], [dict(game_id="college-game", family="spread")]),
+        }
+        targeted = {"all-sports-nhl-spread", "nhl-total-legacy"}
+
+        def grade_with(rule):
+            return lambda db, run: dict(evidence_revision="same-frozen-evidence", grading_rule=rule,
+                                        status="graded")
+
+        with self.connect() as db:
+            for identity, (league, games, tickets) in cases.items():
+                document = dict(report=dict(policy=dict(execution="paper_only", league=league), games=games,
+                    portfolios=dict(best_venue=dict(tickets=tickets), all_venues=dict(tickets=tickets))))
+                db.execute("""INSERT INTO public.research_workspace_run
+                    (id,definition_version,game_date,report_revision,observed_at,summary,payload_bytes,payload)
+                    VALUES (%s,%s,'2026-11-23',%s,clock_timestamp(),'{}',100,%s)""",
+                    (identity, workspace.PILOT_VERSION, identity, Jsonb(document)))
+            for _ in cases:
+                self.assertIsNotNone(queue.process_one(db, grader=grade_with(paper_results.VERSION)))
+            previous = {run: queue.read(db, run) for run in cases}
+            self.assertEqual({run for run, state in previous.items() if state["pending"]}, targeted)
+
+            queue.repair(db)
+            for _ in targeted:
+                self.assertIsNotNone(queue.process_one(db, grader=grade_with(paper_results.NHL_VERSION)))
+            queue.repair(db)
+            self.assertIsNone(queue.process_one(db))
+            for run in cases:
+                current = queue.read(db, run)
+                old_version = previous[run]["version"]
+                self.assertFalse(current["pending"])
+                if run in targeted:
+                    self.assertEqual(current["version"]["grading_rule_version"], paper_results.NHL_VERSION)
+                    self.assertEqual(current["version"]["supersedes"], old_version["id"])
+                    historic = queue.read(db, run, old_version["id"])
+                    self.assertEqual(historic["report"], previous[run]["report"])
+                    self.assertEqual(historic["version"], old_version)
+                else:
+                    self.assertEqual(current, previous[run])
+
     def test_analysis_only_run_and_protected_capture_have_no_publication(self):
         with self.connect() as db:
             self.discover(db)

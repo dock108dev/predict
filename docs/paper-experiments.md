@@ -79,6 +79,11 @@ unsupported settlement and changed schedules remain unresolved; no venue
 settlement is inferred. Resolved-only P/L is labeled separately from outstanding
 tickets, and is not an estimate of strategy profitability from a single day.
 
+Full-game NHL spreads and totals for Novig and Polymarket US use verified
+SportsGameOdds period results for modeled grades. A shootout adds one goal
+to the winner's official score. The report preserves the separate shootout
+tally and a link to the retained original response.
+
 Open a ticket to see the frozen price, probability, modeled commitment and
 sporting result. **Export evidence** retains the exact offer witness, sized
 calculation and checkpoint identity for the saved run. The passive legacy report

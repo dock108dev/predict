@@ -3,13 +3,18 @@
 from collections import Counter, defaultdict
 from datetime import date
 from fractions import Fraction
+from functools import lru_cache
+import json
 
+from app.collection import original_receipts
+from app.collection.sgo_nhl_scoring import BASIS as NHL_SCORE_BASIS, nhl_scoring
 from app.storage import mens_d1_coverage as d1
 from app.storage.mens_d1_occurrences import occurrence_ledger
 from app.storage.store import hashed, stamp
 from . import experiment, paper, records, workspace
 
 VERSION = "paper-sporting-grades-1"
+NHL_VERSION = "paper-sporting-grades-nhl-2"
 SCHEMA = "predict-paper-results-1"
 VARIANTS = ("best_venue", "all_venues")
 RESOLVED = frozenset(("win", "loss", "push", "void"))
@@ -30,6 +35,18 @@ BASE = "/api/workspace/mens-d1"
 SGO_ORIGINAL = "/api/research/workspace/result-evidence"
 ODD_NAMES = dict(moneyline="ml", spread="sp", total="ou")
 SIDES = dict(moneyline=("home", "away"), spread=("home", "away"), total=("over", "under"))
+NHL_LINE_FAMILIES = frozenset(("spread", "total"))
+# The published full-game rules for these venues count one goal for a shootout win.
+# The paper quotes remain SGO observations, without venue settlement confirmation.
+NHL_LINE_VENUES = frozenset(("novig", "polymarket_us"))
+
+
+def _nhl_line_games(report):
+    nhl_only = report["policy"].get("league") == "NHL"
+    game_ids = {game["game_id"] for game in report.get("games", ()) if game.get("league") == "NHL"}
+    return {ticket["game_id"] for ticket in report["portfolios"]["all_venues"]["tickets"]
+            if (nhl_only or ticket["game_id"] in game_ids) and
+            (ticket.get("family") or ticket["identity"]["family"]) in NHL_LINE_FAMILIES}
 
 
 def _scores(teams):
@@ -128,6 +145,35 @@ def _sgo_evidence(game, known, roles, identity, data, recorded_at, url=None):
                 receipt_sha256=source["receipt_sha256"], url=url)
 
 
+def _original_events(digest):
+    body = original_receipts.read_by_digest(digest)
+    if body is None:
+        return ()
+    try:
+        payload = json.loads(body)
+    except (ValueError, UnicodeError):
+        return ()
+    events = payload.get("data") if isinstance(payload, dict) else None
+    return tuple(event for event in events if isinstance(event, dict)) if isinstance(events, list) else ()
+
+
+def _nhl_result_scoring(known, result, source, originals):
+    roles = ("home", "away")
+    final_scores = {role: result["scores"].get(known[role]) for role in roles}
+    source = source.get("source_result") or {}
+    stored = source.get("nhl_scoring")
+    if (isinstance(stored, dict) and stored.get("basis") == NHL_SCORE_BASIS and
+            stored.get("scores") == final_scores and stored.get("decision") in ("regulation", "overtime", "shootout")):
+        return stored
+    event_id = result["source_game_id"]
+    events = [event for event in originals(result["receipt_sha256"]) if event.get("eventID") == event_id]
+    if len(events) != 1:
+        return None
+    return nhl_scoring(events[0], event_id=event_id, starts_at=known["starts_at"],
+        team_ids={role: source.get(f"{role}_provider_id") for role in roles},
+        final_scores=final_scores)
+
+
 def _native_game(known, occurrence):
     provider = (occurrence or {}).get("provider_evidence") or {}
     teams = {team["role"]: team for team in provider.get("teams", ())}
@@ -162,7 +208,7 @@ def _game_result(roles, names, evidence, unavailable=None):
     elif evidence:
         state = evidence[0]["state"] if evidence[0]["state"] in EXCEPTION else "unresolved"
         reason = "retained_" + state if state in EXCEPTION else "retained_final_score_or_participant_binding_unavailable"
-    return dict(state=state, reason=reason, home=names.get("home"), away=names.get("away"),
+    result = dict(state=state, reason=reason, home=names.get("home"), away=names.get("away"),
                 home_id=roles.get("home"), away_id=roles.get("away"),
                 home_score=scores.get(roles.get("home")) if state == "final" else None,
                 away_score=scores.get(roles.get("away")) if state == "final" else None,
@@ -171,6 +217,9 @@ def _game_result(roles, names, evidence, unavailable=None):
                 observed_at=max((item["observed_at"] for item in evidence if item.get("observed_at")),
                                 key=stamp, default=None),
                 evidence=evidence)
+    if state == "final" and (scoring := finals[0].get("nhl_scoring")):
+        result["nhl_scoring"] = scoring
+    return result
 
 
 def _game_context(game, source, known, current, occurrence, evidence):
@@ -209,6 +258,8 @@ def _game_context(game, source, known, current, occurrence, evidence):
 def _lookup_games(db, run):
     report = run["payload"]["report"]
     games = report["games"]
+    nhl_line_games = _nhl_line_games(report)
+    originals = lru_cache(maxsize=2)(_original_events)
     day = date.fromisoformat(report["date"])
     source_games = {row["game_id"]: row for row in (report.get("population") or {}).get("games", ())
                     if row.get("game_id")}
@@ -256,9 +307,9 @@ def _lookup_games(db, run):
         outcome = retained.get(current.get("outcome_id"))
         if known and outcome:
             value = experiment._value(outcome, retained)
-            candidates.append(_sgo_evidence(game, known, roles, outcome["id"],
-                dict(value["data"], schedule_id=value.get("schedule_id")), outcome["recorded_at"].isoformat(),
-                f"{SGO_ORIGINAL}/{outcome['id']}"))
+            data = dict(value["data"], schedule_id=value.get("schedule_id"))
+            candidates.append((_sgo_evidence(game, known, roles, outcome["id"], data,
+                outcome["recorded_at"].isoformat(), f"{SGO_ORIGINAL}/{outcome['id']}"), data))
         for item in legacy[native_id] if known else ():
             data = item["payload"].get("data")
             if not data:
@@ -268,14 +319,20 @@ def _lookup_games(db, run):
                     home_score=source.get("home_score"), away_score=source.get("away_score"))
             if not data.get("final") and (data.get("source_result") or {}).get("reason") == "sporting_result_not_final":
                 continue
-            candidates.append(_sgo_evidence(game, known, roles, item["id"], data, item["recorded_at"].isoformat(),
-                f"{SGO_ORIGINAL}/{item['id']}"))
+            candidates.append((_sgo_evidence(game, known, roles, item["id"], data, item["recorded_at"].isoformat(),
+                f"{SGO_ORIGINAL}/{item['id']}"), data))
         # When two acquisition lanes saved the same provider receipt, prefer the
         # outcome record because it supplies the original-download route.
         unique = {}
-        for item in filter(None, candidates):
-            unique.setdefault(item["receipt_sha256"], item)
-        evidence += _latest(unique.values(), "source")
+        for item, data in candidates:
+            if item is not None:
+                unique.setdefault(item["receipt_sha256"], (item, data))
+        for item in _latest((item for item, _ in unique.values()), "source"):
+            if game["game_id"] in nhl_line_games and known["league"] == "NHL" and item["state"] == "final":
+                scoring = _nhl_result_scoring(known, item, unique[item["receipt_sha256"]][1], originals)
+                if scoring:
+                    item["nhl_scoring"] = scoring
+            evidence.append(item)
         context = _game_context(game, saved, known, current, occurrence, evidence)
         yield context, known
 
@@ -294,8 +351,11 @@ def _grading_rule(ticket, calculation, known):
     league = known["league"]
     if league not in SPORT_SCORING:
         return "unsupported_sport_scoring", "No verified full-game scoring basis is available for this sport."
-    if league == "NHL" and family != "moneyline":
-        return "shootout_score_basis_unverified", "The captured terms do not establish how to count shootouts for this line."
+    if league == "NHL" and family in NHL_LINE_FAMILIES:
+        venue = ticket["venue"]
+        if (venue not in NHL_LINE_VENUES or venue != identity.get("venue", venue) or
+                venue != calculation.get("venue", venue)):
+            return "unsupported_scoring_terms", "A full-game scoring rule for this NHL venue and market is unavailable."
     if scope.get("conflicts") or settlement.get("explicit") or (
             "excluded" in (*settlement.get("overtime_evidence", []), scope.get("overtime"))):
         return "unsupported_scoring_terms", "The retained market terms conflict with a normal full-game score."
@@ -337,10 +397,19 @@ def _grade(ticket, calculation, known, result, commitment):
         return "unresolved", result["reason"], "The final score could not be bound to the frozen occurrence and participants.", None
     identity = ticket["identity"]
     family, line, side = identity["family"], identity["line"], identity["outcome"]
+    basis = SPORT_SCORING[known["league"]]
+    scores = {role: result[role + "_score"] for role in ("home", "away")}
+    if known["league"] == "NHL" and family in NHL_LINE_FAMILIES:
+        scoring = result.get("nhl_scoring") or {}
+        if scoring.get("basis") != NHL_SCORE_BASIS or scoring.get("scores") != scores:
+            return "unsupported", "shootout_score_basis_unverified", "Retained NHL periods do not verify the official full-game score.", None
+        basis = "the official NHL full-game score"
+        if scoring["decision"] == "shootout":
+            basis += " including one goal for the shootout winner"
     if family == "spread" and side == "away":
         line = str(-Fraction(line))
     winner, reason = records.resolved_side(dict(family=family, period=identity["period"], line=line),
-        dict(final=True, result="completed", home_score=result["home_score"], away_score=result["away_score"]))
+        dict(final=True, result="completed", home_score=scores["home"], away_score=scores["away"]))
     if reason == "tie_or_push_outside_decisive_conditioning":
         return "unsupported", "push_refund_unverified", "The full-game score ties the modeled selection. A recorded push or refund cashflow is unavailable.", None
     if reason:
@@ -360,7 +429,6 @@ def _grade(ticket, calculation, known, result, commitment):
     score = f"{result['away']} {result['away_score']}, {result['home']} {result['home_score']}"
     selection = f"{ticket['label']} ({side} {identity['line']})" if line is not None else ticket["label"]
     winner_name = (result.get(winner) or winner)
-    basis = SPORT_SCORING[known["league"]]
     explanation = f"{score}. Using {basis}, the {family} outcome was {winner_name}. {selection} grades as a {state}."
     return state, "decisive_full_game_score", explanation, returned
 
@@ -383,7 +451,9 @@ def _ticket(run_id, ticket, witness, game, known):
     acquisition = calculation.get("acquisition") or {}
     quote_hashes = sorted({item["receipt_sha256"] for item in acquisition.get("required_inputs", ())
                            if item.get("receipt_sha256")})
-    grade = dict(id=hashed([VERSION, run_id, ticket["id"], game["occurrence_id"], result]),
+    version = (NHL_VERSION if known.get("league") == "NHL" and
+               ticket["identity"]["family"] in NHL_LINE_FAMILIES else VERSION)
+    grade = dict(id=hashed([version, run_id, ticket["id"], game["occurrence_id"], result]),
                  state=state, reason=reason, explanation=explanation, evidence_ids=evidence_ids)
     row = {key: ticket.get(key) for key in ("id", "game_id", "label", "venue", "posted_odds", "probability",
            "ev", "family", "period", "side", "line", "exact_bet_id", "equivalent_bet_id", "checkpoint_id",
@@ -486,7 +556,8 @@ def build_report(run, contexts):
         status = "collecting" if not summary["tickets"] and coverage.get("pending_games") else "awaiting_results"
     else:
         status = "unresolved" if summary["tickets"] else "no_selected_tickets"
-    report = dict(schema=SCHEMA, grading_rule=VERSION, run_id=run["id"], date=original["date"],
+    rule = NHL_VERSION if _nhl_line_games(original) else VERSION
+    report = dict(schema=SCHEMA, grading_rule=rule, run_id=run["id"], date=original["date"],
                 original_report_revision=run["report_revision"], status=status,
                 evidence_revision=hashed([(g["game_id"], g["occurrence_id"], g["result"]) for g in games]),
                 result_observed_at=max((g["result"]["observed_at"] for g in games if g["result"]["observed_at"]),

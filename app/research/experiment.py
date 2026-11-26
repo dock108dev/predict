@@ -842,16 +842,20 @@ def observe_outcomes(db, observations, *, at=None):
                     continue
                 if (source.get("home"), source.get("away")) != (event["home"], event["away"]):
                     source = dict(source, final=False, reason="sporting_result_canonical_role_mapping_changed")
+                    source.pop("nhl_scoring", None)
                 signature = (bool(source["final"]), source.get("reason"),
                              source.get("home_score"), source.get("away_score"))
                 if game["outcome_id"]:
                     index = _closure(db, [game["outcome_id"]])
                     prior_value = _value(index[game["outcome_id"]], index)
                     prior = prior_value["data"]
-                    prior_signature = (bool(prior["final"]), (prior.get("source_result") or {}).get("reason"),
+                    prior_source = prior.get("source_result") or {}
+                    prior_signature = (bool(prior["final"]), prior_source.get("reason"),
                                        prior.get("home_score"), prior.get("away_score"))
+                    proof = source.get("nhl_scoring") if event["league"] == "NHL" and source["final"] else None
+                    enriched = proof is not None and proof != prior_source.get("nhl_scoring")
                     if (received < stamp(prior["observed_at"]) or (signature == prior_signature
-                            and prior_value.get("schedule_id") == game["schedule_id"])):
+                            and prior_value.get("schedule_id") == game["schedule_id"] and not enriched)):
                         counts["unchanged"] += 1
                         continue
                 value = dict(data=dict(source=source["source"], published_at=source.get("published_at"),

@@ -55,18 +55,20 @@ def observations(page, *, known_at):
         provider_roles = participant_ids(event['teams'], event['league'], event['event_id'], registry)
         if any(canonical[role] != provider_roles[role] for role in ('home', 'away')):
             reason = 'sporting_result_canonical_role_mapping_changed'
-        result.append(dict(version=VERSION, source='sportsgameodds', kind='sporting_result',
-                           event_id=event['event_id'], league=event['league'],
-                           starts_at=canonical['scheduled_start'], source_starts_at=event['starts_at'],
-                           canonical_event=canonical, home=canonical['home'], away=canonical['away'],
-                           home_provider_id=event['teams']['home']['id'],
-                           away_provider_id=event['teams']['away']['id'],
-                           home_score=scores['home'], away_score=scores['away'], final=reason is None,
-                           state='available' if reason is None else 'unavailable', reason=reason,
-                           published_at=None, source_at=None, observed_at=received, received_at=received,
-                           known_at=known.isoformat(), knowledge_at=known.isoformat(),
-                           receipt_sha256=page.receipt_sha256, provider_status=dict(status),
-                           venue_settlement=None, actual_trade_result=None))
+        item = dict(version=VERSION, source='sportsgameodds', kind='sporting_result',
+                    event_id=event['event_id'], league=event['league'],
+                    starts_at=canonical['scheduled_start'], source_starts_at=event['starts_at'],
+                    canonical_event=canonical, home=canonical['home'], away=canonical['away'],
+                    home_provider_id=event['teams']['home']['id'], away_provider_id=event['teams']['away']['id'],
+                    home_score=scores['home'], away_score=scores['away'], final=reason is None,
+                    state='available' if reason is None else 'unavailable', reason=reason,
+                    published_at=None, source_at=None, observed_at=received, received_at=received,
+                    known_at=known.isoformat(), knowledge_at=known.isoformat(),
+                    receipt_sha256=page.receipt_sha256, provider_status=dict(status),
+                    venue_settlement=None, actual_trade_result=None)
+        if reason is None and event['league'] == 'NHL' and 'nhl_scoring' in event:
+            item['nhl_scoring'] = event['nhl_scoring']
+        result.append(item)
     return result
 
 

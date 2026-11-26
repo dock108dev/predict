@@ -471,6 +471,56 @@ class ExperimentSQL(LatestBoardFixture):
             state=db.execute("SELECT state FROM ev_experiment_task WHERE game_id=%s AND checkpoint='outcome'",(task["game_id"],)).fetchone()["state"]
             self.assertEqual(state,"final")
 
+    async def test_same_score_nhl_outcomes_retain_new_period_proof_without_losing_it_on_repeats(self):
+        from app.collection.sgo_game_results import observations
+        from app.collection.sportsgameodds_adapter import parse_page
+        from tests.test_sgo_nhl_scoring import event as raw_nhl_event
+
+        with self.connect() as db:
+            start = self.now - timedelta(hours=4)
+            raw = raw_nhl_event('F (SO)', overtime=(0, 0), shootout=(2, 1))
+            raw['status']['startsAt'] = owner.clock(start)
+            raw['teams']['home']['names'] = {'long': 'New York Islanders'}
+            raw['teams']['away']['names'] = {'long': 'St. Louis Blues'}
+
+            def projection():
+                page = parse_page(encoded({'success': True, 'data': [raw]}), owner.clock(self.now))
+                [observation] = observations(page, known_at=owner.clock(self.now))
+                return observation
+
+            proof = projection()
+            tracked = dict(self.event(starts=start, key=raw['eventID']), league='NHL',
+                           home=proof['home'], away=proof['away'])
+            owner.discover(db, [tracked], at=start - timedelta(hours=1))
+
+            def record(source, disposition):
+                assert owner.observe_outcomes(db, [source], at=self.now)[disposition] == 1
+                return db.execute('SELECT outcome_id FROM public.ev_experiment_game').fetchone()['outcome_id']
+
+            def next_arrival():
+                self.advance(self.now + timedelta(minutes=1))
+                return projection()
+
+            no_proof = {key: value for key, value in proof.items() if key != 'nhl_scoring'}
+            initial = record(no_proof, 'matched')
+            upgraded = record(next_arrival(), 'matched')
+            assert upgraded != initial
+            assert record(next_arrival(), 'unchanged') == upgraded
+            weaker = next_arrival()
+            del weaker['nhl_scoring']
+            assert record(weaker, 'unchanged') == upgraded
+
+            raw['results']['so'] = {'home': {'points': 1}, 'away': {'points': 0}}
+            corrected = record(next_arrival(), 'matched')
+            index = owner._closure(db, [corrected])
+            current = owner._value(index[corrected], index)
+            assert current['supersedes_id'] == upgraded
+            assert current['data']['source_result']['nhl_scoring']['shootout_attempt_scores'] == {'home': 1, 'away': 0}
+            assert record(proof, 'unchanged') == corrected
+            inputs = db.execute('''SELECT count(*) AS n FROM public.paper_result_input
+                WHERE provider_key=%s''', ('provider:sportsgameodds:' + raw['eventID'],)).fetchone()
+            assert inputs['n'] == 3
+
     async def test_ordinary_terminal_dispute_supersedes_a_final_until_corrected(self):
         from app.research import paper_results
 

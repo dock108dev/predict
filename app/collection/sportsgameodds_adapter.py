@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 
 from app.comparison.sgo_reference import BEST_BOOKS
 from .sgo_capabilities import LEAGUES, MARKET_TYPES, PROPHETX_BOOKMAKER_ID, supported_odd
+from .sgo_nhl_scoring import nhl_scoring
 
 MARKETS = MARKET_TYPES
 MAX_PAGE_BYTES = 16 * 1024 * 1024
@@ -260,9 +261,9 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
         if not isinstance(aliases, list) or len(aliases) > 100:
             raise ValueError('event aliases')
         aliases = [_identity(alias) for alias in aliases]
-        # Retain only bounded full-game team points, rather than the provider's
-        # potentially large player/stat tree. These are audit observations,
-        # not venue settlement authority or a substitute for a source clock.
+        # Retain bounded sporting result facts from the provider's stat tree.
+        # The NHL proof needs period scores to distinguish shootout attempts
+        # from goals that count toward the official final team score.
         game_results = {}
         results = event.get('results')
         game = results.get('game') if isinstance(results, dict) else None
@@ -277,6 +278,11 @@ def parse_page(body, received_at, *, leagues=LEAGUES, venues=None):
                      'status': {key: status.get(key) for key in ('started', 'live', 'ended', 'completed', 'cancelled', 'delayed', 'suspended', 'finalized')},
                      'scores': scores, 'game_results': game_results,
                      'received_at': received_at}
+        if league == 'NHL' and (status.get('completed') is True or status.get('finalized') is True):
+            proof = nhl_scoring(event, event_id=event_id, starts_at=event_row['starts_at'],
+                                team_ids={role: team['id'] for role, team in names.items()}, final_scores=game_results)
+            if proof is not None:
+                event_row['nhl_scoring'] = proof
         previous_starts = status.get('previousStartsAt')
         if isinstance(previous_starts, list) and 0 < len(previous_starts) <= 16:
             try:

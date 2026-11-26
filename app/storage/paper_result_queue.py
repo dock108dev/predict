@@ -25,6 +25,16 @@ MATCH = """((input.game_date BETWEEN job.game_date - 1 AND job.game_date + 1
         WHERE dependency.run_id=job.run_id
           AND dependency.dependency IN (input.game_key,input.provider_key)))"""
 
+# Match paper_results.build_report's grading version on the immutable selections.
+# The job league check keeps existing single-league reports off the JSON path.
+EXPECTED_RULE = """CASE WHEN job.league IN ('NHL','all-sports') AND EXISTS (
+    SELECT 1 FROM jsonb_array_elements(run.payload#>'{report,portfolios,all_venues,tickets}') ticket
+    WHERE COALESCE(ticket->>'family',ticket#>>'{identity,family}') IN ('spread','total')
+      AND (job.league='NHL' OR ticket->>'game_id' IN (
+          SELECT game->>'game_id' FROM jsonb_array_elements(run.payload#>'{report,games}') game
+          WHERE game->>'league'='NHL'))
+) THEN %s ELSE %s END"""
+
 
 class PublicationDeferred(ValueError):
     """An explicit capacity or capture constraint prevented publication."""
@@ -34,8 +44,10 @@ def utc():
     return datetime.now(timezone.utc)
 
 
-def repair(db, rule):
+def repair(db, rule=None):
     """Restore missing job/dependency rows and seed the outbox from retained evidence."""
+    from app.research import paper_results
+
     with db.transaction():
         db.execute("""SELECT public.paper_result_register(run.id,run.game_date,run.payload)
             FROM public.research_workspace_run run WHERE public.paper_result_is_run(run.payload)
@@ -65,9 +77,12 @@ def repair(db, rule):
             WHERE record.kind='sporting' AND public.paper_result_sgo_event(record.payload) IS NOT NULL
               AND NOT EXISTS (SELECT 1 FROM public.paper_result_input input WHERE input.id='legacy:' || record.id)
             ON CONFLICT DO NOTHING""")
-        db.execute("""UPDATE public.paper_result_job SET generation=generation+1,
-            due_at=clock_timestamp(),attempts=0 WHERE generation=processed_generation
-              AND (applied_rule IS DISTINCT FROM %s OR current_result_id IS NULL)""", (rule,))
+        db.execute(f"""UPDATE public.paper_result_job job SET generation=generation+1,
+            due_at=clock_timestamp(),attempts=0
+            FROM public.research_workspace_run run
+            WHERE run.id=job.run_id AND job.generation=job.processed_generation
+              AND (job.applied_rule IS DISTINCT FROM ({EXPECTED_RULE}) OR job.current_result_id IS NULL)""",
+            (paper_results.NHL_VERSION, rule or paper_results.VERSION))
 
 
 def dispatch(db):
@@ -170,7 +185,7 @@ def process_one(db, *, grader=None):
             db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
             run = db.execute("SELECT * FROM public.research_workspace_run WHERE id=%s", (job["run_id"],)).fetchone()
             report = grader(db, run)
-        identity = publish(db, job, report, paper_results.VERSION)
+        identity = publish(db, job, report, report.get("grading_rule", paper_results.VERSION))
     except PublicationDeferred as error:
         reason = str(error)
         if reason in ("writer_busy", "protected_tminus10_capture_due"):
@@ -200,11 +215,12 @@ def read(db, run_id, result_id=None, *, status_only=False, include_history=True)
     from app.research import paper_results
 
     job = db.execute(f"""SELECT job.current_result_id,job.last_error,job.applied_rule,
-        job.generation,job.processed_generation,
+        job.generation,job.processed_generation,{EXPECTED_RULE} AS expected_rule,
         EXISTS (SELECT 1 FROM public.paper_result_input input
             WHERE input.dispatched_at IS NULL AND {MATCH}) AS input_pending
         FROM public.research_workspace_run run LEFT JOIN public.paper_result_job job ON job.run_id=run.id
-        WHERE run.id=%s AND (job.run_id IS NOT NULL OR public.paper_result_is_run(run.payload))""", (run_id,)).fetchone()
+        WHERE run.id=%s AND (job.run_id IS NOT NULL OR public.paper_result_is_run(run.payload))""",
+        (paper_results.NHL_VERSION, paper_results.VERSION, run_id)).fetchone()
     if job is None:
         return None
     identity = result_id or job["current_result_id"]
@@ -215,7 +231,7 @@ def read(db, run_id, result_id=None, *, status_only=False, include_history=True)
             WHERE r.run_id=%s AND r.id=%s""", (run_id, identity)).fetchone()
         if current is None:
             raise KeyError(identity)
-    pending = (job["applied_rule"] != paper_results.VERSION or job["input_pending"]
+    pending = (job["applied_rule"] != job["expected_rule"] or job["input_pending"]
                or job["generation"] != job["processed_generation"])
     state = "failed" if job["last_error"] else "update_pending" if pending else current["status"]
     version = _version(current) if current else None

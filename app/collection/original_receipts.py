@@ -285,6 +285,21 @@ def read(receipt_id, *, root=None):
         db.close()
 
 
+def read_by_digest(receipt_sha256, *, root=None):
+    """Read a retained original by its verified response digest."""
+    archive = lookup(receipt_sha256, root=root)
+    if archive.get('state') != 'retained':
+        return None
+    capture = next(item for item in reversed(archive['captures']) if item['state'] == 'retained')
+    try:
+        metadata, body = read(capture['id'], root=root)
+        if metadata['receipt_sha256'] == receipt_sha256:
+            return body
+    except (OSError, EOFError, ValueError, KeyError, sqlite3.Error):
+        pass
+    return None
+
+
 def status(*, root=None):
     root = directory(root)
     try:

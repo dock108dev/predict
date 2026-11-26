@@ -174,6 +174,39 @@ def test_hockey_winner_can_use_the_final_but_line_needs_a_shootout_score_basis()
     assert spread_grade["reason"] == "shootout_score_basis_unverified"
 
 
+def test_archived_nhl_shootout_credits_one_goal_for_spreads_and_totals(monkeypatch):
+    from tests.test_sgo_nhl_scoring import TEAM_IDS, event
+
+    entry, frozen = game(league="NHL")
+    entry["league"] = "NHL"
+    source = dict(source_result={f"{role}_provider_id": identity for role, identity in TEAM_IDS.items()})
+    item = dict(evidence(home=3, away=2, source=results.SGO), source_game_id=ODDS_ID)
+    raw = event("F (SO)", overtime=(0, 0), shootout=(2, 1))
+    raw.update(eventID=ODDS_ID)
+    raw["status"]["startsAt"] = START
+    monkeypatch.setattr(results.original_receipts, "read_by_digest", lambda _: encoded(dict(data=[raw])))
+    checked = results._nhl_result_scoring(frozen, item, source, results._original_events)
+    assert checked["shootout_attempt_scores"] == {"home": 2, "away": 1}
+    assert checked["scores"] == {"home": 3, "away": 2}
+    assert results._nhl_result_scoring(frozen, item, source, lambda _: (raw, raw)) is None
+    proof = dict(item, nhl_scoring=checked)
+    picks = [ticket("under", league="NHL", family="total", side="under", line="4.5"),
+             ticket("over", league="NHL", family="total", side="over", line="5.5"),
+             ticket("away", league="NHL", side="away", line="0.5"),
+             ticket("home", league="NHL", venue="polymarket_us", side="home", line="-0.5")]
+    saved = run(*picks)
+    saved["payload"]["report"]["games"] = [entry]
+    report = results.build_report(saved, [context(entry, frozen, [proof])])
+    assert report["grading_rule"] == results.NHL_VERSION
+    assert report["games"][0]["result"]["nhl_scoring"] == checked
+    rows = report["portfolios"]["all_venues"]["tickets"]
+    assert [row["grade"]["state"] for row in rows] == ["loss", "loss", "loss", "win"]
+    assert all("including one goal for the shootout winner" in row["grade"]["explanation"] for row in rows)
+    with_missing_receipt = results.build_report(saved, [context(entry, frozen, [item])])
+    assert all(row["grade"]["reason"] == "shootout_score_basis_unverified"
+               for row in with_missing_receipt["portfolios"]["all_venues"]["tickets"])
+
+
 def test_canonical_participant_binding_can_use_reversed_source_display_order():
     capture, frozen = game()
     native_home, native_away = frozen["home"], frozen["away"]

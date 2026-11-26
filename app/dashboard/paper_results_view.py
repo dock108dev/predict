@@ -1,6 +1,5 @@
 """Read and export versioned sporting grades for one immutable paper run."""
 
-import sqlite3
 from urllib.parse import urlencode
 
 from app.collection import original_receipts
@@ -120,13 +119,7 @@ def original_result(db, identity):
             data = legacy["payload"]
             source = (data.get("data") or {}).get("source_result") or data.get("source_result") or {}
             digest = source.get("receipt_sha256")
-    archive = original_receipts.lookup(digest)
-    if archive.get("state") == "retained":
-        capture = next(item for item in reversed(archive["captures"]) if item["state"] == "retained")
-        try:
-            metadata, body = original_receipts.read(capture["id"])
-            if metadata["receipt_sha256"] == digest:
-                return digest, body
-        except (OSError, EOFError, ValueError, KeyError, sqlite3.Error):
-            pass
+    body = original_receipts.read_by_digest(digest)
+    if body is not None:
+        return digest, body
     raise workspace.UnknownSelection("Original provider result response was not retained.")
