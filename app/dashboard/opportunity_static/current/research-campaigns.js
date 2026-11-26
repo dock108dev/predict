@@ -490,7 +490,7 @@ export function renderScheduledDay(root,data,day,{daily,weekly,dayHref,portfolio
       : day.error || 'Awaiting retained capture evidence. Paper financials are unavailable.'),
     ...(day.next_check_at ? [node('p',`Next evidence check ${time(day.next_check_at)}`)] : []));
   const actions=node('div',undefined,'workspace-links');
-  if (config.scope!=='all-sports') actions.append(link('Daily coverage and issue decisions','/data?'+new URLSearchParams({
+  if (data.config.scope!=='all-sports') actions.append(link('Daily coverage and issue decisions','/data?'+new URLSearchParams({
     evidence:'mens-d1',scope:'mens-d1',date:day.date,variant:data.variant,
   })+'#mens-d1-issues'));
   actions.append(link('Edit as a new version',editHref,'research-button'));

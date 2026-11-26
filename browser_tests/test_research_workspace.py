@@ -151,7 +151,11 @@ def research_http_fixture(serve):
         def log_message(self, *_):
             pass
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    class Server(ThreadingHTTPServer):
+        # Chromium loads the workspace module graph in parallel on each navigation.
+        request_queue_size = 64
+
+    server = Server(("127.0.0.1", 0), Handler)
     worker = Thread(target=server.serve_forever, daemon=True)
     worker.start()
     try:
