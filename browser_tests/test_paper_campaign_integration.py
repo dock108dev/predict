@@ -225,6 +225,8 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                         "SELECT state,last_error FROM public.paper_campaign_day"
                     ).fetchall()
                 await page.reload(wait_until="domcontentloaded")
+                await page.get_by_role("link", name="By day", exact=True).click()
+                await page.locator(".experiment-history > summary").click()
                 odds_title = "Posted odds buckets · Win $7.51"
                 await page.get_by_text(odds_title, exact=True).click()
                 odds_table = page.get_by_role("table", name=odds_title)
@@ -286,22 +288,22 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await expect(
                     page.get_by_role("heading", name="Controlled $7.51 replay", exact=True)
                 ).to_be_visible()
-                await expect(page.get_by_role("heading", name="Campaign to date")).to_be_visible()
-                await expect(page.locator(".experiment-comparison table").first.get_by_role(
+                await expect(page.locator(".experiment-campaign-pnl")).to_contain_text("$7.50")
+                await page.get_by_text("Campaign totals", exact=True).click()
+                await expect(page.locator(".experiment-totals table").get_by_role(
                     "row", name=re.compile("^ROI"))).to_contain_text("300.00% on $2.50 graded stake")
-                await page.get_by_role("link", name="By day", exact=True).click()
-                await page.get_by_label("Game date (Eastern)").select_option(day)
+                await page.get_by_role("region", name="Results by date").locator(f'a[href*="date={day}"]').click()
                 await page.get_by_label("Portfolio", exact=True).select_option("all_venues")
+                await page.get_by_text("Daily totals", exact=True).click()
                 await page.get_by_text(odds_title, exact=True).click()
                 await expect(odds_row.locator('[data-label="Graded trades"]')).to_have_text("1")
                 await expect(odds_row.locator('[data-label="Paper P/L"]')).to_have_text("$7.50")
                 await expect(odds_row.locator('[data-label="Realized ROI"]')).to_have_text("300.00% on $2.50 graded stake")
-                comparison=page.locator(".experiment-comparison table").first
+                comparison=page.locator(".experiment-totals table").first
                 await expect(comparison.get_by_role("columnheader", name="Win $7.51")).to_be_visible()
                 await expect(comparison.get_by_role("columnheader", name="Kelly")).to_be_visible()
                 await expect(comparison.get_by_role("row", name=re.compile("^ROI"))).to_contain_text("300.00% on $2.50 graded stake")
                 await expect(comparison.get_by_role("row", name=re.compile("^Expected ROI"))).not_to_contain_text("—")
-                await comparison.get_by_role("link", name="Inspect games and trades").first.click()
                 await expect(
                     page.locator(".result-ledger-table tbody tr")
                 ).to_have_count(1)
@@ -309,6 +311,7 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     page.locator(".result-ledger-table tbody tr")
                 ).to_contain_text("$2.50")
                 await page.locator(".result-ledger-table tbody tr a").click()
+                await page.get_by_role("button", name="Review trade evidence", exact=True).click()
                 await page.get_by_text("Trade calculation and frozen evidence", exact=True).click()
                 await expect(page.get_by_role("heading", name="Paper sizing and fee treatment")).to_be_visible()
                 api = str(
@@ -379,8 +382,8 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     queue.process_one(db)
                     queue.process_one(db)
                 await page.reload(wait_until="domcontentloaded")
-                await page.get_by_role("link", name="Inspect games and trades").first.click()
                 await expect(page.get_by_text("Stake ≥$2.51", exact=False)).to_be_visible()
+                await page.locator(".experiment-history > summary").click()
                 await page.get_by_text("Sizing exclusions", exact=True).click()
                 await expect(page.get_by_text("Stake below minimum after sizing", exact=True)).to_be_visible()
                 assert (await (await page.request.get(api + f"&version={graded}&export=report")).json()) == exported
@@ -391,7 +394,8 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await page.goto(old_url, wait_until="domcontentloaded")
                 await expect(page.get_by_text("This link used previous rules. Showing current results.")).to_be_visible()
                 current = parse_qs(urlsplit(page.url).query)
-                assert current == dict(campaign=[revision_id], date=[day], variant=["all_venues"], ledger_view=["trades"])
+                assert current == dict(campaign=[revision_id], date=[day], variant=["all_venues"],
+                                       view=["daily"], ledger_view=["trades"])
                 await expect(page.get_by_text("No selected paper trades in this portfolio.", exact=True)).to_be_visible()
                 await page.reload(wait_until="domcontentloaded")
                 await page.get_by_role("link", name="Open archived snapshot", exact=True).click()
@@ -432,9 +436,10 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     assert selected["config"]["portfolios"] == ["best_venue"]
                     assert selected["weekly"]["summary"]["tickets"] == 1
                 await page.reload(wait_until="domcontentloaded")
-                await expect(page.get_by_text("One bet per game, main lines first", exact=False).first).to_be_visible()
-                await page.get_by_role("link", name="Inspect games and trades", exact=True).click()
+                await expect(page.get_by_text("One trade per game, main lines first", exact=False).first).to_be_visible()
+                await page.get_by_role("link", name="All trades", exact=True).click()
                 await expect(page.locator(".result-ledger-table tbody tr")).to_have_count(1)
                 await page.locator(".result-ledger-table tbody tr a").click()
-                await expect(page.locator(".paper-result-trade")).to_contain_text("Qualifying main line")
+                await page.locator(".result-inline-trade > details > summary").click()
+                await expect(page.locator(".result-inline-trade")).to_contain_text("Qualifying main line")
                 await browser.close()

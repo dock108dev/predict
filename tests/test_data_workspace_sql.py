@@ -286,6 +286,11 @@ class DataWorkspaceSQL(PregameFixture):
         digest = sha256(original.body).hexdigest()
         scope = dict(PARAMS, bookmakerID='prophetx,fanduel,draftkings')
         with self.connect() as db:
+            experiment.discover(db, [dict(source_event_id=event['eventID'], event_id='browser-occurrence',
+                league='NBA', title='Milwaukee Bucks at Orlando Magic', starts_at=event['status']['startsAt'],
+                home='orlando', away='milwaukee')], at=stamp(AT))
+            tracked_game = db.execute('SELECT id FROM public.ev_experiment_game WHERE source_event_id=%s',
+                                      (event['eventID'],)).fetchone()['id']
             db.execute("""INSERT INTO public.market_pull(pull_id,requested_at,request_scope,state,details)
                 VALUES ('browser-pull',%s,%s,'complete',%s)""", (stamp(AT), Jsonb(scope),
                 Jsonb(dict(event=dict(title='Milwaukee Bucks at Orlando Magic',
@@ -314,6 +319,14 @@ class DataWorkspaceSQL(PregameFixture):
                     pulls = await response.json()
                     self.assertEqual([row['pull_id'] for row in pulls['rows']], ['browser-pull'])
                     self.assertEqual(pulls['provider_requests'], 0)
+                    response = await client.get(base + 'pulls', params=dict(tracked_game=tracked_game))
+                    self.assertEqual(response.status, 200, await response.text())
+                    self.assertEqual([row['pull_id'] for row in (await response.json())['rows']], ['browser-pull'])
+                    response = await client.get(base + 'pulls', params=dict(tracked_game=tracked_game, event_id='different-game'))
+                    self.assertEqual((await response.json())['rows'], [])
+                    response = await client.get(base + 'results', params=dict(tracked_game=tracked_game))
+                    self.assertEqual(response.status, 200, await response.text())
+                    self.assertEqual((await response.json())['rows'], [])
                     response = await client.get(base + 'pull', params=dict(pull='browser-pull'))
                     self.assertEqual(response.status, 200, await response.text())
                     self.assertEqual((await response.json())['receipts'][0]['original']['id'], exact['id'])

@@ -152,6 +152,63 @@ def markets(db, filters, *, offset=0, limit=50):
     return dict(rows=[row(db, value) for value in rows], total=count)
 
 
+def dashboard_outcome_key(identity):
+    """Group venue quotes only when their exact outcome and settlement agree."""
+    event = identity['event']
+    return hashed([event['home'], event['away'], *(identity[name]
+        for name in ('family', 'period', 'outcome', 'line', 'settlement'))])
+
+
+def _retained_outcome_keys(db, pull_id):
+    from app.research.ev_movement import exact_bet_identity
+    from .acquisition_snapshot import read_snapshot
+
+    try:
+        snapshot = read_snapshot(db, pull_id)
+    except ValueError:
+        # An unavailable witness cannot establish cross-venue equivalence.
+        return {}
+    keys = {}
+    for value in snapshot['offers']:
+        identity = exact_bet_identity(value['record'])
+        display = value.get('display_offer') or {}
+        exact_id = display.get('id', identity['id'])
+        revision = display.get('revision') or value.get('evidence_revision') or hashed([pull_id, value])
+        keys[exact_id, revision] = dashboard_outcome_key(identity)
+    return keys
+
+
+def _dashboard_groups(db, values):
+    grouped = {}
+    retained_keys = {}
+    for value in values:
+        details = value['quote']
+        pull_id = value['pull_id']
+        outcome_key = value['outcome_key']
+        if not outcome_key:
+            if pull_id not in retained_keys:
+                retained_keys[pull_id] = _retained_outcome_keys(db, pull_id)
+            outcome_key = retained_keys[pull_id].get((details['id'], details['revision']), details['id'])
+        key = (value['game_id'], value['start_at'], value['family'], value['period'], outcome_key)
+        group = grouped.setdefault(key, {})
+        # Keep the highest eligible observation for a venue, including when
+        # one occurrence has more than one authentic provider event link.
+        group.setdefault(details['venue'], value)
+    groups = [(key, list(venues.values())) for key, venues in grouped.items()]
+    return [(key, group) for key, group in groups if Fraction(group[0]['quote']['calculation']['net_ev_ratio']) > 0]
+
+
+def _dashboard_quote(value):
+    quote = value['quote']
+    # Exact evidence reads reopen the immutable pull and require its ID and revision.
+    return dict(id=quote['id'], revision=quote['revision'], pull_id=value['pull_id'],
+        market_id=value['game_id']+'|'+value['family']+'|'+value['period'], game=value['game'],
+        league=value['league'], eligible_until=value['eligible_until'], kickoff=value['start_at'],
+        family=value['family'], period=value['period'], venue=quote['venue'], selection_label=quote['outcome'],
+        line=quote['line'], times=quote['times'], display=value['display'] or {},
+        posted=dict(value=quote['price'], units=quote['price_units']), calculation=quote['calculation'])
+
+
 def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=None, family=None, venue=None):
     """Show current main offers from the latest complete covering pull per market."""
     from app.comparison.fee_mode import read as read_fee_mode
@@ -204,36 +261,32 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
               AND o.value#>>'{record,market_identity,period}'=s.period AND """ + candidates + """
           ) winner ON true
           WHERE s.start_at>%s AND (s.confirmed_start IS NULL OR s.confirmed_start>%s)
-        ), positive AS (
-          SELECT DISTINCT ON (event_id,family,period,best#>>'{display_offer,id}') *
-          FROM eligible WHERE current AND net_ev>0
-          ORDER BY event_id,family,period,best#>>'{display_offer,id}',net_ev DESC
+        ), positive_scopes AS (
+          SELECT DISTINCT game_id,start_at,family,period FROM eligible WHERE current AND net_ev>0
+        ), current_offers AS (
+          SELECT event_id,family,period,pull_id,game_id,COALESCE(event->>'title',details#>>'{event,title}',event_id) game,
+            start_at,league,eligible_until,best->'display_offer' quote,
+            best->>'dashboard_outcome_key' outcome_key,best#>'{calculation_payload,display}' display
+          FROM eligible JOIN positive_scopes USING(game_id,start_at,family,period)
+          WHERE current
         )
-        SELECT (SELECT count(*) FROM positive) total,
-          count(*)>0 price_available,
+        SELECT COALESCE(bool_or(best IS NOT NULL AND current),false) price_available,
           COALESCE(bool_or(best IS NULL),false) inputs_unavailable,
+          COALESCE(bool_or(state<>'complete'),false) pull_incomplete,
           COALESCE(bool_or(net_ev>0 AND NOT current),false) expired_positive,
-          (SELECT jsonb_agg(page ORDER BY net_ev DESC,event_id,family,best#>>'{display_offer,id}')
-            FROM (SELECT * FROM positive ORDER BY net_ev DESC,event_id,family,best#>>'{display_offer,id}'
-              LIMIT %s OFFSET %s) page) entries
+          (SELECT jsonb_agg(current_offers) FROM current_offers) entries
         FROM eligible"""
     data = db.execute(sql, (at, until, *(value for _, value in filters), at, freshness_seconds, at, read_fee_mode(db)['enabled'],
-        *args, at, at, limit, offset)).fetchone()
-    rows = []
-    for value in data['entries'] or []:
-        event = value['event'] or value['details'].get('event') or {}
-        details = value['best']['display_offer']
-        # The board retains only scalar display fields; the exact evidence read
-        # reopens the immutable pull and refuses a mismatched ID or revision.
-        rows.append(dict(id=details['id'], revision=details['revision'], pull_id=value['pull_id'],
-            market_id=value['game_id']+'|'+value['family']+'|'+value['period'], game=event.get('title') or value['event_id'],
-            league=value['league'], eligible_until=value['eligible_until'],
-            kickoff=value['start_at'], family=value['family'], venue=details['venue'], selection_label=details['outcome'],
-            line=details['line'], times=details['times'],
-            display=(value['best']['calculation_payload'].get('display') or {}),
-            posted=dict(value=details['price'], units=details['price_units']), calculation=details['calculation']))
-    return dict(rows=rows, total=data['total'], offset=offset, availability={key:data[key]
-        for key in ('price_available','inputs_unavailable','expired_positive')})
+        *args, at, at)).fetchone()
+    offers = sorted(data['entries'] or [], key=lambda value: (
+        -Fraction(value['quote']['calculation']['net_ev_ratio']), value['event_id'], value['family'],
+        value['quote']['venue'], value['quote']['id'], value['quote']['revision']))
+    groups = _dashboard_groups(db, offers)
+    rows = [dict(_dashboard_quote(quotes[0]), bet_id=hashed(key),
+                 other_quotes=[_dashboard_quote(value) for value in quotes[1:]])
+            for key, quotes in groups[offset:offset + limit]]
+    return dict(rows=rows, total=len(groups), offset=offset, availability={key:data[key]
+        for key in ('price_available','inputs_unavailable','pull_incomplete','expired_positive')})
 
 def _selection_label(snapshot, record, payload, side):
     if side in ('over', 'under'):
@@ -255,7 +308,7 @@ def _selection_label(snapshot, record, payload, side):
     return 'Selection identity unresolved'
 
 
-def offer(snapshot, value, pull_id, *, family=None):
+def offer(snapshot, value, pull_id, *, family=None, for_projection=False):
     """One exact received trading offer and its stored calculation witness."""
     from app.comparison.current_pregame import reference_key
     from app.research.ev_movement import exact_bet_identity
@@ -316,6 +369,8 @@ def offer(snapshot, value, pull_id, *, family=None):
         calculation_version=(payload or {}).get('version'),
         normalized_record=record, calculation_payload=payload, fee_input=value.get('fee_input'),
         source_input=value, provider_requests=0)
+    if for_projection:
+        result['dashboard_outcome_key'] = dashboard_outcome_key(identity)
     return result
 
 

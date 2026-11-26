@@ -1,7 +1,7 @@
 import {byId,card,count,link,node,pairs,pct,readJSON,table,time,usd} from './workspace-ui.js';
-import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,ruleSummary,sizingTitle} from './research-campaigns.js';
-import {coverageURL,ledgerKeys} from './mens-d1-coverage.js';
-import {campaignTradeLedger,oddsBreakdown,renderResults} from './research-results.js';
+import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,mainFirstRule,ruleSummary,sizingTitle} from './research-campaigns.js';
+import {coverageURL} from './mens-d1-coverage.js';
+import {campaignTradeLedger,campaignTradeEvidence,oddsBreakdown,renderResults} from './research-results.js';
 import {qualityComparison} from './research-quality.js';
 import {renderRun,renderSavedEvidence} from './research-run.js';
 
@@ -15,8 +15,10 @@ const portfolioTitles={best_venue:'Best venue only',all_venues:'All qualifying v
 const hash=/^[0-9a-f]{64}$/;
 const ledgerPreferences=['ledger_view','filter','game_sport','trade_filter','trade_ev','trade_sort',
   'trade_sport','trade_family','trade_venue','trade_rows'];
-const tradePreferences=ledgerPreferences.filter(key=>key.startsWith('trade_'));
+const tradePreferences=[...ledgerPreferences.filter(key=>key.startsWith('trade_')),'trade_page'];
+const dayViews=['daily','weekly','by-day'];
 let requestVersion=0;
+let syncTradeBookmark=null;
 
 const present=values=>Object.fromEntries(Object.entries(values).filter(([,value])=>value!=null));
 const url=(overrides={})=>{
@@ -39,7 +41,8 @@ function defaultDate(config) {
 }
 
 function wantsDetails(query) {
-  return ['run','result','ticket','evidence',...ledgerKeys].some(key=>query.has(key)) ||
+  return ['run','result','ticket','evidence','game','trade','sizing_quote','sizing_bet','ledger_view','game_sport','filter']
+    .some(key=>query.has(key)) ||
     (query.get('view')==='daily' && query.has('mode'));
 }
 
@@ -52,11 +55,16 @@ function currentDestination(campaign, query, savedDate) {
   const requested=query.get('date') || savedDate;
   const view=query.get('view');
   const variant=configuredPortfolio(campaign,query.get('variant'));
-  if (view==='trades') return {campaign:campaign.id,variant,view,...ledgerSelection(query,tradePreferences)};
+  if (view==='trades' || (!details && !requested && !dayViews.includes(view))) {
+    return {campaign:campaign.id,variant,view:'trades',...ledgerSelection(query,tradePreferences)};
+  }
+  if (!details && ['weekly','by-day'].includes(view)) {
+    return {campaign:campaign.id,variant,view:'by-day',...ledgerSelection(query,tradePreferences)};
+  }
   const usesDate=details || requested || view==='daily';
   const date=campaignDays(campaign).includes(requested) ? requested : usesDate ? defaultDate(campaign) : null;
-  return {campaign:campaign.id,date,variant,
-    view:view==='weekly' && !details ? view : null,ledger_view:details ? 'trades' : null};
+  return {campaign:campaign.id,date,variant,view:date ? 'daily' : 'by-day',
+    ...ledgerSelection(query),ledger_view:query.get('ledger_view') || (details ? 'trades' : null)};
 }
 
 function versionNotice(message, title, destination) {
@@ -170,6 +178,22 @@ function campaignRules(config, context) {
   return detail;
 }
 
+function campaignEvidence(config, context, reports=[{mode:context.mode}]) {
+  const history=node('details',undefined,'experiment-history');
+  history.append(node('summary','History & evidence'),campaignRules(config,context));
+  const links=node('div',undefined,'workspace-links');
+  for (const report of reports) {
+    const title=reports.length>1 ? 'Export '+sizingTitle(config,report.mode)+' campaign results' : 'Export campaign results';
+    links.append(action(title,campaignPath(context.campaign,context.variant,report.mode,{export:'1'})));
+  }
+  const refresh=node('button','Refresh results');
+  refresh.type='button';
+  refresh.onclick=()=>render({keepComparison:true});
+  links.append(refresh);
+  history.append(links);
+  return history;
+}
+
 function renderCampaignResults(body, reports, config, context) {
   const primary=reports.find(report=>report.mode===context.mode) || reports[0];
   const through=primary.as_of ? gameDate.format(new Date(primary.as_of)) : gameDate.format(new Date());
@@ -177,13 +201,19 @@ function renderCampaignResults(body, reports, config, context) {
   const values=Object.fromEntries(reports.map(report=>[report.mode,
     metrics(report.weekly?.summary,report.selection || report.weekly?.summary)]));
   const panel=node('section');
+  const history=campaignEvidence(config,context,reports);
   if (days.length) {
+    const summary=primary.weekly?.summary;
+    const header=node('p',undefined,'experiment-campaign-pnl');
+    header.append(node('span','Campaign paper P/L'),node('strong',money(summary?.pnl_usd)),
+      node('span',`${count(summary?.resolved || 0)} / ${count(primary.selection?.tickets ?? summary?.tickets ?? 0)} graded`));
+    panel.append(header);
     const rows=days.map(day=>{
       const summary=day.analysis?.summary, selection=day.selection || summary;
       const realized=summary?.roi == null ? '—' : summary.roi_percent == null ? pct(summary.roi) : summary.roi_percent+'%';
       const status=dayStatus(day)+(day.capture_state==='partial' ? ' · Partial T−10' : '');
       return [link(displayDate.format(new Date(day.date+'T12:00:00Z')),
-        url({...context.base,date:day.date,mode:context.mode})),status,
+        url({...context.base,...context.filters,view:'daily',date:day.date,mode:context.mode})),status,
         selection ? `${count(summary?.resolved ?? 0)} / ${count(selection.tickets)}` : '—',
         money(summary?.pnl_usd),realized];
     });
@@ -206,7 +236,7 @@ function renderCampaignResults(body, reports, config, context) {
   } else panel.append(node('p','No results yet.','workspace-caption'));
   for (const report of reports) {
     const odds=oddsBreakdown(report.selection?.odds_buckets,reports.length>1 ? sizingTitle(config,report.mode) : '');
-    if (odds) panel.append(odds);
+    if (odds) history.append(odds);
     if (!report.weekly) continue;
     const analysis=node('details');
     const suffix=reports.length>1 ? ' · '+sizingTitle(config,report.mode) : '';
@@ -218,14 +248,9 @@ function renderCampaignResults(body, reports, config, context) {
         report.weekly.thresholds.map(bucket=>['≥'+pct(bucket.minimum),...metrics(bucket.summary)])));
     const quality=qualityComparison(report.weekly.quality);
     if (quality) analysis.append(quality);
-    panel.append(analysis);
+    history.append(analysis);
   }
-  const links=node('div',undefined,'workspace-links');
-  for (const report of reports) {
-    const title=reports.length>1 ? 'Export '+sizingTitle(config,report.mode)+' campaign results' : 'Export campaign results';
-    links.append(action(title,campaignPath(context.campaign,context.variant,report.mode,{export:'1'})));
-  }
-  body.replaceChildren(panel,campaignRules(config,context),links);
+  body.replaceChildren(panel,history);
 }
 
 function showResults(config, visible, context) {
@@ -241,26 +266,30 @@ function showResults(config, visible, context) {
   const dates=campaignDays(config).map(value=>[value,displayDate.format(new Date(value+'T12:00:00Z'))]);
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
   const period=node('nav',undefined,'workspace-variant');
-  period.setAttribute('aria-label','Results period');
-  const selectedFilters=ledgerSelection(new URLSearchParams(location.search),tradePreferences);
-  const totalLink=action('Campaign to date',url({...context.base,mode:context.mode,view:null,date:null}));
-  const tradesLink=action('All trades',url({...context.base,mode:context.mode,view:'trades',date:null,...selectedFilters}));
-  const dailyLink=action('By day',url({...context.base,mode:context.mode,view:null,date:context.date,...selectedFilters}));
+  period.setAttribute('aria-label','Experiment results');
+  const {filters}=context;
+  const common={...context.base,mode:context.mode,...filters};
+  const tradesLink=action('All trades',url({...common,view:'trades',date:null}));
+  const dailyLink=action('By day',url({...common,view:'by-day',date:null}));
+  const coverageLink=action('Games and coverage',url({...common,...context.gameFilters,
+    view:'daily',date:context.date,ledger_view:'games'}));
   tradesLink.dataset.tradeTab='';
   dailyLink.dataset.tradeTab='';
-  (context.allTrades ? tradesLink : context.cumulative ? totalLink : dailyLink).setAttribute('aria-current','page');
-  period.append(totalLink,tradesLink,dailyLink);
+  coverageLink.dataset.tradeTab='';
+  (context.allTrades ? tradesLink : context.games ? coverageLink : dailyLink).setAttribute('aria-current','page');
+  period.append(tradesLink,dailyLink,coverageLink);
   heading.append(period);
   const controls=node('div',undefined,'experiment-controls');
   const changeSelection=override=>{
     const latest=new URLSearchParams(location.search);
     change({...context.base,date:context.day ? latest.get('date') || context.date : undefined,
       variant:latest.get('variant') || context.variant,mode:latest.get('mode') || context.mode,
-      ...(!context.cumulative ? ledgerSelection(latest,context.allTrades ? tradePreferences : ledgerPreferences) : {}),...override});
+      ...ledgerSelection(latest,context.allTrades ? tradePreferences : ledgerPreferences),...override});
   };
   if (visible && context.experiments.length>1) {
     controls.append(field('Experiment',context.experiments.map(item=>[item.id,item.name]),context.campaign,
-      campaign=>change({campaign,view:context.allTrades ? 'trades' : null}), 'experiment-choice'));
+      campaign=>change({campaign,view:context.games ? 'daily' : context.allTrades ? 'trades' : 'by-day',
+        ledger_view:context.games ? 'games' : null}), 'experiment-choice'));
   }
   if (context.day) controls.append(
     field('Game date (Eastern)',dates,context.date,date=>changeSelection({date}),'experiment-date'));
@@ -268,12 +297,17 @@ function showResults(config, visible, context) {
     field('Portfolio',portfolios,context.variant,variant=>changeSelection({variant}),'experiment-portfolio'));
   if (context.sizingModes.length>1) controls.append(field('Sizing',context.sizingModes.map(mode=>[mode,sizingTitle(config,mode)]),
     context.mode,mode=>changeSelection({mode}),'experiment-sizing'));
-  const refresh=node('button','Refresh results');
-  refresh.type='button';
-  refresh.onclick=()=>render({keepComparison:true});
-  controls.append(refresh);
-  if (visible) controls.append(action('Edit experiment',url({...context.base,view:'revise'})));
+  if (context.day && !context.games) controls.append(link('All dates',dailyLink.href));
+  const activeRules=node('div',undefined,'experiment-active-rules');
+  const selectionRule=config.portfolio_rule===mainFirstRule.id ? 'One trade per game, main lines first' : 'All qualifying bets';
+  activeRules.append(node('p',[
+    selectionRule,config.minimum_ev != null && `EV ≥${pct(config.minimum_ev)}`,
+    config.minimum_stake_usd != null && `Stake ≥${money(config.minimum_stake_usd)}`,
+    sizingTitle(config,context.mode),
+  ].filter(Boolean).join(' · '),'workspace-caption'));
+  if (visible) activeRules.append(link('Edit experiment',url({...context.base,view:'revise'})));
   panel.append(controls);
+  panel.append(activeRules);
   const body=node('div');
   body.id='experiment-comparison-body';
   panel.append(body);
@@ -285,6 +319,8 @@ function ledgerNavigation(mount, params, paint) {
     embedded:true,params,href:overrides=>url({...params,...overrides}),
     go:overrides=>{
       const focus=document.activeElement?.dataset.workbenchFocus;
+      const moreFilters=mount.querySelector('.result-more-filters');
+      const expanded=moreFilters?.open;
       const next={...params,...overrides};
       history.pushState(history.state,'',url(next));
       for (const tab of root.querySelectorAll('[data-trade-tab]')) {
@@ -296,6 +332,10 @@ function ledgerNavigation(mount, params, paint) {
         tab.href=target.href;
       }
       paint(next);
+      if (expanded) {
+        const nextFilters=mount.querySelector('.result-more-filters');
+        if (nextFilters) nextFilters.open=true;
+      }
       if (focus) Array.from(mount.querySelectorAll('[data-workbench-focus]'))
         .find(element=>element.dataset.workbenchFocus===focus)?.focus({preventScroll:true});
     },
@@ -304,16 +344,58 @@ function ledgerNavigation(mount, params, paint) {
 
 function paintCampaignTrades(body, trades, context, query) {
   const section=node('section',undefined,'experiment-detail');
-  body.replaceChildren(section);
+  const historyPanel=campaignEvidence(context.config,context,context.sizingModes.map(mode=>({mode})));
+  body.replaceChildren(section,historyPanel);
+  const readEvidence=new Map();
   function paint(params) {
     const navigation=ledgerNavigation(section,params,paint);
-    const filters=ledgerSelection(new URLSearchParams(present(params)),tradePreferences);
-    const dailyHref=trade=>url({...context.base,view:null,mode:context.mode,date:trade.game_date,run:trade.run_id,
-      ...filters,
-      ...(trade.result_id ? {trade:trade.id,result:trade.result_id} : {ticket:trade.id})});
-    section.replaceChildren(campaignTradeLedger(trades,context.config,navigation,dailyHref));
+    const filters=ledgerSelection(new URLSearchParams(present(params)),tradePreferences.filter(key=>key!=='trade_page'));
+    const dailyHref=trade=>url({...context.base,view:'daily',mode:context.mode,date:trade.game_date,run:trade.run_id,...filters,
+      ...(trade.result_id ? {trade:trade.id,result:trade.result_id} : {ticket:trade.id,snapshot:'1'})});
+    const campaignInspect=(container,trade)=>{
+      const path=runAPI(trade.run_id);
+      const frozen=node('div');
+      const grade=node('div');
+      const details=node('details');
+      details.append(node('summary','History & evidence'),frozen);
+      container.append(grade,details);
+      frozen.append(node('p','Reading frozen trade evidence…'));
+      const read=address=>{
+        if (!readEvidence.has(address)) readEvidence.set(address,readJSON(address).catch(error=>{
+          readEvidence.delete(address);
+          throw error;
+        }));
+        return readEvidence.get(address);
+      };
+      read(path+'/tickets/'+encodeURIComponent(trade.id)).then(evidence=>{
+        if (!container.isConnected) return;
+        renderSavedEvidence(frozen,evidence,{ticket:true,resultReview:true,showPortfolioSelection:true,exportLink:path+'?export=1',
+          gameLink:game=>detailLink(new URL(dailyHref(trade),location.href).searchParams,{ticket:null,evidence:game})});
+        if (!trade.result_id) campaignTradeEvidence(grade,details,trade,null,context.variant,evidence.evidence?.checkpoint);
+      }).catch(error=>{if (container.isConnected) frozen.replaceChildren(node('p',error.message));});
+      if (trade.result_id) {
+        const resultQuery=new URLSearchParams({variant:context.variant,version:trade.result_id});
+        read(path+'/results?'+resultQuery).then(value=>{
+          if (container.isConnected) campaignTradeEvidence(grade,details,trade,value.report,context.variant);
+        }).catch(error=>{if (container.isConnected) grade.replaceChildren(node('p',error.message));});
+      }
+    };
+    const ledger=campaignTradeLedger(trades,context.config,navigation,{dailyHref,campaignInspect});
+    section.replaceChildren(ledger.section);
+    const bookmark=address=>{
+      const cleaned=new URL(address,location.href);
+      cleaned.searchParams.delete('trade');
+      cleaned.searchParams.sort();
+      return cleaned.pathname+cleaned.search;
+    };
+    const compatible=new Set([bookmark(location.href),bookmark(navigation.href({trade:null}))]);
+    syncTradeBookmark=()=>{
+      const current=new URL(location.href);
+      const trade=current.searchParams.get('trade');
+      return compatible.has(bookmark(current.href)) && ledger.select(trade);
+    };
   }
-  paint({...context.base,mode:context.mode,...ledgerSelection(query,tradePreferences),trade_page:query.get('trade_page')});
+  paint({...context.base,mode:context.mode,...ledgerSelection(query,tradePreferences),trade:query.get('trade')});
 }
 
 function paintDay(body,data,config,context,detail) {
@@ -322,14 +404,15 @@ function paintDay(body,data,config,context,detail) {
   body.replaceChildren(detail || node('p',context.visible ? dayStatus(day) : 'No saved snapshot','workspace-caption'));
   const totals=node('details',undefined,'experiment-totals');
   totals.append(node('summary','Daily totals'),comparisonTable(data,context),node('p',metricBasis,'workspace-caption'));
-  const history=node('details');
-  history.append(node('summary','Saved snapshots'));
+  const history=campaignEvidence(config,context);
+  const snapshotsPanel=node('details');
+  snapshotsPanel.append(node('summary','Saved snapshots'));
   for (const mode of sizingModes) {
     const odds=oddsBreakdown(data.modes[mode].selection?.odds_buckets,sizingModes.length>1 ? sizingTitle(config,mode) : '');
     if (odds) totals.append(odds);
-    if (sizingModes.length>1) history.append(node('h3',sizingTitle(config,mode)));
-    const snapshots=data.modes[mode].snapshots;
-    if (!snapshots.length) history.append(node('p','No snapshot published yet.'));
+    if (sizingModes.length>1) snapshotsPanel.append(node('h3',sizingTitle(config,mode)));
+    const snapshots=data.modes[mode].snapshots || [];
+    if (!snapshots.length) snapshotsPanel.append(node('p','No snapshot published yet.'));
     else {
       const list=node('ul');
       for (const snapshot of snapshots) {
@@ -337,16 +420,18 @@ function paintDay(body,data,config,context,detail) {
         item.append(link(time(snapshot.recorded_at),url({...context.base,mode,run:snapshot.id,snapshot:'1'})));
         list.append(item);
       }
-      history.append(list);
+      snapshotsPanel.append(list);
     }
   }
-  body.append(totals,campaignRules(config,context),history);
+  history.append(snapshotsPanel);
+  body.append(totals,history);
   if (sizingModes.length>1) {
     const destination=campaignAPI(context.campaign)+'/days/'+context.date+'?'+new URLSearchParams({
       variant:context.variant,export:'1',
     });
-    body.append(action('Export comparison',destination));
+    history.querySelector('.workspace-links').append(action('Export comparison',destination));
   }
+  return history;
 }
 
 function detailLink(query,changes) {
@@ -379,7 +464,7 @@ async function sourceDialog(id, query, version) {
   }
 }
 
-async function openDetail(mount,selected,query,context,version) {
+async function openDetail(mount,selected,query,context,version,historyPanel=null) {
   const id=selected.run.id;
   const {config,date,variant,campaign}=context;
   const mode=selected.definition.sizing_mode || selected.report.policy.sizing_mode || 'kelly';
@@ -410,7 +495,7 @@ async function openDetail(mount,selected,query,context,version) {
     const details=node('details',undefined,'workspace-panel');
     details.append(node('summary','Original selection and capture evidence'));
     details.addEventListener('toggle',()=>{if (details.open && details.childElementCount===1) audit(details);});
-    mount.append(details);
+    (historyPanel || mount).append(details);
     const tickets=new Map();
     const inspect=(container, trade, loaded)=>{
       container.append(node('p','Reading frozen quote and sizing calculation…'));
@@ -437,7 +522,7 @@ async function openDetail(mount,selected,query,context,version) {
     if (version!==requestVersion) return;
     function paint(params) {
       const navigation={
-        ...ledgerNavigation(resultRoot,params,paint),variant,mode,config,
+        ...ledgerNavigation(resultRoot,params,paint),variant,mode,config,historyPanel,topCoverage:Boolean(campaign),
         pinned:Boolean(params.result),showSnapshotOdds:!campaign || savedSnapshot || Boolean(params.result),
         game:params.game,trade:params.trade,
         filter:['traded','zero','missing','missing_results','unresolved','frozen','reconstructed'].includes(params.filter) ? params.filter : 'all',
@@ -479,6 +564,7 @@ async function showArchive(selected,query,version) {
 
 async function render({keepComparison=false,focus=null}={}) {
   const version=++requestVersion;
+  syncTradeBookmark=null;
   let query=new URLSearchParams(location.search);
   const isCreate=['create','schedule'].includes(query.get('view'));
   if (source.open) source.close();
@@ -537,10 +623,13 @@ async function render({keepComparison=false,focus=null}={}) {
     const date=dates.includes(wanted) ? wanted : defaultDate(config);
     const variant=configuredPortfolio(config,query.get('variant'));
     const detailRequested=wantsDetails(query);
-    const allTrades=query.get('view')==='trades';
-    const day=!allTrades && Boolean(detailRequested || query.get('view')==='daily' || (wanted && query.get('view')!=='weekly'));
+    const view=query.get('view');
+    const allTrades=view==='trades' || (!detailRequested && !wanted && !dayViews.includes(view));
+    const day=!allTrades && Boolean(detailRequested || view==='daily' || (wanted && !['weekly','by-day'].includes(view)));
     const cumulative=!day && !allTrades;
-    const base={campaign:id,date:day ? date : undefined,variant,view:allTrades ? 'trades' : undefined,...(!known ? {snapshot:'1'} : {})};
+    const games=day && (query.get('ledger_view')==='games' || query.has('game') || query.has('filter'));
+    const base={campaign:id,date:day ? date : undefined,variant,
+      view:allTrades ? 'trades' : day ? 'daily' : 'by-day',...(!known ? {snapshot:'1'} : {})};
     if (known && query.get('view')==='revise') {
       root.replaceChildren();
       setStatus();
@@ -556,7 +645,8 @@ async function render({keepComparison=false,focus=null}={}) {
     const currentHref=successor && !redirected ? url(currentDestination(successor,query,wanted)) : null;
     const redirect=history.state?.experimentRedirect;
     const archiveHref=redirect?.campaign===id ? redirect.archiveHref : null;
-    const context={base,campaign:id,date,variant,config,mode,sizingModes,day,cumulative,allTrades,experiments:campaigns,
+    const context={base,campaign:id,date,variant,config,mode,sizingModes,day,cumulative,games,allTrades,experiments:campaigns,
+      filters:ledgerSelection(query,tradePreferences),gameFilters:ledgerSelection(query,['game_sport','filter']),
       visible:Boolean(known),archiveHref,currentHref};
     let body=keepComparison && !redirected && root.querySelector('#experiment-comparison-body');
     if (!body) {
@@ -585,7 +675,7 @@ async function render({keepComparison=false,focus=null}={}) {
     if (version!==requestVersion) return;
     context.latestRun=data.modes[selected?.definition.sizing_mode || mode]?.run_id;
     const detail=selected || context.latestRun ? node('section',undefined,'experiment-detail') : null;
-    paintDay(body,data,config,context,detail);
+    const historyPanel=paintDay(body,data,config,context,detail);
     setStatus();
     if (!selected && context.latestRun) selected=await readJSON(runAPI(context.latestRun));
     if (version!==requestVersion || !selected) return;
@@ -593,11 +683,11 @@ async function render({keepComparison=false,focus=null}={}) {
       setStatus('The saved run belongs to another experiment.');
       return;
     }
-    await openDetail(detail,selected,query,context,version);
+    await openDetail(detail,selected,query,context,version,historyPanel);
   } catch(error) {
     if (version===requestVersion) setStatus(error.message);
   }
 }
 
-window.addEventListener('popstate',()=>render());
+window.addEventListener('popstate',()=>{if (!syncTradeBookmark?.()) render();});
 render();

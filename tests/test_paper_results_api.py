@@ -4,14 +4,16 @@ import asyncio
 from contextlib import nullcontext
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
 from app.dashboard.request_guard import dashboard_guard
 from app.dashboard.research_workspace_api import BASE, mount
-from app.dashboard.workspace_routes import compatibility_middleware, mount as mount_workspace
+from app.dashboard.workspace_routes import compatibility_middleware, destination, mount as mount_workspace
 from app.storage.store import hashed
 
 
@@ -98,6 +100,22 @@ def test_result_status_history_and_exact_variant_exports():
                 assert statements.count("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY") == 7
 
     asyncio.run(check())
+
+
+def test_exact_game_evidence_redirect_keeps_pinned_trade_return():
+    experiment = "/experiments?" + urlencode(dict(
+        campaign="saved-campaign", date="2026-11-25", run="exact-run",
+        result="archive-result", view="trades", trade="exact-ticket",
+        trade_sport="NHL", trade_page=2,
+    ))
+    request = SimpleNamespace(path="/data/", query=dict(
+        evidence="checkpoints", tracked_game="captured-game", back=experiment,
+    ))
+    redirected = urlsplit(destination(request))
+    assert redirected.path == "/data"
+    assert parse_qs(redirected.query) == dict(
+        evidence=["checkpoints"], tracked_game=["captured-game"], back=[experiment],
+    )
 
 
 def test_direct_paper_game_and_trade_links_open_experiments():

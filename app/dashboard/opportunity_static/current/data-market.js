@@ -32,7 +32,7 @@ export function renderMarket(root,value,{positive=false,includeAlternates=false,
  if(row.reason)root.append(node('p',readable(row.reason),'experiment-notice'));
  const related=node('div',undefined,'data-browser-links');
  for(const [title,params] of [['Open original odds pull',{evidence:'pulls',pull:row.pull_id}],
-   ['Find sporting result',{evidence:'populations',event_id:row.event_id}]]){
+   ['Captures',{evidence:'checkpoints',event_id:row.event_id}],['Game scores',{evidence:'populations',event_id:row.event_id}]]){
   if(Object.values(params).some(value=>!value))continue;
   const anchor=node('a',title,'research-button');anchor.href='/data?'+new URLSearchParams(params);related.append(anchor);
  }
@@ -60,6 +60,12 @@ export function renderMarketInput(root,value){
  root.append(node('p','Stored screening calculation. Price availability, exact contract and settlement limitations remain applicable.'));
  const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'})),download=node('a','Export this exact offer & supporting calculation','research-button');download.href=url;download.download='predict-market-offer.json';root.append(download);
  const details=node('details',undefined,'market-evidence');details.append(node('summary','Normalized record and calculation evidence'),node('pre',JSON.stringify(value,null,2)));root.append(details);
- if(row.pull_id){const anchor=node('a','Open original odds pull','research-button');anchor.href='/data?'+new URLSearchParams({evidence:'pulls',pull:row.pull_id});root.append(anchor);}
+ const related=node('div',undefined,'data-browser-links');
+ for(const [title,params] of [['Open original odds pull',{evidence:'pulls',pull:row.pull_id}],
+   ['Captures',{evidence:'checkpoints',event_id:row.event_id}]]){
+  if(Object.values(params).some(item=>!item))continue;
+  const anchor=node('a',title,'research-button');anchor.href='/data?'+new URLSearchParams(params);related.append(anchor);
+ }
+ if(related.childElementCount)root.append(related);
  return ()=>URL.revokeObjectURL(url);
 }

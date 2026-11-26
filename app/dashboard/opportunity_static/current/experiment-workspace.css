@@ -8,6 +8,7 @@
 }
 #experiments-main > .board-heading h1 { margin:0; }
 .experiment-comparison { margin-block-end:.75rem; padding:.65rem .8rem; }
+.experiment-comparison .experiment-heading { display:grid; gap:.45rem; }
 .experiment-comparison .experiment-heading h2 { margin:0; }
 .experiment-comparison .experiment-heading .workspace-variant { gap:.25rem; }
 .experiment-comparison .experiment-heading a[aria-current] {
@@ -23,7 +24,29 @@
   margin-block:.55rem;
 }
 .experiment-controls label { min-width:0; display:grid; gap:.15rem; }
-.experiment-controls label:has(#experiment-choice) { flex:0 1 21rem; }
+.experiment-controls:empty { display:none; }
+.experiment-controls label:has(#experiment-choice) { flex:0 1 20rem; }
+.experiment-active-rules {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:.2rem .6rem;
+  margin-block:.5rem;
+  font-size:.875rem;
+}
+.experiment-active-rules p { margin:0; }
+.experiment-campaign-pnl {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:.25rem .75rem;
+  font-variant-numeric:tabular-nums;
+  margin-block:.6rem;
+}
+.experiment-campaign-pnl strong { font-size:1.35rem; }
+.experiment-history { border-top:1px solid var(--line); padding-block:.45rem; }
+.experiment-history > summary,.result-more-filters > summary { cursor:pointer; }
 .experiment-controls :is(select,button,.research-button),
 .experiment-comparison .experiment-heading .research-button { min-height:36px; padding:.3rem .55rem; font-size:.85rem; }
 .experiment-comparison table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -37,13 +60,23 @@
 .experiment-version-notice p { margin: 0; }
 .experiment-detail { min-width:0; margin-block:.5rem; }
 #experiments-main .experiment-detail .result-workbench { margin-block:.6rem; }
-#experiments-main .experiment-detail .result-ledger-heading { margin-bottom:.4rem; }
+#experiments-main .experiment-detail .result-ledger-heading { justify-content:flex-start; margin-bottom:.4rem; }
 #experiments-main .experiment-detail .result-ledger-subset { margin-bottom:.4rem; }
 #experiments-main .experiment-detail .result-ledger-controls { gap:.35rem .55rem; }
 #experiments-main .experiment-detail .result-ledger-controls :is(select,button) {
   min-height:36px;
   padding:.3rem .45rem;
 }
+.experiment-comparison .result-more-filters { margin:0; }
+.result-more-filters > summary { padding:.3rem 0; }
+.result-more-filters[open] { flex-basis:100%; }
+.result-ledger-pagination label { display:flex; align-items:center; gap:.35rem; }
+.result-ledger-pagination select { font:inherit; min-height:36px; }
+.result-inline-trade { white-space:normal; text-align:left; padding:.35rem .5rem; }
+.result-inline-trade > header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.35rem; }
+.result-inline-trade > header h4 { margin:0; }
+.result-inline-trade :is(pre,dd) { overflow-wrap:anywhere; white-space:pre-wrap; }
+#experiments-main .result-campaign-inspection { background:var(--p-alternate); }
 #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) :is(th,td) {
   padding:.35rem .5rem;
   vertical-align:middle;
@@ -61,40 +94,49 @@
 .campaign-handoff .campaign-check { grid-column: 1 / -1; }
 
 @media (max-width: 760px) {
-  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) {
+  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) {
     overflow-x:auto;
   }
-  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) table {
+  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) table {
     display:table;
     min-width:38rem;
   }
   #experiments-main .experiment-date-table table { min-width:30rem; }
-  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) thead {
+  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) thead {
     display:table-header-group;
     position:static;
     width:auto;
     height:auto;
     clip-path:none;
   }
-  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tbody {
+  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tbody {
     display:table-row-group;
   }
-  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tr {
+  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tr {
     display:table-row;
     width:auto;
     border:0;
     margin:0;
   }
-  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td {
+  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td {
     display:table-cell;
     width:auto;
     border-bottom:1px solid var(--line);
   }
-  #experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td::before {
+  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td::before {
     content:none;
   }
 }
+@media (max-width:740px) {
+  #experiments-main .result-ledger-table .workspace-table td { padding:0; text-align:left; }
+  #experiments-main .result-ledger-table .workspace-table td:first-child { min-width:0; }
+  #experiments-main .result-ledger-table tbody tr { gap:.35rem .45rem; padding:.55rem; }
+  #experiments-main .result-ledger-heading > .result-ledger-controls { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; }
+  #experiments-main .result-ledger-controls label { min-width:0; }
+  #experiments-main .result-campaign-inspection td { grid-column:1/-1; }
+}
 @media (max-width: 480px) {
   .experiment-comparison { padding-inline:.55rem; }
-  .experiment-controls label:has(#experiment-choice) { flex-basis:100%; }
+  .experiment-controls label:has(#experiment-choice) { max-width:100%; }
+  .experiment-active-rules p { font-size:.8125rem; }
 }

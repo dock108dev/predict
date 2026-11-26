@@ -31,6 +31,19 @@ def like(term):
     return '%' + term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
 
 
+def tracked_game_query(db, view, query):
+    identity = query.get('tracked_game')
+    if not identity:
+        return query
+    if view == 'results':
+        return dict(query, id=identity) if query.get('id', identity) == identity else None
+    game = db.execute("""SELECT source_event_id FROM public.ev_experiment_game
+        WHERE id=%s AND provider='sportsgameodds'""", (identity,)).fetchone()
+    if not game or query.get('event_id', game['source_event_id']) != game['source_event_id']:
+        return None
+    return dict(query, event_id=game['source_event_id'])
+
+
 def pull_page(db, query):
     where, params = [], []
     scoped, scope_params = [], []
@@ -294,9 +307,9 @@ def mount(app, connector=connect):
 
         view = request.match_info['view']
         fields = {
-            'pulls': FILTERS | {'offset'},
-            'pull': FILTERS | {'pull', 'offset', 'receipt_offset'},
-            'results': FILTERS - {'original_bookmaker_id', 'family'} | {'offset', 'id'},
+            'pulls': FILTERS | {'tracked_game', 'offset'},
+            'pull': FILTERS | {'tracked_game', 'pull', 'offset', 'receipt_offset'},
+            'results': FILTERS - {'original_bookmaker_id', 'family'} | {'tracked_game', 'offset', 'id'},
             'original': FILTERS | {'id', 'offset', 'download'},
         }[view]
         query = dict(request.query)
@@ -319,6 +332,8 @@ def mount(app, connector=connect):
             raise PublicRequestError('Select a recorded pull.')
         if view == 'original' and not re.fullmatch(r'[0-9a-f]{64}', query.get('id', '')):
             raise PublicRequestError('Select an original receipt identity.')
+        if 'tracked_game' in query and not re.fullmatch(r'[0-9a-f]{64}', query['tracked_game']):
+            raise PublicRequestError('Select a retained tracked game identity.')
         if query.get('download') not in (None, '1'):
             raise PublicRequestError('Invalid original response download.')
 
@@ -328,7 +343,12 @@ def mount(app, connector=connect):
             with connector() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute("SET LOCAL statement_timeout='10s'")
-                return handlers[view](db, query)
+                scoped = tracked_game_query(db, view, query)
+                if scoped is None:
+                    if view == 'pull':
+                        raise web.HTTPNotFound(reason='This tracked game is unavailable.')
+                    return entry_page([], query['offset'])
+                return handlers[view](db, scoped)
 
         if gate.locked():
             raise web.HTTPTooManyRequests(reason='Stored reads are busy. Retry shortly.')

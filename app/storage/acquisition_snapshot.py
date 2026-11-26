@@ -160,7 +160,9 @@ def compact_snapshot(snapshot, pull_id, family=None):
             quote={key:record['quote'][key] for key in ('venue','state','times')},
             comparison_source_metadata={key:meta[key] for key in ('provider_bookmaker_id','acquisition') if key in meta})
         from .market_board import offer
-        display = offer(snapshot,value,pull_id)
+        display = offer(snapshot,value,pull_id,for_projection=True)
+        if outcome_key := display.pop('dashboard_outcome_key', None):
+            item['dashboard_outcome_key'] = outcome_key
         for key in ('normalized_record','calculation_payload','fee_input','source_input'):
             display.pop(key,None)
         if display.get('reference'):

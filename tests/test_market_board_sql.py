@@ -23,6 +23,7 @@ from app.collection.sportsgameodds_transport import ODD_IDS
 AT = '2026-11-22T22:00:02Z'
 SCOPE = dict(eventIDs='source-game',bookmakerID=','.join(REQUEST_BOOKS),
     oddID=','.join(ODD_IDS),includeAltLines=True)
+CBB_GAME = 'South Carolina Gamecocks at Arizona State Sun Devils'
 
 
 def captured_offer(*, ev='1/10', line='-3', venue='kalshi', main='main', family='spread', side='home'):
@@ -38,15 +39,68 @@ def captured_offer(*, ev='1/10', line='-3', venue='kalshi', main='main', family=
     return value
 
 
+def cbb_offers():
+    return [captured_offer(family=family, side=side, line=line, venue=venue, ev=ev)
+            for family, side, line, venues in (
+                ('moneyline', 'home', None, [('novig', '1/5'), ('kalshi', '1/10')]),
+                ('spread', 'home', '-3.5', [('kalshi', '1/12'), ('novig', '1/14')]),
+                ('total', 'over', '152.5', [('prophetx', '1/16'), ('kalshi', '1/18')]),
+            ) for venue, ev in venues]
+
+
+def test_dashboard_exact_groups_survive_legacy_projections_without_merging_other_contracts():
+    from app.comparison.acquisition import validate
+
+    offers = cbb_offers()
+    different_line = captured_offer(line='-4.5', venue='novig', ev='1/30')
+    different_period = captured_offer(line='-3.5', venue='novig', ev='1/31')
+    different_period['record']['market_identity']['period'] = 'first_half'
+    different_rules = captured_offer(line='-3.5', venue='novig', ev='1/32')
+    different_rules['record']['market_identity']['rules'] = 'regulation_only'
+    snapshot = dict(event=dict(title=CBB_GAME), offers=[*offers,different_line,different_period,different_rules])
+    pull = 'south-carolina-arizona-state-pull'
+    provenance = dict(pull_id=pull,attempt_id='accepted:'+pull,
+        receipt_sha256='fixture-receipt:'+pull,received_at=AT)
+    for item in snapshot['offers']:
+        item['record']['comparison_source_metadata']['acquisition'] = dict(provenance)
+        item['calculation_payload']['reference']['required_input_prices'] = [
+            dict(acquisition=dict(provenance),received_at=AT) for _ in range(4)]
+        item['calculation_payload']['acquisition'] = validate([dict(provenance) for _ in range(5)])
+    compact = acquisition.compact_snapshot(snapshot, pull)
+    candidates = [dict(quote=item['display_offer'], outcome_key=None, game_id='canonical-cbb-game',
+                      event_id='source-game', game=CBB_GAME, league='NCAAB', eligible_until=AT, display={},
+                      start_at=AT, family=item['display_offer']['family'], period=item['display_offer']['period'],
+                      pull_id=pull) for item in compact['offers']]
+    db = MagicMock()
+    db.execute.return_value.fetchone.return_value = dict(entries=candidates[::-1], price_available=True,
+        inputs_unavailable=False, pull_incomplete=False, expired_positive=False)
+    at = stamp(AT)
+    options = dict(at=at, until=at + timedelta(hours=24), freshness_seconds=1800, sport='NCAAB')
+    with patch('app.comparison.fee_mode.read', return_value=dict(enabled=False)), \
+            patch('app.storage.acquisition_snapshot.read_snapshot', return_value=snapshot) as read:
+        legacy = market_board.dashboard(db, **options)
+        read.assert_called_once_with(db, pull)
+        read.reset_mock()
+        for candidate, item in zip(candidates, compact['offers']):
+            candidate['outcome_key'] = item['dashboard_outcome_key']
+        assert legacy == market_board.dashboard(db, **options)
+        paged = market_board.dashboard(db, **options, limit=2, offset=1)
+        read.assert_not_called()
+    assert legacy['total'] == paged['total'] == 6
+    assert [row['venue'] for row in legacy['rows'][:3]] == ['novig', 'kalshi', 'prophetx']
+    assert [len(row['other_quotes']) for row in legacy['rows']] == [1, 1, 1, 0, 0, 0]
+    assert paged['rows'] == legacy['rows'][1:3]
+
+
 @skipUnless(SOCKET, 'Disposable PostgreSQL required')
 class MarketBoardSQL(LatestBoardFixture):
     async def asyncSetUp(self):
         with self.connect() as db:
             db.execute('TRUNCATE public.market_pull CASCADE')
 
-    def start(self, db, *, scope=None):
-        return acquisition.start(db,scope or SCOPE,at=stamp(AT),event=dict(title='Away at Home',
-            league='NBA',starts_at='2026-11-23T01:00:00Z'))
+    def start(self, db, *, scope=None, game='Away at Home', league='NBA'):
+        return acquisition.start(db,scope or SCOPE,at=stamp(AT),event=dict(title=game,
+            league=league,starts_at='2026-11-23T01:00:00Z'))
 
     def assert_exact_headline(self, expected, actual):
         # List rows carry a compact projection; exact detail restores the full
@@ -58,7 +112,8 @@ class MarketBoardSQL(LatestBoardFixture):
             self.assertEqual((expected.get('reference') or {}).get(key),
                              (actual.get('reference') or {}).get(key),key)
 
-    def publish(self, db, pull_id, *offers, state='complete', transform=None, canonical_game_id=None):
+    def publish(self, db, pull_id, *offers, state='complete', transform=None, canonical_game_id=None,
+                game='Away at Home', league='NBA', legacy_projection=False):
         from app.comparison.acquisition import validate
 
         provenance = dict(pull_id=pull_id,attempt_id='accepted:'+pull_id,
@@ -74,13 +129,16 @@ class MarketBoardSQL(LatestBoardFixture):
             item['calculation_payload']['acquisition'] = validate([dict(provenance) for _ in range(5)])
             if transform:
                 transform(item)
-        snapshot = dict(event=dict(title='Away at Home',competition='NBA',
+        snapshot = dict(event=dict(title=game,competition=league,
             scheduled_start='2026-11-23T01:00:00Z'),offers=list(offers),references=[],raw_quotes=[],
             times=dict(received_at=AT,captured_at=AT),fee_mode=dict(enabled=False))
         if canonical_game_id:
             snapshot['canonical_game_id'] = canonical_game_id
         acquisition.store_evidence(db,pull_id,snapshot)
         projection = acquisition.compact_snapshot(snapshot,pull_id)
+        if legacy_projection:
+            for value in projection['offers']:
+                value.pop('dashboard_outcome_key')
         for family in acquisition.FAMILIES:
             selected = dict(projection,offers=[value for value in projection['offers']
                 if value['record']['market_identity']['family']==family])
@@ -155,12 +213,14 @@ class MarketBoardSQL(LatestBoardFixture):
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 first = market_board.dashboard(db, **options, limit=1)
                 second = market_board.dashboard(db, **options, offset=1, limit=1)
-            self.assertEqual(first['total'], 2)
+            self.assertEqual(first['total'], 1)
             high, = first['rows']
-            low, = second['rows']
-            self.assertEqual((high['venue'], low['venue']), ('novig', 'kalshi'))
+            self.assertEqual(second['rows'], [])
+            low, negative = high['other_quotes']
+            self.assertEqual((high['venue'], low['venue'], negative['venue']), ('novig', 'kalshi', 'prophetx'))
             filtered = market_board.dashboard(db, **options, sport='NBA', family='spread', venue='kalshi', limit=1)
-            self.assertEqual((filtered['total'], filtered['rows']), (1, [low]))
+            self.assertEqual((filtered['total'], filtered['rows']),
+                (1, [dict(low, bet_id=high['bet_id'], other_quotes=[])]))
             self.assertEqual(market_board.dashboard(db, **options, sport='NHL')['total'], 0)
             self.assertEqual(market_board.dashboard(db, **options, family='total')['total'], 0)
             self.assertEqual(market_board.dashboard(db, **options, venue='prophetx')['total'], 0)
@@ -206,6 +266,37 @@ class MarketBoardSQL(LatestBoardFixture):
             pending = market_board.dashboard(db, **options)
             self.assertEqual(pending['total'], 0)
             self.assertTrue(pending['availability']['inputs_unavailable'])
+
+    async def test_dashboard_south_carolina_arizona_state_six_quotes_for_three_bets(self):
+        self.assert_cbb_grouped_dashboard(legacy_projection=False)
+
+    async def test_dashboard_south_carolina_arizona_state_groups_legacy_projections(self):
+        self.assert_cbb_grouped_dashboard(legacy_projection=True)
+
+    def assert_cbb_grouped_dashboard(self, *, legacy_projection):
+        from app.comparison import fee_mode
+
+        at = stamp(AT)
+        options = dict(at=at, until=at + timedelta(hours=24), freshness_seconds=1800, sport='NCAAB')
+        with self.connect() as db:
+            fee_mode.set_enabled(db, False)
+            pull = self.start(db, game=CBB_GAME, league='NCAAB')
+            self.publish(db, pull, *cbb_offers(), game=CBB_GAME, league='NCAAB',
+                         legacy_projection=legacy_projection)
+            board = market_board.dashboard(db, **options)
+            self.assertEqual(board['total'], 3)
+            self.assertEqual([row['family'] for row in board['rows']], ['moneyline', 'spread', 'total'])
+            self.assertEqual([row['venue'] for row in board['rows']], ['novig', 'kalshi', 'prophetx'])
+            self.assertEqual([len(row['other_quotes']) for row in board['rows']], [1, 1, 1])
+            self.assertEqual({row['game'] for row in board['rows']}, {CBB_GAME})
+            self.assertEqual(market_board.dashboard(db, **options, limit=1, offset=1)['rows'], board['rows'][1:2])
+            filtered = market_board.dashboard(db, **options, venue='kalshi', limit=1)
+            self.assertEqual((filtered['total'], filtered['rows'][0]['venue']), (3, 'kalshi'))
+            self.assertEqual(filtered['rows'][0]['other_quotes'], [])
+            saved = board['rows'][0]['other_quotes'][0]
+            evidence = market_board.detail(db, market_id=saved['market_id'], pull_id=saved['pull_id'],
+                                           offer_id=saved['id'], revision=saved['revision'])
+            self.assertEqual(evidence['selected_offer']['venue'], 'kalshi')
 
     async def test_delayed_old_completion_cannot_overwrite_new_complete_missing_inputs(self):
         with self.connect() as db:

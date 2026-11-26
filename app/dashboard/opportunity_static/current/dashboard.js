@@ -7,7 +7,6 @@ import {dateTime, percent, readable, selection} from './workspace-format.js';
 const byId = id => document.getElementById(id);
 const rows = byId('dashboard-rows');
 const status = byId('dashboard-status');
-const notice = byId('dashboard-notice');
 const reload = byId('dashboard-reload');
 const previous = byId('dashboard-previous');
 const next = byId('dashboard-next');
@@ -24,7 +23,7 @@ let snapshot;
 let read;
 let refreshTimer;
 let closed = false;
-let selectedId;
+let selectedQuote;
 let evidenceRead;
 
 function readLocation() {
@@ -74,24 +73,52 @@ function bet(row) {
   return selection(row);
 }
 
-function offerRow(row) {
-  const tr = node('tr');
-  tr.dataset.quote = row.id;
-  tr.setAttribute('role', 'row');
-  const button = node('button', bet(row), 'dashboard-bet');
+const quoteKey = row => `${row.pull_id}:${row.id}`;
+const current = row => Date.parse(row.eligible_until) > Date.now();
+const ev = row => row.display.net_ev || percent(row.calculation.net_ev_percent);
+
+function evidenceButton(row, label) {
+  const button = node('button', label, 'dashboard-bet');
   button.type = 'button';
+  button.dataset.quote = quoteKey(row);
   button.setAttribute('aria-haspopup', 'dialog');
   button.setAttribute('aria-label', `${bet(row)} · ${row.game} · ${bookName(row.venue)} · View evidence`);
   button.onclick = () => inspect(row);
+  return button;
+}
+
+function otherVenues(row, expanded) {
+  const quotes = (row.other_quotes || []).filter(current);
+  if (!quotes.length) return '';
+  const list = node('ul');
+  for (const quote of quotes) {
+    const item = node('li');
+    const price = quote.display.posted_odds || exactPrice(quote);
+    item.append(evidenceButton(quote, bookName(quote.venue)), node('span', `${price} · ${ev(quote)} EV`),
+      node('small', `Fair ${quote.display.fair_odds || 'odds unavailable'} · `));
+    item.lastChild.append(ageNode(quote.times?.source_at));
+    list.append(item);
+  }
+  const details = node('details', undefined, 'dashboard-other-venues');
+  details.open = expanded;
+  details.append(node('summary', `${quotes.length} other ${quotes.length === 1 ? 'quote' : 'quotes'}`), list);
+  return details;
+}
+
+function offerRow(row, expanded) {
+  const tr = node('tr');
+  tr.dataset.bet = row.bet_id || row.id;
+  tr.setAttribute('role', 'row');
   tr.onclick = event => {
-    if (!event.target.closest('button,a')) inspect(row);
+    if (!event.target.closest('button,a,details')) inspect(row);
   };
   cell(tr, 'Game', node('strong', row.game), node('small', `${row.league} · ${dateTime(row.kickoff)}`));
-  cell(tr, 'Bet', button, node('small', readable(row.family)));
-  cell(tr, 'Venue', bookName(row.venue));
+  const period = row.period && row.period !== 'full_game' ? ` · ${readable(row.period)}` : '';
+  cell(tr, 'Bet', evidenceButton(row, bet(row)), node('small', readable(row.family) + period));
+  cell(tr, 'Best venue', node('strong', bookName(row.venue)), otherVenues(row, expanded));
   cell(tr, 'Posted odds', row.display.posted_odds || exactPrice(row));
   cell(tr, 'Fair odds', row.display.fair_odds || 'Unavailable');
-  cell(tr, 'EV', row.display.net_ev || percent(row.calculation.net_ev_percent));
+  cell(tr, 'EV', ev(row));
   cell(tr, 'Quote age', ageNode(row.times?.source_at));
   return tr;
 }
@@ -116,8 +143,9 @@ function link(text, href) {
 }
 
 function renderEvidence(row, evidence, query) {
-  const stored = evidence.selected_offer?.calculation_payload;
-  if (!stored || evidence.selected_offer.calculation?.status !== 'positive') {
+  const offer = evidence.selected_offer;
+  const stored = offer?.calculation_payload;
+  if (!stored || !['positive', 'negative', 'zero'].includes(offer.calculation?.status)) {
     throw Error('Exact calculation evidence unavailable.');
   }
   const quote = node('section');
@@ -130,6 +158,8 @@ function renderEvidence(row, evidence, query) {
     ['Source timestamp', row.times?.source_at],
     ['Received', row.times?.received_at],
     ['Calculated', stored.calculated_at],
+    ['Period', readable(offer.period || row.period)],
+    ['Settlement rules', offer.normalized_record?.market_identity?.rules],
     ['Fee assumption', stored.fee_mode?.enabled === false ? '$0 modeled fees · fees disabled when calculated' : readable(stored.fee?.classification)],
   ]));
 
@@ -156,7 +186,7 @@ function renderEvidence(row, evidence, query) {
 }
 
 async function inspect(row) {
-  selectedId = row.id;
+  selectedQuote = quoteKey(row);
   byId('dashboard-inspector-title').textContent = `${bet(row)} · ${bookName(row.venue)}`;
   const progress = node('p', 'Reading this exact saved quote…');
   progress.setAttribute('role', 'status');
@@ -181,49 +211,51 @@ async function inspect(row) {
   }
 }
 
-function rowButton(id) {
-  return [...rows.querySelectorAll('tr')].find(row => row.dataset.quote === id)?.querySelector('button');
+function rowButton(key) {
+  return [...rows.querySelectorAll('button[data-quote]')].find(button => button.dataset.quote === key);
 }
 
 inspector.addEventListener('close', () => {
   evidenceRead?.abort();
   evidenceRead = undefined;
-  (rowButton(selectedId) || reload).focus({preventScroll: true});
-  selectedId = undefined;
+  (rowButton(selectedQuote) || reload).focus({preventScroll: true});
+  selectedQuote = undefined;
 });
 
-function dashboardState(packet) {
+function dashboardState(packet, hasRows, expiring) {
   const state = packet.availability || {};
+  if (expiring) return 'Quotes expired. Reading saved prices…';
+  if (hasRows) {
+    if (state.pull_incomplete) return 'Some odds pulls are incomplete.';
+    if (state.expired_positive) return 'Stale or withdrawn quotes are excluded.';
+    if (state.inputs_unavailable) return 'Some bets are missing prices or reference odds.';
+    return '';
+  }
   if (state.expired_positive) return 'No current +EV opportunities. Earlier estimates have stale or withdrawn inputs.';
+  if (state.pull_incomplete) return 'No current +EV opportunities. Some odds pulls are incomplete.';
   if (state.inputs_unavailable) return 'Some calculations are unavailable. Stored prices or references did not pass the current evidence checks.';
+  if (filterNames.some(name => field(name).value)) return 'No opportunities match these filters.';
   if (!state.price_available) return 'No current quotes are available in the collection window.';
   return 'No current +EV opportunities in the evaluated prices.';
 }
 
 function render(packet) {
-  const currentRows = packet.rows.filter(row => Date.parse(row.eligible_until) > Date.now());
-  const focused = document.activeElement?.closest('[data-quote]')?.dataset.quote;
-  rows.replaceChildren(...currentRows.map(offerRow));
+  const currentRows = packet.rows.filter(current);
+  const focused = document.activeElement;
+  const focusedBet = focused?.closest('[data-bet]')?.dataset.bet;
+  const expanded = new Set([...rows.querySelectorAll('details[open]')].map(details => details.closest('tr').dataset.bet));
+  rows.replaceChildren(...currentRows.map(row => offerRow(row, expanded.has(row.bet_id || row.id))));
   byId('dashboard-table').hidden = currentRows.length === 0;
-  if (focused) (rowButton(focused) || reload).focus({preventScroll: true});
-
+  if (focusedBet) {
+    const refreshed = [...rows.children].find(row => row.dataset.bet === focusedBet);
+    const control = focused.dataset.quote ? rowButton(focused.dataset.quote) : refreshed?.querySelector('summary');
+    (control || refreshed?.querySelector('button') || reload).focus({preventScroll: true});
+  }
   const expiring = currentRows.length !== packet.rows.length;
-  const label = packet.total === 1 ? 'opportunity' : 'opportunities';
-  status.textContent = currentRows.length
-    ? `${packet.total.toLocaleString()} ${label}`
-    : expiring ? 'Quotes expired. Reading saved prices…'
-      : filterNames.some(name => field(name).value) ? 'No opportunities match these filters.' : dashboardState(packet);
-  const stale = packet.availability?.expired_positive;
-  const unavailable = packet.availability?.inputs_unavailable;
-  const notes = [];
-  if (currentRows.length && stale) notes.push('Older estimates with expired or withdrawn inputs are excluded.');
-  if ((currentRows.length || stale) && unavailable) notes.push('Some markets have missing or incomplete calculations.');
-  if (currentRows.length && expiring) notes.push('An expired quote was removed while the board updates.');
-  notice.hidden = !notes.length;
-  notice.textContent = notes.join(' ');
-
-  byId('dashboard-pages').hidden = packet.total <= pageSize();
-  byId('dashboard-page').textContent = `${packet.offset + 1}–${packet.offset + packet.rows.length} of ${packet.total}`;
+  status.textContent = dashboardState(packet, currentRows.length, expiring);
+  byId('dashboard-pages').hidden = expiring || !currentRows.length;
+  previous.hidden = next.hidden = packet.total <= pageSize();
+  byId('dashboard-page').textContent = `${packet.offset + 1}–${packet.offset + packet.rows.length} of ${packet.total} bets`;
   previous.disabled = Boolean(read) || offset === 0;
   next.disabled = Boolean(read) || offset + pageSize() >= packet.total;
 }
@@ -232,7 +264,8 @@ function schedule() {
   clearTimeout(refreshTimer);
   if (closed || document.hidden) return;
   const now = Date.now();
-  const deadline = Math.min(...(snapshot?.rows || []).map(row => Date.parse(row.eligible_until)));
+  const deadline = Math.min(...(snapshot?.rows || []).flatMap(row => [row, ...(row.other_quotes || [])])
+    .filter(current).map(row => Date.parse(row.eligible_until)));
   const delay = deadline > now ? Math.min(30000, deadline - now) : 30000;
   refreshTimer = setTimeout(() => {
     if (deadline <= Date.now()) {
@@ -275,7 +308,6 @@ async function refresh() {
     rows.replaceChildren();
     byId('dashboard-table').hidden = true;
     byId('dashboard-pages').hidden = true;
-    notice.hidden = true;
     status.textContent = 'Current opportunities are unavailable. Reload saved prices to try again.';
   } finally {
     if (read === controller && !closed) {
@@ -294,7 +326,7 @@ next.onclick = () => { offset += pageSize(); writeLocation(); refresh(); };
 function refreshSelection() {
   snapshot = undefined;
   rows.replaceChildren();
-  byId('dashboard-table').hidden = byId('dashboard-pages').hidden = notice.hidden = true;
+  byId('dashboard-table').hidden = byId('dashboard-pages').hidden = true;
   clear.hidden = !filterNames.some(name => field(name).value);
   refresh();
 }
@@ -316,7 +348,7 @@ const ageTimer = setInterval(() => updateRelativeAges(rows), 1000);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) clearTimeout(refreshTimer);
   else if (!closed) {
-    if (snapshot?.rows.some(row => Date.parse(row.eligible_until) <= Date.now())) render(snapshot);
+    if (snapshot?.rows.some(row => !current(row) || row.other_quotes?.some(quote => !current(quote)))) render(snapshot);
     refresh();
   }
 });
@@ -332,4 +364,5 @@ window.addEventListener('pageshow', event => {
   if (event.persisted) refresh();
 });
 readLocation();
+if (location.hash === '#diagnostics') byId('diagnostics').open = true;
 refresh();

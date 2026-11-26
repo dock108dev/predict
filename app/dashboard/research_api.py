@@ -384,7 +384,7 @@ def mount(app, *, campaigns_only=False):
 
     async def experiment(request):
         query = dict(request.query)
-        filters = {key: query[key] for key in ('date', 'sport', 'search', 'event_id', 'provider') if query.get(key)}
+        filters = {key: query[key] for key in ('date', 'sport', 'search', 'event_id', 'tracked_game', 'provider') if query.get(key)}
         if set(query)-{'id', 'revision', 'export', 'include_context', 'outcomes_only', 'limit', 'offset'}-set(filters) or any(
                 len(value) > 256 for value in query.values()):
             raise PublicRequestError('Invalid checkpoint experiment selection.')
@@ -404,6 +404,9 @@ def mount(app, *, campaigns_only=False):
             raise PublicRequestError('Invalid checkpoint experiment page.') from None
         if filters.get('date'):
             validate({'date': filters['date']})
+        tracked = filters.get('tracked_game')
+        if tracked and (len(tracked) != 64 or any(char not in '0123456789abcdef' for char in tracked)):
+            raise PublicRequestError('Select a retained tracked game identity.')
         if identity and (filters or any(key in query for key in ('include_context', 'outcomes_only', 'limit', 'offset'))):
             raise PublicRequestError('Context filtering applies to the game list.')
 

@@ -1,4 +1,8 @@
-#data-create-experiment { margin: .3rem 0 .55rem auto; }
+#data-diagnostics { position: relative; margin: .3rem 0 .3rem auto; }
+#data-diagnostics summary { padding: .45rem 0; cursor: pointer; }
+#data-diagnostics nav { position: absolute; z-index: 10; inset-inline-end: 0; min-width: max-content; padding: .5rem; border: 1px solid var(--line); border-radius: .4rem; background: var(--paper); }
+#data-diagnostics nav a { display: block; padding: .4rem .5rem; color: var(--p-accent); }
+#data-diagnostics nav a[aria-current=page] { font-weight: 600; }
 .data-browser-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(min(100%,10rem),1fr));
@@ -12,5 +16,6 @@
 #data-tables .db-table td { max-width: 22rem; }
 #data-tables #db-content { min-width: 0; }
 @media (max-width: 560px) {
-  #data-create-experiment { margin-top: .5rem; }
+  .workbench-page .workspace-page-heading:has(#data-diagnostics) { display: flex; }
+  .workspace-page-heading:has(#data-diagnostics) .board-heading { flex-basis: 100%; }
 }

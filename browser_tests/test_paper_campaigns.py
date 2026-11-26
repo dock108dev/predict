@@ -37,6 +37,8 @@ def test_create_all_sports_with_an_exclusive_alternate_price_cutoff():
             route.fulfill(json=dict(campaigns=saved))
         elif target.path == f"{endpoint}/{identity}":
             route.fulfill(json=dict(days=[], mode="fixed_profit"))
+        elif target.path == f"{endpoint}/{identity}/trades":
+            route.fulfill(json=dict(trades=[]))
         else:
             route.fulfill(status=404)
 
@@ -107,6 +109,8 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
                 for mode, run in (("fixed_profit", fixed_run), ("kelly", kelly_run))
             }
             route.fulfill(json=dict(config=config, modes=records))
+        elif path.endswith("/trades"):
+            route.fulfill(json=dict(trades=[]))
         elif path.startswith(endpoint + "/"):
             query = parse_qs(urlsplit(route.request.url).query)
             assert query["comparison"] == ["0"]
@@ -126,16 +130,21 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
         page = browser.new_page(viewport={"width": 390, "height": 850})
         page.goto(f"{base}/experiments")
+        expect(page.get_by_role("link", name="All trades", exact=True)).to_have_attribute("aria-current", "page")
+        page.get_by_role("link", name="By day", exact=True).click()
         dates = page.get_by_role("region", name="Results by date")
         expect(dates.locator("tbody tr")).to_have_count(2)
         expect(dates.get_by_role("link", name="Nov 24, 2026")).to_be_visible()
+        pnl = page.locator(".experiment-campaign-pnl")
+        expect(pnl.locator("strong")).to_have_text("-$10.00")
+        expect(pnl).to_contain_text("1 / 2 graded")
         totals = page.locator(".experiment-totals")
         expect(totals).not_to_have_attribute("open", "")
         page.get_by_text("Campaign totals", exact=True).click()
         table = totals.get_by_role("table").first
         headers = table.get_by_role("columnheader")
         expect(headers).to_have_text(["Paper results", "Win $10"])
-        expect(page.get_by_role("link", name="Campaign to date")).to_have_attribute("aria-current", "page")
+        expect(page.get_by_role("link", name="By day", exact=True)).to_have_attribute("aria-current", "page")
         expect(table.get_by_role("row", name=re.compile("^Selected trades"))).to_contain_text("2")
         expect(table.get_by_role("row", name=re.compile("^Ungraded trades"))).to_contain_text("1")
         expect(table.get_by_role("row", name=re.compile("^Stake"))).to_contain_text("$30.00")
@@ -152,11 +161,11 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         expect(headers).to_have_text(["Paper results", "Win $10"])
         expect(page.get_by_label("Game date (Eastern)")).to_have_value(day)
         expect(table.get_by_role("row", name=re.compile("^Expected ROI"))).to_contain_text("8.00%")
+        page.get_by_text("History & evidence", exact=True).click()
         page.get_by_text("Experiment rules", exact=True).click()
         expect(page.get_by_text("Kelly comparison", exact=True)).to_have_count(0)
         page.get_by_text("Saved snapshots", exact=True).click()
         expect(page.locator(f'a[href*="run={kelly_run}"]')).to_have_count(0)
-        page.get_by_text("Coverage, history and exports", exact=True).click()
         expect(page.get_by_role("link", name="Export graded report")).to_have_attribute("href", export)
 
         page.get_by_label("Experiment", exact=True).select_option(other)

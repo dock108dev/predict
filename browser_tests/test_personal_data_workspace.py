@@ -11,6 +11,113 @@ from browser_tests.test_pregame_current import ASSETS
 from browser_tests.test_research_workspace import record, research_http_fixture
 
 
+def test_missing_score_scope_and_settings_diagnostics_on_mobile():
+    tracked_game = "a" * 64
+    score_reads = []
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        if url.path in ("/data", "/settings"):
+            route.fulfill(path=ASSETS / (url.path[1:] + ".html"))
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        elif url.path == "/api/research/data/results":
+            score_reads.append(parse_qs(url.query))
+            route.fulfill(json=dict(rows=[], offset=0))
+        elif url.path == "/api/admin/status":
+            route.fulfill(
+                json=dict(
+                    dispatch_enabled=True,
+                    config=dict(aggregate_provider="sportsgameodds"),
+                    data_runtime=dict(healthy=True, paused_sources=["kalshi"]),
+                    sources=[
+                        dict(provider="kalshi"),
+                        dict(
+                            provider="sportsgameodds",
+                            worker_behavior="accounting_hold",
+                            next_action="Inspect the pending accounting hold.",
+                        ),
+                    ],
+                    quota=dict(reserved=2, held_uncertain_credits=2),
+                )
+            )
+        elif url.path == "/api/admin/activity-mode":
+            route.fulfill(json=dict(settings=dict(monitor_interval_seconds=1800)))
+        elif url.path == "/api/workspace/status":
+            route.fulfill(
+                json=dict(
+                    storage={},
+                    fee_mode=dict(enabled=False),
+                    reference_scope=dict(books=[]),
+                    readiness=dict(
+                        blockers=[dict(message="Capture storage is full.")],
+                        state="blocked",
+                    ),
+                )
+            )
+        elif url.path == "/api/workspace/mens-d1/status":
+            route.fulfill(
+                json=dict(
+                    source="college_basketball_data",
+                    state="paused",
+                    reason="account_hold",
+                    credits=dict(held=1),
+                    storage={},
+                    jobs=[],
+                    overdue_jobs=1,
+                )
+            )
+        elif url.path == "/api/workspace/collection":
+            route.fulfill(
+                json=dict(state="Collecting", problem="Waiting on a credit hold")
+            )
+        else:
+            route.fulfill(status=404)
+
+    with research_http_fixture(serve) as base, sync_playwright() as runtime:
+        browser = runtime.chromium.launch()
+        page = browser.new_page(
+            viewport=dict(width=390, height=844), is_mobile=True, has_touch=True
+        )
+        page.goto(base + "/data?evidence=populations&tracked_game=" + tracked_game)
+        expect(page.get_by_role("link", name="Game scores")).to_have_attribute(
+            "aria-current", "page"
+        )
+        expect(page.locator("#data-sporting-results")).to_contain_text(
+            "No retained odds-provider score for this game."
+        )
+        page.locator("#data-result-filters select[name=sport]").select_option("NCAAB")
+        page.get_by_role("button", name="Apply filters").click()
+        expect(page.locator("#data-sporting-results")).to_contain_text(
+            "No retained odds-provider score for this game."
+        )
+        assert score_reads[-1] == dict(tracked_game=[tracked_game], sport=["NCAAB"])
+
+        page.goto(base + "/settings")
+        expect(page.get_by_role("button", name="Stop collection")).to_be_enabled()
+        expect(page.get_by_role("checkbox", name="Include fees")).not_to_be_checked()
+        expect(page.locator("#retention-readiness")).to_have_text(
+            "Capture storage is full."
+        )
+        expect(page.locator("#source-rows")).to_contain_text("Credit hold")
+        expect(page.locator("#source-rows")).to_contain_text("KalshiPaused")
+        expect(page.locator("#mens-d1-problem")).to_contain_text("1 past-due job")
+        expect(page.locator("#credits")).to_contain_text(
+            "CollegeBasketballData API unconfirmed calls1"
+        )
+        assert not page.locator("#diagnostics").evaluate("element => element.open")
+        page.get_by_role("link", name="Inspect unresolved request evidence").click()
+        expect(page.locator("#hold-evidence")).to_contain_text('"reserved_exposure": 2')
+        page.goto(base + "/settings#mens-d1-jobs")
+        expect(
+            page.get_by_role("link", name="Open Men’s D1 reconciliation")
+        ).to_be_visible()
+        assert page.evaluate(
+            "document.documentElement.scrollWidth === window.innerWidth"
+        )
+        browser.close()
+
+
 def test_data_game_exact_export_checkpoint_and_back():
     experiment = json.loads(
         Path("tests/fixtures/experiment-workspace.json").read_text()
@@ -133,13 +240,44 @@ def test_data_game_exact_export_checkpoint_and_back():
             viewport=dict(width=960, height=700), accept_downloads=True
         )
         page.on("pageerror", lambda error: errors.append(str(error)))
-        page.goto(base + "/data?view=history&sport=NCAAB&date=2026-11-22")
+        page.goto(
+            base + "/data?view=history&sport=NCAAB&date=2026-11-22"
+            "&provider=sportsgameodds&reference_scope=selected"
+        )
         expect(page.locator("#catalog-status")).to_contain_text("1 game")
         expect(page.locator("nav[aria-label=Main] a")).to_have_count(3)
+        expect(
+            page.get_by_role("navigation", name="Data sections").get_by_role("link")
+        ).to_have_text(["Market history", "Game scores"])
+        expect(page.get_by_role("link", name="Men’s D1 reconciliation")).to_be_hidden()
+        page.get_by_text("Diagnostics", exact=True).click()
+        expect(
+            page.get_by_role("link", name="Men’s D1 reconciliation")
+        ).to_have_attribute(
+            "href", "/data?evidence=mens-d1&scope=mens-d1&date=2026-11-22&view=history"
+        )
+        expect(page.get_by_role("link", name="Tables", exact=True)).to_have_attribute(
+            "href", "/data?evidence=tables"
+        )
+        page.get_by_text("Diagnostics", exact=True).click()
+        expect(
+            page.get_by_role("link", name="Create experiment from these filters")
+        ).to_have_count(0)
         page.get_by_role("link", name="Open game", exact=True).click()
         expect(page.locator("#game-detail")).to_be_visible()
         expect(page.locator("#game-content")).to_contain_text("Role: alternate")
         expect(page.locator("#game-content")).to_contain_text("Role: main")
+        expect(
+            page.locator("#game-content").get_by_role("link", name="Odds pulls")
+        ).to_have_attribute("href", "/data?evidence=pulls&event_id=source-event")
+        expect(
+            page.locator("#game-content").get_by_role("link", name="Captures")
+        ).to_have_attribute(
+            "href",
+            "/data?evidence=checkpoints&id=game-captured&revision="
+            + experiment["detail"]["revision"]
+            + "&event_id=source-event",
+        )
         page.locator('[data-record="' + rows[1]["id"] + '"] button').click()
         dialog = page.locator("#input-detail")
         expect(dialog).to_be_visible()
@@ -183,7 +321,7 @@ def test_data_game_exact_export_checkpoint_and_back():
         expect(dialog).to_be_visible()
         assert "bet=sgo%3Aunavailable" in page.url
         page.get_by_role("button", name="Close", exact=True).click()
-        page.get_by_role("link", name="Historical captures").click()
+        page.goto(base + "/data?evidence=checkpoints&event_id=source-event")
         expect(page.locator("#experiment-status")).to_contain_text("4 retained cases")
         expect(page.locator("#catalog")).to_be_hidden()
         assert any(
@@ -198,6 +336,11 @@ def test_data_game_exact_export_checkpoint_and_back():
             and not query.get("provider")
             for _, path, query in requests
         )
+        assert any(
+            path == "/api/research/experiment"
+            and query.get("event_id") == "source-event"
+            for _, path, query in requests
+        )
         assert not errors, errors
         assert all(
             method == "GET" or path == "/api/research/read"
@@ -206,7 +349,7 @@ def test_data_game_exact_export_checkpoint_and_back():
         assert all(
             "/api/research/" in path
             or "/view/" in path
-            or path in ("/data", "/favicon.ico")
+            or path in ("/data", "/favicon.ico", "/api/workspace/collection")
             for _, path, _ in requests
         )
         browser.close()

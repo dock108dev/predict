@@ -215,7 +215,7 @@ function evidenceSection(root, title, description, values, technical) {
   if (technical) section.append(details('Exact evidence and source details', technical));
   root.append(section);
 }
-export function renderSavedEvidence(root, value, {ticket, resultReview = false, exportLink, gameLink}) {
+export function renderSavedEvidence(root, value, {ticket, resultReview = false, showPortfolioSelection = !resultReview, exportLink, gameLink}) {
   root.replaceChildren();
   if (!ticket) {
     const game = value.game || value.disposition || value.evidence?.game || value;
@@ -287,7 +287,7 @@ export function renderSavedEvidence(root, value, {ticket, resultReview = false, 
       'EV at modeled commitment':pct(item.ev),
     }, {reference, exact_probability:item.probability, exact_screen_ev:item.screen_ev, exact_sized_ev:item.ev});
     if (portfolioSelection?.tier) evidenceSection(root, 'Portfolio selection', mainFirstRule.description,
-      resultReview ? null : portfolioSelectionFields(portfolioSelection,item.family), portfolioSelection);
+      showPortfolioSelection ? portfolioSelectionFields(portfolioSelection,item.family) : null, portfolioSelection);
     const rule = fixed
       ? 'The closest positive modeled win profit wins, with ties going to the lower commitment. Quantity and fees are repriced at the frozen quote.'
       : 'The saved Kelly calculation uses the modeled win and loss returns, then applies the recorded multiplier and bankroll. Quantity and fee rounding determine the final commitment.';

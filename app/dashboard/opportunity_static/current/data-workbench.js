@@ -42,22 +42,6 @@ function syncForm(form, query) {
   for (const field of form.elements) if (field.name) field.value = query.get(field.name) || '';
 }
 
-function createFromFilters(query) {
-  const result = select(query, ['date', 'date_from', 'date_to', 'sport', 'provider', 'scope',
-    'search', 'original_bookmaker_id', 'family', 'calculation_status', 'pull', 'receipt', 'include_alternates', 'max_age_minutes']);
-  if (query.get('reference_scope') === 'all') result.set('reference_scope', 'all');
-  const game = query.get('event_id') || query.get('game') || query.get('game_key');
-  if (game) result.set('game', game);
-  result.set('view', 'create');
-  result.set('from', 'data');
-  return '/experiments?' + result;
-}
-
-function updateCreateLink(query) {
-  const action = byId('data-create-experiment');
-  action.href = createFromFilters(query);
-}
-
 function pagination(query, value, size, name = 'offset', title = 'pages') {
   const nav = node('nav', undefined, 'catalog-pagination');
   nav.setAttribute('aria-label', title);
@@ -73,7 +57,8 @@ function collectionLinks(receipt, query, exact, eventId) {
     row.append(optionLink('Inspect original response', query, {receipt}, ['offset']),
       link('Download original response', '/api/research/data/original?' + new URLSearchParams({id:receipt, download:'1'}), 'research-button'));
   }
-  if (eventId) row.append(link('Find sporting result', dataHref(new URLSearchParams({evidence:'populations', event_id:eventId})), 'research-button'));
+  if (eventId) row.append(link('Game scores', dataHref(new URLSearchParams({evidence:'populations', event_id:eventId})), 'research-button'),
+    link('Captures', dataHref(new URLSearchParams({evidence:'checkpoints', event_id:eventId})), 'research-button'));
   if (exact) row.append(link('Find game observations', dataHref(new URLSearchParams({view:'history', event_id:eventId})), 'research-button'));
   return row;
 }
@@ -163,7 +148,7 @@ async function loadPull(query, version) {
   pullStatus.textContent = 'Reading stored odds pulls…';
   pullDetail.replaceChildren();
   pullRows.replaceChildren();
-  const params = select(query, [...filters, 'offset', 'receipt_offset', 'pull']);
+  const params = select(query, [...filters, 'tracked_game', 'offset', 'receipt_offset', 'pull']);
   try {
     if (query.get('pull')) {
       if (query.get('receipt')) params.delete('offset');
@@ -206,12 +191,13 @@ async function loadPull(query, version) {
 async function loadResults(query, version) {
   const root = byId('data-sporting-results');
   root.replaceChildren(node('p', 'Reading retained sporting results…'));
-  const params = select(query, ['date', 'sport', 'search', 'event_id', 'provider', 'offset', 'id']);
+  const params = select(query, ['date', 'sport', 'search', 'event_id', 'tracked_game', 'provider', 'offset', 'id']);
   try {
     const value = await readJSON('/api/research/data/results?' + params);
     if (version !== revision) return;
     if (!value.rows.length) {
-      root.replaceChildren(node('p', 'No recorded sporting results match these filters.'));
+      root.replaceChildren(node('p', query.has('tracked_game')
+        ? 'No retained odds-provider score for this game.' : 'No recorded sporting results match these filters.'));
       return;
     }
     root.replaceChildren(table(['Game', 'Result', 'Source / receipt', 'Evidence'], value.rows.map(game => {
@@ -227,8 +213,11 @@ async function loadResults(query, version) {
       if (game.original) actions.append(link('Download original response',
         '/api/research/data/original?' + new URLSearchParams({id:game.original, download:'1'}), 'research-button'));
       if (game.receipt_id) actions.append(link('Download source receipt', '/api/workspace/mens-d1/receipts/' + game.receipt_id, 'research-button'));
-      if (game.outcome_id) actions.append(link('Game observations',
-        dataHref(new URLSearchParams({view:'history', event_id:game.source_event_id})), 'research-button'));
+      if (game.outcome_id) actions.append(
+        link('Market history', dataHref(new URLSearchParams({view:'history', event_id:game.source_event_id})), 'research-button'),
+        link('Odds pulls', dataHref(new URLSearchParams({evidence:'pulls', tracked_game:game.id})), 'research-button'),
+        link('Captures', dataHref(new URLSearchParams({evidence:'checkpoints', tracked_game:game.id})), 'research-button'),
+      );
       box.append(actions);
       return [stack(game.title, `${game.league} · ${time(game.starts_at)}`),
         stack(result.final ? 'Final' : label(result.result), score),
@@ -239,26 +228,33 @@ async function loadResults(query, version) {
   }
 }
 
-function screen() {
-  const version = ++revision;
-  const query = currentQuery();
+function syncNavigation(query) {
   const active = views.includes(query.get('evidence')) ? query.get('evidence') : 'observations';
-  for (const name of views) byId('data-' + name).hidden = name !== active;
+  const currentTab = ['pulls', 'checkpoints'].includes(active) ? 'observations' : active;
   const shared = select(query, filters);
   for (const anchor of document.querySelectorAll('[data-evidence-view]')) {
     const target = anchor.dataset.evidenceView;
-    if (target === active) anchor.setAttribute('aria-current', 'page');
+    if (target === currentTab) anchor.setAttribute('aria-current', 'page');
     else anchor.removeAttribute('aria-current');
     const next = new URLSearchParams(shared);
     if (target !== 'observations') next.set('evidence', target);
     if (target === 'observations' && (next.get('provider') || next.get('original_bookmaker_id'))) next.set('view', 'history');
-    if (target === 'populations') for (const key of ['original_bookmaker_id', 'family']) next.delete(key);
+    if (target === 'populations') {
+      for (const key of ['original_bookmaker_id', 'family']) next.delete(key);
+      if (query.get('tracked_game')) next.set('tracked_game', query.get('tracked_game'));
+    }
     if (target === 'tables') {
       for (const key of filters) next.delete(key);
     }
     anchor.href = target === 'mens-d1' ? coverageURL(query) : dataHref(next);
   }
-  updateCreateLink(query);
+  return active;
+}
+
+function screen() {
+  const version = ++revision;
+  const query = currentQuery(), active = syncNavigation(query);
+  for (const name of views) byId('data-' + name).hidden = name !== active;
   if (active === 'pulls') {
     syncForm(pullForm, query);
     void loadPull(query, version);
@@ -281,7 +277,9 @@ for (const [form, evidence] of [[pullForm, 'pulls'], [resultForm, 'populations']
     const previous = currentQuery();
     const query = clear ? new URLSearchParams() : formQuery(form);
     query.set('evidence', evidence);
-    if (!clear && previous.get('event_id') && query.get('search') === (previous.get('search') || null)) query.set('event_id', previous.get('event_id'));
+    if (!clear && query.get('search') === previous.get('search')) {
+      for (const key of ['event_id', 'tracked_game']) if (previous.has(key)) query.set(key, previous.get(key));
+    }
     if (evidence === 'checkpoints') {
       if (previous.get('context')) query.set('context', previous.get('context'));
       location.assign(dataHref(query));
@@ -293,19 +291,8 @@ for (const [form, evidence] of [[pullForm, 'pulls'], [resultForm, 'populations']
   };
   form.onsubmit = event => apply(event, false);
   form.onreset = event => apply(event, true);
-  form.addEventListener('input', () => {
-    const query = formQuery(form), previous = currentQuery();
-    for (const key of ['event_id', 'pull', 'receipt']) if (previous.has(key)) query.set(key, previous.get(key));
-    updateCreateLink(query);
-  });
 }
 
-byId('catalog-filters').addEventListener('input', () => {
-  const query = formQuery(byId('catalog-filters'));
-  const previous = currentQuery();
-  for (const key of ['game', 'game_key', 'event_id', 'pull']) if (previous.has(key)) query.set(key, previous.get(key));
-  updateCreateLink(query);
-});
-window.addEventListener('predict:data-selection', () => updateCreateLink(currentQuery()));
 window.addEventListener('popstate', screen);
+window.addEventListener('predict:data-selection', () => syncNavigation(currentQuery()));
 screen();

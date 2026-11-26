@@ -15,14 +15,16 @@
 <div class="workspace-page-heading">
 <header class="board-heading"><h1>Data</h1></header>
 <nav class="workspace-sections" aria-label="Data sections">
-<a href="/data" data-evidence-view="observations" aria-current="page">Observations</a>
-<a href="/data?evidence=pulls" data-evidence-view="pulls">Odds pulls</a>
-<a href="/data?evidence=checkpoints" data-evidence-view="checkpoints">Captures</a>
-<a href="/data?evidence=populations" data-evidence-view="populations">Results</a>
-<a href="/data?evidence=mens-d1&amp;scope=mens-d1" data-evidence-view="mens-d1">Men’s D1 coverage</a>
+<a href="/data" data-evidence-view="observations" aria-current="page">Market history</a>
+<a href="/data?evidence=populations" data-evidence-view="populations">Game scores</a>
+</nav>
+<details id="data-diagnostics">
+<summary>Diagnostics</summary>
+<nav aria-label="Data diagnostics">
+<a href="/data?evidence=mens-d1&amp;scope=mens-d1" data-evidence-view="mens-d1">Men’s D1 reconciliation</a>
 <a href="/data?evidence=tables" data-evidence-view="tables">Tables</a>
 </nav>
-<a id="data-create-experiment" class="research-button" href="/experiments?view=create&amp;from=data">Create experiment from these filters</a>
+</details>
 </div>
 <div id="data-observations">
 <form id="catalog-filters" class="catalog-filters data-filters">
@@ -76,7 +78,7 @@
 </section>
 <div id="data-checkpoints" hidden>
 <section id="experiment" class="workspace-panel" data-lazy aria-labelledby="experiment-heading" aria-busy="true">
-<div class="experiment-heading"><h2 id="experiment-heading">Frozen first-observation and T−10 checkpoints</h2><button id="experiment-refresh" type="button">Refresh comparisons</button></div>
+<div class="experiment-heading"><h2 id="experiment-heading">Captures</h2><button id="experiment-refresh" type="button">Refresh comparisons</button></div>
 <form id="checkpoint-filters" class="workspace-form data-browser-filters">
 <label>Game date (Eastern)<input name="date" type="date"></label>
 <label>Sport<select name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>
@@ -91,7 +93,7 @@
 </section>
 </div>
 <section id="data-populations" class="workspace-panel" hidden aria-labelledby="populations-title">
-<h2 id="populations-title">Sporting results</h2>
+<h2 id="populations-title">Game scores</h2>
 <form id="data-result-filters" class="workspace-form data-browser-filters">
 <label>Game date (Eastern)<input name="date" type="date"></label>
 <label>Sport<select name="sport"><option value="">All sports</option><option>NFL</option><option>NCAAF</option><option>NBA</option><option>NCAAB</option><option>MLB</option><option>NHL</option></select></label>

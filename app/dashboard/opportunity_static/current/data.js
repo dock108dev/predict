@@ -51,7 +51,15 @@ function renderGame(value,query){
  $('catalog').hidden=true;$('game-pagination').hidden=true;
  root.append(node('p',`${known(game.sport)} · ${dateTime(game.start_at||game.starts_at)}`));
  const identity=node('details');identity.append(node('summary','Source identity and stored read'),node('p',`${readable(game.identity_status)} · ${game.source_events?.map(item=>`${item.provider}: ${item.event_id}`).join('; ')||'No source identity retained'}`));root.append(identity);
- const actions=node('div',undefined,'catalog-actions'),capture=checkpointLink(game);if(capture)actions.append(capture);root.append(actions);
+ const actions=node('div',undefined,'catalog-actions');
+ const sourceEvents=(game.source_events||[]).filter(item=>item.provider==='sportsgameodds'&&item.event_id);
+ const scope=sourceEvents.length===1?{event_id:sourceEvents[0].event_id}
+  :sourceEvents.length&&game.experiment?{tracked_game:game.experiment.id}:null;
+ if(scope)actions.append(link('Odds pulls',new URLSearchParams({evidence:'pulls',...scope})));
+ if(game.experiment)actions.append(link('Captures',new URLSearchParams({evidence:'checkpoints',id:game.experiment.id,revision:game.experiment.revision,...scope})));
+ else if(scope)actions.append(link('Captures',new URLSearchParams({evidence:'checkpoints',...scope})));
+ if(scope)actions.append(link('Game scores',new URLSearchParams({evidence:'populations',...scope})));
+ root.append(actions);
  root.append(node('h3','Received observations'));
  table(root,['Book / source','Market / exact bet','Source price','Observation times','Calculation','Inspect'],(value.rows||[]).map(quoteRow));
  if(!value.rows?.length)root.append(node('p','No current source observations match. Frozen experiment evidence remains available when retained.'));

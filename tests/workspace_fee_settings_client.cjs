@@ -7,7 +7,7 @@ for(const action of ['stop','recover']){controls[action]=new Element('button');c
 document.querySelector=selector=>selector.includes('"stop"')?controls.stop:selector.includes('"recover"')?controls.recover:null;
 document.querySelectorAll=selector=>selector==='[data-control]'?Object.values(controls):document.body.querySelectorAll(selector);
 document.addEventListener=()=>{};
-const context={document,AbortSignal,Date,JSON,Number,String,Error,Set,console,setInterval(){},Intl:{DateTimeFormat:Intl.DateTimeFormat,supportedValuesOf:()=>['UTC']},Option:function(text,value){const item=new Element('option');item.textContent=text;item.value=value;return item;},
+const context={document,window:{addEventListener(){}},location:{hash:''},AbortSignal,Date,JSON,Number,String,Error,Set,console,setInterval(){},Intl:{DateTimeFormat:Intl.DateTimeFormat,supportedValuesOf:()=>['UTC']},Option:function(text,value){const item=new Element('option');item.textContent=text;item.value=value;return item;},
  accountingFacts:()=>[],accountingEvidence:()=>({sportsgameodds:{object_holds:[],interrupted_scans:[]},the_odds_api:{}}),applyTheme(){},readPreference:()=>'',savePreference(){},timezone:()=> 'UTC',
  fetch:(url,options={})=>new Promise(resolve=>calls.push({url,options,resolve,settled:false}))};
 vm.runInNewContext(fs.readFileSync('app/dashboard/opportunity_static/current/settings.js','utf8').replace(/^import .*;\n/gm,''),context,{filename:'settings.js'});

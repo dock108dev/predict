@@ -5,10 +5,11 @@ controls, evidence downloads and APIs. [Open Predict](https://predict.dock108.de
 
 ## Dashboard
 
-Dashboard orders current positive EV offers by unrounded EV. Each row shows the
-game, bet, venue, posted odds, fair odds, EV and source quote age. Open any row
-for the bound acquisition, exact quote, reference odds, fee and cashflow evidence,
-and a link to the original pull in Data.
+Dashboard applies Sport, Bet type and Venue filters before ranking exact bets
+by their best eligible quote’s unrounded EV. Expand a bet to compare its other
+venue quotes. Open a quote for the bound acquisition, reference odds, fee and
+cashflow evidence, and its original pull in Data. Use Diagnostics for Men’s D1
+coverage and job details.
 
 The board uses the newest covering pull for each full-game market. Failed or
 incomplete latest attempts can withhold earlier offers. Explicit withdrawals,
@@ -19,38 +20,31 @@ interval stays visible as historical evidence in Data.
 
 ## Data
 
-- **Observations** opens readable game and market rows. Use the date, sport, game,
-  source, venue and market filters to narrow the evidence. Inspect an exact
-  quote for its normalized record and linked acquisition.
-- **Odds pulls** shows recorded SportsGameOdds attempts, including incomplete or
-  failed attempts. Open a pull, filter its captured records and inspect or
-  download an original physical response where retained.
-- **Captures** and **Results** show immutable first-observation and T−10
-  checkpoints, sporting results and their original source evidence. Men’s D1
-  coverage also shows reconciled counts and recorded evidence decisions.
-- **Tables** browses PostgreSQL relations read-only with bounded rows and cell
-  pages. It reports objects or contents the web reader cannot access.
+- **Market history** shows saved game and market rows. Filter by date, sport,
+  game, source, venue or market. Open a quote for its normalized record and
+  follow **Odds pulls** or **Captures** for the supporting collection evidence.
+- **Game scores** shows sporting results and their retained source evidence.
+- **Diagnostics** contains the PostgreSQL table browser and Men’s D1
+  reconciliation, including recorded evidence decisions.
 
-Use **Create experiment from these filters** to carry supported settings into
-the form. Unsupported browsing filters appear as context that requires a choice.
-The activity on these pages and their exports reads stored evidence. Missing
-bytes are shown separately from a stored normalized record.
+These pages and their exports read stored evidence. When original bytes are
+missing, Data still shows any available normalized record.
 
 ## Experiments
 
-Experiments opens **Campaign to date** for Win $10. Choose a portfolio for the
-running totals and daily breakdown. Open a date or select **By day** to inspect
-one day's results. The rules show the saved scope, capture timing,
-reference and fee assumptions, EV threshold and sizing. Expected paper profit
-uses the frozen entry EV for each selected trade. Expected ROI divides that
+Experiments opens **All trades** for the selected campaign. Open a trade in the
+ledger to inspect it while keeping your filters and place. **By day** shows
+campaign P/L and lets you open a date. The active-rule summary sits near Edit.
+Expected paper profit uses the frozen entry EV for each selected trade.
+Expected ROI divides that
 profit by all selected stake. The realized ROI denominator uses graded stake.
 P/L vs expected compares realized profit with the entry expectation for those
 same graded trades.
 
-Open a game or trade to trace the exact quote, eligibility, sizing, grade and
-supporting source evidence. A current result can change as grades arrive. A
-saved snapshot opens with its own IDs and clocks. Pending results and capture
-gaps have separate states.
+Open **Games and coverage** to filter for missing finals, missed captures or
+zero qualifying trades. **History & evidence** holds snapshots, exports and
+raw evidence. A current result can change as grades arrive. Saved snapshots
+open with their own IDs and clocks.
 
 New experiments can use the reconciled Men's Division I slate or tracked
 T−10 captures from all six supported leagues (NFL, NCAAF, NBA, NCAAB, MLB and
@@ -68,8 +62,9 @@ links still open saved evidence.
 Open the collection status in the top bar to see the last odds receipt, next
 scheduled pull, a current problem if one exists, and the link to controls.
 Stop, Resume and source Pause use committed authority and accounting guards.
-Credit usage, holds, daily source jobs, retention and display preferences are
-available on the controls page. The collection schedule continues with the
+Current collection problems, actionable credits and holds, and fee treatment
+are on the controls page. Diagnostics holds job history, storage, reference
+inventory and operating records. The collection schedule continues with the
 browser closed. Dates use Eastern game-day boundaries.
 
 ### Fee assumption
@@ -84,7 +79,7 @@ revision. Saved evidence retains its recorded assumption.
 EV and Opportunities open Dashboard. Browse Odds, Odds, Raw Inputs and saved
 game or replay links open Data. An exact legacy experiment or result link
 opens Experiments with its pinned inputs. Retired standalone pages identify
-the workspace destinations. [Route and job inventory](engineering/predict-simplification-20261125.md)
+the workspace destinations. [Architecture](architecture.md)
 
 ## Active provider and ten sportsbook references
 

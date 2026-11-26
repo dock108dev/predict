@@ -2,5 +2,16 @@
 .workbench-page main > section h2 { margin-top: 0; }
 .workbench-page main > details { border-top: 1px solid var(--line); padding-block: 1rem; }
 #collection-state,#credits-state,#storage-state { max-width:60rem; }
-#source-rows td { min-width:0; }
-#control-result:empty,#configuration-result:empty { display:none; }
+#source-rows td,#mens-d1-job-rows td { min-width:0; }
+#source-rows td small { margin-top:.3rem; }
+#control-result:empty,#settings-status:empty,#collection-problem:empty,#retention-readiness:empty,#mens-d1-problem:empty,#settings-checked:empty { display:none; }
+#collection-problem,#retention-readiness,#mens-d1-problem { color:var(--workbench-warning); }
+#diagnostics summary { cursor:pointer; }
+#diagnostics > summary { font-size:1.25rem; font-weight:600; }
+#diagnostics > details { margin:.7rem 0; padding:.65rem .8rem; border:1px solid var(--line); border-radius:.35rem; }
+#diagnostics pre { max-height:28rem; overflow:auto; overflow-wrap:anywhere; white-space:pre-wrap; }
+#diagnostics :target { scroll-margin-top:3.5rem; }
+@media (max-width: 760px) {
+  #collection-state .research-detail-grid, #credits .research-detail-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  #collection-state dd, #credits dd { margin-bottom: 0; }
+}

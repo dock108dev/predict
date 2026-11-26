@@ -969,7 +969,8 @@ def catalog(db, *, include_context=False, outcomes_only=False, limit=50, offset=
     predicates = ["outcome_id IS NOT NULL" if outcomes_only else "true" if include_context else "retained_cases>0"]
     filters = filters or {}
     values = []
-    for key, column in (('sport', "event->>'league'"), ('provider', 'provider'), ('event_id', 'source_event_id')):
+    for key, column in (('sport', "event->>'league'"), ('provider', 'provider'),
+                        ('event_id', 'source_event_id'), ('tracked_game', 'id')):
         if filters.get(key):
             predicates.append(column + '=%s')
             values.append(filters[key])

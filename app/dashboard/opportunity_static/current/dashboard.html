@@ -33,10 +33,9 @@
         <button id="dashboard-clear" type="button" hidden>Clear filters</button>
       </form>
       <p id="dashboard-status" role="status" aria-live="polite">Reading stored calculations…</p>
-      <p id="dashboard-notice" class="research-muted" hidden></p>
       <div id="dashboard-table" class="dashboard-table-wrap" hidden>
         <table class="catalog-table dashboard-table" role="table" aria-labelledby="dashboard-opportunities">
-          <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Game</th><th scope="col" role="columnheader">Bet</th><th scope="col" role="columnheader">Venue</th><th scope="col" role="columnheader">Posted odds</th><th scope="col" role="columnheader">Fair odds</th><th scope="col" role="columnheader" aria-sort="descending">EV</th><th scope="col" role="columnheader">Quote age</th></tr></thead>
+          <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Game</th><th scope="col" role="columnheader">Bet</th><th scope="col" role="columnheader">Best venue</th><th scope="col" role="columnheader">Posted odds</th><th scope="col" role="columnheader">Fair odds</th><th scope="col" role="columnheader" aria-sort="descending">EV</th><th scope="col" role="columnheader">Quote age</th></tr></thead>
           <tbody id="dashboard-rows" role="rowgroup"></tbody>
         </table>
       </div>
@@ -46,6 +45,13 @@
         <button id="dashboard-next" type="button">Next</button>
       </nav>
     </section>
+    <details class="dashboard-diagnostics" id="diagnostics">
+      <summary>Diagnostics</summary>
+      <ul>
+        <li><a href="/data?evidence=mens-d1&amp;scope=mens-d1">Men’s D1 coverage and reconciliation</a></li>
+        <li><a href="/settings#mens-d1-jobs">Men’s D1 collection jobs</a></li>
+      </ul>
+    </details>
   </main>
   <dialog id="dashboard-inspector" class="dashboard-inspector" aria-labelledby="dashboard-inspector-title">
     <div class="dashboard-inspector-head">

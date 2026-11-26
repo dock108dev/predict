@@ -14,7 +14,7 @@ from tests.test_current_state import owner
 
 
 PUBLIC_DESK_PAGES = {"/": "Dashboard", "/data": "Data", "/experiments": "Experiments",
-                     "/settings": "Collection controls"}
+                     "/settings": "Settings"}
 
 
 class Assets(unittest.IsolatedAsyncioTestCase):

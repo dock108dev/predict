@@ -3,7 +3,9 @@ import {applyTheme, readPreference, savePreference, timezone} from './desk-prefe
 const $=id=>document.getElementById(id);
 const node=(tag,text)=>{const item=document.createElement(tag);if(text!==undefined)item.textContent=text;return item;};
 const known=value=>value===null||value===undefined?'Unavailable':String(value);
+const words=value=>value==null?'':String(value).replaceAll('_',' ');
 const names={sportsgameodds:'SportsGameOdds',the_odds_api:'The Odds API',kalshi:'Kalshi',polymarket_us:'Polymarket US',novig:'Novig',prophetx:'ProphetX'};
+const sourceProblems={terminal_failure:'Worker stopped',unavailable:'Unavailable',accounting_hold:'Credit hold',retrying:'Retry pending'};
 const clock=value=>{if(!value)return 'Not reported';const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString(undefined,{timeZone:timezone()}):'Not reported';};
 const bytes=value=>value===null||value===undefined?'Unavailable':(Number(value)/1048576).toFixed(1)+' MiB';
 let current=null,busy=false,refreshing=false,feeMode=null,feePending=false,feeRequested=false,feeNotice=null;
@@ -19,15 +21,32 @@ function render() {
  const retryStop=healthy&&!running&&Boolean(s.cleanup_errors?.length);
  facts($('collection-state'),[['State',!healthy?'Data service unavailable':running?'Running':retryStop?'Stop cleanup unconfirmed':s.config?.enabled===false?'Disabled in configuration':'Stopped'],['Background service',healthy?'Available · runs with the browser closed':'Unavailable; stored observations remain inspectable']]);
  const stop=document.querySelector('[data-control="stop"]'),resume=document.querySelector('[data-control="recover"]');stop.hidden=!running&&!retryStop;stop.textContent=retryStop?'Retry Stop':'Stop collection';resume.hidden=running;stop.disabled=busy||!healthy;resume.disabled=busy||!healthy||!!s.recovery?.reason;
- if(retryStop)$('control-result').textContent='Acquisition is withdrawn. Retry Stop to confirm cleanup.';
- else if(!running&&s.recovery?.reason)$('control-result').textContent='Resume is unavailable: '+String(s.recovery.reason).replaceAll('_',' ')+'.';
+ $('collection-problem').textContent=retryStop?'Retry Stop to confirm cleanup.'
+  : !running&&s.recovery?.reason?`Resume unavailable · ${words(s.recovery.reason)}`:'';
  const evidence=accountingEvidence(s);facts($('credits-state'),accountingFacts(s,clock));
- $('hold-details').hidden=!evidence.sportsgameodds.object_holds.length&&!evidence.sportsgameodds.interrupted_scans.length&&!evidence.the_odds_api.recovery_incident&&!evidence.the_odds_api.reserved_exposure&&!evidence.the_odds_api.uncertain_held_credits;$('hold-evidence').textContent=JSON.stringify(evidence,null,2);
+ const hasHold=evidence.sportsgameodds.object_holds.length||evidence.sportsgameodds.interrupted_scans.length||evidence.the_odds_api.recovery_incident||evidence.the_odds_api.reserved_exposure||evidence.the_odds_api.uncertain_held_credits;
+ $('hold-details').hidden=$('hold-link').hidden=!hasHold;
+ $('hold-evidence').textContent=JSON.stringify(evidence,null,2);
  const paused=s.data_runtime?.paused_sources||[];
  const config=s.config||{};
+ const sources=s.sources||[];
+ const unlistedPauses=paused.filter(provider=>!sources.some(item=>item.provider===provider)).map(provider=>({provider}));
  const sourceConfigured=id=>paused.includes(id)||(id===(config.aggregate_provider||'sportsgameodds')
   ?config.aggregate_enabled!==false:config['direct_'+id+'_enabled']!==false&&['kalshi','polymarket_us'].includes(id));
- $('source-rows').replaceChildren(...(s.sources||[]).filter(p=>sourceConfigured(p.provider)).map(p=>{const row=node('tr'),state=paused.includes(p.provider)?'Paused':p.worker_done?'Stopped':Object.values(p.status||{}).some(v=>v.state==='available')?'Available':'Waiting / unavailable';const td=node('td'),pause=node('button',paused.includes(p.provider)?'Paused':'Pause source');pause.type='button';pause.dataset.control='pause';pause.dataset.source=p.provider;pause.disabled=busy||!healthy||!running||paused.includes(p.provider);td.append(pause);for(const value of [names[p.provider]||p.provider,state,clock(p.last_valid_receipt_at||p.received_at||p.last_book_receipt_at)])row.append(node('td',value));row.append(td);return row;}));
+ $('source-rows').replaceChildren(...[...sources,...unlistedPauses].filter(p=>sourceConfigured(p.provider)).map(p=>{
+  const row=node('tr'), isPaused=paused.includes(p.provider), states=Object.values(p.status||{});
+  const problem=running&&!isPaused&&(sourceProblems[p.worker_behavior]||(states.some(v=>v.state==='budget_delayed')?'Budget delayed':null));
+  const state=isPaused?'Paused':!healthy?'Service unavailable':!running?'Stopped':problem||
+   (p.worker_done?'Worker stopped':states.some(v=>v.state==='available')?'Available':'Waiting / unavailable');
+  for(const [label,value] of [['Source',names[p.provider]||p.provider],['Availability',state],['Last valid receipt',clock(p.last_valid_receipt_at||p.received_at||p.last_book_receipt_at)]]){
+   const cell=node('td',value);cell.dataset.label=label;
+   if(label==='Availability'&&problem&&p.next_action)cell.append(node('small',p.next_action));
+   row.append(cell);
+  }
+  const control=node('td'),pause=node('button',isPaused?'Paused':'Pause source');
+  control.dataset.label='Control';pause.type='button';pause.dataset.control='pause';pause.dataset.source=p.provider;
+  pause.disabled=busy||!healthy||!running||isPaused;control.append(pause);row.append(control);return row;
+ }));
  $('collection-scope').textContent='Leagues: '+(s.config?.aggregate_sports||s.config?.sports||[]).join(', ')+'. Markets: '+(s.config?.families||[]).join(', ')+'.';
  $('operating-evidence').textContent=JSON.stringify({service:s.service_state,recovery:s.recovery,background:s.background_work,issues:s.issues,source_pauses:paused},null,2);
 }
@@ -59,7 +78,7 @@ function renderWorkspace(value){
   ? readiness.blockers.map(issue=>issue.message).join(' ')
   : readiness?.state==='limited'
     ? 'Unreserved capacity is below the measured mean for a retained checkpoint pair.'
-    : readiness?.state==='ready' ? 'Current collection and storage guards allow new capture attempts.' : '';
+    : '';
  if(!retention)return;
  const gaps=[
   ['Historical checkpoint and outcome refusals',retention.checkpoint_refusals],
@@ -77,9 +96,18 @@ function renderWorkspace(value){
 async function refreshDailyCoverage(){
  try{
   const value=await request('/api/workspace/mens-d1/status'), credits=value.credits, storage=value.storage, forecast=value.forecast;
-  const words=raw=>raw==null?'':String(raw).replaceAll('_',' ');
   const sourceNames={college_basketball_data:'CollegeBasketballData API',sports_reference:'Sports Reference'};
   const isCbbd=value.source==='college_basketball_data';
+  const problems=[];
+  if(value.state==='paused')problems.push(`${sourceNames[value.source]} paused${value.reason?' · '+words(value.reason):''}`);
+  if(value.overdue_jobs>0)problems.push(`${value.overdue_jobs} past-due ${value.overdue_jobs===1?'job':'jobs'}`);
+  $('mens-d1-problem').textContent=problems.length?`Men’s D1 schedule and results · ${problems.join(' · ')}`:'';
+  const exposures=(value.sources||[value]).flatMap(source=>Number(source.credits?.held)>0
+   ? [[`${sourceNames[source.source]} unconfirmed ${source.source==='college_basketball_data'?'calls':'credits'}`,source.credits.held]] : []);
+  if(isCbbd&&credits.budget?.window_ends_at)exposures.push(['Last reported CollegeBasketballData balance',
+   `${credits.budget.remaining_calls_at_check} of ${credits.budget.monthly_call_limit} calls · resets ${clock(credits.budget.window_ends_at)}`]);
+  if(exposures.length)facts($('mens-d1-credits'),exposures);
+  else $('mens-d1-credits').replaceChildren();
   const late=forecast?.late_capture, latency=late?.current_execution_latency;
   const busyWindow=late?.windows?.reduce((busiest,window)=>!busiest||window.scheduled_tasks>busiest.scheduled_tasks?window:busiest,null);
   const seconds=value=>value==null?'Unknown':`${Number(value).toFixed(2)} s`;
@@ -107,7 +135,7 @@ async function refreshDailyCoverage(){
    ...(busyWindow ? [['Busiest upcoming T−10 window',`${clock(busyWindow.target_at)} to ${clock(busyWindow.deadline_at)}`],
     ['Tasks and planned requests',`${busyWindow.scheduled_tasks} tasks · ${busyWindow.planned_event_requests} requests · ${busyWindow.ncaab_tasks} college basketball`],
     ['Window storage',`${bytes(busyWindow.reserved_bytes)} reserved · ${busyWindow.tasks_without_storage_reservation} tasks use shared headroom`],
-    ['Measured batch samples',`${latency.samples} successful captures · ${latency.observed_physical_requests} observed request receipts`],
+    ...(latency?[['Measured batch samples',`${latency.samples} successful captures · ${latency.observed_physical_requests} observed request receipts`]]:[]),
     ['Window capacity estimate',`${seconds(busyWindow.estimated_window_service_p95_seconds)} service · ${seconds(busyWindow.seconds_available)} available · ${words(busyWindow.risk)}`],
     ['Competing work',`${busyWindow.competing_non_late_tasks} ordinary checkpoint or result tasks · discovery slot ${clock(busyWindow.ordinary_discovery_slot_at)}`],
     ['In-flight and retry allowances',`${late.permitted_in_flight_event_requests} in flight · ${late.paid_retry_allowance} paid retries`]] : []),
@@ -129,22 +157,25 @@ async function refreshDailyCoverage(){
  }catch(error){
   $('mens-d1-source').textContent='Daily job status unavailable. '+error.message;
   $('mens-d1-job-table').hidden=true;
+  $('mens-d1-problem').textContent='Men’s D1 job status unavailable.';
  }
 }
 async function refresh(){
  if(refreshing||busy)return;
- refreshing=true;renderFeeMode(feeMode);$('settings-status').textContent='Reading operating status…';
+ refreshing=true;renderFeeMode(feeMode);if(!current)$('settings-status').textContent='Reading operating status…';
  void refreshDailyCoverage();
  const results=await Promise.allSettled([request('/api/admin/status'),request('/api/admin/activity-mode'),request('/api/workspace/status')]);
  if(results[0].status==='fulfilled'){current=results[0].value;render();}
  else{current=null;for(const button of document.querySelectorAll('[data-control]'))button.disabled=true;}
  if(results[1].status==='fulfilled')renderMode(results[1].value);
+ else $('collection-schedule').textContent='Collection schedule unavailable.';
  if(results[2].status==='fulfilled')renderWorkspace(results[2].value);
  else{
   $('storage-state').textContent='Storage status is unavailable. Collection still enforces existing storage limits.';
-  $('retention-readiness').textContent='';$('retention-gaps').replaceChildren();
+  $('retention-readiness').textContent='Capture readiness unavailable.';$('retention-gaps').replaceChildren();
  }
- $('settings-status').textContent=results.every(r=>r.status==='fulfilled')?'Status read at '+clock(new Date().toISOString())+'.':results[0].status==='rejected'?'Operating status unavailable. Controls require a current response.':'Some operating details are unavailable.';
+ $('settings-status').textContent=results[0].status==='rejected'?'Operating status unavailable. Controls require a current response.':'';
+ $('settings-checked').textContent=results.every(r=>r.status==='fulfilled')?'Status read '+clock(new Date().toISOString()):'';
  refreshing=false;renderFeeMode(feeMode);
 }
 $('settings-refresh').onclick=refresh;
@@ -157,10 +188,14 @@ $('include-fees').onchange=async()=>{
 };
 
 document.addEventListener('click',async event=>{const button=event.target.closest('[data-control]');if(!button||button.disabled||busy||!current)return;const action=button.dataset.control,body={action};if(action==='pause')body.source=button.dataset.source;if(action==='recover')Object.assign(body,{runtime_id:current.runtime_id,candidate_digest:current.candidate_digest});busy=true;render();try{current=await request('/api/admin/current',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});$('control-result').textContent=action==='stop'?'Collection stopped. Stored data remains available.':action==='pause'?'Source pause acknowledged and preserved across restarts.':'Collection resumed under its existing guards.';}catch(error){$('control-result').textContent=error.message;}finally{busy=false;render();}});
-for(const section of document.querySelectorAll('main > details[id]')){
- const reveal=()=>{if(location.hash==='#'+section.id)section.open=true;};
- window.addEventListener('hashchange',reveal);
- reveal();
+function revealDiagnostic(){
+ const section=$(location.hash.slice(1)), diagnostics=$('diagnostics');
+ if(!section||!diagnostics.contains(section))return;
+ diagnostics.open=true;
+ if(section.tagName==='DETAILS')section.open=true;
+ requestAnimationFrame(()=>section.scrollIntoView({block:'start'}));
 }
+window.addEventListener('hashchange',revealDiagnostic);
+revealDiagnostic();
 for(const zone of [...new Set(['UTC',Intl.DateTimeFormat().resolvedOptions().timeZone,...(Intl.supportedValuesOf?.('timeZone')||[])])].sort())$('timezone').append(new Option(zone.replaceAll('_',' '),zone));for(const key of ['theme','timezone']){$(key).value=readPreference(key);$(key).onchange=()=>{savePreference(key,$(key).value);applyTheme();};}$('display-form').onsubmit=event=>event.preventDefault();
 refresh();setInterval(()=>{if(!document.hidden)refresh();},15000);

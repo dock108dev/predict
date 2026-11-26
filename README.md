@@ -8,22 +8,21 @@ login. Hosted use needs no local `.env` or running app. Pushes to `main` deploy
 through the focused private-beta CI path; [server and Mac setup](docs/hetzner.md) explains
 the private deployment and optional local development.
 
-Predict opens on **Dashboard**, where the highest current positive expected
-value appears first. Open an offer to see its captured prices and calculation
-inputs while keeping your place on the board.
+Predict opens on **Dashboard**, where each exact bet shows its best eligible
+price and other venue quotes are expandable. Open a quote to see its captured
+prices and calculation inputs while keeping your place on the board.
 
-**Data** browses stored observations, odds pulls, sporting results, historical
-captures and PostgreSQL tables. You can carry a filtered selection to experiment
-creation. **Experiments** opens Win $10. New campaigns use the same paper results
-and evidence view.
+**Data** opens **Market history** and **Game scores**, with links to the pulls
+and captures that support a record. **Experiments** opens the selected campaign’s
+**All trades** ledger. Go to **By day** for campaign P/L or **Games and coverage**
+to investigate missing results and captures.
 
 Open **Collection controls** from the status area for Stop, Resume, source
 pauses, credit usage and retention. The status area shows the latest accepted
 odds receipt, the next scheduled pull and collection problems. The three
 destinations and their exports read committed evidence. Scheduled collection
-runs independently of the browser. The [workspace guide](docs/personal-data-workspace.md)
-and [simplification inventory](docs/engineering/predict-simplification-20261125.md)
-describe the workflows and retained dependencies.
+runs independently of the browser. See the [workspace guide](docs/personal-data-workspace.md)
+for the current workflows.
 
 ## Requirements and quickstart
 
