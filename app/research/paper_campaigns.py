@@ -670,6 +670,63 @@ def daily(db, identity, game_date, variant=None):
                 modes=days, provider_requests=0, orders_submitted=0)
 
 
+def trades(db, identity, variant=None, mode=None):
+    """Read selected trades and their published grades across current dated runs."""
+    campaign = db.execute('SELECT payload FROM public.paper_campaign WHERE id=%s', (identity,)).fetchone()
+    if not campaign:
+        raise workspace.UnknownSelection('Unknown scheduled experiment.')
+    config = campaign['payload']
+    available_modes = modes(config)
+    if mode is not None and mode not in available_modes:
+        raise workspace.SelectionError('Choose a sizing mode saved for this experiment.')
+    if variant is not None and variant not in config['portfolios']:
+        raise workspace.SelectionError('Choose a portfolio saved for this experiment.')
+    primary = available_modes[0]
+    mode, variant = mode or primary, variant or config['portfolios'][0]
+    days = db.execute('''SELECT game_date,run_id FROM public.paper_campaign_day
+        WHERE campaign_id=%s AND run_id IS NOT NULL''', (identity,)).fetchall()
+    if mode == primary:
+        run_ids = [day['run_id'] for day in days]
+    else:
+        history = _history(db, identity)
+        run_ids = [run for day in days if (run := _mode_runs(history.get(day['game_date'], []),
+                                                          day['run_id'], primary).get(mode))]
+
+    rows = []
+    selected = db.execute('''SELECT r.id,r.game_date,published.id result_id,
+        r.payload#>ARRAY['report','portfolios',%s,'tickets'] frozen,
+        published.payload#>ARRAY['portfolios',%s,'tickets'] graded,
+        (SELECT jsonb_object_agg(game->>'game_id',jsonb_build_object('title',game->'title','league',game->'league'))
+         FROM jsonb_array_elements(r.payload#>'{report,games}') game) games
+        FROM public.research_workspace_run r
+        LEFT JOIN public.paper_result_job j ON j.run_id=r.id
+        LEFT JOIN public.paper_result_report published ON published.run_id=r.id AND published.id=j.current_result_id
+        WHERE r.id=ANY(%s) ORDER BY r.game_date DESC,r.id''', (variant, variant, run_ids))
+    fallback_league = 'NCAAB' if config.get('scope', mens_d1.SCOPE) == mens_d1.SCOPE else None
+    for day in selected:
+        graded = {ticket['id']:ticket for ticket in day['graded'] or ()}
+        games = day['games'] or {}
+        for ticket in day['frozen'] or ():
+            publication = graded.get(ticket['id'])
+            result_id = day['result_id'] if publication else None
+            if publication is None:
+                stake = F(ticket.get('cash_commitment_usd', ticket['stake_usd']))
+                profit = ticket.get('expected_profit_exact_usd')
+                publication = paper_results._money(dict(grade=dict(state='pending')),
+                    stake=stake, expected_profit=F(profit) if profit is not None else stake * F(ticket['ev']),
+                    return_=None, pnl=None)
+            game = games.get(ticket['game_id'], {})
+            entry = {key:ticket.get(key) for key in ('id', 'game_id', 'family', 'period', 'side', 'label', 'line',
+                'venue', 'posted_odds', 'ev', 'probability', 'screen_ev')}
+            entry.update({key:publication.get(key) for key in ('stake_usd', 'stake_exact_usd',
+                'expected_profit_usd', 'expected_profit_exact_usd', 'return_usd', 'return_exact_usd',
+                'pnl_usd', 'pnl_exact_usd')})
+            rows.append(dict(entry, grade=dict(state=publication['grade']['state']),
+                game_title=game.get('title') or ticket.get('title'), league=game.get('league') or fallback_league,
+                game_date=str(day['game_date']), run_id=day['id'], result_id=result_id))
+    return dict(id=identity, mode=mode, variant=variant, trades=rows, provider_requests=0, orders_submitted=0)
+
+
 def index(db, *, active_only=False):
     campaigns = [dict(id=r['id'], **r['payload']) for r in db.execute(
         'SELECT id,payload FROM public.paper_campaign ORDER BY created_at DESC,id')]

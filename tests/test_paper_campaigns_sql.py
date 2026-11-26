@@ -263,12 +263,15 @@ class CampaignSQL(ResearchWorkspaceFixture):
                     assert report['sizing_policy']['sizing_mode'] == mode
                     trade = paper_results_view.export(view, 'trades')['rows'][0]
                     observed_trade[mode] = trade
+                    ledger, = campaigns.trades(db, identity, variant, mode)['trades']
+                    assert (ledger['id'], ledger['run_id'], ledger['result_id'], ledger['league']) == (
+                        trade['id'], run_id, view['version']['id'], 'NCAAB')
                     rollup = campaigns.view(db, identity, variant, mode=mode)
                     assert rollup['reported_days'] == 1
                     daily = rollup['days'][0]['analysis']['summary']
                     weekly = rollup['weekly']['summary']
                     for field in ('stake_exact_usd', 'return_exact_usd', 'pnl_exact_usd'):
-                        assert trade[field] == daily[field] == weekly[field]
+                        assert trade[field] == ledger[field] == daily[field] == weekly[field]
                     assert F(weekly['roi']) == F(trade['pnl_exact_usd']) / F(trade['stake_exact_usd'])
                     assert rollup['selection']['tickets'] == 1
                     assert F(rollup['selection']['stake_exact_usd']) == F(trade['stake_exact_usd'])
@@ -325,6 +328,7 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 campaign = campaigns.create(db, config)
                 assert campaign == campaigns.create(db, dict(config, alternate_odds_below='400'))
                 assert len(campaigns.view(db, campaign['id'])['days']) == 15
+                assert not campaigns.trades(db, campaign['id'])['trades']
                 run_id = campaigns.tick(db)
             assert run_id
             run = workspace.run_detail(db, run_id)['report']
@@ -335,9 +339,18 @@ class CampaignSQL(ResearchWorkspaceFixture):
             tickets = run['portfolios']['all_venues']['tickets']
             assert {F(ticket['posted_odds']) for ticket in tickets} == {399, 550}
             assert all(ticket['sizing']['target_profit_usd'] == '25' for ticket in tickets)
+            with patch.object(queue, 'utc', return_value=self.at):
+                pending = campaigns.trades(db, campaign['id'])['trades']
+            assert {trade['screen_ev'] for trade in pending} == {ticket['screen_ev'] for ticket in tickets}
+            assert {trade['game_title'] for trade in pending} == {nba['title']}
+            assert {trade['league'] for trade in pending} == {'NBA'}
+            assert {trade['game_date'] for trade in pending} == {'2026-11-23'}
+            assert all(trade['pnl_usd'] is None and trade['result_id'] is None and trade['grade']['state'] == 'pending'
+                       and trade['run_id'] == run_id for trade in pending)
 
             # A final attaches via the result queue while the opportunity snapshot stays fixed.
-            assert queue.process_one(db)
+            first_result = queue.process_one(db)
+            assert first_result
             self.advance(db, stamp('2026-11-23T20:00:00Z'))
             observed = self.at.isoformat()
             final = dict(nba, source='sportsgameodds', final=True, result='completed', home_score=92,
@@ -345,14 +358,19 @@ class CampaignSQL(ResearchWorkspaceFixture):
                          receipt_sha256=hashed(['nba-result', 92]))
             assert experiment.observe_outcomes(db, [final], at=self.at)['matched'] == 1
             assert queue.dispatch(db) == 1
-            assert queue.process_one(db)
+            latest_result = queue.process_one(db)
+            assert latest_result and latest_result != first_result
             report = queue.read(db, run_id)['report']
             assert {game['title']: game['result']['state'] for game in report['games']} == {
                 nba['title']: 'final', college['title']: 'pending',
             }
             assert {ticket['grade']['state'] for ticket in report['portfolios']['all_venues']['tickets']} == {'win'}
             with patch.object(queue, 'utc', return_value=self.at):
+                graded = campaigns.trades(db, campaign['id'])['trades']
                 assert campaigns.tick(db) == run_id
+            assert len(graded) == len(pending)
+            assert {trade['result_id'] for trade in graded} == {latest_result}
+            assert {trade['grade']['state'] for trade in graded} == {'win'}
 
             self.advance(db, self.at + timedelta(minutes=16))
             moved = [dict(event, starts_at=event['starts_at'].replace('11-23', '11-24'))
@@ -361,11 +379,70 @@ class CampaignSQL(ResearchWorkspaceFixture):
             with patch.object(queue, 'utc', return_value=self.at):
                 replacement = campaigns.tick(db)
                 campaign_view = campaigns.view(db, campaign['id'])
+                assert not campaigns.trades(db, campaign['id'])['trades']
             assert replacement and replacement != run_id
             assert workspace._run(db, replacement)['supersedes'] == run_id
             assert workspace.run_detail(db, replacement)['report']['games'] == []
             assert len(workspace.run_detail(db, run_id)['report']['games']) == 2
             assert campaign_view['selection'] is None
+
+    async def test_campaign_trade_route_reads_multiple_saved_dates_and_selected_portfolio(self):
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient, TestServer
+
+        from app.dashboard import research_workspace_api
+        from app.dashboard.request_guard import dashboard_guard
+        from app.research import experiment
+
+        await super().asyncSetUp()
+        runs = {}
+        with (self.connect() as db, patch.object(queue, '_late_capture_due', return_value=False),
+              patch.object(queue, 'utc', side_effect=lambda: self.at),
+              patch.object(campaigns.mens_d1, 'daily_recovery', return_value={}),
+              patch.object(paper.math, 'calculate', side_effect=linear)):
+            saved = campaigns.create(db, config())
+            identity = saved['id']
+            for day in ('2026-11-23', '2026-11-24'):
+                self.advance(db, stamp(f'{day}T17:00:00Z'))
+                game = self.game(f'game-{day}', f'{day}T18:00:00Z')
+                experiment.discover(db, [game], at=self.at)
+                self.capture(db, 'early', game)
+                self.advance(db, stamp(f'{day}T17:50:00Z'))
+                self.capture(db, 'late', game)
+                population = dict(kind='reconciled_occurrences', source='fixture', membership_version='fixture',
+                    revision=hashed([day]), observed_at=self.at.isoformat(), expected_games=None,
+                    games=[dict(scope_state='eligible', paper_eligible=True, provider_event_id=game['source_event_id'],
+                                occurrence_id=game['source_event_id'], title=game['title'], starts_at=game['starts_at'])])
+                with patch.object(campaigns.mens_d1, 'daily_population', return_value=population):
+                    runs[day] = campaigns.tick(db)
+                assert runs[day]
+                db.execute('UPDATE public.paper_campaign_day SET next_check_at=%s WHERE campaign_id=%s AND game_date=%s',
+                           (self.at + timedelta(days=2), identity, day))
+
+        app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+        research_workspace_api.mount(app, campaigns_only=True)
+        route = f'{research_workspace_api.BASE}/campaigns/{identity}/trades'
+        # A saved run remains available even if the browser checks before its game date.
+        with (patch.object(research_workspace_api, 'connect', side_effect=self.connect),
+              patch.object(queue, 'utc', return_value=stamp('2026-11-23T18:00:00Z'))):
+            async with TestClient(TestServer(app)) as client:
+                response = await client.get(route, params=dict(mode='kelly', variant='all_venues'))
+                assert response.status == 200, await response.text()
+                payload = await response.json()
+                assert (payload['id'], payload['mode'], payload['variant']) == (identity, 'kelly', 'all_venues')
+                assert payload['provider_requests'] == payload['orders_submitted'] == 0
+                rows = payload['trades']
+                assert {row['game_date']: row['run_id'] for row in rows} == runs
+                assert len({row['id'] for row in rows}) == len(rows)
+                assert all(row['result_id'] is None and row['grade']['state'] == 'pending' for row in rows)
+
+                best = await client.get(route, params=dict(variant='best_venue'))
+                assert best.status == 200, await best.text()
+                best_rows = (await best.json())['trades']
+                assert len(best_rows) == len(runs) < len(rows)
+                assert {row['id'] for row in best_rows} <= {row['id'] for row in rows}
+                bad_mode = await client.get(route, params=dict(mode='fixed_profit'))
+                assert bad_mode.status == 422
 
     def test_last_game_date_has_next_day_finals_and_correction_jobs(self):
         from app.collection import mens_d1_jobs

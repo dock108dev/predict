@@ -94,6 +94,14 @@ def mount(app, *, campaigns_only=False):
         name = f'predict-comparison-{value["date"]}-{value["variant"]}.json'
         return _response(value, filename=name if query.get('export') else None)
 
+    async def campaign_trades(request):
+        query = request.query
+        if set(query) - {'variant', 'mode'} or len(query) != len(set(query)):
+            raise PublicRequestError('Select an experiment sizing mode and portfolio.')
+        value = await work(paper_campaigns.trades, _identity(request.match_info['campaign_id']),
+                           query.get('variant'), mode=query.get('mode'))
+        return _response(value)
+
     async def run(request):
         query = dict(request.query)
         if query not in ({}, {"export": "1"}):
@@ -251,6 +259,7 @@ def mount(app, *, campaigns_only=False):
     app.router.add_post(BASE + '/campaigns', campaigns)
     app.router.add_get(BASE + '/campaigns/{campaign_id}', campaign)
     app.router.add_get(BASE + '/campaigns/{campaign_id}/days/{game_date}', campaign_day)
+    app.router.add_get(BASE + '/campaigns/{campaign_id}/trades', campaign_trades)
     app.router.add_get(BASE + "/result-evidence/{result_id}", result_evidence)
     app.router.add_get(BASE + "/runs/{run_id}", run)
     app.router.add_get(BASE + "/runs/{run_id}/results", results)

@@ -1,7 +1,7 @@
 import {byId,card,count,link,node,pairs,pct,readJSON,table,time,usd} from './workspace-ui.js';
 import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,ruleSummary,sizingTitle} from './research-campaigns.js';
 import {coverageURL,ledgerKeys} from './mens-d1-coverage.js';
-import {oddsBreakdown,renderResults} from './research-results.js';
+import {campaignTradeLedger,oddsBreakdown,renderResults} from './research-results.js';
 import {qualityComparison} from './research-quality.js';
 import {renderRun,renderSavedEvidence} from './research-run.js';
 
@@ -15,6 +15,7 @@ const portfolioTitles={best_venue:'Best venue only',all_venues:'All qualifying v
 const hash=/^[0-9a-f]{64}$/;
 const ledgerPreferences=['ledger_view','filter','game_sport','trade_filter','trade_ev','trade_sort',
   'trade_sport','trade_family','trade_venue','trade_rows'];
+const tradePreferences=ledgerPreferences.filter(key=>key.startsWith('trade_'));
 let requestVersion=0;
 
 const present=values=>Object.fromEntries(Object.entries(values).filter(([,value])=>value!=null));
@@ -42,17 +43,19 @@ function wantsDetails(query) {
     (query.get('view')==='daily' && query.has('mode'));
 }
 
-function ledgerSelection(query) {
-  return present(Object.fromEntries(ledgerPreferences.map(key=>[key,query.get(key)])));
+function ledgerSelection(query, keys=ledgerPreferences) {
+  return present(Object.fromEntries(keys.map(key=>[key,query.get(key)])));
 }
 
 function currentDestination(campaign, query, savedDate) {
   const details=wantsDetails(query);
   const requested=query.get('date') || savedDate;
   const view=query.get('view');
+  const variant=configuredPortfolio(campaign,query.get('variant'));
+  if (view==='trades') return {campaign:campaign.id,variant,view,...ledgerSelection(query,tradePreferences)};
   const usesDate=details || requested || view==='daily';
   const date=campaignDays(campaign).includes(requested) ? requested : usesDate ? defaultDate(campaign) : null;
-  return {campaign:campaign.id,date,variant:configuredPortfolio(campaign,query.get('variant')),
+  return {campaign:campaign.id,date,variant,
     view:view==='weekly' && !details ? view : null,ledger_view:details ? 'trades' : null};
 }
 
@@ -239,23 +242,27 @@ function showResults(config, visible, context) {
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
   const period=node('nav',undefined,'workspace-variant');
   period.setAttribute('aria-label','Results period');
-  const totalLink=action('Campaign to date',url({...context.base,mode:context.mode,date:null}));
-  const dailyLink=action('By day',url({...context.base,mode:context.mode,date:context.date}));
-  (context.cumulative ? totalLink : dailyLink).setAttribute('aria-current','page');
-  period.append(totalLink,dailyLink);
+  const selectedFilters=ledgerSelection(new URLSearchParams(location.search),tradePreferences);
+  const totalLink=action('Campaign to date',url({...context.base,mode:context.mode,view:null,date:null}));
+  const tradesLink=action('All trades',url({...context.base,mode:context.mode,view:'trades',date:null,...selectedFilters}));
+  const dailyLink=action('By day',url({...context.base,mode:context.mode,view:null,date:context.date,...selectedFilters}));
+  tradesLink.dataset.tradeTab='';
+  dailyLink.dataset.tradeTab='';
+  (context.allTrades ? tradesLink : context.cumulative ? totalLink : dailyLink).setAttribute('aria-current','page');
+  period.append(totalLink,tradesLink,dailyLink);
   heading.append(period);
   const controls=node('div',undefined,'experiment-controls');
   const changeSelection=override=>{
     const latest=new URLSearchParams(location.search);
-    change({...context.base,date:context.cumulative ? undefined : latest.get('date') || context.date,
+    change({...context.base,date:context.day ? latest.get('date') || context.date : undefined,
       variant:latest.get('variant') || context.variant,mode:latest.get('mode') || context.mode,
-      ...(!context.cumulative ? ledgerSelection(latest) : {}),...override});
+      ...(!context.cumulative ? ledgerSelection(latest,context.allTrades ? tradePreferences : ledgerPreferences) : {}),...override});
   };
   if (visible && context.experiments.length>1) {
     controls.append(field('Experiment',context.experiments.map(item=>[item.id,item.name]),context.campaign,
-      campaign=>change({campaign}), 'experiment-choice'));
+      campaign=>change({campaign,view:context.allTrades ? 'trades' : null}), 'experiment-choice'));
   }
-  if (!context.cumulative) controls.append(
+  if (context.day) controls.append(
     field('Game date (Eastern)',dates,context.date,date=>changeSelection({date}),'experiment-date'));
   if (portfolios.length>1) controls.append(
     field('Portfolio',portfolios,context.variant,variant=>changeSelection({variant}),'experiment-portfolio'));
@@ -271,6 +278,42 @@ function showResults(config, visible, context) {
   body.id='experiment-comparison-body';
   panel.append(body);
   return panel;
+}
+
+function ledgerNavigation(mount, params, paint) {
+  return {
+    embedded:true,params,href:overrides=>url({...params,...overrides}),
+    go:overrides=>{
+      const focus=document.activeElement?.dataset.workbenchFocus;
+      const next={...params,...overrides};
+      history.pushState(history.state,'',url(next));
+      for (const tab of root.querySelectorAll('[data-trade-tab]')) {
+        const target=new URL(tab.href);
+        for (const key of tradePreferences) {
+          if (next[key]) target.searchParams.set(key,next[key]);
+          else target.searchParams.delete(key);
+        }
+        tab.href=target.href;
+      }
+      paint(next);
+      if (focus) Array.from(mount.querySelectorAll('[data-workbench-focus]'))
+        .find(element=>element.dataset.workbenchFocus===focus)?.focus({preventScroll:true});
+    },
+  };
+}
+
+function paintCampaignTrades(body, trades, context, query) {
+  const section=node('section',undefined,'experiment-detail');
+  body.replaceChildren(section);
+  function paint(params) {
+    const navigation=ledgerNavigation(section,params,paint);
+    const filters=ledgerSelection(new URLSearchParams(present(params)),tradePreferences);
+    const dailyHref=trade=>url({...context.base,view:null,mode:context.mode,date:trade.game_date,run:trade.run_id,
+      ...filters,
+      ...(trade.result_id ? {trade:trade.id,result:trade.result_id} : {ticket:trade.id})});
+    section.replaceChildren(campaignTradeLedger(trades,context.config,navigation,dailyHref));
+  }
+  paint({...context.base,mode:context.mode,...ledgerSelection(query,tradePreferences),trade_page:query.get('trade_page')});
 }
 
 function paintDay(body,data,config,context,detail) {
@@ -394,15 +437,7 @@ async function openDetail(mount,selected,query,context,version) {
     if (version!==requestVersion) return;
     function paint(params) {
       const navigation={
-        embedded:true,variant,mode,config,params,href:overrides=>url({...params,...overrides}),
-        go:overrides=>{
-          const focus=document.activeElement?.dataset.workbenchFocus;
-          const next={...params,...overrides};
-          history.pushState(history.state,'',url(next));
-          paint(next);
-          if (focus) Array.from(resultRoot.querySelectorAll('[data-workbench-focus]'))
-            .find(element=>element.dataset.workbenchFocus===focus)?.focus({preventScroll:true});
-        },
+        ...ledgerNavigation(resultRoot,params,paint),variant,mode,config,
         pinned:Boolean(params.result),showSnapshotOdds:!campaign || savedSnapshot || Boolean(params.result),
         game:params.game,trade:params.trade,
         filter:['traded','zero','missing','missing_results','unresolved','frozen','reconstructed'].includes(params.filter) ? params.filter : 'all',
@@ -465,7 +500,7 @@ async function render({keepComparison=false,focus=null}={}) {
     const knownSuccessor=!pinned && campaigns.some(item=>item.id===successors[requestedCampaign]);
     const run=query.get('run');
     let selected;
-    if (hash.test(run || '') && (!knownSuccessor || !query.has('date'))) {
+    if (query.get('view')!=='trades' && hash.test(run || '') && (!knownSuccessor || !query.has('date'))) {
       const readRun=readJSON(runAPI(run));
       selected=await (knownSuccessor ? readRun.catch(()=>null) : readRun);
     }
@@ -502,8 +537,10 @@ async function render({keepComparison=false,focus=null}={}) {
     const date=dates.includes(wanted) ? wanted : defaultDate(config);
     const variant=configuredPortfolio(config,query.get('variant'));
     const detailRequested=wantsDetails(query);
-    const cumulative=!(detailRequested || query.get('view')==='daily' || (wanted && query.get('view')!=='weekly'));
-    const base={campaign:id,date:cumulative ? undefined : date,variant,...(!known ? {snapshot:'1'} : {})};
+    const allTrades=query.get('view')==='trades';
+    const day=!allTrades && Boolean(detailRequested || query.get('view')==='daily' || (wanted && query.get('view')!=='weekly'));
+    const cumulative=!day && !allTrades;
+    const base={campaign:id,date:day ? date : undefined,variant,view:allTrades ? 'trades' : undefined,...(!known ? {snapshot:'1'} : {})};
     if (known && query.get('view')==='revise') {
       root.replaceChildren();
       setStatus();
@@ -519,7 +556,7 @@ async function render({keepComparison=false,focus=null}={}) {
     const currentHref=successor && !redirected ? url(currentDestination(successor,query,wanted)) : null;
     const redirect=history.state?.experimentRedirect;
     const archiveHref=redirect?.campaign===id ? redirect.archiveHref : null;
-    const context={base,campaign:id,date,variant,config,mode,sizingModes,cumulative,experiments:campaigns,
+    const context={base,campaign:id,date,variant,config,mode,sizingModes,day,cumulative,allTrades,experiments:campaigns,
       visible:Boolean(known),archiveHref,currentHref};
     let body=keepComparison && !redirected && root.querySelector('#experiment-comparison-body');
     if (!body) {
@@ -528,6 +565,14 @@ async function render({keepComparison=false,focus=null}={}) {
       root.replaceChildren(heading);
       if (restoreFocus && focus.id) byId(focus.id)?.focus({preventScroll:true});
       body=heading.querySelector('#experiment-comparison-body');
+    }
+    if (allTrades) {
+      const params=new URLSearchParams({variant,mode});
+      const {trades}=await readJSON(campaignAPI(id)+'/trades?'+params);
+      if (version!==requestVersion) return;
+      paintCampaignTrades(body,trades,context,query);
+      setStatus();
+      return;
     }
     if (cumulative) {
       const reports=await Promise.all(sizingModes.map(mode=>readJSON(campaignPath(id,variant,mode))));

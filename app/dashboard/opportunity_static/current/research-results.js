@@ -30,6 +30,7 @@ const resultStates = {
 const captured = game => ['captured', 'frozen', 'reconstructed'].includes(game.capture_status);
 const money = value => value == null ? '—' : usd(value);
 const ticketSelection = ticket => selection({...ticket, selection_label:ticket.label});
+const ledgerDate = new Intl.DateTimeFormat('en-US', {month:'short', day:'numeric', timeZone:'UTC'});
 const gradeLabel = ticket => gradeStates[ticket.grade?.state] || 'Unresolved';
 const marketContext = ticket => [
   {moneyline:'Moneyline', spread:'Spread', total:'Total'}[ticket.family] || label(ticket.family),
@@ -437,16 +438,16 @@ function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
   return panel;
 }
 
-function ledgerTable(ledger, games, leagueFor, navigation, showInspector) {
+function ledgerTable(ledger, gameFor, leagueFor, navigation, showInspector, campaignTradeHref) {
   const headers = ['Selection', 'Venue', 'Odds', 'EV', 'Stake', 'Grade', 'Modeled P/L'];
   const scroll = table(headers, ledger.rows.map(ticket => {
-    const game = games.get(ticket.game_id);
     const selected = showInspector && ticket.id === ledger.selected?.id;
     const exactSelection = ticketSelection(ticket);
     const selectionName = ticketSelection({...ticket, line:null});
-    const pick = focusKey(link(exactSelection, navigation.href({
+    const destination = campaignTradeHref ? campaignTradeHref(ticket) : navigation.href({
       game:null, ledger_view:null, trade:ticket.id, sizing_quote:null, sizing_bet:null, trade_page:ledger.page,
-    }), 'result-ledger-selection'), 'trade-' + ticket.id);
+    });
+    const pick = focusKey(link(exactSelection, destination, 'result-ledger-selection'), 'trade-' + ticket.id);
     if (exactSelection !== selectionName) {
       const line = node('span', exactSelection.slice(selectionName.length + 1), 'result-ledger-exact-line');
       pick.replaceChildren(selectionName + ' ', line);
@@ -455,7 +456,8 @@ function ledgerTable(ledger, games, leagueFor, navigation, showInspector) {
     const selectionCell = node('div');
     const family = familyFilters.find(([id]) => id === ticket.family)?.[1];
     const market = ticket.period === 'full_game' && family ? family : marketContext(ticket);
-    const context = [leagueFor(ticket), market, game?.title].filter(Boolean).join(' · ');
+    const date = campaignTradeHref ? ledgerDate.format(new Date(ticket.game_date+'T12:00:00Z')) : null;
+    const context = [date, leagueFor(ticket), market, gameFor(ticket)?.title].filter(Boolean).join(' · ');
     selectionCell.append(pick, node('small', context, 'result-ledger-game'));
     const grade = gradeLabel(ticket), tone = grade === 'Win' ? 'result-positive' : grade === 'Loss' ? 'result-negative' : '';
     return [selectionCell, venue(ticket.venue), ticket.posted_odds, pct(ticket.ev), money(ticket.stake_usd),
@@ -498,20 +500,14 @@ function ledgerPagination(ledger, navigation) {
   return footer;
 }
 
-function tradeLedger(report, portfolio, selected, analysis, navigation, inspectTrade, views) {
-  // The daily and freshness comparisons share the campaign's configured bucket edges.
-  const buckets = analysis.quality?.fresh_target_only?.buckets || [];
-  const {portfolios} = selected.report;
-  const originals = portfolios.all_venues?.tickets || portfolios[navigation.variant]?.tickets || [];
-  const games = new Map(report.games.map(game => [game.game_id, game]));
-  const policy = {...navigation.config, ...selected.report.policy};
-  const leagueFor = ticket => gameLeague(games.get(ticket.game_id), policy);
-  const ledger = ledgerViewModel(portfolio.tickets, originals, buckets, navigation.params, leagueFor);
+function tradeLedger({tickets, originals, buckets, gameFor, leagueFor, navigation, inspectTrade, views, campaignTradeHref}) {
+  const ledger = ledgerViewModel(tickets, originals, buckets, navigation.params, leagueFor);
   const {params} = navigation;
-  const showInspector = ledger.selected && (!navigation.embedded || params.trade || params.sizing_quote || params.sizing_bet);
+  const showInspector = !campaignTradeHref && ledger.selected &&
+    (!navigation.embedded || params.trade || params.sizing_quote || params.sizing_bet);
   const section = node('section', undefined, 'result-workbench');
   const heading = node('div', undefined, 'result-ledger-heading');
-  const title = node('h3', 'Trades');
+  const title = node('h3', campaignTradeHref ? 'All trades' : 'Trades', campaignTradeHref ? 'sr-only' : undefined);
   title.id = 'trade-ledger-title';
   title.tabIndex = -1;
   const controls = node('div', undefined, 'workspace-form result-ledger-controls');
@@ -533,13 +529,15 @@ function tradeLedger(report, portfolio, selected, analysis, navigation, inspectT
     clear.onclick = () => navigation.go({trade_sport:null, trade_family:null, trade_venue:null, trade_filter:null, trade_ev:null, trade_page:1});
     controls.append(clear);
   }
-  heading.append(title, views, controls);
+  heading.append(title);
+  if (views) heading.append(views);
+  heading.append(controls);
   section.append(heading);
   if (ledger.subset && ledger.total) {
-    const {tickets, resolved, stake, pnl} = ledger.subset;
-    const partial = resolved !== tickets;
+    const {tickets:matching, resolved, stake, pnl} = ledger.subset;
+    const partial = resolved !== matching;
     const caption = [
-      `${count(tickets)} of ${count(portfolio.tickets.length)} trades`,
+      `${count(matching)} of ${count(tickets.length)} trades`,
       `Staked ${money(stake)}`,
       `${partial ? 'Graded P/L' : 'P/L'} ${money(pnl)}`,
       ...(partial ? [`${count(resolved)} graded`] : []),
@@ -547,20 +545,26 @@ function tradeLedger(report, portfolio, selected, analysis, navigation, inspectT
     section.append(node('p', caption.join(' · '), 'result-ledger-subset'));
   }
   if (!ledger.rows.length) {
-    section.append(node('p', portfolio.tickets.length ? 'No trades match the current filters.'
+    section.append(node('p', tickets.length ? 'No trades match the current filters.'
       : 'No selected paper trades in this portfolio.'));
     return section;
   }
   const sheet = node('div', undefined, 'result-ledger');
   if (showInspector) sheet.append(link('Selected trade details', '#trade-inspector', 'result-jump-inspector'));
-  sheet.append(ledgerTable(ledger, games, leagueFor, navigation, showInspector));
+  sheet.append(ledgerTable(ledger, gameFor, leagueFor, navigation, showInspector, campaignTradeHref));
   if (!ledger.subset || ledger.pageCount > 1) sheet.append(ledgerPagination(ledger, navigation));
   if (showInspector) {
     const split = node('div', undefined, 'result-workbench-split');
-    split.append(sheet, tradeInspector(ledger.selected, games.get(ledger.selected.game_id), ledger, navigation, inspectTrade));
+    split.append(sheet, tradeInspector(ledger.selected, gameFor(ledger.selected), ledger, navigation, inspectTrade));
     section.append(split);
   } else section.append(sheet);
   return section;
+}
+
+export function campaignTradeLedger(trades, config, navigation, campaignTradeHref) {
+  const buckets = (config.bucket_edges || []).map((minimum, index, edges) => ({minimum, maximum:edges[index+1]}));
+  return tradeLedger({tickets:trades, originals:trades, buckets, navigation, campaignTradeHref,
+    gameFor:trade=>({title:trade.game_title}), leagueFor:trade=>gameLeague(trade, config)});
 }
 
 function breakdowns(portfolio) {
@@ -738,7 +742,14 @@ export function renderResults(root, selected, analysis, navigation, inspectTrade
       root.append(gamesView(report, portfolio, navigation));
     }
   } else {
-    root.append(tradeLedger(report, portfolio, selected, analysis, navigation, inspectTrade, views));
+    const {portfolios, policy} = selected.report;
+    const games = new Map(report.games.map(game => [game.game_id, game]));
+    const gameFor = trade => games.get(trade.game_id);
+    const rules = {...navigation.config, ...policy};
+    root.append(tradeLedger({tickets:portfolio.tickets,
+      originals:portfolios.all_venues?.tickets || portfolios[navigation.variant]?.tickets || [],
+      buckets:analysis.quality?.fresh_target_only?.buckets || [], gameFor,
+      leagueFor:trade=>gameLeague(gameFor(trade), rules), navigation, inspectTrade, views}));
   }
   if (navigation.embedded) {
     detailsPanel.append(coverage, tools);
