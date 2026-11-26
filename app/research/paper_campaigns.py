@@ -724,7 +724,8 @@ def trades(db, identity, variant=None, mode=None):
             rows.append(dict(entry, grade=dict(state=publication['grade']['state']),
                 game_title=game.get('title') or ticket.get('title'), league=game.get('league') or fallback_league,
                 game_date=str(day['game_date']), run_id=day['id'], result_id=result_id))
-    return dict(id=identity, mode=mode, variant=variant, trades=rows, provider_requests=0, orders_submitted=0)
+    return dict(id=identity, mode=mode, variant=variant, trades=rows, summary=paper_results._summary(rows),
+                provider_requests=0, orders_submitted=0)
 
 
 def index(db, *, active_only=False):

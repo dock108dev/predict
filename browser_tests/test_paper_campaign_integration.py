@@ -225,7 +225,7 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                         "SELECT state,last_error FROM public.paper_campaign_day"
                     ).fetchall()
                 await page.reload(wait_until="domcontentloaded")
-                await page.get_by_role("link", name="By day", exact=True).click()
+                await page.get_by_role("link", name="Results by day", exact=True).click()
                 await page.locator(".experiment-history > summary").click()
                 odds_title = "Posted odds buckets · Win $7.51"
                 await page.get_by_text(odds_title, exact=True).click()

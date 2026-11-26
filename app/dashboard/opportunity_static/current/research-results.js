@@ -502,7 +502,9 @@ function ledgerTable(ledger, gameFor, leagueFor, navigation, showInspector, camp
     const market = ticket.period === 'full_game' && family ? family : marketContext(ticket);
     const date = campaign ? ledgerDate.format(new Date(ticket.game_date+'T12:00:00Z')) : null;
     const context = [date, leagueFor(ticket), market, gameFor(ticket)?.title].filter(Boolean).join(' · ');
-    selectionCell.append(pick, node('small', context, 'result-ledger-game'));
+    const terms = [venue(ticket.venue), ticket.posted_odds, `${pct(ticket.ev)} EV`, `${money(ticket.stake_usd)} stake`];
+    selectionCell.append(pick, node('small', context, 'result-ledger-game'),
+      node('small', terms.join(' · '), 'result-ledger-mobile-terms'));
     const grade = gradeLabel(ticket), tone = grade === 'Win' ? 'result-positive' : grade === 'Loss' ? 'result-negative' : '';
     return [selectionCell, venue(ticket.venue), ticket.posted_odds, pct(ticket.ev), money(ticket.stake_usd),
       node('span', grade, tone), moneyCell(ticket.pnl_usd)];
@@ -513,6 +515,7 @@ function ledgerTable(ledger, gameFor, leagueFor, navigation, showInspector, camp
   tableElement.setAttribute('role', 'table');
   for (const group of tableElement.querySelectorAll('thead, tbody')) group.setAttribute('role', 'rowgroup');
   for (const row of tableElement.querySelectorAll('tr')) row.setAttribute('role', 'row');
+  for (const row of tableElement.querySelectorAll('tbody tr')) row.classList.add('result-ledger-row');
   for (const column of tableElement.querySelectorAll('th')) column.setAttribute('role', 'columnheader');
   for (const cell of tableElement.querySelectorAll('td')) cell.setAttribute('role', 'cell');
   const direction = ledger.sort === 'ev_asc' ? 'ascending' : 'descending';
@@ -561,9 +564,10 @@ function tradeLedger({tickets, originals, buckets, gameFor, leagueFor, navigatio
   more.open = Boolean(ledger.bucket || ledger.filters.venue !== 'all' || ledger.sort !== 'ev_desc');
   const change = (key, value) => navigation.go({[key]:value === 'all' ? null : value, trade_page:1,
     ...(campaign ? {trade:null} : {})});
-  controls.append(dropdown('Sport', sportFilters, ledger.filters.sport, value => change('trade_sport', value), 'ledger-sport'),
-    dropdown('Bet type', familyFilters, ledger.filters.family, value => change('trade_family', value), 'ledger-family'),
-    dropdown('Grade', gradeFilters, ledger.filters.grade, value => change('trade_filter', value), 'ledger-grade'));
+  const compact = options => [['all', 'All'], ...options.slice(1)];
+  controls.append(dropdown('Sport', compact(sportFilters), ledger.filters.sport, value => change('trade_sport', value), 'ledger-sport'),
+    dropdown('Bet type', compact(familyFilters), ledger.filters.family, value => change('trade_family', value), 'ledger-family'),
+    dropdown('Grade', compact(gradeFilters), ledger.filters.grade, value => change('trade_filter', value), 'ledger-grade'));
   extra.append(dropdown('Venue', venueFilters, ledger.filters.venue, value => change('trade_venue', value), 'ledger-venue'));
   if (buckets.length > 1) {
     extra.append(dropdown('Screening EV', [['all', 'All EV buckets'], ...buckets.map(bucket => [bucket.minimum, band(bucket)])],

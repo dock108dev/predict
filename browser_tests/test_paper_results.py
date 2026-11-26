@@ -474,8 +474,13 @@ def test_experiment_trade_filters_compose_and_more_rows_survive_reload():
         browser.close()
 
 
-@pytest.mark.parametrize("width", [390, 1440])
-def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(width):
+@pytest.mark.parametrize("engine,device,viewport", [
+    pytest.param("chromium", None, {"width": 390, "height": 820}, id="chromium-phone"),
+    pytest.param("chromium", None, {"width": 1440, "height": 820}, id="chromium-desktop"),
+    pytest.param("webkit", "iPhone 13 Mini", None, id="webkit-iphone-13-mini"),
+    pytest.param("webkit", "iPhone 15", None, id="webkit-iphone-15"),
+])
+def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(engine, device, viewport):
     from app.research.paper_campaigns import configuration
     from tests.test_paper_campaigns import fixed_config
 
@@ -491,6 +496,7 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(width):
     tickets = results["portfolios"]["all_venues"]["tickets"]
     games = {game["game_id"]: game for game in results["games"]}
     pending = tickets[33]
+    games[pending["game_id"]]["title"] = "University of North Carolina Greensboro at Louisiana State University at Alexandria"
     later_trades = tickets[29:33] + tickets[34:]
     pending.update(id=pending_ticket, grade=dict(state="pending"), return_usd=None, pnl_usd=None,
                    return_exact_usd=None, pnl_exact_usd=None)
@@ -504,6 +510,12 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(width):
                              league=games[trade["game_id"]]["league"],
                              game_title=games[trade["game_id"]]["title"], screen_ev="1/25")
                         for trade in selected)
+    summary = _summary(overview)
+    daily_results = [
+        dict(date=day, run_id=run, result_state="partially_graded",
+             analysis=dict(summary=_summary(selected)))
+        for day, run, selected in [(DAY, RUN, tickets[:29]), (later_date, later_run, later_trades)]
+    ]
     path = f"{BASE}/campaigns/{campaign}"
     run_path = f"{BASE}/runs/{later_run}"
     pending_path = f"{BASE}/runs/{pending_run}"
@@ -529,9 +541,11 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(width):
             else:
                 route.fulfill(json=dict(campaigns=[cfg]))
         elif endpoint == path:
-            route.fulfill(json=dict(config=cfg, days=[], mode="fixed_profit"))
+            route.fulfill(json=dict(config=cfg, days=daily_results, mode="fixed_profit", as_of=CLOCK,
+                                    weekly=dict(summary=summary, buckets=[], thresholds=[])))
         elif endpoint == f"{path}/trades":
-            route.fulfill(json=dict(id=campaign, mode="fixed_profit", variant="best_venue", trades=overview))
+            route.fulfill(json=dict(id=campaign, mode="fixed_profit", variant="best_venue", trades=overview,
+                                    summary=summary))
         elif endpoint in {f"{path}/days/{later_date}", f"{path}/days/{pending_date}"}:
             awaiting = endpoint.endswith(pending_date)
             route.fulfill(json=dict(config=cfg, modes={"fixed_profit": dict(
@@ -557,26 +571,58 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(width):
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
-        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
-        page = browser.new_page(viewport={"width": width, "height": 820})
+        browser_type = getattr(runtime, engine)
+        if engine == "webkit" and not Path(browser_type.executable_path).exists():
+            pytest.skip("Install the optional WebKit browser to exercise iPhone layouts locally")
+        browser = browser_type.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM") if engine == "chromium" else None)
+        page = browser.new_page(**runtime.devices[device]) if device else browser.new_page(viewport=viewport)
+        viewport = page.viewport_size
         page.goto(f"{base}/experiments?campaign={campaign}&variant=best_venue")
         expect(page.get_by_role("link", name="All trades", exact=True)).to_have_attribute("aria-current", "page")
+        pnl = page.locator(".experiment-campaign-pnl")
+        expect(pnl).to_be_visible()
+        expect(pnl).to_contain_text("Campaign paper P/L")
+        expect(pnl.locator(".experiment-campaign-pnl-value")).to_have_text("$40.00")
+        expect(pnl.locator(".experiment-campaign-roi")).to_have_text("Realized ROI 21.62%")
+        expect(pnl.locator(".experiment-campaign-graded")).to_have_text("37 / 58 graded")
         rows = page.locator(".result-ledger-table tbody tr:not(.result-campaign-inspection)")
         expect(rows).to_have_count(50)
         first_trade = rows.first.bounding_box()
-        assert first_trade["y"] >= 0 and first_trade["y"] + first_trade["height"] <= 820
+        campaign_result = pnl.bounding_box()
+        assert 0 <= campaign_result["y"] and campaign_result["y"] + campaign_result["height"] <= first_trade["y"]
+        assert first_trade["y"] >= 0 and first_trade["y"] + first_trade["height"] <= viewport["height"]
+        if viewport["width"] < 500:
+            expect(page.get_by_label("Bet type", exact=True).locator("option:checked")).to_have_text("All")
+            terms = rows.first.locator(".result-ledger-mobile-terms")
+            expect(terms).to_be_visible()
+            expect(terms).to_contain_text("$5.00")
+            expect(rows.first).to_contain_text("University of North Carolina Greensboro")
+            selection = rows.first.locator(".result-ledger-selection").bounding_box()
+            for label in ("Grade", "Modeled P/L"):
+                cell = rows.first.locator(f'td[data-label="{label}"]')
+                expect(cell).to_be_visible()
+                value = cell.bounding_box()
+                assert selection["x"] < value["x"] and value["x"] + value["width"] <= viewport["width"]
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         expect(page.get_by_label("Screening EV", exact=True)).to_be_hidden()
         expect(page.locator(".experiment-active-rules")).to_contain_text("One trade per game, main lines first")
+        pager = page.get_by_role("navigation", name="Trade pagination")
+        pager.get_by_role("link", name="Next", exact=True).click()
+        expect(rows).to_have_count(8)
+        pager.get_by_role("link", name="Previous", exact=True).click()
+        expect(rows).to_have_count(50)
         page.get_by_label("Rows per page").select_option("100")
         expect(rows).to_have_count(58)
         assert (f"{path}/trades", {"variant": ["best_venue"], "mode": ["fixed_profit"]}) in requests
-        assert not any("/days/" in endpoint or "/runs/" in endpoint for endpoint, _ in requests)
+        assert not any(endpoint == path or "/days/" in endpoint or "/runs/" in endpoint for endpoint, _ in requests)
         page.get_by_label("Sport", exact=True).select_option("NBA")
         page.get_by_label("Bet type", exact=True).select_option("total")
         page.get_by_text("More filters", exact=True).click()
         page.get_by_label("Venue", exact=True).select_option("novig")
         expect(rows).to_have_count(8)
-        for tab in ("All trades", "By day"):
+        expect(pnl.locator(".experiment-campaign-pnl-value")).to_have_text("$40.00")
+        expect(pnl.locator(".experiment-campaign-graded")).to_have_text("37 / 58 graded")
+        for tab in ("All trades", "Results by day"):
             href = page.get_by_role("link", name=tab, exact=True).get_attribute("href")
             filters = parse_qs(urlsplit(href).query)
             assert filters["trade_sport"] == ["NBA"]
@@ -639,6 +685,17 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(width):
         expect(rows).to_have_count(8)
         expect(pick).to_have_attribute("aria-expanded", "false")
         expect(page.get_by_label("Sport", exact=True)).to_have_value("NBA")
+        page.get_by_role("link", name="Results by day", exact=True).click()
+        dates = page.get_by_role("region", name="Results by date")
+        expect(dates.locator("tbody tr")).to_have_count(2)
+        later_row = dates.locator("tbody tr").filter(has_text="Nov 24, 2026")
+        daily_pnl = later_row.locator('[data-label="Paper P/L"]')
+        expect(daily_pnl).to_be_visible()
+        expect(daily_pnl).to_have_text("$25.00")
+        assert dates.evaluate("element => element.scrollWidth <= element.clientWidth")
+        dates.get_by_role("link", name="Nov 24, 2026").click()
+        page.get_by_text("Daily totals", exact=True).click()
+        expect(page.locator(".experiment-totals").get_by_text("Paper P/L", exact=True)).to_be_visible()
         browser.close()
 
 

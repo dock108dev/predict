@@ -131,7 +131,7 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         page = browser.new_page(viewport={"width": 390, "height": 850})
         page.goto(f"{base}/experiments")
         expect(page.get_by_role("link", name="All trades", exact=True)).to_have_attribute("aria-current", "page")
-        page.get_by_role("link", name="By day", exact=True).click()
+        page.get_by_role("link", name="Results by day", exact=True).click()
         dates = page.get_by_role("region", name="Results by date")
         expect(dates.locator("tbody tr")).to_have_count(2)
         expect(dates.get_by_role("link", name="Nov 24, 2026")).to_be_visible()
@@ -144,7 +144,7 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         table = totals.get_by_role("table").first
         headers = table.get_by_role("columnheader")
         expect(headers).to_have_text(["Paper results", "Win $10"])
-        expect(page.get_by_role("link", name="By day", exact=True)).to_have_attribute("aria-current", "page")
+        expect(page.get_by_role("link", name="Results by day", exact=True)).to_have_attribute("aria-current", "page")
         expect(table.get_by_role("row", name=re.compile("^Selected trades"))).to_contain_text("2")
         expect(table.get_by_role("row", name=re.compile("^Ungraded trades"))).to_contain_text("1")
         expect(table.get_by_role("row", name=re.compile("^Stake"))).to_contain_text("$30.00")

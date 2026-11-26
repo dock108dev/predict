@@ -11,6 +11,15 @@
 .experiment-comparison .experiment-heading { display:grid; gap:.45rem; }
 .experiment-comparison .experiment-heading h2 { margin:0; }
 .experiment-comparison .experiment-heading .workspace-variant { gap:.25rem; }
+.experiment-picker { display:grid; gap:.15rem; width:min(100%,20rem); font-size:.9375rem; }
+.experiment-picker select {
+  min-width:0;
+  min-height:36px;
+  padding:.3rem .45rem;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:.25rem;
+}
 .experiment-comparison .experiment-heading a[aria-current] {
   color:var(--p-accent);
   background:var(--p-active);
@@ -25,7 +34,6 @@
 }
 .experiment-controls label { min-width:0; display:grid; gap:.15rem; }
 .experiment-controls:empty { display:none; }
-.experiment-controls label:has(#experiment-choice) { flex:0 1 20rem; }
 .experiment-active-rules {
   display:flex;
   justify-content:space-between;
@@ -42,9 +50,15 @@
   align-items:baseline;
   gap:.25rem .75rem;
   font-variant-numeric:tabular-nums;
-  margin-block:.6rem;
+  margin-block:.55rem;
+  padding:.38rem .55rem;
+  background:var(--p-alternate);
+  border-radius:.35rem;
+  font-size:.875rem;
+  line-height:1.3;
 }
-.experiment-campaign-pnl strong { font-size:1.35rem; }
+.experiment-campaign-pnl-value { font-size:1.2rem; white-space:nowrap; }
+.experiment-campaign-pnl :is(.experiment-campaign-roi,.experiment-campaign-graded) { white-space:nowrap; }
 .experiment-history { border-top:1px solid var(--line); padding-block:.45rem; }
 .experiment-history > summary,.result-more-filters > summary { cursor:pointer; }
 .experiment-controls :is(select,button,.research-button),
@@ -77,7 +91,7 @@
 .result-inline-trade > header h4 { margin:0; }
 .result-inline-trade :is(pre,dd) { overflow-wrap:anywhere; white-space:pre-wrap; }
 #experiments-main .result-campaign-inspection { background:var(--p-alternate); }
-#experiments-main :is(.experiment-date-table,.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) :is(th,td) {
+#experiments-main :is(.result-ledger-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) :is(th,td) {
   padding:.35rem .5rem;
   vertical-align:middle;
 }
@@ -94,49 +108,127 @@
 .campaign-handoff .campaign-check { grid-column: 1 / -1; }
 
 @media (max-width: 760px) {
-  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) {
+  #experiments-main :is(.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) {
     overflow-x:auto;
   }
-  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) table {
+  #experiments-main :is(.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) table {
     display:table;
     min-width:38rem;
   }
-  #experiments-main .experiment-date-table table { min-width:30rem; }
-  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) thead {
+  #experiments-main :is(.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) thead {
     display:table-header-group;
     position:static;
     width:auto;
     height:auto;
     clip-path:none;
   }
-  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tbody {
+  #experiments-main :is(.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tbody {
     display:table-row-group;
   }
-  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tr {
+  #experiments-main :is(.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) tr {
     display:table-row;
     width:auto;
     border:0;
     margin:0;
   }
-  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td {
+  #experiments-main :is(.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td {
     display:table-cell;
     width:auto;
     border-bottom:1px solid var(--line);
   }
-  #experiments-main :is(.experiment-date-table,.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td::before {
+  #experiments-main :is(.paper-result-games .catalog-scroll,.paper-result-game .catalog-scroll) td::before {
     content:none;
   }
 }
 @media (max-width:740px) {
   #experiments-main .result-ledger-table .workspace-table td { padding:0; text-align:left; }
   #experiments-main .result-ledger-table .workspace-table td:first-child { min-width:0; }
-  #experiments-main .result-ledger-table tbody tr { gap:.35rem .45rem; padding:.55rem; }
+  #experiments-main .result-ledger-table tbody tr { padding:.5rem; }
+  #experiments-main .result-ledger-table .result-ledger-row {
+    grid-template-columns:minmax(0,1fr) max-content;
+    grid-template-rows:min-content 1fr;
+    gap:.17rem .55rem;
+    font-size:.875rem;
+    line-height:1.3;
+  }
+  #experiments-main .result-ledger-row td:first-child { grid-area:1 / 1 / 3 / 2; }
+  #experiments-main .result-ledger-table :is(thead th,.result-ledger-row td):nth-child(n+2):nth-child(-n+5) { display:none; }
+  #experiments-main .result-ledger-row td::before { content:none; }
+  #experiments-main .result-ledger-row td:nth-child(6) { grid-area:1 / 2; max-width:6rem; text-align:right; }
+  #experiments-main .result-ledger-row td:nth-child(7) { grid-area:2 / 2; text-align:right; font-weight:600; white-space:nowrap; }
+  #experiments-main .result-ledger-row .result-ledger-selection { overflow-wrap:anywhere; line-height:1.2; }
+  #experiments-main .result-ledger-row .result-ledger-game {
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:.75rem;
+  }
+  #experiments-main .result-ledger-row .result-ledger-mobile-terms {
+    display:block;
+    margin:0;
+    font-size:.75rem;
+    line-height:1.3;
+  }
   #experiments-main .result-ledger-heading > .result-ledger-controls { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; }
   #experiments-main .result-ledger-controls label { min-width:0; }
-  #experiments-main .result-campaign-inspection td { grid-column:1/-1; }
+  #experiments-main .result-ledger-controls select { min-width:0; font-size:1rem; }
+  #experiments-main .result-campaign-inspection { display:block; }
+  #experiments-main .result-campaign-inspection td::before { content:none; }
 }
+@media (max-width: 760px) {
+  #experiments-main .experiment-date-table table { display:block; min-width:0; }
+  #experiments-main .experiment-date-table thead {
+    display:table-header-group;
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip-path:inset(50%);
+  }
+  #experiments-main .experiment-date-table tbody { display:block; }
+  #experiments-main .experiment-date-table tr {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) max-content;
+    gap:.15rem .5rem;
+    border-bottom:1px solid var(--line);
+    padding:.45rem .2rem;
+    border-radius:0;
+    margin:0;
+  }
+  #experiments-main .experiment-date-table td {
+    display:block;
+    width:auto;
+    padding:0;
+    border:0;
+    font-size:.875rem;
+    line-height:1.25;
+  }
+  #experiments-main .experiment-date-table td::before { content:none; }
+  #experiments-main .experiment-date-table td:nth-child(1) { grid-area:1 / 1; }
+  #experiments-main .experiment-date-table td:nth-child(2) { grid-area:2 / 1; color:var(--muted); }
+  #experiments-main .experiment-date-table td:nth-child(3) { grid-area:3 / 1; text-align:left; color:var(--muted); }
+  #experiments-main .experiment-date-table td:nth-child(4) { grid-area:1 / 2; font-weight:600; }
+  #experiments-main .experiment-date-table td:nth-child(5) { grid-area:2 / 2; }
+  .experiment-day-graded::after { content:' graded'; }
+  .experiment-day-roi::after { content:' ROI'; }
+}
+.experiment-tab-short { display:none; }
 @media (max-width: 480px) {
   .experiment-comparison { padding-inline:.55rem; }
-  .experiment-controls label:has(#experiment-choice) { max-width:100%; }
+  .experiment-heading:has(.experiment-picker) :is(h2,.experiment-picker > span) {
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip-path:inset(50%);
+  }
+  .experiment-picker select { font-size:1rem; font-weight:600; }
+  .experiment-tab-full { display:none; }
+  .experiment-tab-short { display:inline; }
+  .experiment-active-rules { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
   .experiment-active-rules p { font-size:.8125rem; }
+  #experiments-main > .board-heading .research-button { padding:.4rem .55rem; font-size:.875rem; }
+}
+@media (max-width: 350px) {
+  #experiments-main .result-ledger-heading > .result-ledger-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }

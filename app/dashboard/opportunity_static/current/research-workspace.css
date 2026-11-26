@@ -181,6 +181,7 @@
 .result-ledger-exact-line { white-space:nowrap; }
 .result-ledger-line { display:block; color:var(--ink); white-space:normal; overflow-wrap:normal; }
 .result-ledger-game { display:block; margin-top:.28rem; color:var(--muted); font-size:.875rem; line-height:1.35; }
+.result-ledger-mobile-terms { display:none; }
 .result-positive { color:var(--research-positive); }
 .result-negative { color:var(--research-negative); }
 .result-ledger-table td:nth-child(6) { font-weight:600; }

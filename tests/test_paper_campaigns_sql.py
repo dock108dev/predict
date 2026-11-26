@@ -263,7 +263,8 @@ class CampaignSQL(ResearchWorkspaceFixture):
                     assert report['sizing_policy']['sizing_mode'] == mode
                     trade = paper_results_view.export(view, 'trades')['rows'][0]
                     observed_trade[mode] = trade
-                    ledger, = campaigns.trades(db, identity, variant, mode)['trades']
+                    campaign_trades = campaigns.trades(db, identity, variant, mode)
+                    ledger, = campaign_trades['trades']
                     assert (ledger['id'], ledger['run_id'], ledger['result_id'], ledger['league']) == (
                         trade['id'], run_id, view['version']['id'], 'NCAAB')
                     rollup = campaigns.view(db, identity, variant, mode=mode)
@@ -271,7 +272,9 @@ class CampaignSQL(ResearchWorkspaceFixture):
                     daily = rollup['days'][0]['analysis']['summary']
                     weekly = rollup['weekly']['summary']
                     for field in ('stake_exact_usd', 'return_exact_usd', 'pnl_exact_usd'):
-                        assert trade[field] == ledger[field] == daily[field] == weekly[field]
+                        assert trade[field] == ledger[field] == daily[field] == weekly[field] == campaign_trades['summary'][field]
+                    for field in ('resolved', 'tickets', 'roi_percent'):
+                        assert campaign_trades['summary'][field] == weekly[field]
                     assert F(weekly['roi']) == F(trade['pnl_exact_usd']) / F(trade['stake_exact_usd'])
                     assert rollup['selection']['tickets'] == 1
                     assert F(rollup['selection']['stake_exact_usd']) == F(trade['stake_exact_usd'])
@@ -340,7 +343,11 @@ class CampaignSQL(ResearchWorkspaceFixture):
             assert {F(ticket['posted_odds']) for ticket in tickets} == {399, 550}
             assert all(ticket['sizing']['target_profit_usd'] == '25' for ticket in tickets)
             with patch.object(queue, 'utc', return_value=self.at):
-                pending = campaigns.trades(db, campaign['id'])['trades']
+                pending = campaigns.trades(db, campaign['id'])
+            assert pending['summary']['resolved'] == 0
+            assert pending['summary']['tickets'] == len(tickets)
+            assert pending['summary']['pnl_usd'] is pending['summary']['roi_percent'] is None
+            pending = pending['trades']
             assert {trade['screen_ev'] for trade in pending} == {ticket['screen_ev'] for ticket in tickets}
             assert {trade['game_title'] for trade in pending} == {nba['title']}
             assert {trade['league'] for trade in pending} == {'NBA'}
@@ -435,6 +442,8 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 assert {row['game_date']: row['run_id'] for row in rows} == runs
                 assert len({row['id'] for row in rows}) == len(rows)
                 assert all(row['result_id'] is None and row['grade']['state'] == 'pending' for row in rows)
+                assert payload['summary']['tickets'] == len(rows)
+                assert payload['summary']['resolved'] == 0
 
                 best = await client.get(route, params=dict(variant='best_venue'))
                 assert best.status == 200, await best.text()

@@ -111,10 +111,13 @@ function dayStatus(day) {
   return result[day.result_state] || 'Saved snapshot';
 }
 
+function roiPercent(summary) {
+  if (summary?.roi_percent != null) return summary.roi_percent+'%';
+  return summary?.roi == null ? '—' : pct(summary.roi);
+}
+
 function roi(summary) {
-  if (summary?.roi == null) return '—';
-  const percent=summary.roi_percent == null ? pct(summary.roi) : summary.roi_percent+'%';
-  return percent+' on '+usd(summary.roi_stake_usd)+' graded stake';
+  return summary?.roi == null ? '—' : roiPercent(summary)+' on '+usd(summary.roi_stake_usd)+' graded stake';
 }
 
 function metrics(summary, selection=summary) {
@@ -194,6 +197,19 @@ function campaignEvidence(config, context, reports=[{mode:context.mode}]) {
   return history;
 }
 
+function campaignResultSummary(summary, selected=summary?.tickets) {
+  const header=node('div',undefined,'experiment-campaign-pnl');
+  header.setAttribute('role','group');
+  header.setAttribute('aria-label','Campaign results');
+  const pnl=node('strong',money(summary?.pnl_usd),'experiment-campaign-pnl-value');
+  if (Number(summary?.pnl_usd)>0) pnl.classList.add('result-positive');
+  if (Number(summary?.pnl_usd)<0) pnl.classList.add('result-negative');
+  header.append(node('span','Campaign paper P/L','experiment-campaign-pnl-label'),pnl,
+    node('span',`Realized ROI ${roiPercent(summary)}`,'experiment-campaign-roi'),
+    node('span',`${count(summary?.resolved ?? 0)} / ${count(selected ?? 0)} graded`,'experiment-campaign-graded'));
+  return header;
+}
+
 function renderCampaignResults(body, reports, config, context) {
   const primary=reports.find(report=>report.mode===context.mode) || reports[0];
   const through=primary.as_of ? gameDate.format(new Date(primary.as_of)) : gameDate.format(new Date());
@@ -204,24 +220,25 @@ function renderCampaignResults(body, reports, config, context) {
   const history=campaignEvidence(config,context,reports);
   if (days.length) {
     const summary=primary.weekly?.summary;
-    const header=node('p',undefined,'experiment-campaign-pnl');
-    header.append(node('span','Campaign paper P/L'),node('strong',money(summary?.pnl_usd)),
-      node('span',`${count(summary?.resolved || 0)} / ${count(primary.selection?.tickets ?? summary?.tickets ?? 0)} graded`));
-    panel.append(header);
+    panel.append(campaignResultSummary(summary,primary.selection?.tickets));
     const rows=days.map(day=>{
       const summary=day.analysis?.summary, selection=day.selection || summary;
-      const realized=summary?.roi == null ? '—' : summary.roi_percent == null ? pct(summary.roi) : summary.roi_percent+'%';
       const status=dayStatus(day)+(day.capture_state==='partial' ? ' · Partial T−10' : '');
+      const realized=roiPercent(summary);
       return [link(displayDate.format(new Date(day.date+'T12:00:00Z')),
         url({...context.base,...context.filters,view:'daily',date:day.date,mode:context.mode})),status,
-        selection ? `${count(summary?.resolved ?? 0)} / ${count(selection.tickets)}` : '—',
-        money(summary?.pnl_usd),realized];
+        selection ? node('span',`${count(summary?.resolved ?? 0)} / ${count(selection.tickets)}`,'experiment-day-graded') : '—',
+        money(summary?.pnl_usd),realized==='—' ? realized : node('span',realized,'experiment-day-roi')];
     });
     const dates=table(['Date (ET)','Status','Graded / selected','Paper P/L','Realized ROI'],rows);
     dates.classList.add('experiment-date-table');
     dates.tabIndex=0;
     dates.setAttribute('role','region');
     dates.setAttribute('aria-label','Results by date');
+    dates.querySelector('table').setAttribute('role','table');
+    for (const row of dates.querySelectorAll('tr')) row.setAttribute('role','row');
+    for (const cell of dates.querySelectorAll('th')) cell.setAttribute('role','columnheader');
+    for (const cell of dates.querySelectorAll('td')) cell.setAttribute('role','cell');
     panel.append(dates);
     const totals=node('details',undefined,'experiment-totals');
     totals.append(node('summary','Campaign totals'),summaryTable(config,context.sizingModes,[
@@ -265,14 +282,24 @@ function showResults(config, visible, context) {
     'Open archived snapshot',context.archiveHref));
   const dates=campaignDays(config).map(value=>[value,displayDate.format(new Date(value+'T12:00:00Z'))]);
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
+  if (visible && context.experiments.length>1) {
+    const picker=field('Experiment',context.experiments.map(item=>[item.id,item.name]),context.campaign,
+      campaign=>change({campaign,view:context.games ? 'daily' : context.allTrades ? 'trades' : 'by-day',
+        ledger_view:context.games ? 'games' : null}), 'experiment-choice');
+    picker.classList.add('experiment-picker');
+    heading.append(picker);
+  }
   const period=node('nav',undefined,'workspace-variant');
   period.setAttribute('aria-label','Experiment results');
   const {filters}=context;
   const common={...context.base,mode:context.mode,...filters};
   const tradesLink=action('All trades',url({...common,view:'trades',date:null}));
-  const dailyLink=action('By day',url({...common,view:'by-day',date:null}));
+  const dailyLink=action('Results by day',url({...common,view:'by-day',date:null}));
   const coverageLink=action('Games and coverage',url({...common,...context.gameFilters,
     view:'daily',date:context.date,ledger_view:'games'}));
+  coverageLink.setAttribute('aria-label','Games and coverage');
+  coverageLink.replaceChildren(node('span','Games and coverage','experiment-tab-full'),
+    node('span','Games','experiment-tab-short'));
   tradesLink.dataset.tradeTab='';
   dailyLink.dataset.tradeTab='';
   coverageLink.dataset.tradeTab='';
@@ -286,11 +313,6 @@ function showResults(config, visible, context) {
       variant:latest.get('variant') || context.variant,mode:latest.get('mode') || context.mode,
       ...ledgerSelection(latest,context.allTrades ? tradePreferences : ledgerPreferences),...override});
   };
-  if (visible && context.experiments.length>1) {
-    controls.append(field('Experiment',context.experiments.map(item=>[item.id,item.name]),context.campaign,
-      campaign=>change({campaign,view:context.games ? 'daily' : context.allTrades ? 'trades' : 'by-day',
-        ledger_view:context.games ? 'games' : null}), 'experiment-choice'));
-  }
   if (context.day) controls.append(
     field('Game date (Eastern)',dates,context.date,date=>changeSelection({date}),'experiment-date'));
   if (portfolios.length>1) controls.append(
@@ -303,9 +325,14 @@ function showResults(config, visible, context) {
   activeRules.append(node('p',[
     selectionRule,config.minimum_ev != null && `EV ≥${pct(config.minimum_ev)}`,
     config.minimum_stake_usd != null && `Stake ≥${money(config.minimum_stake_usd)}`,
-    sizingTitle(config,context.mode),
+    sizingTitle(config,context.mode).replace(/^Win /,'Win\u00a0'),
   ].filter(Boolean).join(' · '),'workspace-caption'));
-  if (visible) activeRules.append(link('Edit experiment',url({...context.base,view:'revise'})));
+  if (visible) {
+    const edit=link('Edit experiment',url({...context.base,view:'revise'}));
+    edit.setAttribute('aria-label','Edit experiment');
+    edit.replaceChildren(node('span','Edit experiment','experiment-tab-full'),node('span','Edit','experiment-tab-short'));
+    activeRules.append(edit);
+  }
   panel.append(controls);
   panel.append(activeRules);
   const body=node('div');
@@ -342,10 +369,11 @@ function ledgerNavigation(mount, params, paint) {
   };
 }
 
-function paintCampaignTrades(body, trades, context, query) {
+function paintCampaignTrades(body, {trades,summary}, context, query) {
   const section=node('section',undefined,'experiment-detail');
   const historyPanel=campaignEvidence(context.config,context,context.sizingModes.map(mode=>({mode})));
   body.replaceChildren(section,historyPanel);
+  if (summary) body.prepend(campaignResultSummary(summary));
   const readEvidence=new Map();
   function paint(params) {
     const navigation=ledgerNavigation(section,params,paint);
@@ -658,9 +686,9 @@ async function render({keepComparison=false,focus=null}={}) {
     }
     if (allTrades) {
       const params=new URLSearchParams({variant,mode});
-      const {trades}=await readJSON(campaignAPI(id)+'/trades?'+params);
+      const ledger=await readJSON(campaignAPI(id)+'/trades?'+params);
       if (version!==requestVersion) return;
-      paintCampaignTrades(body,trades,context,query);
+      paintCampaignTrades(body,ledger,context,query);
       setStatus();
       return;
     }
