@@ -55,6 +55,10 @@
 .results-counts,.results-score { color:var(--p-ink); font-size:1rem; font-weight:600; }
 .paper-result-games .workspace-table,.paper-result-game .workspace-table { font-variant-numeric:tabular-nums; }
 .paper-result-games .workspace-table a,.paper-result-game .workspace-table a { color:var(--p-accent); text-decoration:underline; text-underline-offset:2px; }
+:is(.game-coverage-table,.game-trades-table) td:is([data-label="Trades"],[data-label="Staked"],[data-label="Returned"],
+  [data-label="P/L"],[data-label="Odds"],[data-label="Probability"],[data-label="EV"],[data-label="Stake"],
+  [data-label="Expected profit"],[data-label="Return"]) { white-space:nowrap; overflow-wrap:normal; }
+:is(.result-game-mobile-score,.result-game-mobile-financials) { display:none; }
 .paper-result-game a[aria-current=true] { font-weight:700; }
 .paper-result-trade { background:var(--p-alternate); }
 .paper-result-trade section { border-top:1px solid var(--line); padding-top:.6rem; }

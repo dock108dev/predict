@@ -86,6 +86,21 @@ function keyboardScroll(container, name, navigation) {
   return container;
 }
 
+function resultTableRoles(tableElement) {
+  tableElement.setAttribute('role', 'table');
+  for (const group of tableElement.querySelectorAll('thead, tbody')) group.setAttribute('role', 'rowgroup');
+  for (const row of tableElement.querySelectorAll('tr')) row.setAttribute('role', 'row');
+  for (const column of tableElement.querySelectorAll('th')) column.setAttribute('role', 'columnheader');
+  for (const cell of tableElement.querySelectorAll('td')) cell.setAttribute('role', 'cell');
+}
+
+function gameTable(headers, rows, className, name, navigation) {
+  const scroll = table(headers, rows);
+  scroll.classList.add(className);
+  resultTableRoles(scroll.firstElementChild);
+  return keyboardScroll(scroll, name, navigation);
+}
+
 function statusNotice(analysis, pinned, summary, compact=false) {
   const state = analysis.status?.state;
   const notice = node('div', undefined, compact ? 'results-status-compact' : 'workspace-notice results-status');
@@ -195,18 +210,28 @@ function summaryView(summary, gameCount) {
   return section;
 }
 
+function overtimeLabel(result) {
+  return result.overtime_periods > 1 ? `(${result.overtime_periods}OT)` : result.overtime_periods === 1 ? '(OT)' : null;
+}
+
 function score(result = {}) {
   const name = team => typeof team === 'string' ? team : team?.name || team?.id;
   const available = result.away_score != null && result.home_score != null;
-  const overtime = result.overtime_periods > 1 ? `(${result.overtime_periods}OT)` : result.overtime_periods === 1 ? '(OT)' : null;
-  return available ? [name(result.away), result.away_score, '–', name(result.home), result.home_score, overtime].filter(value => value != null).join(' ')
+  return available ? [name(result.away), result.away_score, '–', name(result.home), result.home_score, overtimeLabel(result)].filter(value => value != null).join(' ')
     : resultStates[result.state] || label(result.state || 'pending');
 }
 
 function scoreCell(result = {}) {
-  const status = resultStates[result.state] || label(result.state || 'pending');
+  const state = result.state || 'pending';
+  const status = resultStates[state] || label(state);
   const value = score(result);
-  return stack(value, value === status ? null : status);
+  const cell = node('div');
+  const full = stack(value, value === status ? null : status);
+  full.classList.add('result-game-full-score');
+  const compact = result.away_score != null && result.home_score != null
+    ? [`${status} · Away ${result.away_score} – Home ${result.home_score}`, overtimeLabel(result)].filter(Boolean).join(' ') : status;
+  cell.append(full, node('strong', compact, 'result-game-mobile-score'));
+  return cell;
 }
 
 function captureDescription(game, summary) {
@@ -216,6 +241,19 @@ function captureDescription(game, summary) {
   const original = game.original_capture_status && game.original_capture_status !== game.capture_status
     ? `Original task ${label(game.original_capture_status)}` : null;
   return [state, description, original].filter(Boolean).join(' · ');
+}
+
+function coverageCell(game, summary) {
+  const cell = node('div', captureDescription(game, summary));
+  if (captured(game) && summary?.tickets) {
+    const figures = node('div', undefined, 'result-game-mobile-financials');
+    const pnl = node('span');
+    pnl.append('P/L ', moneyCell(summary.pnl_usd));
+    figures.append(node('span', `${count(summary.tickets)} ${summary.tickets === 1 ? 'trade' : 'trades'}`),
+      node('span', `Staked ${money(summary.stake_usd)}`), node('span', `Returned ${money(summary.return_usd)}`), pnl);
+    cell.append(figures);
+  }
+  return cell;
 }
 
 function gameEvidenceLinks(game) {
@@ -259,7 +297,7 @@ function gamesView(report, portfolio, navigation) {
     return true;
   });
   if (!games.length) content.append(node('p', 'No games match this view.'));
-  else content.append(keyboardScroll(table(['Game', 'Score / status', 'Trades', 'Staked', 'Returned', 'P/L', 'Capture status'], games.map(game => {
+  else content.append(gameTable(['Game', 'Score / status', 'Trades', 'Staked', 'Returned', 'P/L', 'Capture status'], games.map(game => {
     const summary = portfolio.by_game[game.game_id];
     const gameLink = node('div');
     const usable = captured(game);
@@ -268,8 +306,8 @@ function gamesView(report, portfolio, navigation) {
     return [gameLink, scoreCell(game.result),
       usable ? count(summary?.tickets || 0) : 'Unavailable', money(usable ? summary?.stake_usd : null),
       money(usable ? summary?.return_usd : null), money(usable ? summary?.pnl_usd : null),
-      captureDescription(game, summary)];
-  })), 'Game rows', navigation));
+      coverageCell(game, summary)];
+  }), 'game-coverage-table', 'Game rows', navigation));
   return panel;
 }
 
@@ -367,12 +405,14 @@ function gameView(game, portfolio, navigation, inspectTrade) {
     dropdown('Show trades', gradeFilters, filters.grade, value => change('trade_filter', value), 'game-trade-filter'));
   panel.append(node('h4', 'Selected paper trades'), controls);
   if (!matching.length) panel.append(node('p', 'No trades match this view.'));
-  else panel.append(keyboardScroll(table(['Selection', 'Venue', 'Odds', 'Probability', 'EV', 'Stake', 'Expected profit', 'Grade', 'Return', 'P/L'], matching.map(ticket => {
+  else panel.append(gameTable(['Selection', 'Venue', 'Odds', 'Probability', 'EV', 'Stake', 'Expected profit', 'Grade', 'Return', 'P/L'], matching.map(ticket => {
     const selectionLink = link(ticketSelection(ticket), navigation.href({trade:ticket.id,sizing_quote:null,sizing_bet:null}));
     if (trade?.id === ticket.id) selectionLink.setAttribute('aria-current', 'true');
-    return [selectionLink, venue(ticket.venue), ticket.posted_odds, pct(ticket.probability), pct(ticket.ev), money(ticket.stake_usd),
-      money(ticket.expected_profit_usd), gradeLabel(ticket), money(ticket.return_usd), money(ticket.pnl_usd)];
-  })), 'Game trade rows', navigation));
+    const selection = node('div');
+    selection.append(selectionLink, compactTradeTerms(ticket));
+    return [selection, venue(ticket.venue), ticket.posted_odds, pct(ticket.probability), pct(ticket.ev), money(ticket.stake_usd),
+      money(ticket.expected_profit_usd), gradeLabel(ticket), money(ticket.return_usd), moneyCell(ticket.pnl_usd)];
+  }), 'game-trades-table', 'Game trade rows', navigation));
   return panel;
 }
 
@@ -402,6 +442,11 @@ function tradeView(trade, game, navigation, inspectTrade) {
 function moneyCell(value) {
   const amount = number(value);
   return node('span', money(value), amount > 0 ? 'result-positive' : amount < 0 ? 'result-negative' : undefined);
+}
+
+function compactTradeTerms(ticket) {
+  const terms = [venue(ticket.venue), ticket.posted_odds, `${pct(ticket.ev)} EV`, `${money(ticket.stake_usd)} stake`];
+  return node('small', terms.join(' · '), 'result-ledger-mobile-terms');
 }
 
 function tradeInspector(trade, game, ledger, navigation, inspectTrade) {
@@ -502,9 +547,7 @@ function ledgerTable(ledger, gameFor, leagueFor, navigation, showInspector, camp
     const market = ticket.period === 'full_game' && family ? family : marketContext(ticket);
     const date = campaign ? ledgerDate.format(new Date(ticket.game_date+'T12:00:00Z')) : null;
     const context = [date, leagueFor(ticket), market, gameFor(ticket)?.title].filter(Boolean).join(' · ');
-    const terms = [venue(ticket.venue), ticket.posted_odds, `${pct(ticket.ev)} EV`, `${money(ticket.stake_usd)} stake`];
-    selectionCell.append(pick, node('small', context, 'result-ledger-game'),
-      node('small', terms.join(' · '), 'result-ledger-mobile-terms'));
+    selectionCell.append(pick, node('small', context, 'result-ledger-game'), compactTradeTerms(ticket));
     const grade = gradeLabel(ticket), tone = grade === 'Win' ? 'result-positive' : grade === 'Loss' ? 'result-negative' : '';
     return [selectionCell, venue(ticket.venue), ticket.posted_odds, pct(ticket.ev), money(ticket.stake_usd),
       node('span', grade, tone), moneyCell(ticket.pnl_usd)];
@@ -512,12 +555,8 @@ function ledgerTable(ledger, gameFor, leagueFor, navigation, showInspector, camp
   scroll.classList.add('result-ledger-table');
   const tableElement = scroll.firstElementChild;
   tableElement.setAttribute('aria-labelledby', 'trade-ledger-title');
-  tableElement.setAttribute('role', 'table');
-  for (const group of tableElement.querySelectorAll('thead, tbody')) group.setAttribute('role', 'rowgroup');
-  for (const row of tableElement.querySelectorAll('tr')) row.setAttribute('role', 'row');
+  resultTableRoles(tableElement);
   for (const row of tableElement.querySelectorAll('tbody tr')) row.classList.add('result-ledger-row');
-  for (const column of tableElement.querySelectorAll('th')) column.setAttribute('role', 'columnheader');
-  for (const cell of tableElement.querySelectorAll('td')) cell.setAttribute('role', 'cell');
   const direction = ledger.sort === 'ev_asc' ? 'ascending' : 'descending';
   const sortHeader = {ev_asc:3, ev_desc:3, stake_desc:4, pnl_desc:6}[ledger.sort];
   tableElement.querySelectorAll('th')[sortHeader].setAttribute('aria-sort', direction);
