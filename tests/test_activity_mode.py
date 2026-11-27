@@ -127,6 +127,36 @@ def test_monitor_clock_boundaries_custom_phase_legacy_settings_and_dst():
     )
 
 
+def test_monitor_keeps_service_available_after_storage_interruption(monkeypatch):
+    from psycopg.errors import LockNotAvailable
+
+    async def busy(params):
+        raise LockNotAvailable()
+
+    async def scenario():
+        store, worker = Store(), Worker()
+        fetch = worker._fetch
+        monkeypatch.setattr(worker, '_fetch', busy)
+        owner = ActivityCollector(worker, store=store)
+        await owner.tick()
+        assert len(store.runs) == 1
+        _, interrupted = store.updates[-1]
+        assert interrupted['state'] == 'partial'
+        assert interrupted['reason'] == 'ordinary_storage_busy'
+        assert owner.monitor is None
+
+        monkeypatch.setattr(worker, '_fetch', fetch)
+        await owner.tick()
+        assert not worker.calls
+        worker.at += timedelta(seconds=DEFAULT_SETTINGS['monitor_interval_seconds'])
+        worker.events['near']['starts_at'] = (worker.at+timedelta(minutes=20)).isoformat()
+        await owner.tick()
+        assert len(store.runs) == 2
+        assert worker.calls
+
+    asyncio.run(scenario())
+
+
 def test_monitor_restart_claims_recent_slot_once_and_skips_old_catchup():
     async def scenario():
         store, worker = Store(), Worker()

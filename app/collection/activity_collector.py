@@ -3,6 +3,9 @@
 import asyncio
 from datetime import timedelta
 
+from psycopg.errors import LockNotAvailable, QueryCanceled
+
+from app.diagnostics import failure
 from app.storage.store import connect, stamp
 from . import activity_mode
 from .bulk_checkpoint import owned_thread
@@ -264,6 +267,13 @@ class ActivityCollector:
                 await self.save(job, state="partial", reason=type(exc).__name__)
                 self.monitor = None
                 self.retry_at = at + timedelta(seconds=60)
+                return
+            except (LockNotAvailable, QueryCanceled) as exc:
+                # Admission may have succeeded already. Preserve the partial
+                # run and its receipts without replaying the current page.
+                failure(__name__, "ordinary_monitor_storage_interrupted", exc)
+                await self.save(job, state="partial", reason="ordinary_storage_busy")
+                self.monitor = None
                 return
             except (ValueError, RejectedCursor) as exc:
                 await self.save(job, state="partial", reason=type(exc).__name__)

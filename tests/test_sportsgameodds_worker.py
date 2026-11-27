@@ -89,6 +89,36 @@ def test_planned_storage_interval_waits_for_paid_page_and_blocks_next_dispatch()
     asyncio.run(scenario())
 
 
+def test_busy_storage_before_manifest_defers_without_paid_dispatch(monkeypatch):
+    from psycopg.errors import LockNotAvailable
+
+    from app.collection.activity_collector import ActivityBudgetDelayed
+
+    def busy(*args):
+        raise LockNotAvailable()
+
+    async def scenario():
+        service = SimpleNamespace(config=deepcopy(DEFAULT), dispatch=True,
+                                  globally_stopped=False, paused_sources=set())
+        worker = SportsGameOddsWorker(service, now=lambda: NOW)
+        worker.collector = SimpleNamespace(fetch=AsyncMock())
+        monkeypatch.setattr(worker, 'request_in_scope_async', AsyncMock(return_value=True))
+        monkeypatch.setattr(worker, '_begin_pull', busy)
+        with pytest.raises(ActivityBudgetDelayed, match='ordinary_storage_busy') as delay:
+            await worker._fetch_owned({'leagueID': 'NBA'})
+        assert delay.value.retry_at > NOW
+        worker.collector.fetch.assert_not_called()
+        assert not worker.page_in_progress
+        assert not worker.closed
+
+        monkeypatch.setattr(worker, '_renew_pull', busy)
+        worker.collector.pull_id = 'fixture-manifest'
+        with pytest.raises(ActivityBudgetDelayed, match='ordinary_storage_busy'):
+            await worker.dispatch_in_scope({'leagueID': 'NBA'})
+
+    asyncio.run(scenario())
+
+
 def test_worker_replans_every_minute_overnight_and_keeps_discovery_cursor():
     from unittest.mock import patch
 

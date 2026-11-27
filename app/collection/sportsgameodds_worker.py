@@ -217,13 +217,19 @@ class SportsGameOddsWorker:
         return self.request_in_scope(params)
 
     async def dispatch_in_scope(self, params):
+        from psycopg.errors import LockNotAvailable, QueryCanceled
+
         from .activity_collector import ActivityBudgetDelayed
         from .bulk_checkpoint import owned_thread
         from .experiment_acquisition import late_protection_until
 
         if not await self.request_in_scope_async(params):
             return False
-        if not await owned_thread(self._renew_pull, self.collector.pull_id):
+        try:
+            renewed = await owned_thread(self._renew_pull, self.collector.pull_id)
+        except (LockNotAvailable, QueryCanceled) as exc:
+            raise ActivityBudgetDelayed('ordinary_storage_busy', self.now()+timedelta(seconds=5)) from exc
+        if not renewed:
             raise ValueError('ordinary_page_storage_reservation_expired')
         until = late_protection_until(self)
         if until and getattr(self.service, 'activity_mode_enabled', False):
@@ -435,6 +441,11 @@ class SportsGameOddsWorker:
                 finish(db, pull_id, state, details=dict(reason=reason))
 
     async def _fetch_owned(self, params):
+        from psycopg import OperationalError
+        from psycopg.errors import LockNotAvailable, QueryCanceled
+
+        from .activity_collector import ActivityBudgetDelayed
+
         if not await self.request_in_scope_async(params):
             raise PregameWindowClosed()
         self.page_in_progress = True
@@ -442,7 +453,10 @@ class SportsGameOddsWorker:
         from .bulk_checkpoint import owned_thread
         pull_id = None
         try:
-            pull_id = await owned_thread(self._begin_pull, params)
+            try:
+                pull_id = await owned_thread(self._begin_pull, params)
+            except (LockNotAvailable, QueryCanceled) as exc:
+                raise ActivityBudgetDelayed('ordinary_storage_busy', self.now()+timedelta(seconds=5)) from exc
             self.collector.pull_id = pull_id
             page = await self.collector.fetch(params, self.key)
             self.metrics['last_valid_received_at'] = page.received_at
@@ -507,8 +521,6 @@ class SportsGameOddsWorker:
             for event_id in omitted:
                 if event_id in next_events:
                     next_events[event_id] = dict(next_events[event_id], last_polled_at=observed_at.isoformat())
-            from psycopg import OperationalError
-            from psycopg.errors import QueryCanceled
             admitted_page = page
             if unexpected:
                 admitted_page = replace(page, events=events,
@@ -905,8 +917,8 @@ class SportsGameOddsWorker:
                     if not await self.wait_for_dispatch(exc, retry_at=self.now()+timedelta(minutes=1)):
                         raise
                     await asyncio.sleep(60)
+            from .activity_collector import ActivityBudgetDelayed, ActivityCollector
             if getattr(self.service, 'activity_mode_enabled', False):
-                from .activity_collector import ActivityCollector
                 from .native_reference_refresh import NativeReferenceRefresh
                 await ActivityCollector(self, refresh_references=NativeReferenceRefresh(self)).run()
                 return
@@ -927,6 +939,13 @@ class SportsGameOddsWorker:
                         due = due_events(self.scheduled_events(at=now), now, policy=policy,
                                          **self.controls_to_schedule())
                         await self.refresh(due, policy)
+                except ActivityBudgetDelayed as exc:
+                    self.phase = 'waiting_for_storage'
+                    self.metrics['next_refresh_at'] = exc.retry_at.isoformat()
+                    await self.state('budget_delayed', 'ordinary_storage_busy',
+                                     'SportsGameOdds is waiting for storage admission.')
+                    await asyncio.sleep(max(0, (exc.retry_at-self.now()).total_seconds()))
+                    continue
                 except RuntimeError as exc:
                     policy = None
                     if str(exc) == 'daily object pacing limit':
@@ -953,6 +972,7 @@ class SportsGameOddsWorker:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
+            failure(__name__, 'sgo_worker_failed', exc)
             reasons = {'account reset evidence unavailable':'The provider did not report an account reset time.',
                        'account reset evidence expired':'The account reset evidence has expired.',
                        'current account usage evidence unavailable or changed':'Current account usage could not be safely reconciled.',
