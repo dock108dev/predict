@@ -79,13 +79,15 @@ def test_first_exact_book_replaces_unobserved_inventory():
 def test_one_venue_turn_keeps_both_sides_and_does_not_advance_another_venue():
     at = stamp("2026-11-27T23:50:00Z")
     trader = NativeTrading(None, now=lambda: at)
-    event = {"scheduled_start": (at + timedelta(hours=1)).isoformat()}
+    start = at + timedelta(hours=1)
+    event = {"scheduled_start": start.isoformat(), "competition": "NBA"}
     for venue in ("kalshi", "polymarket_us"):
         for side in ("long", "short"):
             trader.bindings[f"{venue}-{side}"] = dict(
                 venue=venue,
                 event_id="event",
                 market_id="market",
+                terms_valid_until=(at + timedelta(seconds=50)).isoformat(),
                 _record={"event": event},
             )
     trader.references["polymarket_us-long"] = at + timedelta(minutes=5)
@@ -93,6 +95,12 @@ def test_one_venue_turn_keeps_both_sides_and_does_not_advance_another_venue():
     plan, streaming = trader._book_plan("polymarket_us")
     assert set(plan) == set(streaming) == {"polymarket_us-long", "polymarket_us-short"}
     assert trader._book_plan("kalshi")[0] == {}
+    assert trader._identity_scope("polymarket_us", {}) is None
+    for side in ("long", "short"):
+        trader.bindings[f"polymarket_us-{side}"]["terms_valid_until"] = at.isoformat()
+    assert trader._book_plan("polymarket_us") == ({}, {})
+    assert trader._identity_scope("polymarket_us", {}) == ("NBA", start)
+    assert trader._identity_scope("polymarket_us", {("NBA", start): at}) is None
 
 
 def test_cache_clock_is_independent_of_receive_time_and_age():

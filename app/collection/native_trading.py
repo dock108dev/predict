@@ -18,6 +18,8 @@ READ_SECONDS = 6
 BOOKS_PER_TURN = {"novig": 3, "kalshi": 16, "polymarket_us": 6, "prophetx": 12}
 MAX_BINDINGS = 32768
 WRITE_BATCH = 24
+IDENTITY_RECHECK_LEAD = timedelta(seconds=18)
+IDENTITY_RETRY_WAIT = timedelta(seconds=15)
 
 
 class NativeTrading:
@@ -243,6 +245,11 @@ class NativeTrading:
         for cid, binding in self.bindings.items():
             if binding["venue"] != venue_filter:
                 continue
+            due = binding.get("terms_valid_until")
+            if venue_filter in ("kalshi", "polymarket_us") and (
+                not due or stamp(due) <= at
+            ):
+                continue
             venue = binding["venue"]
             key = venue, binding["event_id"], binding["market_id"]
             by_venue[venue].setdefault(key, {})[cid] = binding
@@ -293,6 +300,83 @@ class NativeTrading:
                     if hot_book:
                         hot_pmus.update(bindings)
         return result, hot_pmus
+
+    def _identity_scope(self, venue, attempted):
+        at = self.now()
+        scopes = {}
+        for cid, binding in self.bindings.items():
+            if binding["venue"] != venue:
+                continue
+            event = binding["_record"]["event"]
+            start = stamp(event["scheduled_start"])
+            key = event["competition"], start
+            if not at < start <= at + timedelta(hours=2):
+                continue
+            deadline = binding.get("terms_valid_until")
+            if deadline and stamp(deadline) > at + IDENTITY_RECHECK_LEAD:
+                continue
+            if key in attempted and at - attempted[key] < IDENTITY_RETRY_WAIT:
+                continue
+            exact = bool(self.references.get(cid) and self.references[cid] > at)
+            scopes[key] = exact or scopes.get(key, False)
+        return min(
+            scopes,
+            key=lambda key: (
+                not scopes[key],
+                attempted.get(key, at - timedelta(days=1)),
+                key[1],
+            ),
+            default=None,
+        )
+
+    async def refresh_identity(self, _, native, venue):
+        """Renew identity for known priority occurrences independently of depth."""
+        attempted = {}
+        while True:
+            if not self.enabled(venue) or self.protected():
+                await asyncio.sleep(1)
+                continue
+            scope = self._identity_scope(venue, attempted)
+            if scope is None:
+                await asyncio.sleep(1)
+                continue
+            at = self.now()
+            attempted = {key: prior for key, prior in attempted.items() if key[1] > at}
+            attempted[scope] = at
+            league, start = scope
+            window = start, start + timedelta(milliseconds=1)
+            products = await asyncio.to_thread(self.products)
+            if not self.enabled(venue) or self.protected():
+                continue
+            cutoff = self.now() + timedelta(seconds=READ_SECONDS)
+            if venue == "kalshi":
+                found = await Catalog().read(
+                    native,
+                    league,
+                    {},
+                    cutoff=cutoff,
+                    products=products,
+                    discover_window=window,
+                )
+            else:
+                found = await pmus(
+                    native,
+                    league,
+                    {},
+                    at=at,
+                    cutoff=cutoff,
+                    products=products,
+                    discover_window=window,
+                )
+            if self.enabled(venue) and not self.protected():
+                for cid, binding in found.items():
+                    if cid in self.bindings and binding.get("terms_valid_until"):
+                        current = self.bindings[cid].get("terms_valid_until")
+                        if not current or stamp(binding["terms_valid_until"]) > stamp(
+                            current
+                        ):
+                            self.bindings[cid] = binding
+            await asyncio.sleep(1)
 
     def synchronized(self, bindings, cutoff):
         from .native_experiment_depth import synchronized_native
@@ -526,6 +610,12 @@ class NativeTrading:
                             self.books,
                             venue,
                             stream if venue == "polymarket_us" else None,
+                        )
+                    )
+                for venue in ("kalshi", "polymarket_us"):
+                    tasks.create_task(
+                        supervise(
+                            "native_identity_" + venue, self.refresh_identity, venue
                         )
                     )
                 tasks.create_task(supervise("native_references", self.references_loop))

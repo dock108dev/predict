@@ -458,6 +458,10 @@ def publish(db, observations, *, at, prune=False):
                     valid_until=at.isoformat(),
                     reason=receipt.get("reason") or "book_unobserved",
                 )
+            elif not receipt.get("reason") and stamp(receipt["valid_until"]) <= stamp(
+                receipt["received_at"]
+            ):
+                receipt = dict(receipt, reason="native_identity_expired")
             if prior:
                 receipt = adopt(prior["book"], receipt)
                 if receipt is prior["book"]:
