@@ -289,12 +289,9 @@ def mount(app, *, campaigns_only=False):
                 db.execute("SET LOCAL jit='off'")
                 at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
                 if request.path == '/api/research/dashboard-coverage':
-                    from app.storage.current_pregame import read as read_pregame
-                    from app.storage.pregame_cohorts import select
+                    from app.storage.current_pregame_depth import coverage
 
-                    select(db, 'all')
-                    scope = {'league' if key == 'sport' else key: query[key] for key in filters if query.get(key)}
-                    return read_pregame(db, dict(scope, liquidity_coverage='1', data_type='all'), at=at)
+                    return coverage(db, at=at, **{name:query.get(name) or None for name in filters})
                 mode = db.execute('SELECT settings FROM public.activity_mode WHERE singleton').fetchone()
                 settings = mode['settings'] if mode else DEFAULT_SETTINGS
                 horizon = settings['monitor_horizon_seconds']

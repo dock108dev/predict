@@ -150,6 +150,10 @@ class CurrentPregameSQL(PregameFixture):
                 modeled, proof = market_board.dashboard_liquidity(db, saved, at=at, stake='25')
                 self.assertEqual(modeled['modeled_stake_usd'], '25')
                 self.assertEqual(proof['market_id'], 'native-strike')
+                coverage = current_pregame_depth.coverage(db, at=at, venue='prophetx')
+                self.assertEqual(sum(group['full_size'] for group in coverage['coverage']), 1)
+                self.assertEqual(sum(group['ev_assessable'] for group in coverage['coverage']), 1)
+                self.assertEqual(coverage['provider_requests'], 0)
             self.assertEqual(market_board.dashboard(db, **dict(options, at=expiry))['total'], 0)
             db.execute('TRUNCATE public.market_pull CASCADE')
 

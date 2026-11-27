@@ -1,5 +1,8 @@
 """Collector-owned current depth and passive Dashboard size calculations."""
 
+from collections import Counter
+from fractions import Fraction
+
 from psycopg.types.json import Jsonb
 
 from app.comparison import current_pregame as math, execution_contract
@@ -167,3 +170,76 @@ def preview(db, payload, record, *, at, stake, evidence=False):
     summary = dict(_present(result), modeled_fills=result.get("modeled_fills"),
                    published_at=found["published_at"].isoformat(), valid_until=found["valid_until"].isoformat())
     return (summary, found['receipt']) if evidence else summary
+
+
+def coverage(db, *, at, sport=None, family=None, venue=None):
+    """Count the current price catalog without materializing the ranked board."""
+    from app.comparison.cashflows import exact_wire
+    from app.comparison.snapshot_fee_outcome import VENUES
+
+    sql = """WITH clock AS (SELECT %s::timestamptz AS at), base AS MATERIALIZED (
+      SELECT DISTINCT ON (p.payload->>'bet_id',c.venue) c.id,c.revision,c.venue,
+         p.payload->>'league' league,p.payload->>'family' family,
+         COALESCE((p.payload->>'main')::boolean,false) main,e.provider,e.native_event_id,
+         p.payload->>'input_revision' input_revision,p.valid_until,o.facts->>'state' quote_state
+      FROM public.current_pregame_price p JOIN public.current_contract_storage c ON c.id=p.contract_id
+      JOIN public.current_event e ON e.id=c.event_id
+      LEFT JOIN public.current_offer_storage o ON o.contract_id=c.id
+      WHERE c.active AND p.start_at>(SELECT at FROM clock) AND c.venue=ANY(%s)
+        AND p.payload->>'family' IN ('moneyline','spread','total')
+        AND p.payload->>'period'='full_game'
+        AND (%s::text IS NULL OR p.payload->>'league'=%s)
+        AND (%s::text IS NULL OR p.payload->>'family'=%s)
+      ORDER BY p.payload->>'bet_id',c.venue,o.received_order DESC NULLS LAST,c.id
+    ) SELECT b.venue,b.league,b.family,b.main,
+        CASE WHEN b.quote_state IS DISTINCT FROM 'available' THEN 'price_withdrawn'
+          WHEN b.valid_until<=(SELECT at FROM clock) THEN 'stale_quote'
+          WHEN d.receipt_id IS NULL THEN 'book_unobserved'
+          WHEN d.contract_revision<>b.revision THEN 'identity_revision_changed'
+          WHEN d.valid_until<=(SELECT at FROM clock) THEN 'stale_book' ELSE NULL END reason,
+        d.receipt->>'reason' raw_reason,
+        COALESCE(w.projection, d.valuations->b.input_revision)->'result' result,
+        w.projection IS NOT NULL exact_reference
+      FROM base b
+      LEFT JOIN public.current_pregame_depth d ON d.contract_id=b.id AND d.published_at<=(SELECT at FROM clock)
+      LEFT JOIN LATERAL (
+        SELECT s.pull_id,s.state FROM public.market_pull_scope s JOIN public.market_pull p USING(pull_id)
+        WHERE d.valid_until>(SELECT at FROM clock) AND d.receipt->>'reason' IS NULL
+          AND b.provider='sportsgameodds' AND s.event_id=b.native_event_id AND s.family=b.family
+          AND s.period='full_game' AND s.coverage->>'covers_board'='true'
+        ORDER BY p.started_order DESC LIMIT 1
+      ) latest ON true
+      LEFT JOIN LATERAL (
+        SELECT hit.value projection FROM jsonb_each(d.valuations) hit
+        WHERE latest.state='complete' AND split_part(hit.key,':',1)='dashboard'
+          AND split_part(hit.key,':',2)=latest.pull_id LIMIT 1
+      ) w ON true"""
+    rows = db.execute(sql, (at,[venue] if venue else list(VENUES),sport,sport,family,family)).fetchall()
+    groups = {}
+    for row in rows:
+        group = tuple(row[key] for key in ('venue','league','family','main'))
+        totals = groups.setdefault(group, dict(opportunities=0, assessable=0, full_size=0, ev_assessable=0,
+                                               stake=Fraction(0), reasons=Counter()))
+        totals['opportunities'] += 1
+        result = row['result'] or {}
+        if row['reason']:
+            totals['reasons'][row['reason']] += 1
+            continue
+        size = result.get('size_status','unknown')
+        totals['assessable'] += size != 'unknown'
+        totals['full_size'] += size == 'full_size'
+        totals['ev_assessable'] += bool(row['exact_reference'] and result.get('modeled_net_ev') is not None)
+        if result.get('modeled_stake_usd') is not None and (size != 'unknown' or result.get('availability_is_lower_bound')):
+            totals['stake'] += Fraction(result['modeled_stake_usd'])
+        reason = result.get('reason') or row['raw_reason']
+        if not row['exact_reference'] and result.get('modeled_net_ev') is not None:
+            reason = reason or 'reference_revision_changed'
+        if reason or size == 'unknown':
+            totals['reasons'][reason or 'book_unobserved'] += 1
+    output = []
+    for (venue,league,family,main), totals in sorted(groups.items()):
+        supported = exact_wire(totals.pop('stake'))
+        output.append(dict(venue=venue, league=league, family=family, main=main, **totals,
+            intended_stake_usd=str(int(BOARD_STAKE)*totals['opportunities']), observed_supported_stake_usd=supported))
+    return dict(coverage=output,total=len(rows),provider_requests=0,scheduled_calculations=0,
+                read_at=at.isoformat(),liquidity_stake_usd=BOARD_STAKE)
