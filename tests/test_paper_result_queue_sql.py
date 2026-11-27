@@ -9,7 +9,7 @@ from psycopg.types.json import Jsonb
 
 from app.research import experiment, paper_result_worker, paper_results, records, workspace
 from app.storage import mens_d1_coverage, paper_result_queue as queue
-from app.storage.store import hashed, stamp
+from app.storage.store import encoded, hashed, stamp
 from tests.latest_board_fixture import SOCKET
 from tests.test_mens_d1_coverage_sql import DAY, MORNING, game, persist
 from tests.test_paper_experiments_sql import ResearchWorkspaceFixture
@@ -51,6 +51,27 @@ class PaperResultQueueSQL(ResearchWorkspaceFixture):
     def hash_run(db, run_id):
         original = workspace._run(db, run_id)
         return hashed([original["payload"], original["summary"], original["report_revision"]])
+
+    def test_research_allocation_charges_compressed_storage_and_preserves_payload(self):
+        with self.connect() as db:
+            run_id = self.save(db)
+            report = dict(evidence_revision="compressed-fixture", status="partial",
+                          report_evidence="selection witness " * 65536)
+            saved = queue.publish(db, queue.claim(db), report, paper_results.VERSION)
+            self.assertIsNotNone(saved)
+            db.execute("""INSERT INTO public.market_pull(pull_id,requested_at,request_scope,state)
+                VALUES ('fixture',clock_timestamp(),'{}','complete')""")
+            db.execute("""INSERT INTO public.market_pull_scope(pull_id,event_id,family,coverage,state,snapshot)
+                VALUES ('fixture','game','moneyline','{}','complete',%s)""",
+                (Jsonb(dict(projection="quote witness " * 65536)),))
+            usage = records.retention_usage(db)
+            paper_overhead = sum(db.execute("SELECT pg_total_relation_size(%s) n", (f"public.{table}",))
+                                 .fetchone()["n"] for table in
+                                 ("paper_result_job", "paper_result_dependency", "paper_result_input"))
+            self.assertLess(usage["paper_result_bytes"] - paper_overhead, len(encoded(report)))
+            self.assertEqual(queue.read(db, run_id, saved)["report"], report)
+            scope = db.execute("SELECT allocation_bytes FROM market_pull_scope WHERE pull_id='fixture'").fetchone()
+            self.assertLess(usage["market_snapshot_bytes"], scope["allocation_bytes"])
 
     def test_both_orderings_and_duplicate_deliveries_through_normal_retention(self):
         with self.connect() as db:

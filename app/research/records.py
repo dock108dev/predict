@@ -84,11 +84,11 @@ def retention_usage(db):
         if extra["latest"] and (not row["latest_recorded_at"] or extra["latest"] > row["latest_recorded_at"]):
             row["latest_recorded_at"] = extra["latest"]
     if db.execute("SELECT to_regclass('public.market_pull') r").fetchone()["r"]:
-        # Snapshot projections share the existing retained-research allocation.
-        # Count JSON text conservatively, including manifest/scope metadata.
-        market = db.execute('''SELECT COALESCE(sum(bytes),0) bytes FROM (
+        # The compressed witness is retained once. Charge its derived JSON
+        # projection by the allocated relation, including TOAST and indexes.
+        market = db.execute('''SELECT COALESCE(sum(bytes),0)
+            + pg_total_relation_size('public.market_pull_scope') bytes FROM (
             SELECT allocation_bytes AS bytes FROM public.market_pull
-            UNION ALL SELECT allocation_bytes FROM public.market_pull_scope
             UNION ALL SELECT allocation_bytes FROM public.market_pull_receipt
             UNION ALL SELECT allocation_bytes FROM public.market_pull_evidence) allocation''').fetchone()
         row['market_snapshot_bytes'] = int(market['bytes'])
@@ -115,9 +115,13 @@ def retention_usage(db):
         row['total'] += row['daily_coverage_bytes']
         row['reserved'] += row['daily_coverage_reserved_bytes']
     if db.execute("SELECT to_regclass('public.paper_result_report') r").fetchone()['r']:
-        results = db.execute("""SELECT count(*) n,COALESCE(sum(payload_bytes),0) +
+        # PostgreSQL compresses immutable reports. Keep their canonical payload
+        # length for export and new-write admission, and charge allocated storage
+        # here using the same rule as the associated job and dependency tables.
+        results = db.execute("""SELECT count(*) n,
             (SELECT sum(pg_total_relation_size(relation)) FROM unnest(ARRAY[
-                'public.paper_result_job','public.paper_result_dependency','public.paper_result_input'
+                'public.paper_result_report','public.paper_result_job',
+                'public.paper_result_dependency','public.paper_result_input'
             ]::regclass[]) AS relation) bytes FROM public.paper_result_report""").fetchone()
         row['paper_result_bytes'] = int(results['bytes'])
         row['total'] += row['paper_result_bytes']
