@@ -42,7 +42,15 @@ def _value(payload, record, receipt, *, at, stake):
     from app.comparison.experiment_depth_execution import evaluate_at_stake
 
     reference = payload.get("reference") or {}
-    return evaluate_at_stake(receipt, at=at, stake=stake, probability=reference.get("probability"),
+    probability = reference.get('probability')
+    from datetime import timedelta
+    for quote in reference.get('required_input_prices') or reference.get('prices') or ():
+        if (not quote.get('source_at') or not quote.get('received_at') or
+                not stamp(quote['source_at']) <= stamp(quote['received_at']) <= at <
+                stamp(quote['source_at'])+timedelta(seconds=900)):
+            probability = None
+            break
+    return evaluate_at_stake(receipt, at=at, stake=stake, probability=probability,
                              minimum="0", expected=execution_contract.expected(record))
 
 
@@ -88,6 +96,16 @@ def _dashboard_inputs(db, event_ids, contract_ids):
 
 def publish(db, items, *, at):
     """Replace current observations only for the same active contract revision."""
+    # One transaction serializes concurrent readers and makes ordering survive
+    # restarts. Revaluation may change without receiving another native book.
+    with db.transaction():
+        db.execute('SELECT pg_advisory_xact_lock(901127)')
+        return _publish(db, items, at=at)
+
+
+def _publish(db, items, *, at):
+    from app.comparison.native_observation import adopt
+
     at = stamp(at)
     items = list(items)
     if not items:
@@ -99,6 +117,9 @@ def publish(db, items, *, at):
         JOIN public.current_pregame_price p ON p.contract_id=c.id
         WHERE c.active AND c.id=ANY(%s) AND p.start_at>%s""", (list(contracts), at)).fetchall()
     exact = {row["id"]:row for row in rows}
+    previous = {row['contract_id']: row for row in db.execute(
+        'SELECT * FROM public.current_pregame_depth WHERE contract_id=ANY(%s) FOR UPDATE',
+        (list(contracts),))}
     valuation_inputs = {}
     selection = "SELECT contract_id,input_revision,payload FROM {}.current_pregame_calculation WHERE contract_id=ANY(%s) AND reason IS NULL AND valid_until>%s"
     for schema in ("public", *COHORTS):
@@ -118,6 +139,11 @@ def publish(db, items, *, at):
         if receipt.get("venue") != row["price"]["venue"] or receipt.get("contract_id") not in (None, cid):
             continue
         known, expires = (stamp(item[field]) for field in ("known_at", "valid_until"))
+        prior = previous.get(cid)
+        if prior and prior['contract_revision'] == row['revision']:
+            selected = adopt(prior['receipt'], receipt)
+            if selected is prior['receipt']:
+                receipt, known, expires = selected, prior['known_at'], prior['valid_until']
         expires = min(expires, stamp(row["price"]["kickoff"]))
         if not known <= at < expires:
             continue
@@ -125,7 +151,7 @@ def publish(db, items, *, at):
         if observed_at and stamp(observed_at) > known:
             continue
         _clocks(receipt, known)
-        receipt_id = hashed(receipt)
+        receipt_id = receipt.get('receipt_id') or hashed(receipt)
         receipt = dict(receipt, receipt_id=receipt_id, contract_id=cid)
         current = valuation_inputs.get(cid, {})
         valuations = {key:_projection(payload, row["record"], receipt, at=at)
@@ -136,6 +162,8 @@ def publish(db, items, *, at):
                 "result": _present(_value(row["price"], row["record"], receipt, at=at, stake=BOARD_STAKE))
             }
         output.append((cid, row["revision"], receipt_id, known, expires, at, Jsonb(receipt), Jsonb(valuations)))
+        previous[cid] = dict(contract_id=cid, contract_revision=row['revision'], receipt=receipt,
+                             known_at=known, valid_until=expires)
     if not output:
         return 0
     with db.cursor() as cursor:

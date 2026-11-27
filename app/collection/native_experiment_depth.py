@@ -2,6 +2,7 @@
 
 import asyncio
 from collections import Counter, defaultdict
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from fractions import Fraction as F
@@ -34,6 +35,31 @@ ERRORS = (ArithmeticError, AttributeError, KeyError, StopIteration, TypeError, V
 PMUS_TERMS = 'https://docs.polymarket.us/fees'
 PMUS_CURRENT_FROM = stamp('2026-11-25T21:45:00-05:00')
 PMUS_CURRENT_HASH = 'feb258b62257967f21f390de474bd1e7d7486a1da02f62ab54cf07a745237f87'
+DASHBOARD_BUDGET = ContextVar('native_dashboard_http_budget', default=None)
+
+
+def polymarket_ladders(data):
+    """Validate one advertised two-sided image before selecting either side."""
+    native = {}
+    for side in ('bids', 'offers'):
+        rows = data[side]
+        if not isinstance(rows, list):
+            raise ValueError('polymarket_us_book_ladder_invalid')
+        levels = {}
+        for raw in rows:
+            price = F(polymarket_us.price(raw['px']).value)
+            quantity = F(raw['qty'])
+            if price in levels or quantity < 0:
+                raise ValueError('polymarket_us_book_level_conflict')
+            levels[price] = (quantity, dict(px=str(raw['px']['value']), qty=str(raw['qty'])))
+        native[side] = sorted(((p, q, raw) for p, (q, raw) in levels.items() if q > 0),
+                              reverse=side == 'bids')[:DEPTH]
+    offers = {
+        'Long': [dict(price=str(p), quantity=str(q)) for p, q, _ in native['offers']],
+        'Short': [dict(price=str(1 - p), quantity=str(q)) for p, q, _ in native['bids']],
+    }
+    original = {side: [raw for _, _, raw in rows] for side, rows in native.items()}
+    return offers, original
 
 
 def _pmus_fee(products, at):
@@ -217,27 +243,36 @@ def native_bindings(db, task, at, pregame_offers, *, venues=VENUES):
 
 
 def synchronized_kalshi(db, bindings, *, at, cutoff):
-    """Use a current synchronized ladder for the exact market and selected side."""
+    return synchronized_native(db, bindings, at=at, cutoff=cutoff, venues=('kalshi',))
+
+
+def synchronized_native(db, bindings, *, at, cutoff, venues=('kalshi', 'polymarket_us')):
+    """Reuse a fresh exchange image from the current, exact native subscription."""
     selected = {key: binding for key, binding in bindings.items()
-                if binding['venue'] == 'kalshi' and binding.get('contract') and not binding['reason']}
+                if binding['venue'] in venues and binding.get('contract') and not binding['reason']}
     if not selected:
         return {}
-    keys = {(current_event_id('kalshi', b['event_id']), b['market_id'], b['outcome_id']) for b in selected.values()}
-    events, markets, sides = [list(values) for values in zip(*keys, strict=True)]
+    keys = {(b['venue'], current_event_id(b['venue'], b['event_id']), b['market_id'], b['outcome_id'])
+            for b in selected.values()}
+    venues, events, markets, sides = [list(values) for values in zip(*keys, strict=True)]
     floor = cutoff-timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS)
-    rows = db.execute('''SELECT b.event_id,b.native_market_id,b.source_at,b.received_at,b.revision,b.sequence,
-               wanted.side,e.scheduled_start,d.levels
-        FROM unnest(%s::text[],%s::text[],%s::text[]) wanted(event_id,market_id,side)
-        JOIN native_book_revision b ON b.event_id=wanted.event_id AND b.native_market_id=wanted.market_id
-        JOIN current_event e ON e.id=b.event_id AND e.provider='kalshi'
-        JOIN native_ladder_revision d ON d.id=b.ladder_refs#>>ARRAY[wanted.side,'asks']
-        WHERE b.venue='kalshi' AND b.is_current AND b.state='active' AND b.sync='synchronized'
+    rows = db.execute('''SELECT b.venue,b.event_id,b.native_market_id,b.source_at,b.received_at,b.revision,
+               b.sequence,b.state,wanted.side,e.scheduled_start,d.levels
+        FROM unnest(%s::text[],%s::text[],%s::text[],%s::text[]) wanted(venue,event_id,market_id,side)
+        JOIN native_book_revision b ON (b.venue,b.event_id,b.native_market_id)=
+            (wanted.venue,wanted.event_id,wanted.market_id)
+        JOIN current_event e ON e.id=b.event_id AND e.provider=b.venue
+        LEFT JOIN native_ladder_revision d ON d.id=b.ladder_refs#>>ARRAY[wanted.side,'asks']
+        WHERE b.is_current AND b.state IN ('active','suspended') AND b.sync='synchronized'
+          AND (b.state='suspended' OR d.id IS NOT NULL OR b.outcomes @>
+               jsonb_build_array(jsonb_build_object('outcome_id',wanted.side,'asks',true)))
           AND b.quantity_units='contracts' AND b.source_order>=extract(epoch FROM %s::timestamptz)
-          AND b.received_order<=extract(epoch FROM %s::timestamptz)''', (events,markets,sides,floor,at))
-    exact = {(row['event_id'],row['native_market_id'],row['side']):row for row in rows}
+          AND b.received_order<=extract(epoch FROM %s::timestamptz)''', (venues,events,markets,sides,floor,at))
+    exact = {(row['venue'],row['event_id'],row['native_market_id'],row['side']):row for row in rows}
     results = {}
     for key,b in selected.items():
-        row = exact.get((current_event_id('kalshi', b['event_id']), b['market_id'], b['outcome_id']))
+        venue = b['venue']
+        row = exact.get((venue, current_event_id(venue, b['event_id']), b['market_id'], b['outcome_id']))
         if not row or stamp(row['scheduled_start']) != stamp(b['scheduled_start']):
             continue
         source, received = stamp(row['source_at']), stamp(row['received_at'])
@@ -245,15 +280,17 @@ def synchronized_kalshi(db, bindings, *, at, cutoff):
                       stamp(b['scheduled_start']), stamp(b['terms_valid_until']))
         if not floor <= source <= received <= at <= cutoff < expires:
             continue
-        ladder = row['levels']
+        ladder = row['levels'] or []
         if not all(price_unit == 'usd_per_contract' and size_unit == 'contracts'
                    for _,price_unit,_,size_unit in ladder):
             continue
-        evidence = dict(observed_at=row['received_at'], source_at=row['source_at'],
+        evidence = dict(received_at=row['received_at'], source_at=row['source_at'],
                         source='synchronized_native_book', revision=row['revision'], sequence=row['sequence'])
-        results[key] = dict(b, levels=[dict(price=p,quantity=q) for p,_,q,_ in ladder[:DEPTH]],
+        halted = row['state'] == 'suspended'
+        results[key] = dict(b, levels=[] if halted else [dict(price=p,quantity=q) for p,_,q,_ in ladder[:DEPTH]],
             complete=False, source_at=row['source_at'], received_at=row['received_at'],
-            valid_until=expires.isoformat(), identity_receipts=[*b['identity_receipts'],evidence])
+            reason='native_market_halted' if halted else None,
+            valid_until=expires.isoformat(), receipts=[evidence], identity_receipts=[*b['identity_receipts'],evidence])
     return results
 
 
@@ -266,6 +303,32 @@ class NativeExperimentDepth:
         self.blocked_until = {}
         self.requests = Counter()
         self.allowed = allowed or (lambda _venue: True)
+        self.inflight = {}
+
+    async def dashboard_call(self, work, config):
+        """Track optional HTTP allowance separately from checkpoint traffic."""
+        token = DASHBOARD_BUDGET.set(dict(request_limit=config['requests_per_source'],
+            byte_limit=config['source_bytes'], usage={}))
+        try:
+            return await work
+        finally:
+            DASHBOARD_BUDGET.reset(token)
+
+    def _reserve_dashboard_read(self, venue, body_limit):
+        budget = DASHBOARD_BUDGET.get()
+        if budget is None:
+            return None, False
+        at = asyncio.get_running_loop().time()
+        usage = budget['usage']
+        if venue not in usage or usage[venue]['until'] <= at:
+            usage[venue] = dict(until=at+3600, requests=0, bytes=0, reserved=0)
+        window = usage[venue]
+        if (window['requests'] >= budget['request_limit']
+                or window['bytes'] + window['reserved'] + body_limit > budget['byte_limit']):
+            return None, True
+        window['requests'] += 1
+        window['reserved'] += body_limit
+        return window, False
 
     async def __aenter__(self):
         if self.client is None:
@@ -273,6 +336,10 @@ class NativeExperimentDepth:
         return self
 
     async def __aexit__(self, *_):
+        tasks = list(self.inflight.values())
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         await self.client.aclose()
 
     def _failed_read(self, url, started, cutoff, reason):
@@ -282,6 +349,29 @@ class NativeExperimentDepth:
         return None, evidence if finished <= cutoff else None, reason
 
     async def _read(self, venue, url, cutoff, *, params=None, body_limit=512 * 1024):
+        """Share one in-flight HTTP receipt across exact, overlapping consumers.
+
+        Every waiter still enforces its own cutoff. Cancellation of one paper
+        decision cannot cancel an independent Dashboard consumer or vice versa.
+        Completed reads are never re-dated or used to renew their freshness.
+        """
+        key = venue, url, repr(params), body_limit
+        task = self.inflight.get(key)
+        if task is None:
+            task = asyncio.create_task(self._read_owned(venue,url,cutoff,params=params,body_limit=body_limit))
+            self.inflight[key] = task
+            def finished(done):
+                if self.inflight.get(key) is done:
+                    self.inflight.pop(key,None)
+            task.add_done_callback(finished)
+        body,evidence,reason = await asyncio.shield(task)
+        if reason == 'native_dashboard_source_budget' and DASHBOARD_BUDGET.get() is None:
+            return await self._read_owned(venue, url, cutoff, params=params, body_limit=body_limit)
+        if evidence and stamp(evidence['received_at']) > cutoff:
+            return None,None,'cutoff_passed'
+        return body,evidence,reason
+
+    async def _read_owned(self, venue, url, cutoff, *, params=None, body_limit=512 * 1024):
         async with self.semaphore:
             if not self.allowed(venue):
                 return None, None, 'source_paused'
@@ -291,11 +381,15 @@ class NativeExperimentDepth:
                 return None, None, 'cutoff_passed'
             if self.blocked_until.get(venue, sent) > sent:
                 return None, None, 'throttled'
+            window, deferred = self._reserve_dashboard_read(venue, body_limit)
+            if deferred:
+                return None, None, 'native_dashboard_source_budget'
             self.requests[venue] += 1
+            size = 0
             try:
                 async with asyncio.timeout(seconds):
                     async with self.client.stream('GET', url, params=params, timeout=seconds) as response:
-                        chunks, size = [], 0
+                        chunks = []
                         async for chunk in response.aiter_bytes():
                             size += len(chunk)
                             if size > body_limit:
@@ -312,6 +406,10 @@ class NativeExperimentDepth:
                             date=headers.get('date'), sha256=sha256(body).hexdigest())
             except (httpx.HTTPError, TimeoutError):
                 return self._failed_read(url, sent, cutoff, 'native_book_unavailable')
+            finally:
+                if window is not None:
+                    window['reserved'] -= body_limit
+                    window['bytes'] += size
             if status == 429:
                 pause = headers.get('retry-after')
                 try:
@@ -374,8 +472,12 @@ class NativeExperimentDepth:
                 if witness:
                     receipts.append(witness)
                 market = (listing or {}).get('market') or {}
-                if (reason or market.get('ticker') != ticker or market.get('event_ticker') != bindings[0]['event_id']
-                        or market.get('status') != 'active' or not self._fresh(witness, cutoff)):
+                exact = market.get('ticker') == ticker and market.get('event_ticker') == bindings[0]['event_id']
+                if (not reason and exact and market.get('status') in ('closed','settled','determined','finalized','inactive')
+                        and self._fresh(witness,cutoff)):
+                    return [dict(binding, reason='native_market_halted', levels=[], receipts=receipts,
+                                 **self._book_window(binding,witness)) for binding in bindings]
+                if (reason or not exact or market.get('status') != 'active' or not self._fresh(witness, cutoff)):
                     return [dict(binding, reason=reason or 'native_market_open_unverified', receipts=receipts)
                             for binding in bindings]
             rows = []
@@ -383,6 +485,8 @@ class NativeExperimentDepth:
                 levels = sorted(native[binding['opposite_outcome_id']].items(), reverse=True)
                 normalized = [dict(price=str(1 - F(bid)), quantity=str(size)) for bid, size in levels]
                 rows.append(dict(binding, levels=normalized[:DEPTH], complete=len(levels) < DEPTH,
+                    native_book={side+'_dollars':[[str(price),str(quantity)] for price,quantity in native[side].items()]
+                                 for side in ('yes','no')},
                     receipts=receipts, **self._book_window(binding, evidence)))
             return rows
         except ERRORS:
@@ -398,23 +502,25 @@ class NativeExperimentDepth:
             try:
                 data = body['marketData']
                 source_at = data.get('transactTime')
-                if data['marketSlug'] != slug or polymarket_us.state(data.get('state')).value != 'active':
+                state = polymarket_us.state(data.get('state')).value
+                if data['marketSlug'] != slug:
+                    reason = 'native_market_open_unverified'
+                elif state in ('suspended','closed') and self._fresh(evidence,cutoff,source_at):
+                    return [dict(binding,reason='native_market_halted',levels=[],receipts=receipts,
+                                 source_at=source_at,**self._book_window(binding,evidence,source_at))
+                            for binding in bindings]
+                elif state != 'active':
                     reason = 'native_market_open_unverified'
                 elif source_at is None or not self._fresh(evidence, cutoff, source_at):
                     reason = 'stale'
                 else:
+                    levels, original = polymarket_ladders(data)
                     results = []
                     for binding in bindings:
-                        long = binding['native_side'] == 'Long'
-                        levels = []
-                        for raw in data['offers' if long else 'bids']:
-                            p, size = F(polymarket_us.price(raw['px']).value), F(raw['qty'])
-                            if size > 0:
-                                levels.append((p if long else 1 - p, size))
-                        levels.sort()
-                        normalized = [dict(price=str(ask), quantity=str(size)) for ask, size in levels[:DEPTH]]
                         # REST documents no complete-depth guarantee for PMUS.
-                        results.append(dict(binding, levels=normalized, complete=False,
+                        results.append(dict(binding, levels=levels[binding['native_side']], complete=False,
+                            native_book=dict(marketSlug=data['marketSlug'],state=data['state'],
+                                transactTime=source_at, **original),
                             source_at=source_at, receipts=receipts, **self._book_window(binding, evidence, source_at)))
                     return results
             except ERRORS:

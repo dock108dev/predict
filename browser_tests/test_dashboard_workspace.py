@@ -328,3 +328,204 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         assert requests.count("/api/research/market") == 2
         assert requests.count("/api/research/dashboard-liquidity") == 1
         assert not errors
+
+
+@pytest.mark.parametrize("width", [1360, 390])
+def test_native_alternate_retains_price_and_depth_without_reference(width):
+    from playwright.sync_api import expect, sync_playwright
+
+    from tests.test_liquidity_execution import admitted, preview
+
+    now = datetime.now(timezone.utc)
+    listing_expiry = (now + timedelta(minutes=5)).isoformat()
+    key = {
+        "market_id": "canonical:fixture|spread|full_game",
+        "pull_id": "native:fixture-revision",
+        "offer_id": "novig-alternate",
+        "revision": "fixture-revision",
+    }
+    book = admitted(
+        (".25", 2000, 2000), (".4", 12500, 12500), coefficient=".03", line="-3.5"
+    )
+    book.update(
+        event_id="official-event",
+        market_id="official-market",
+        outcome_id="official-home",
+        native_side="buy",
+    )
+
+    def valuation(stake, observed=book):
+        return dict(
+            preview(observed, stake=stake, probability=None), valid_until=listing_expiry
+        )
+
+    row = dict(
+        **{k: v for k, v in key.items() if k != "offer_id"},
+        id=key["offer_id"],
+        native_source={"provider": "novig"},
+        venue="novig",
+        league="NCAAB",
+        game="Away University at Home University",
+        kickoff=(now + timedelta(hours=1)).isoformat(),
+        line="-3.5",
+        line_role="alternate",
+        period="full_game",
+        family="spread",
+        selection_label="Home University",
+        eligible_until=listing_expiry,
+        posted={"value": "0.0025", "native_price_probability": "0.25"},
+        display={"posted_odds": "+300", "fair_odds": None, "net_ev": None},
+        calculation={"status": "unavailable", "net_ev_percent": None},
+        times={"source_at": now.isoformat()},
+        liquidity=valuation("100"),
+    )
+    payload = {
+        "native_offer": {
+            "row": row,
+            "book": book,
+            "game_link": {
+                "canonical_game_id": "canonical:fixture",
+                "sgo_event_id": "sgo-event",
+                "method": "both_roles_exact_schedule",
+            },
+            "reference": None,
+            "reference_reason": "exact_sportsbook_line_unavailable",
+            "sgo_comparison": [],
+        },
+        "liquidity": row["liquidity"],
+        "liquidity_evidence": book,
+    }
+    stale = dict(row, id="stale-offer", line="-4.5", eligible_until=now.isoformat())
+    refreshed = dict(
+        book, levels=[dict(price=".30", quantity="2000", orders=["2000"]), book["levels"][1]]
+    )
+    preview_offer = dict(
+        row,
+        revision="newer-revision",
+        posted={"value": "0.003", "native_price_probability": "0.3"},
+        display={"posted_odds": "+233", "fair_odds": None, "net_ev": None},
+    )
+    previews = []
+    errors = []
+
+    def serve(route):
+        url = urlparse(route.request.url)
+        if url.path == "/":
+            route.fulfill(path=ASSETS / "dashboard.html", content_type="text/html")
+        elif url.path == "/api/research/dashboard":
+            assert parse_qs(url.query)["view"] == ["all"]
+            route.fulfill(
+                json={
+                    "rows": [row, stale],
+                    "total": 2,
+                    "offset": 0,
+                    "source_authority": "official_venue_apis",
+                }
+            )
+        elif url.path == "/api/research/dashboard-coverage":
+            assert not url.query
+            route.fulfill(
+                json={
+                    "coverage": [
+                        dict(
+                            venue="novig",
+                            league="NCAAB",
+                            family="spread",
+                            line_role="alternate",
+                            opportunities=2,
+                            priority_offers=1,
+                            exact_matches=2,
+                            priority_exact_matches=1,
+                            fresh_books=1,
+                            priority_fresh_books=1,
+                            usable_references=0,
+                            priority_usable_references=0,
+                            full_size=0,
+                            priority_full_size=0,
+                            ev_assessable=0,
+                            priority_ev_assessable=0,
+                            reasons={"stale_book": 1, "reference_unavailable": 1},
+                            priority_reasons={"reference_unavailable": 1},
+                        )
+                    ]
+                }
+            )
+        elif url.path == "/api/research/market":
+            assert parse_qs(url.query) == {
+                k: [v] for k, v in dict(key, liquidity="1").items()
+            }
+            route.fulfill(json=payload)
+        elif url.path == "/api/research/dashboard-liquidity":
+            assert route.request.method == "POST"
+            assert route.request.post_data_json == dict(key, amount="25")
+            previews.append(route.request.post_data_json)
+            route.fulfill(
+                json={
+                    "result": {
+                        "liquidity": valuation("25", refreshed),
+                        "liquidity_evidence": refreshed,
+                        "preview_offer": preview_offer,
+                    },
+                    "provider_requests": 0,
+                }
+            )
+        elif url.path == "/api/research/market-export":
+            assert parse_qs(url.query) == {k: [v] for k, v in key.items()}
+            route.fulfill(
+                json=payload,
+                headers={
+                    "Content-Disposition": 'attachment; filename="predict-market-evidence.json"'
+                },
+            )
+        elif (asset := ASSETS / Path(url.path).name).is_file():
+            route.fulfill(path=asset)
+        else:
+            route.fulfill(status=404)
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 850})
+        page.route("**/*", serve)
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto("http://predict.fixture/?board_view=all")
+        table = page.get_by_role("table", name="All venue offers")
+        expect(table.get_by_text("25% (+300)", exact=True)).to_have_count(1)
+        expect(table.get_by_text("EV unavailable", exact=True)).to_have_count(2)
+        expect(table.get_by_text("$5.00 at posted price", exact=True)).to_be_visible()
+        expect(
+            table.get_by_text("$55.00 across displayed levels", exact=True)
+        ).to_be_visible()
+        expect(page.locator("#dashboard-rows > tr")).to_have_count(2)
+        assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
+        expect(table.get_by_text("Depth unknown", exact=True)).to_be_visible()
+        table.get_by_role(
+            "button", name=re.compile(r"Home University -3\.5.*View evidence")
+        ).click()
+        dialog = page.get_by_role("dialog")
+        expect(
+            dialog.get_by_text("Exact sportsbook reference unavailable.", exact=True)
+        ).to_be_visible()
+        expect(dialog.get_by_text("canonical:fixture", exact=True)).to_be_visible()
+        expect(
+            dialog.get_by_role("heading", name="Liquidity at $100.00")
+        ).to_have_count(1)
+        dialog.get_by_role("button", name="$25", exact=True).click()
+        expect(
+            dialog.get_by_role("heading", name="Liquidity at $25.00")
+        ).to_be_visible()
+        expect(dialog.get_by_text("Full size", exact=False)).to_be_visible()
+        expect(dialog.get_by_text("Modeled fee", exact=True)).to_be_visible()
+        expect(dialog.get_by_text("Modeled net EV", exact=True)).to_have_count(0)
+        expect(dialog.get_by_text("25% (+300)", exact=True)).to_be_visible()
+        expect(dialog.get_by_text("30% (+233)", exact=True)).to_be_visible()
+        with page.expect_download() as transfer:
+            dialog.get_by_role("link", name="Export saved evidence").click()
+        assert "official-home" in transfer.value.path().read_text()
+        dialog.get_by_role("button", name="Close", exact=True).click()
+        coverage = page.locator("#dashboard-liquidity-coverage")
+        coverage.get_by_text("Liquidity coverage", exact=True).click()
+        expect(coverage.get_by_text("24-hour slate and next 2 hours")).to_be_visible()
+        expect(coverage.get_by_role("cell", name=re.compile("stale book 1"))).to_be_visible()
+        assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
+        assert len(previews) == 1
+        assert not errors

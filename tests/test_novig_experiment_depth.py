@@ -91,6 +91,30 @@ def test_exact_total_checks_both_over_and_under_labels():
     assert catalog(bind, row)['reason'] == 'identity_or_quote_conflict'
 
 
+def test_current_novig_lifecycle_uses_exact_fresh_receipts_without_altering_checkpoint():
+    def serve(request):
+        headers = {'Date': format_datetime(CUTOFF), 'Cache-Control': 'public, max-age=10'}
+        if '/events/' in request.url.path:
+            return httpx.Response(200, headers=headers,
+                                  json=dict(eventId=uid(1), status='DELAYED'))
+        if request.url.path.endswith(uid(2)):
+            return httpx.Response(200, headers=headers,
+                                  json=dict(eventId=uid(1), marketId=uid(2), status='CLOSED'))
+        headers['Cache-Control'] = 'no-store'
+        return httpx.Response(404, headers=headers, json={'code': 'MARKET_NOT_FOUND'})
+
+    async def run():
+        async with novig.NovigExperimentDepth(transport=httpx.MockTransport(serve), clock=lambda: CUTOFF) as client:
+            cutoff = CUTOFF + timedelta(seconds=8)
+            assert (await client.read_event_metadata(uid(1), cutoff))[2] == 'identity_conflict'
+            event, witness, reason = await client.read_event_metadata(uid(1), cutoff, lifecycle=True)
+            assert reason is None and event['status'] == 'DELAYED' and witness['status'] == 200
+            assert (await client.read_market_metadata(uid(1), uid(2), cutoff))[2] == 'native_market_halted'
+            assert (await client.read_market_metadata(uid(1), uid(3), cutoff))[2] == 'native_market_withdrawn'
+
+    asyncio.run(run())
+
+
 def test_prepared_native_alternates_replay_without_an_earlier_sgo_quote():
     first, second, anchor = binding(), binding(3, '-16.5'), binding(4, '-5.5')
     event = dict(id='sgo-event', competition='NCAAB', scheduled_start=first['starts_at'],

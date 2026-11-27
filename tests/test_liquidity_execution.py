@@ -58,6 +58,9 @@ def test_requested_size_uses_both_price_levels_and_ceil_fees():
     book = admitted(('.20', 1000, 1000), ('.25', 2000, 2000), coefficient='.03')
     result = preview(book, stake='7.16')
     assert result['status'] == 'full_size' and result['eligible']
+    assert result['best_level_quantity'] == '1000'
+    assert result['best_level_purchase_usd'] == '2'
+    assert result['available_purchase_usd'] == '7'
     assert result['modeled_native_quantity'] == '2999'
     assert result['modeled_purchase_usd'] == '6.9975'
     assert result['modeled_fee_usd'] == '0.16045'
@@ -124,6 +127,7 @@ def test_prophetx_stake_value_and_late_commission_are_distinct():
     result = preview(book, stake='100', probability='.6')
     assert result['eligible'] and result['quantity_unit'] == 'usd_stake'
     assert result['available_purchase_usd'] == '1387.08'
+    assert result['best_level_purchase_usd'] == '1387.08'
     assert result['modeled_native_quantity'] == result['modeled_stake_usd'] == '100'
     assert result['modeled_win_profit_usd'] == '74.24'
     assert result['modeled_fee_usd'] == '1.52' and result['modeled_entry_fee_usd'] == '0'

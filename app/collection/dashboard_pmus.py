@@ -232,7 +232,34 @@ def _binding(market, *, eid, cid, expected, is_long, predicate, rule, fee,
         identity_receipts=[role_proof, family_proof], levels=[], receipts=[], reason=None, complete=False)
 
 
-async def read(client, league, events, *, at, cutoff, products):
+def _main_market(event, markets, family):
+    """Verify the venue's own signed full-game line and its exact market ID."""
+    groups = event.get('marketGroups') or []
+    if family == 'moneyline':
+        primary = [group for group in groups if isinstance(group, dict) and group.get('id') == 'PRIMARY']
+        candidates = [m['id'] for m in markets if len(primary) == 1
+                      and m['id'] in (primary[0].get('marketIds') or ()) and _open(m)]
+        return candidates[0] if len(candidates) == 1 else None
+    group_id = f"game-lines/{'spread' if family == 'spread' else 'totals'}/full-game"
+    field = 'mainSpreadLine' if family == 'spread' else 'mainTotalLine'
+    try:
+        game_state = event['metadata']['gameState']
+        if (str(game_state['gameId']) != str(event['gameId'])
+                or game_state['sportradarGameId'] != event['sportradarGameId']):
+            return None
+        group, = [group for group in groups if group.get('id') == group_id and group.get('live') is False]
+        stat, = [stat for stat in game_state['marketGroupStats'] if stat.get('marketGroupId') == group_id]
+        line = F(game_state[field])
+        if F(group['line']) != line or F(stat['line']) != line:
+            return None
+        (market_id,) = [m['id'] for m in markets if m['id'] in group['marketIds']
+                        and _open(m) and m.get('line') is not None and F(m['line']) == line]
+        return market_id
+    except ERRORS:
+        return None
+
+
+async def read(client, league, events, *, at, cutoff, products, discover_window=None):
     """Read only the scheduled candidate window and bind complete native sides."""
     slug = LEAGUES.get(league)
     if not slug:
@@ -255,13 +282,15 @@ async def read(client, league, events, *, at, cutoff, products):
                 starts.add(start)
             except ERRORS:
                 continue
-    if not starts:
+    if not starts and discover_window is None:
         return {}
     types = dict(zip(('moneyline', 'spread', 'total'), pmus.full_game_types(slug), strict=True))
     present = {key[0] for strikes in keys.values() for key in strikes}
-    requested = {family: kind for family, kind in types.items() if family in present or family == 'moneyline'}
+    requested = {family: kind for family, kind in types.items()
+                 if discover_window is not None or family in present or family == 'moneyline'}
+    start_window, end_window = discover_window if discover_window else (min(starts), max(starts))
     scans = dict(zip(requested, await asyncio.gather(*(
-        _family(client, slug, kind, min(starts), max(starts), cutoff) for kind in requested.values())), strict=True))
+        _family(client, slug, kind, start_window, end_window, cutoff) for kind in requested.values())), strict=True))
     catalog = {family: result[0] for family, result in scans.items()}
     now = client.now()
     try:
@@ -281,7 +310,7 @@ async def read(client, league, events, *, at, cutoff, products):
                 continue
             roles, ids, teams = _role_binding(winner, league, slug)
             occurrence = stamp(winner['startTime']), roles['home'], roles['away']
-            if occurrence in keys:
+            if occurrence in keys or discover_window is not None and start_window <= occurrence[0] < end_window:
                 occurrences[occurrence].append((eid, winner, witness, expires, roles, ids, teams))
         except ERRORS:
             continue
@@ -313,16 +342,40 @@ async def read(client, league, events, *, at, cutoff, products):
                 if (len({str(m.get('id')) for m in markets}) != len(markets)
                         or len({m.get('slug') for m in markets}) != len(markets)):
                     continue
+                main_market_id = _main_market(row, markets, family) if discover_window is not None else None
             except ERRORS:
                 continue
             for market in markets:
                 try:
                     for side, line, is_long, predicate in _outcomes(market, family, source_event, roles, ids, start):
-                        for cid, expected in keys[occurrence].get((family, side, line), ()):
-                            matches[cid].append(_binding(market, eid=eid, cid=cid, expected=expected,
+                        selections = keys[occurrence].get((family, side, line), ())
+                        discovered = None
+                        if discover_window is not None:
+                            from .native_trading_identity import native_event, record, expected as exact
+
+                            labels = {team['ordering']: team['name'] for team in teams}
+                            native = native_event('polymarket_us', eid, league, occurrence[0], roles, labels,
+                                proof=dict(witness, native_team_ids=ids),
+                                shared={'sportradar': str(winner['sportradarGameId'])}
+                                if winner.get('sportradarGameId') else {})
+                            discovered = record('polymarket_us', native, pmus.identifier(market['id']),
+                                pmus.side_ids(market)[is_long], 'Long' if is_long else 'Short',
+                                family, side, line, settlement=_settlement(market, rule, predicate),
+                                main=market['id'] == main_market_id if main_market_id is not None else None)
+                            if main_market_id is not None:
+                                discovered['comparison_source_metadata']['main_line_witness'] = dict(
+                                    native_market_id=str(main_market_id), source_sha256=evidence['sha256'],
+                                    source_url=evidence['url'])
+                            expectation = exact(discovered)
+                            selections = [(expectation['contract_id'], expectation)]
+                        for cid, expected in selections:
+                            binding = _binding(market, eid=eid, cid=cid, expected=expected,
                                 is_long=is_long, predicate=predicate, rule=rule, fee=fee,
                                 role_proof=dict(witness, participants=roles, native_team_ids=ids),
-                                family_proof=evidence, expiry=min(expires, listing_expiry, fee_until, occurrence[0])))
+                                family_proof=evidence, expiry=min(expires, listing_expiry, fee_until, occurrence[0]))
+                            if discovered is not None:
+                                binding['_record'] = discovered
+                            matches[cid].append(binding)
                 except ERRORS:
                     continue
         output.update((cid, bindings[0]) for cid, bindings in matches.items() if len(bindings) == 1)

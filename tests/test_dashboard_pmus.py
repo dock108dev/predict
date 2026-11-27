@@ -68,6 +68,20 @@ def fee_metadata():
                                                          retrieved_at='2026-11-27T20:00:00Z'))))}
 
 
+def test_main_spread_uses_signed_native_group_not_mirrored_alternate():
+    selected = market('spread', line=31.5)
+    alternate = dict(selected, id='alt', line=-31.5)
+    row = event(selected)
+    group_id = 'game-lines/spread/full-game'
+    row.update(markets=[selected, alternate], marketGroups=[dict(id=group_id, line='31.5',
+        live=False, marketIds=[alternate['id'], selected['id']])],
+        metadata=dict(gameState=dict(gameId=row['gameId'], sportradarGameId=row['sportradarGameId'],
+            mainSpreadLine='31.5', marketGroupStats=[dict(marketGroupId=group_id, line='31.5')])))
+    assert dashboard_pmus._main_market(row, row['markets'], 'spread') == selected['id']
+    row['marketGroups'][0]['line'] = '-31.5'
+    assert dashboard_pmus._main_market(row, row['markets'], 'spread') is None
+
+
 def test_exact_family_catalog_binding_feeds_us_short_depth_and_size():
     winner = event(market('moneyline'))
     spread = event(market('spread', line=31.5))

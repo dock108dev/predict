@@ -7,7 +7,7 @@ const node=(tag,text,cls)=>{
   return element;
 };
 const shown=(value,format)=>value!=null&&Number.isFinite(ratio(value))?format(ratio(value)):null;
-const money=value=>shown(value,n=>n.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}));
+const money=(value,digits=2)=>shown(value,n=>n.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:digits}));
 const percent=value=>shown(value,n=>(n>0?'+':'')+(100*n).toFixed(2)+'%');
 const price=value=>shown(value,n=>(100*n).toFixed(2)+'¢');
 const labels={
@@ -20,7 +20,14 @@ const reasons={
   book_unobserved:'No matching book has been collected.',
   stale_book:'The last matching book is stale.',
   reference_stale:'The fair-price reference is stale.',
+  reference_withdrawn:'A sportsbook price or game schedule changed after this calculation.',
   reference_revision_changed:'A new fair-price reference is awaiting a depth calculation.',
+  depth_reference_unavailable:'An exact sportsbook reference is unavailable.',
+  native_observation_superseded:'The current book has changed. Reload saved prices for the latest offer.',
+  native_identity_changed:'This market changed. Open the latest offer from the Dashboard.',
+  native_game_started:'This game is outside the pregame window.',
+  native_schedule_changed:'The schedule changed. Wait for the venue to confirm the new kickoff.',
+  fee_mode_changed:'The saved calculation used a different fee setting.',
   identity_revision_changed:'The contract changed since the book was collected.',
   native_identity_unmatched:'The exact venue contract is unverified.',
   source_paused:'The source is paused.',
@@ -34,7 +41,8 @@ const reasons={
 };
 
 function statusText(depth){
-  const status=labels[depth.status]||labels.unknown;
+  const state=depth.status==='unknown'&&depth.size_status&&depth.size_status!=='unknown'?depth.size_status:depth.status;
+  const status=labels[state]||(depth.available_purchase_usd!=null?'Displayed depth':labels.unknown);
   const ev=percent(depth.modeled_net_ev);
   const at=money(depth.modeled_stake_usd);
   if(ev&&at)return `${status} · ${depth.status==='unknown'?'Observed size ':''}${ev} at ${at}`;
@@ -46,8 +54,12 @@ export function liquidityBadge(row){
   if(!depth)return null;
   const section=node('small',statusText(depth),'liquidity-badge');
   section.dataset.depthStatus=depth.status||'unknown';
-  const available=money(depth.available_purchase_usd);
-  if(available)section.append(node('span',`${depth.availability_is_lower_bound?'At least ':''}${available} available`));
+  const best=money(depth.best_level_purchase_usd,5),available=money(depth.available_purchase_usd,best?5:2);
+  if(best)section.append(node('span',`${best} at posted price`));
+  if(available&&(!best||best!==available||depth.availability_is_lower_bound)){
+    const range=best?' across displayed levels':' available';
+    section.append(node('span',`${depth.availability_is_lower_bound?'At least ':''}${available}${range}`));
+  }
   return section;
 }
 
@@ -63,6 +75,9 @@ export function liquidityDetails(row){
     if(value!==null&&value!==undefined&&value!=='')rows.append(node('dt',label),node('dd',value));
   };
   add('Supported cash budget',money(depth.modeled_stake_usd));
+  if(depth.best_level_quantity!=null&&depth.quantity_unit!=='usd_stake'){
+    add('Contracts at posted price',ratio(depth.best_level_quantity).toLocaleString('en-US',{maximumFractionDigits:6}));
+  }
   add('Modeled purchase',money(depth.modeled_purchase_usd));
   add('Modeled average buy price',price(depth.modeled_average_price));
   add('Price limit used',price(depth.limit_price));
@@ -71,6 +86,7 @@ export function liquidityDetails(row){
     feeLower+' to '+modeledFee:'Up to '+modeledFee):modeledFee);
   add('Modeled win profit',money(depth.modeled_win_profit_usd));
   add('Modeled net EV',percent(depth.modeled_net_ev));
+  add('Calculated',clock(depth.as_of));
   add('Book received',clock(depth.book_received_at||depth.book_known_at));
   add('Venue timestamp',clock(depth.book_source_at));
   add('Published',clock(depth.published_at));
@@ -114,7 +130,14 @@ function clock(value){
 export function coverageRows(rows,bookName){
   const table=node('table',undefined,'liquidity-coverage-table');
   const headings=node('tr');
-  for(const label of ['Venue','League','Market','Lines','All','Size checked','Full size','EV checked','Stake covered','Gaps']){
+  const native=rows.some(row=>row.fresh_books!==undefined);
+  const measures=native?['Offers','Exact matches','Fresh books','Fair references','Full size','Sized EV','Gaps']
+    :['All','Size checked','Full size','EV checked','Stake covered','Gaps'];
+  if(native){
+    const caption=node('caption','24-hour slate and next 2 hours');
+    table.append(caption);
+  }
+  for(const label of ['Venue','League','Market','Lines',...measures]){
     const heading=node('th',label);heading.scope='col';headings.append(heading);
   }
   const head=node('thead');head.append(headings);table.append(head);
@@ -124,8 +147,16 @@ export function coverageRows(rows,bookName){
     const intended=ratio(row.intended_stake_usd),supported=ratio(row.observed_supported_stake_usd);
     const share=intended?(100*supported/intended).toFixed(1)+'%':'—';
     const gaps=Object.entries(row.reasons||{}).map(([reason,n])=>reason.replaceAll('_',' ')+' '+n);
-    for(const value of [bookName(row.venue),row.league,row.family,row.main?'Main':'Alternate',
-      row.opportunities,row.assessable,row.full_size,row.ev_assessable,share,gaps.join(' · ')||'—'])entry.append(node('td',String(value)));
+    const priorityGaps=Object.entries(row.priority_reasons||{}).map(([reason,n])=>reason.replaceAll('_',' ')+' '+n);
+    const count=(all,priority)=>priority===undefined?all??'—':`${all} / ${priority}`;
+    const values=native?[
+      count(row.opportunities,row.priority_offers),count(row.exact_matches,row.priority_exact_matches),
+      count(row.fresh_books,row.priority_fresh_books),count(row.usable_references,row.priority_usable_references),
+      count(row.full_size,row.priority_full_size),count(row.ev_assessable,row.priority_ev_assessable),
+      [gaps.join(' · '),priorityGaps.length&&'Next 2h: '+priorityGaps.join(' · ')].filter(Boolean).join(' / ')||'—',
+    ]:[row.opportunities,row.assessable,row.full_size,row.ev_assessable,share,gaps.join(' · ')||'—'];
+    for(const value of [bookName(row.venue),row.league,row.family,row.line_role==='unknown'?'Unclassified':row.main?'Main':'Alternate',
+      ...values])entry.append(node('td',String(value)));
     body.append(entry);
   }
   table.append(body);

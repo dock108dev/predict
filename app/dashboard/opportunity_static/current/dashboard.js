@@ -3,6 +3,7 @@ import {payoutExample} from './pregame-evidence.js';
 import {explanation} from './pregame-explanation.js';
 import {bookName} from './pregame-labels.js';
 import {coverageRows, liquidityBadge, liquidityDetails} from './pregame-liquidity.js';
+import {priceDisplay} from './pregame-prices.js';
 import {amountResearch} from './research-tools.js';
 import {dateTime, percent, readable, selection} from './workspace-format.js';
 
@@ -18,7 +19,7 @@ const inspector = byId('dashboard-inspector');
 const content = byId('dashboard-inspector-content');
 const coverage = byId('dashboard-liquidity-coverage');
 const coverageContent = byId('dashboard-liquidity-content');
-const filterNames = ['sport', 'family', 'venue'];
+const filterNames = ['sport', 'family', 'venue', 'view'];
 const defaultPageSize = '50';
 const field = name => filters.elements.namedItem(name);
 const pageSize = () => Number(field('rows').value);
@@ -41,7 +42,13 @@ function readLocation() {
   }
   const savedOffset = Number(query.get('board_offset'));
   offset = Number.isInteger(savedOffset) && savedOffset > 0 && savedOffset <= 2147483647 ? savedOffset : 0;
+  updateHeading();
   clear.hidden = !filterNames.some(name => field(name).value);
+}
+
+function updateHeading() {
+  const labels = {all: 'All venue offers', unavailable: 'Offers with EV unavailable'};
+  byId('dashboard-opportunities').textContent = labels[field('view').value] || 'Current +EV opportunities';
 }
 
 function writeLocation(replace = false) {
@@ -74,25 +81,66 @@ function exactPrice(row) {
   return posted.value == null ? 'Not recorded' : `${posted.value} ${readable(posted.units)}`;
 }
 
+function venuePrice(row) {
+  if (!row.native_source) return row.display.posted_odds || exactPrice(row);
+  const price = row.posted?.native_price_probability;
+  if (price == null) return 'Unavailable';
+  if (row.venue === 'prophetx') return row.display.posted_odds;
+  const shown = priceDisplay({...row, posted: {value: price, units: 'probability'}});
+  return [shown.primary, shown.secondary].filter(Boolean).join(' ');
+}
+
 function bet(row) {
   return selection(row);
 }
 
 const quoteKey = row => `${row.pull_id}:${row.id}`;
 const current = row => Date.parse(row.eligible_until) > Date.now();
-const ev = row => row.display.net_ev || percent(row.calculation.net_ev_percent);
+const ev = row => row.display.net_ev || (row.calculation.net_ev_percent == null ? 'EV unavailable' : percent(row.calculation.net_ev_percent));
+
+function visibleQuote(row) {
+  if (!row.native_source) return current(row) ? row : null;
+  const view = field('view').value;
+  const fresh = current(row);
+  if (!fresh && view !== 'all') return null;
+  const refExpired = Date.parse(row.liquidity?.reference_valid_until) <= Date.now();
+  if (fresh && !refExpired) return row;
+  if (!view) return null;
+  const liquidity = fresh ? {...row.liquidity, modeled_net_ev: null, reason: 'reference_stale'}
+    : unknownLiquidity(row.liquidity, row.liquidity?.status === 'unknown' && !row.liquidity?.modeled_stake_usd
+      ? row.liquidity.reason : 'stale_book');
+  const posted = fresh ? row.posted : {...row.posted, value: null, native_price_probability: null};
+  const display = {posted_odds: fresh ? row.display.posted_odds : null, fair_odds: null, net_ev: null};
+  return {...row, posted, display, liquidity,
+    calculation: {...row.calculation, status: 'unavailable', net_ev_ratio: null, net_ev_percent: null}};
+}
+
+function quoteAge(row) {
+  if (row.native_source && !row.times?.source_at && row.times?.received_at) {
+    return ageNode(row.times.received_at, 'Received ');
+  }
+  return ageNode(row.times?.source_at);
+}
+
+function unknownLiquidity(liquidity, reason) {
+  return {status: 'unknown', reason: reason || 'stale_book', intended_stake_usd: liquidity?.intended_stake_usd,
+    book_received_at: liquidity?.book_received_at, published_at: liquidity?.published_at};
+}
 
 function availableLiquidity(row) {
   const liquidity = row.liquidity;
   if (liquidity?.valid_until && Date.parse(liquidity.valid_until) <= Date.now()) {
-    return {status: 'unknown', reason: 'stale_book', intended_stake_usd: liquidity.intended_stake_usd,
-      book_received_at: liquidity.book_received_at, published_at: liquidity.published_at};
+    return unknownLiquidity(liquidity, 'stale_book');
   }
   return liquidity;
 }
 
 function dashboardBadge(row) {
-  return liquidityBadge({liquidity: availableLiquidity(row)});
+  const liquidity = availableLiquidity(row);
+  if (row.native_source && liquidity && row.calculation.status === 'unavailable') {
+    return liquidityBadge({liquidity: {...liquidity, modeled_net_ev: null}});
+  }
+  return liquidityBadge({liquidity});
 }
 
 function evidenceButton(row, label) {
@@ -106,15 +154,16 @@ function evidenceButton(row, label) {
 }
 
 function otherVenues(row, expanded) {
-  const quotes = (row.other_quotes || []).filter(current);
+  const quotes = row.other_quotes || [];
   if (!quotes.length) return '';
   const list = node('ul');
   for (const quote of quotes) {
     const item = node('li');
-    const price = quote.display.posted_odds || exactPrice(quote);
-    item.append(evidenceButton(quote, bookName(quote.venue)), node('span', `${price} · ${ev(quote)} quote EV`),
+    const price = venuePrice(quote);
+    const label = quote.native_source ? price : `${price} · ${ev(quote)} quote EV`;
+    item.append(evidenceButton(quote, bookName(quote.venue)), node('span', label),
       node('small', `Fair ${quote.display.fair_odds || 'odds unavailable'} · `));
-    item.lastChild.append(ageNode(quote.times?.source_at));
+    item.lastChild.append(quoteAge(quote));
     const badge = dashboardBadge(quote);
     if (badge) item.append(badge);
     list.append(item);
@@ -137,13 +186,14 @@ function offerRow(row, expanded) {
   const line = row.line_role === 'alternate' ? ' · Alternate' : '';
   cell(tr, 'Bet', evidenceButton(row, bet(row)), node('small', readable(row.family) + period + line));
   cell(tr, 'Best venue', node('strong', bookName(row.venue)), otherVenues(row, expanded));
-  cell(tr, 'Posted odds', row.display.posted_odds || exactPrice(row));
+  cell(tr, 'Posted odds', venuePrice(row));
   cell(tr, 'Fair odds', row.display.fair_odds || 'Unavailable');
-  const quoted = node('span', row.liquidity ? `Quote ${ev(row)}` : ev(row), 'dashboard-quoted-ev');
-  if (ev(row).startsWith('-')) quoted.dataset.sign = 'negative';
+  const quoted = row.native_source && ev(row) !== 'EV unavailable' ? null
+    : node('span', !row.native_source && row.liquidity ? `Quote ${ev(row)}` : ev(row), 'dashboard-quoted-ev');
+  if (quoted && (ev(row).startsWith('-') || ev(row) === 'EV unavailable')) quoted.dataset.sign = 'neutral';
   const badge = dashboardBadge(row);
   cell(tr, 'EV', ...[quoted, badge].filter(Boolean));
-  cell(tr, 'Quote age', ageNode(row.times?.source_at));
+  cell(tr, 'Quote age', quoteAge(row));
   return tr;
 }
 
@@ -167,6 +217,45 @@ function link(text, href) {
 }
 
 function renderEvidence(row, evidence, query, signal) {
+  if (evidence.native_offer) {
+    const native = evidence.native_offer;
+    const book = {liquidity: evidence.liquidity || row.liquidity, liquidity_evidence: evidence.liquidity_evidence};
+    const size = amountResearch('dashboard', {...row, ...book}, (output, modeled) => {
+      const details = liquidityDetails(modeled);
+      const price = modeled.preview_offer ? facts([['Venue price used for preview', venuePrice(modeled.preview_offer)]]) : null;
+      output.replaceChildren(...[price, details].filter(Boolean));
+    }, {signal});
+    const sources = facts([
+      ['Saved venue price', venuePrice(native.row || row)],
+      ['Venue event', native.book.event_id],
+      ['Native market', native.book.market_id], ['Native outcome', native.book.outcome_id],
+      ['Native side', native.book.native_side], ['Source timestamp', native.book.source_at],
+      ['Book received', native.book.received_at], ['Book expires', native.book.valid_until],
+      ['Calculation time', native.calculated_at], ['Shared game', native.game_link.canonical_game_id],
+      ['Game match', native.game_link.method || native.game_link.reason],
+      ['SportsGameOdds event', native.game_link.sgo_event_id],
+      ...(native.fee_mode?.enabled === false ? [['Modeled fees', 'Disabled in saved calculation']] : []),
+    ]);
+    const reference = node('section');
+    const prices = node('ul');
+    for (const price of native.reference?.prices || []) {
+      const side = readable(price.side) + (price.side === native.reference.selected_outcome ? ' (this bet)' : '');
+      prices.append(node('li', `${side} · ${price.price_american} · ${dateTime(price.source_at)}`));
+    }
+    reference.append(node('h3', 'Reference prices'));
+    if (prices.childElementCount) {
+      const fair = native.reference.fair_odds ? ` · Fair odds ${native.reference.fair_odds}` : '';
+      reference.append(node('p', `${bookName(native.reference.book)}${fair}`), prices);
+    } else {
+      reference.append(node('p', 'Exact sportsbook reference unavailable.'));
+    }
+    const exact = node('details');
+    exact.append(node('summary', 'Native book, fees, game match and SGO audit'), node('pre', JSON.stringify(native, null, 2)));
+    const actions = node('div', undefined, 'dashboard-evidence-actions');
+    actions.append(link('Export saved evidence', '/api/research/market-export?' + query));
+    content.replaceChildren(node('p', `${row.game} · ${dateTime(row.kickoff)}`), size, sources, reference, actions, exact);
+    return;
+  }
   const offer = evidence.selected_offer;
   const stored = offer?.calculation_payload;
   if (!stored || !['positive', 'negative', 'zero'].includes(offer.calculation?.status)) {
@@ -241,7 +330,8 @@ async function inspect(row) {
     const retry = node('button', 'Retry evidence');
     retry.type = 'button';
     retry.onclick = () => inspect(row);
-    content.replaceChildren(progress, retry, link('Open original odds pull in Data', '/data?' + new URLSearchParams({evidence: 'pulls', pull: row.pull_id})));
+    content.replaceChildren(progress, retry);
+    if (!row.native_source) content.append(link('Open original odds pull in Data', '/data?' + new URLSearchParams({evidence: 'pulls', pull: row.pull_id})));
   }
 }
 
@@ -258,6 +348,11 @@ inspector.addEventListener('close', () => {
 
 function dashboardState(packet, hasRows, expiring) {
   const state = packet.availability || {};
+  if (packet.source_authority === 'official_venue_apis' && field('view').value) {
+    if (hasRows) return '';
+    return field('view').value === 'unavailable' ? 'No fresh venue prices with EV unavailable match these filters.'
+      : 'No stored venue offers match these filters.';
+  }
   if (expiring) return 'Quotes expired. Reading saved prices…';
   if (hasRows) {
     if (state.pull_incomplete) return 'Some odds pulls are incomplete.';
@@ -274,7 +369,12 @@ function dashboardState(packet, hasRows, expiring) {
 }
 
 function render(packet) {
-  const currentRows = packet.rows.filter(current);
+  const currentRows = packet.rows.flatMap(group => {
+    const quotes = [group, ...(group.other_quotes || [])].map(visibleQuote).filter(Boolean);
+    if (!quotes.length) return [];
+    const [first, ...other_quotes] = quotes.sort((a, b) => Number(current(b)) - Number(current(a)));
+    return [{...first, other_quotes}];
+  });
   const focused = document.activeElement;
   const focusedBet = focused?.closest('[data-bet]')?.dataset.bet;
   const expanded = new Set([...rows.querySelectorAll('details[open]')].map(details => details.closest('tr').dataset.bet));
@@ -299,7 +399,8 @@ function schedule() {
   if (closed || document.hidden) return;
   const now = Date.now();
   const deadline = Math.min(...(snapshot?.rows || []).flatMap(row => [row, ...(row.other_quotes || [])])
-    .flatMap(row => [row.eligible_until, row.liquidity?.valid_until]).map(Date.parse).filter(at => at > now));
+    .flatMap(row => [row.eligible_until, row.liquidity?.valid_until, row.liquidity?.reference_valid_until])
+    .map(Date.parse).filter(at => at > now));
   const delay = deadline > now ? Math.min(30000, deadline - now) : 30000;
   refreshTimer = setTimeout(() => {
     if (deadline <= Date.now()) {
@@ -320,7 +421,7 @@ async function refreshCoverage() {
   const controller = new AbortController();
   coverageRead = controller;
   const query = {};
-  for (const name of filterNames) if (field(name).value) query[name] = field(name).value;
+  for (const name of ['sport', 'family', 'venue']) if (field(name).value) query[name] = field(name).value;
   coverageContent.replaceChildren(node('p', 'Reading stored coverage…'));
   try {
     const packet = await get('/api/research/dashboard-coverage', query, AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]));
@@ -378,6 +479,7 @@ function refreshSelection() {
   snapshot = undefined;
   rows.replaceChildren();
   byId('dashboard-table').hidden = byId('dashboard-pages').hidden = true;
+  updateHeading();
   clear.hidden = !filterNames.some(name => field(name).value);
   refresh();
   if (coverage.open) refreshCoverage();

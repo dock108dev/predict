@@ -103,6 +103,7 @@ def _contract(raw, cell, expected):
         # No fair tie/push partition is inferred from a two-runner quote.
         equality = 'unknown'
     settlement = dict(available=available, rule_id=rule.get('source_sha256'),
+        native_rules=dict(primary=primary,secondary=secondary),
         evidence=rule.get('evidence'), overtime=rule.get('overtime'),
         extra_innings=rule.get('extra_innings'), shootout=rule.get('shootout'), equality=equality,
         reason=None if available else 'native_settlement_equivalence_unverified')
@@ -169,11 +170,11 @@ class Catalog:
         self.cache[key] = body, evidence, reason
         return body, evidence, reason
 
-    async def read(self, client, league, events, *, cutoff, products):
-        if not events or not any(r['quote']['venue'] == 'kalshi' for rows in events.values() for _,_,r in rows):
+    async def read(self, client, league, events, *, cutoff, products, discover_window=None):
+        if discover_window is None and (not events or not any(r['quote']['venue'] == 'kalshi' for rows in events.values() for _,_,r in rows)):
             return {}
         times = {stamp(rows[0][2]['event']['scheduled_start']) for rows in events.values()}
-        start, end = min(times), max(times)
+        start, end = discover_window if discover_window else (min(times), max(times))
         cursor, previous, prospects = '', None, []
         for _ in range(MAX_PAGES):
             body, evidence, failure = await self.get(client, '/milestones', dict(category='Sports',
@@ -185,7 +186,7 @@ class Catalog:
             if starts != sorted(starts) or starts and previous and starts[0] < previous:
                 return {}
             prospects.extend((row, evidence) for row, kickoff in zip(rows, starts, strict=True)
-                if kickoff in times and row.get('category') == 'Sports' and row.get('type') == TYPES[league]
+                if (start <= kickoff < end if discover_window else kickoff in times) and row.get('category') == 'Sports' and row.get('type') == TYPES[league]
                 and row.get('details', {}).get('league') == NATIVE_LEAGUES.get(league, league)
                 and row['details'].get('status') == 'scheduled')
             cursor = body['cursor']
@@ -198,7 +199,8 @@ class Catalog:
 
         if not prospects or len(prospects) > MAX_EVENTS:
             return {}
-        candidates = await asyncio.gather(*(self._event(client, league, events, row, receipt, cutoff)
+        candidates = await asyncio.gather(*(self._event(client, league, events, row, receipt, cutoff,
+                                                       discover=discover_window is not None)
                                               for row, receipt in prospects))
         exact = defaultdict(list)
         for outcome in candidates:
@@ -212,7 +214,7 @@ class Catalog:
                                         for (event,series), entries in by_event.items()))
         return {cid: binding for group in output for cid, binding in group.items()}
 
-    async def _event(self, client, league, events, milestone, witness, cutoff):
+    async def _event(self, client, league, events, milestone, witness, cutoff, *, discover=False):
         try:
             choices = {}
             for ticker in dict.fromkeys(milestone['related_event_tickers']):
@@ -258,7 +260,20 @@ class Catalog:
                     except ERRORS:
                         continue
                     for side, line, native_side in outcomes:
-                        for cid, expected in records[cell['family'], side, line]:
+                        selections = records[cell['family'], side, line]
+                        if discover:
+                            from .native_trading_identity import native_event, record, expected as exact
+
+                            event = native_event('kalshi', ticker, league, start, roles, labels,
+                                proof=dict(role_witness, schedule=identity_rows),
+                                occurrence_id=role_witness['event_id'], occurrence_links=choices)
+                            row = record('kalshi', event, raw['ticker'], native_side, native_side,
+                                cell['family'], side, line, settlement=_contract(raw, cell,
+                                    dict(signed_line=None if line is None else str(line)))['settlement'],
+                                main=True if ticker == role_witness['event_id'] else None)
+                            expectation = exact(row)
+                            selections = [(expectation['contract_id'], dict(expectation, _record=row))]
+                        for cid, expected in selections:
                             matches[cid].append((expected, raw, cell, native_side, listing, witness, identity_rows))
             return matches
         except ERRORS:
@@ -273,6 +288,8 @@ class Catalog:
         review = for_offer(products, dict(venue='kalshi'), at)
         output = {}
         for cid, (expected, raw, cell, side, listing, witness, occurrence) in entries:
+            expected = dict(expected)
+            discovered = expected.pop('_record', None)
             market = identity(raw['ticker'])
             contract = _contract(raw, cell, expected)
             base = dict(venue='kalshi', event_id=event, market_id=market, route=market,
@@ -280,6 +297,9 @@ class Catalog:
                 levels=[], receipts=[], complete=False, contract=contract,
                 scheduled_start=expected['starts_at'], contract_id=cid,
                 identity_receipts=[witness, listing, occurrence], binding_method='public_milestone_and_exact_strike')
+            if discovered is not None:
+                base['_record'] = discovered
+            grid = None
             try:
                 grid, revision = _grid(raw, event, market, side, listing)
                 if (not review or review.get('unavailable_reason') or not applies(review, at)
@@ -300,5 +320,12 @@ class Catalog:
                     identity_receipts=[*base['identity_receipts'],*evidence])
             except ERRORS as error:
                 reason = str(error) if isinstance(error, ValueError) and str(error).startswith('kalshi_') else 'kalshi_market_terms_unavailable'
-                output[cid] = dict(base, reason=reason)
+                if discovered is not None and grid is not None:
+                    output[cid] = dict(base,reason=None,market_revision=revision,payout_usd='1',
+                        quantity_increment=grid['increment'],quantity_minimum=grid['minimum'],
+                        price_bands=grid['price_ranges'],fee=dict(reason=reason),
+                        terms_valid_until=min(stamp(listing['received_at'])+IDENTITY_AGE,
+                                              stamp(witness['received_at'])+IDENTITY_AGE).isoformat())
+                else:
+                    output[cid] = dict(base, reason=reason)
         return output

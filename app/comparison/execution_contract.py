@@ -61,7 +61,7 @@ def validate_receipt(receipt, at, expected=None):
     received, expires, decision = (clock(value) for value in (receipt['received_at'], receipt['valid_until'], at))
     if not received <= decision < clock(contract['starts_at']):
         raise ValueError('depth_receipt_outside_decision')
-    if decision > expires:
+    if decision >= expires:
         raise ValueError('stale')
     if receipt.get('source_at') and clock(receipt['source_at']) > received:
         raise ValueError('depth_source_clock_invalid')

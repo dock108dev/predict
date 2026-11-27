@@ -143,6 +143,11 @@ def plan(root, paths):
         if path.startswith(("app/research/", "app/storage/")):
             scopes.add("research")
             sql.update(SQL_CORE)
+        if path.startswith(('app/collection/native_trading','app/storage/native_trading',
+                            'app/comparison/native_observation','tests/test_native_trading',
+                            'tests/test_native_observation')) or path.endswith('128_native_trading_offers.sql'):
+            pure.update({'tests/test_native_trading.py','tests/test_native_trading_prophetx.py','tests/test_native_observation.py'})
+            sql.add('tests/test_native_trading_sql.py')
         if path.startswith(("app/", "tests/")) and any(
             topic in candidate.name
             for topic in ("experiment_depth", "paper_depth", "experiment_public_depth", "execution_contract",

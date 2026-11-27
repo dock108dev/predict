@@ -271,8 +271,9 @@ def _round_cents(value):
 class _StakePath:
     """Price-time prefixes, expressed in the venue's own order increments."""
 
-    def __init__(self, receipt, levels, *, fragmented=True):
+    def __init__(self, receipt, levels, *, fragmented=True, fees_enabled=True):
         self.receipt = receipt
+        self.fees_enabled = fees_enabled
         self.venue = receipt['venue']
         self.stake_units = self.venue == 'prophetx'
         self.payout = F(1) if self.stake_units else F(receipt['payout_usd'])
@@ -287,6 +288,8 @@ class _StakePath:
         self.bound = False
         self.novig = None
         if self.venue == 'novig':
+            if not fees_enabled:
+                receipt = dict(receipt,fee=dict(model='novig_v3',coefficient='0',round_usd='0.00001'))
             payout, coefficient, precision, orders = _novig_orders(receipt, levels)
             self.novig = NovigFill(orders, payout=payout, precision=precision, fragmented=fragmented)
             self.bound = bool(coefficient and any(not order.individually_identified for order in orders))
@@ -294,11 +297,11 @@ class _StakePath:
             if receipt.get('quantity_unit') != 'usd_stake' or self.step != F('0.01') or minimum < 1:
                 raise ValueError('depth_quantity_grid_unverified')
             fee = receipt['fee']
-            if (fee.get('model') != 'prophetx_market_commission' or not fee.get('schedule_revision')
+            if fees_enabled and (fee.get('model') != 'prophetx_market_commission' or not fee.get('schedule_revision')
                     or fee.get('rounding') != 'nearest_cent_profit_then_commission'
                     or not 0 <= F(fee['rate']) <= 1):
                 raise ValueError(fee.get('reason') or 'prophetx_account_fee_schedule_unverified')
-            self.bound = True
+            self.bound = fees_enabled
         elif self.payout != 1:
             raise ValueError('depth_quantity_grid_unverified')
         else:
@@ -319,12 +322,12 @@ class _StakePath:
             purchase += cost
             gross += face
             leg_fee = F(0)
-            if self.venue == 'kalshi':
+            if self.fees_enabled and self.venue == 'kalshi':
                 if ask not in self.curves:
                     self.curves[ask] = _native_fee_curve(self.venue, self.receipt, ask, self.step)
                 rate, precision = self.curves[ask]
                 leg_fee = ceil(rate * take / precision) * precision
-            elif self.venue == 'polymarket_us':
+            elif self.fees_enabled and self.venue == 'polymarket_us':
                 terms = self.receipt['fee']
                 _native_fee_curve(self.venue, self.receipt, ask, self.step)
                 fills = [(quantity, price) for price, quantity in legs] + [(size, ask)]
@@ -341,7 +344,8 @@ class _StakePath:
             raw_profit = gross - purchase
             profit = F(ceil(raw_profit * 100 - F(1, 2)), 100)
             gross = purchase + profit
-            commission = _round_cents(F(self.receipt['fee']['rate']) * _round_cents(raw_profit))
+            commission = (_round_cents(F(self.receipt['fee']['rate']) * _round_cents(raw_profit))
+                          if self.fees_enabled else F(0))
         cash = dict(settlement_fee_usd={'win': wire(commission)}) if commission else {}
         return (purchase + entry, legs, purchase, entry, F(0), cash, trace), gross
 
@@ -393,7 +397,7 @@ def _execution_values(partition, settlement_rules, fill, gross):
 
 
 def evaluate_at_stake(receipt, *, at, stake, probability, minimum, price_limit=None,
-                      probabilities=None, cashflow_rules=None, expected=None):
+                      probabilities=None, cashflow_rules=None, expected=None, fees_enabled=True):
     """Size a requested cash outlay on exact current depth and price its own EV."""
     at, stake, minimum = stamp(at), F(stake), F(minimum)
     if stake <= 0 or (stake * 100).denominator != 1:
@@ -419,6 +423,10 @@ def evaluate_at_stake(receipt, *, at, stake, probability, minimum, price_limit=N
                       stake_units=stake_units)
         result.update(quantity_unit='usd_stake' if stake_units else 'native_contracts', limit_price=wire(limit),
                       best_price=wire(levels[0][0]) if levels else None)
+        if eligible:
+            ask, quantity, _ = eligible[0]
+            result.update(best_level_quantity=wire(quantity),
+                          best_level_purchase_usd=wire(quantity if stake_units else ask * quantity * payout))
         if receipt.get('reason'):
             return _unknown(result, receipt['reason'])[0]
         if not eligible:
@@ -426,7 +434,7 @@ def evaluate_at_stake(receipt, *, at, stake, probability, minimum, price_limit=N
                 return _unknown(result, 'truncated')[0]
             size = 'above_limit' if levels else 'confirmed_empty'
             return dict(result, size_status=size, status=size, reason=None)
-        path = _StakePath(receipt, eligible)
+        path = _StakePath(receipt, eligible, fees_enabled=fees_enabled)
         proposal = path.budget(stake)
         if not proposal:
             if not complete and path.total_ticks < path.minimum_ticks:

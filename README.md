@@ -74,6 +74,7 @@ Use affected tests for small changes; [CI](docs/CI.md) describes the broader
 automated checks.
 
 - [Calculation and fee policy](docs/benchmark-ev.md) · [Raw prices](docs/raw-prices.md)
+- [Native trading sources and liquidity](docs/native-trading.md)
 - [Scanner filters and manual tickets](docs/scanner-usage.md)
 - [Architecture, APIs, and module ownership](docs/architecture.md)
 - [Acquisition and accounting](docs/acquisition.md) · [Data limitations](docs/market-data-gaps.md)

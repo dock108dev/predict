@@ -2,6 +2,7 @@ import asyncio
 from datetime import timedelta
 from email.utils import format_datetime
 from fractions import Fraction
+import json
 from unittest import skipUnless
 
 import httpx
@@ -10,6 +11,7 @@ import pytest
 from app.collection.native_experiment_depth import (
     NativeExperimentDepth, PMUS_CURRENT_HASH, PMUS_TERMS, _pmus_fee, native_bindings,
 )
+from app.collection.native_trading_pmus_stream import DashboardMarketStream
 from app.storage.store import stamp
 from tests.latest_board_fixture import SOCKET
 from tests.test_paper_experiments_sql import ResearchWorkspaceFixture
@@ -128,6 +130,83 @@ def test_throttle_and_cutoff_prevent_a_second_native_request():
 
     asyncio.run(read())
     assert len(calls) == 1
+
+
+def test_dashboard_hourly_allowance_defers_optional_read_without_blocking_checkpoint():
+    calls = []
+
+    def serve(request):
+        calls.append(request.url.path)
+        return httpx.Response(200, json={'active': True})
+
+    async def run():
+        cutoff = AT + timedelta(seconds=2)
+        async with NativeExperimentDepth(
+            client=httpx.AsyncClient(transport=httpx.MockTransport(serve)), now=lambda: AT,
+        ) as client:
+            async def read(suffix):
+                return await client._read('kalshi', 'https://example.test/' + suffix, cutoff, body_limit=100)
+
+            async def optional():
+                assert (await read('first'))[2] is None
+                assert (await read('deferred'))[2] == 'native_dashboard_source_budget'
+
+            await client.dashboard_call(optional(), {'requests_per_source': 10, 'source_bytes': 105})
+            assert (await read('checkpoint'))[2] is None
+
+    asyncio.run(run())
+    assert calls == ['/first', '/checkpoint']
+
+
+def test_polymarket_dashboard_stream_shares_exact_snapshot_and_rejects_stale_updates():
+    calls = []
+    clock = [AT]
+
+    class Socket:
+        def __init__(self):
+            self.frames = asyncio.Queue()
+
+        async def send(self, raw):
+            command = json.loads(raw)['subscribe']
+            calls.append(command['marketSlugs'])
+            for when, state in ((AT, 'MARKET_STATE_OPEN'),
+                                (AT-timedelta(seconds=1), 'MARKET_STATE_HALTED')):
+                data = dict(requestId=command['requestId'], subscriptionType='SUBSCRIPTION_TYPE_MARKET_DATA',
+                    marketData=dict(marketSlug='slug', state=state, transactTime=when.isoformat(),
+                        bids=[dict(px=dict(value='0.77', currency='USD'), qty='12.01')],
+                        offers=[dict(px=dict(value='0.79', currency='USD'), qty='119.02')]))
+                self.frames.put_nowait(json.dumps(data))
+
+        async def recv(self):
+            return await self.frames.get()
+
+        async def close(self):
+            calls.append('closed')
+
+    class Credential:
+        def check(self, _raw):
+            pass
+
+    async def run():
+        async def connect(_credential):
+            return Socket()
+
+        stream = DashboardMarketStream(now=lambda: clock[0], allowed=lambda: True,
+                                       credentials=Credential, transport=connect)
+        ends = dict(scheduled_start=(AT+timedelta(minutes=10)).isoformat(),
+                    terms_valid_until=(AT+timedelta(minutes=1)).isoformat())
+        selections = {side: dict(binding('polymarket_us', 'slug', side, other), **ends)
+                      for side, other in (('Long', 'Short'), ('Short', 'Long'))}
+        initial = await stream.read(selections, AT+timedelta(seconds=1))
+        assert initial['Long']['receipts'] == initial['Short']['receipts']
+        assert initial['Short']['levels'] == [dict(price='23/100', quantity='1201/100')]
+        assert initial['Short']['reason'] is None
+        clock[0] += timedelta(seconds=31)
+        assert await stream.read(selections, clock[0]+timedelta(seconds=1)) == {}
+        await stream.close()
+
+    asyncio.run(run())
+    assert calls == [['slug'], 'closed']
 
 
 def test_sgo_polymarket_label_alone_does_not_map_to_polymarket_us():

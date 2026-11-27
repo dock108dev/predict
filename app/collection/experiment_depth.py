@@ -453,16 +453,19 @@ class ExperimentDepth:
         self.progress = dict(self.progress, active=len(self.running), pending=len(self.pending))
 
     async def run(self):
-        from .dashboard_depth import DashboardDepth
+        from .native_trading import NativeTrading
         from .native_experiment_depth import NativeExperimentDepth
         from .novig_experiment_depth import NovigExperimentDepth
 
         try:
             async with ((self.client_factory or NovigExperimentDepth)() as novig,
-                        NativeExperimentDepth(now=self.now, allowed=self.venue_enabled) as native):
-                dashboard = DashboardDepth(self, connector=self.connector, now=self.now)
+                        NativeExperimentDepth(now=self.now, allowed=lambda venue:
+                            self.service.dispatch and not self.service.globally_stopped
+                            and venue not in self.service.paused_sources) as native):
+                dashboard = NativeTrading(self, connector=self.connector, now=self.now)
                 self.dashboard_progress = dashboard.progress
-                task = asyncio.create_task(dashboard.run(novig, native), name='predict-dashboard-public-depth')
+                task = asyncio.create_task(native.dashboard_call(dashboard.run(novig, native), self.service.config),
+                                           name='predict-dashboard-public-depth')
                 try:
                     while True:
                         try:

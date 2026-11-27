@@ -126,7 +126,7 @@ class CatalogReads(RawReads):
                     population='One game/market/period per latest covering acquisition attempt; '
                         'numeric headlines use only eligible source-designated main trading offers.')
 
-    def market(self, query):
+    def market(self, query, frozen=False):
         from app.storage import market_board
 
         with self.lock:
@@ -141,6 +141,11 @@ class CatalogReads(RawReads):
             with self.connector() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute("SET LOCAL statement_timeout='10s'")
+                if query['pull_id'].startswith('native:'):
+                    from app.storage.native_trading import detail
+
+                    at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
+                    return detail(db, query, at=at, stake=query.get('amount', '100'), frozen=frozen)
                 value = market_board.detail(db, market_id=query['market_id'], pull_id=query['pull_id'],
                     offer_id=query.get('offer_id'), revision=query.get('revision'))
                 if query.get('liquidity') == '1':
@@ -271,34 +276,28 @@ def mount(app, *, campaigns_only=False):
 
         query = request.query
         paging = {'offset', 'limit'}
-        filters = {'sport': SPORTS, 'family': MARKET_FAMILIES.values(), 'venue': VENUES}
+        filters = {'sport': SPORTS, 'family': MARKET_FAMILIES.values(), 'venue': VENUES,
+                   'view': ('all', 'unavailable')}
         if set(query) - paging - filters.keys():
             raise PublicRequestError('Invalid Dashboard filters.')
         if any(query.get(name) not in (None, '', *values) for name, values in filters.items()):
-            raise PublicRequestError('Unknown sport, bet type, or venue.')
+            raise PublicRequestError('Unknown Dashboard filter.')
         validate({key: query[key] for key in paging if key in query})
 
         def work():
-            from datetime import timedelta
-            from app.collection.activity_mode import DEFAULT_SETTINGS
-            from app.storage.market_board import dashboard as read_dashboard
+            from app.storage.native_trading import HORIZON, coverage, dashboard as read_dashboard
 
+            selection = {name: query.get(name) or None for name in ('sport', 'family', 'venue')}
             with reads.connector() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute("SET LOCAL statement_timeout='10s'")
                 db.execute("SET LOCAL jit='off'")
                 at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
                 if request.path == '/api/research/dashboard-coverage':
-                    from app.storage.current_pregame_depth import coverage
-
-                    return coverage(db, at=at, **{name:query.get(name) or None for name in filters})
-                mode = db.execute('SELECT settings FROM public.activity_mode WHERE singleton').fetchone()
-                settings = mode['settings'] if mode else DEFAULT_SETTINGS
-                horizon = settings['monitor_horizon_seconds']
-                until = at + timedelta(seconds=horizon) if horizon else datetime.max.replace(tzinfo=timezone.utc)
-                packet = read_dashboard(db, at=at, until=until, freshness_seconds=settings['monitor_interval_seconds'],
+                    return coverage(db, at=at, **selection)
+                packet = read_dashboard(db, at=at, until=at + HORIZON, view=query.get('view'),
                     offset=int(query.get('offset', 0)), limit=int(query.get('limit', 30)),
-                    **{name: query.get(name) for name in filters})
+                    **selection)
                 return dict(packet, schema='predict-dashboard-1', read_at=at.isoformat(),
                     provider_requests=0, scheduled_calculations=0)
 
@@ -316,9 +315,10 @@ def mount(app, *, campaigns_only=False):
             raise PublicRequestError('A captured market and acquisition identity are required.')
         if bool(request.query.get('offer_id')) != bool(request.query.get('revision')):
             raise PublicRequestError('Exact offer identity and revision are required together.')
+        frozen = request.path.endswith('market-export')
         async with admission():
-            value = await joined(reads.market, query)
-        if request.path.endswith('market-export'):
+            value = await joined(reads.market, query, frozen)
+        if frozen:
             return web.Response(text=json.dumps(value, sort_keys=True, indent=2, allow_nan=False)+'\n',
                 content_type='application/json', headers={**HEADERS,
                     'Content-Disposition': 'attachment; filename="predict-market-evidence.json"'})
@@ -342,6 +342,8 @@ def mount(app, *, campaigns_only=False):
         async with admission():
             value = await joined(reads.market, dict(query, liquidity='1', amount=str(amount)))
         result = {key: value[key] for key in ('liquidity', 'liquidity_evidence')}
+        if 'preview_offer' in value:
+            result['preview_offer'] = value['preview_offer']
         return web.json_response(dict(result=result, provider_requests=0, scheduled_calculations=0), headers=HEADERS)
 
     async def game(request):

@@ -11,7 +11,7 @@
 .dashboard-table td:nth-child(n+3) { white-space: nowrap; }
 .dashboard-table td:nth-child(6) { color: var(--research-positive); font-weight: 600; }
 .dashboard-table .dashboard-quoted-ev { display: block; }
-.dashboard-table .dashboard-quoted-ev[data-sign="negative"] { color: var(--ink); }
+.dashboard-table .dashboard-quoted-ev[data-sign="neutral"] { color: var(--ink); }
 .dashboard-table td:nth-child(6) { white-space: normal; }
 .dashboard-table .liquidity-badge, .dashboard-inspector .liquidity-badge { color: var(--muted); }
 .dashboard-table .liquidity-badge[data-depth-status="full_size"],

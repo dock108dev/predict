@@ -1,0 +1,156 @@
+{
+  "version": "native-trading-college-occurrences-20261127-1",
+  "novig_role_documentation": "https://docs.novig.com/api/catalog",
+  "events": {
+    "I8N9XIM3AGzZ4UEYfb0Z": {
+      "league": "NCAAB",
+      "novig_event": "01a20fdc-ccf2-7cb0-a4f0-e196628d5af7",
+      "official_start": "2026-11-27T23:00:00+00:00",
+      "school_schedule": "https://iuhoosiers.com/news/2026/11/25/mens-basketball-indiana-basketball-game-notes-game-8-vs-bowling-green",
+      "sgo_receipt_sha256": "643e628c5d96e38292dbe28f55bf536f9b6d4380a4b8aed90ecb77de28d7c88d",
+      "novig_event_sha256": "f06699d0fc821f4011dd58dbe3b54610e4ec772d0f4de9a810458579e9202049",
+      "novig_market_sha256": "921bdc80fe19931e20bc8c15d5162c1ba6e039bca893c8fb7586565a1baca097",
+      "novig_market": "01a21c65-8018-7213-938b-11f455164ac0",
+      "novig_home_handicap": "-5.5",
+      "teams": {
+        "home": {
+          "canonical": "NCAAB:M:D1:NCAA306",
+          "sgo_name": "Indiana",
+          "novig_subject": "57bd5791-db88-40fc-90f1-463c72d4f67c",
+          "novig_outcome": "IU -5.5"
+        },
+        "away": {
+          "canonical": "NCAAB:M:D1:NCAA71",
+          "sgo_name": "Bowling Green Falcons",
+          "novig_subject": "622613a7-5411-457c-b7fe-ee345b6ead0e",
+          "novig_outcome": "BGSU +5.5"
+        }
+      }
+    },
+    "9R0TEUnbDBJw9rq67oOF": {
+      "league": "NCAAB",
+      "novig_event": "01a20fdc-cc1b-7cd3-a062-dc1b52425c75",
+      "official_start": "2026-11-27T23:00:00+00:00",
+      "school_schedule": "https://fightingillini.com/news/2026/11/25/mens-basketball-no-4-illini-host-western-kentucky-on-black-friday",
+      "sgo_receipt_sha256": "643e628c5d96e38292dbe28f55bf536f9b6d4380a4b8aed90ecb77de28d7c88d",
+      "novig_event_sha256": "46372323d3065773737675b3a9d312b6b316ef378da65c2ea6fd2287fd17c470",
+      "novig_market_sha256": "faf2e6c0128697c1f0f20dd04b7a3652d77511f2e99c5b5b6c259a1a66482a3f",
+      "novig_market": "01a21d56-7c95-7fa0-9f49-67c2edd9a7a4",
+      "novig_home_handicap": "-31.5",
+      "teams": {
+        "home": {
+          "canonical": "NCAAB:M:D1:NCAA301",
+          "sgo_name": "Illinois Fighting Illini",
+          "novig_subject": "cc5ad736-1251-4a23-b7f0-e97e9adb9a4c",
+          "novig_outcome": "ILL -31.5"
+        },
+        "away": {
+          "canonical": "NCAAB:M:D1:NCAA772",
+          "sgo_name": "Western Kentucky Hilltoppers",
+          "novig_subject": "a1d3e706-b053-4231-a6a9-5a9b1a4fe084",
+          "novig_outcome": "WKU +31.5"
+        }
+      }
+    },
+    "eKpFzdA2BwGMssCmq28s": {
+      "league": "NCAAB",
+      "novig_event": "01a21014-0ba9-7281-9ff7-bb26b1adaffb",
+      "official_start": "2026-11-28T00:00:00+00:00",
+      "school_schedule": "https://goheels.com/news/2026/11/25/mens-basketball-mbb-off-to-charlotte-to-meet-west-virginia-friday",
+      "sgo_receipt_sha256": "edb00abd8206d2246f4bca318d59e94421eb2ee594315d04e7423bb81f253010",
+      "novig_event_sha256": "75ab6c76ecdff89c3f89d7894542d09b70d718521797dc9f197f251243b5a975",
+      "novig_market_sha256": "0844fa4c3198778209105a2e12eeb49d764163f86c1e987b3ed05b1de20dbb8a",
+      "novig_market": "01a21e30-127b-73d3-ba93-633e4cc6f3a1",
+      "novig_home_handicap": "6.5",
+      "teams": {
+        "home": {
+          "canonical": "NCAAB:M:D1:NCAA457",
+          "sgo_name": "North Carolina Tar Heels",
+          "novig_subject": "cb223728-e15d-4768-a38b-dc01a0517f54",
+          "novig_outcome": "UNC +6.5"
+        },
+        "away": {
+          "canonical": "NCAAB:M:D1:NCAA768",
+          "sgo_name": "West Virginia",
+          "novig_subject": "7d8e7af3-7b2d-4452-af73-5ea07b718830",
+          "novig_outcome": "WVU -6.5"
+        }
+      }
+    },
+    "JlHgAjOjnpHxn4d2LXJM": {
+      "league": "NCAAB",
+      "novig_event": "01a21014-0c2e-73f2-b482-a3b8164791d5",
+      "official_start": "2026-11-28T00:00:00+00:00",
+      "school_schedule": "https://georgiadogs.com/news/2026/11/27/mens-basketball-bulldogs-look-to-bounce-back-against-ucf",
+      "sgo_receipt_sha256": "39becf6aa58838e3bdaba411e0d1bdbbde4139e74e1faf5308da7e78cd382ec9",
+      "novig_event_sha256": "2419b2ab233ed708982d919c3f54a2c86ce4e2d9556e854d8f5b2bace63031d0",
+      "novig_market_sha256": "062ac53d65e3d97cdc8d341995c1f15baaeed77d2a29688ee3836d5cbcdb02b7",
+      "novig_market": "01a21d5c-e32e-7662-a567-8f8324aae1b0",
+      "novig_home_handicap": "11.5",
+      "teams": {
+        "home": {
+          "canonical": "NCAAB:M:D1:NCAA257",
+          "sgo_name": "Georgia Bulldogs",
+          "novig_subject": "d90cdf3a-f563-4e72-84fe-48019cd955db",
+          "novig_outcome": "UGA +11.5"
+        },
+        "away": {
+          "canonical": "NCAAB:M:D1:NCAA128",
+          "sgo_name": "UCF Knights",
+          "novig_subject": "a1d77f0b-7106-4bfe-be23-52c40433f5d0",
+          "novig_outcome": "UCF -11.5"
+        }
+      }
+    },
+    "rBAH3wjrSKV9X8XiRpwg": {
+      "league": "NCAAF",
+      "novig_event": "01a1f573-e81e-7db0-8002-d0252c7b602f",
+      "official_start": "2026-11-27T20:00:00+00:00",
+      "school_schedule": "https://usajaguars.com/news/2026/11/26/football-jags-host-app-state-on-black-friday-for-the-regular-season-finale.aspx",
+      "sgo_receipt_sha256": "e167e880e34d3281335cb90955b522919860b349d25fe9b06f491f960f6dd0ca",
+      "novig_event_sha256": "06f773f59dd05fa03ae48d3b9d772859782d26c4daa45f9a7b74cedfb49671d6",
+      "novig_market_sha256": "0ce87b31b62a1e6f4ebbfe7db29695f5ea40ebdee2ed492328308d9734dc5678",
+      "novig_market": "01a20822-db1b-7da3-a6dc-f189c73c3297",
+      "novig_home_handicap": "17.5",
+      "teams": {
+        "home": {
+          "canonical": "NCAAF:NCAA646",
+          "sgo_name": "South Alabama",
+          "novig_subject": "60c6eeec-3773-4b51-96bd-5fb8ed4d2109",
+          "novig_outcome": "USA +17.5"
+        },
+        "away": {
+          "canonical": "NCAAF:NCAA27",
+          "sgo_name": "Appalachian State",
+          "novig_subject": "6eb34e34-4af3-43b3-ab9a-566bdd7d1927",
+          "novig_outcome": "APP -17.5"
+        }
+      }
+    },
+    "16u3L7XtM6NEuhPA5322": {
+      "league": "NCAAF",
+      "novig_event": "01a1f58f-9d27-7412-8ebb-f137405b08eb",
+      "official_start": "2026-11-27T20:30:00+00:00",
+      "school_schedule": "https://sjsuspartans.com/news/2026/11/23/spartans-host-ndsu-on-friday-presented-by-cefcu",
+      "sgo_receipt_sha256": "e167e880e34d3281335cb90955b522919860b349d25fe9b06f491f960f6dd0ca",
+      "novig_event_sha256": "bfcf49c03551e1b048f88b5ad037564f6df4a45e8c126139ee16e630ca96d783",
+      "novig_market_sha256": "9d7a3d6b9c33d733208fd65d8b558345d15c1f06811a9d41638a99cf6e817067",
+      "novig_market": "01a2047d-853e-78a2-83e7-9878f1a19e34",
+      "novig_home_handicap": "30.5",
+      "teams": {
+        "home": {
+          "canonical": "NCAAF:NCAA630",
+          "sgo_name": "San José State",
+          "novig_subject": "0c605744-26cc-40a1-bae7-5820c6e373e2",
+          "novig_outcome": "SJSU +30.5"
+        },
+        "away": {
+          "canonical": "NCAAF:NDSU",
+          "sgo_name": "North Dakota State",
+          "novig_subject": "13d1aa9b-8a53-4443-8293-edce452d2b66",
+          "novig_outcome": "NDSU -30.5"
+        }
+      }
+    }
+  }
+}

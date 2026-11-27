@@ -31,6 +31,9 @@ REQUEST_SPACING_SECONDS = 0.65
 CATALOG_FRESH_SECONDS = 10
 BOOK_FRESH_SECONDS = 5
 EVENT_FRESH_SECONDS = 15
+EVENT_STATES = frozenset(('OPEN_PREGAME', 'CLOSED_PREGAME', 'OPEN_INGAME',
+                          'SETTLED', 'FINAL', 'DELAYED', 'CANCELED'))
+MARKET_STATES = frozenset(('OPEN', 'CLOSED', 'SETTLED'))
 FEE_SOURCE = 'https://docs.novig.com/api/concepts/fees#from-december-1-2026'
 CUTOVER_DATE_UTC = datetime(2026, 12, 1, tzinfo=timezone.utc)
 CUTOVER_DATE_ET = CUTOVER_DATE_UTC + timedelta(hours=5)
@@ -87,6 +90,7 @@ class NovigExperimentDepth:
         self._next_start = 0
         self._retry_at = 0
         self._checkpoint_slates = {}
+        self._inflight = {}
 
     async def __aenter__(self):
         return self
@@ -95,13 +99,28 @@ class NovigExperimentDepth:
         await self.close()
 
     async def close(self):
-        tasks = [task for task in self._checkpoint_slates.values() if not task.done()]
+        tasks = [task for task in (*self._checkpoint_slates.values(), *self._inflight.values()) if not task.done()]
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         await self.client.aclose()
 
-    async def _read(self, path, params, cutoff):
+    async def _read(self, path, params, cutoff, *, read_not_found=False):
+        key=path,tuple(sorted(params.items())),read_not_found
+        task=self._inflight.get(key)
+        if task is None:
+            task=asyncio.create_task(self._read_owned(path,params,cutoff,read_not_found=read_not_found))
+            self._inflight[key]=task
+            def finished(done):
+                if self._inflight.get(key) is done:
+                    self._inflight.pop(key,None)
+            task.add_done_callback(finished)
+        value,receipt,reason=await asyncio.shield(task)
+        if receipt and stamp(receipt['received_at'])>cutoff:
+            return None,None,'after_cutoff'
+        return value,receipt,reason
+
+    async def _read_owned(self, path, params, cutoff, *, read_not_found=False):
         remaining = (cutoff - self.clock()).total_seconds()
         if remaining <= 0:
             return None, None, 'after_cutoff'
@@ -135,7 +154,9 @@ class NovigExperimentDepth:
                                 return None, None, 'after_cutoff'
                             receipt.update(received_at=now.isoformat(), retry_after_seconds=delay)
                             return None, receipt, 'throttled'
-                        response.raise_for_status()
+                        not_found = read_not_found and response.status_code == 404
+                        if not not_found:
+                            response.raise_for_status()
                         body = bytearray()
                         async for chunk in response.aiter_bytes():
                             body.extend(chunk)
@@ -149,7 +170,7 @@ class NovigExperimentDepth:
                     if received > cutoff:
                         return None, None, 'after_cutoff'
                     receipt.update(received_at=received.isoformat(), sha256=sha256(body).hexdigest())
-                    return json.loads(body), receipt, None
+                    return json.loads(body), receipt, 'unavailable' if not_found else None
         except (TimeoutError, httpx.TimeoutException):
             reason = 'after_cutoff' if self.clock() >= cutoff else 'timeout'
         except httpx.HTTPError:
@@ -170,31 +191,88 @@ class NovigExperimentDepth:
                       marketType='MONEY,SPREAD,TOTAL' if moneyline else 'SPREAD,TOTAL', limit=PAGE_SIZE)
         return await self._read_catalog(params, stamp(cutoff))
 
-    async def read_event_metadata(self, event_id, cutoff):
+    async def read_event_metadata(self, event_id, cutoff, *, lifecycle=False):
         """Verify the exact event and its phase before rebuilding identity."""
         if not _uuid(event_id):
             return None, None, 'unmatched'
-        event, receipt, reason = await self._read(f'{EVENTS_PATH}/{event_id}', {}, stamp(cutoff))
+        event, receipt, reason = await self._read(f'{EVENTS_PATH}/{event_id}', {}, stamp(cutoff),
+                                                   read_not_found=lifecycle)
         if reason:
+            if lifecycle and _missing(event, receipt, self.clock(), 'EVENT_NOT_FOUND'):
+                return None, receipt, 'native_market_withdrawn'
             return None, receipt, reason
         reason = _fresh(receipt, self.clock(), EVENT_FRESH_SECONDS)
         if reason:
             return None, receipt, reason
+        states = EVENT_STATES if lifecycle else ('OPEN_PREGAME',)
         if (not isinstance(event, dict) or event.get('eventId') != event_id
-                or event.get('status') != 'OPEN_PREGAME'):
+                or event.get('status') not in states):
             return None, receipt, 'identity_conflict'
         return event, receipt, None
 
-    async def read_slate(self, league, *, after, before, cutoff):
+    async def read_market_metadata(self, event_id, market_id, cutoff):
+        """Confirm a market removed from the open catalog or read its exact lifecycle."""
+        if not _uuid(event_id) or not _uuid(market_id):
+            return None, None, 'unmatched'
+        market, receipt, reason = await self._read(f'{MARKETS_PATH}/{market_id}', {}, stamp(cutoff),
+                                                    read_not_found=True)
+        if reason:
+            if _missing(market, receipt, self.clock(), 'MARKET_NOT_FOUND'):
+                return None, receipt, 'native_market_withdrawn'
+            return None, receipt, reason
+        freshness = _fresh(receipt, self.clock(), CATALOG_FRESH_SECONDS)
+        if freshness:
+            return None, receipt, freshness
+        if not isinstance(market, dict) or market.get('marketId') != market_id:
+            return None, receipt, 'identity_conflict'
+        if market.get('eventId') != event_id:
+            return market, receipt, 'native_identity_changed'
+        if market.get('status') not in MARKET_STATES:
+            return None, receipt, 'identity_conflict'
+        if market['status'] != 'OPEN':
+            return market, receipt, 'native_market_halted'
+        return market, receipt, None
+
+    async def read_slate(self, league, *, after, before, cutoff, include_start=False):
         """Read a bounded kickoff window with all three pregame market families."""
         from .current_policy import SPORTS
 
         if league not in SPORTS or stamp(after) >= stamp(before):
             return PublicEventDepth({}, (), 'invalid_scope')
-        params = dict(league=league, startsAfter=int(stamp(after).timestamp() * 1000),
+        params = dict(league=league, startsAfter=int(stamp(after).timestamp() * 1000) - int(include_start),
                       startsBefore=int(stamp(before).timestamp() * 1000), eventStatus='OPEN_PREGAME',
                       marketType='MONEY,SPREAD,TOTAL', limit=PAGE_SIZE)
         return await self._read_catalog(params, stamp(cutoff))
+
+    async def read_slate_metadata(self, league, *, after, before, cutoff):
+        """Load official event identities in pages, with the receipt of each page."""
+        params = dict(league=league, startsAfter=int(stamp(after).timestamp() * 1000) - 1,
+                      startsBefore=int(stamp(before).timestamp() * 1000),
+                      status='OPEN_PREGAME', limit=PAGE_SIZE)
+        result = {}
+        after_cursors = set()
+        for _ in range(PAGE_LIMIT):
+            body, receipt, reason = await self._read(EVENTS_PATH, params, stamp(cutoff))
+            reason = reason or _fresh(receipt, self.clock(), EVENT_FRESH_SECONDS)
+            if reason:
+                return result, reason
+            if not isinstance(body, dict) or not isinstance(body.get('items'), list):
+                return result, 'invalid_event_catalog'
+            for event in body['items']:
+                if not isinstance(event, dict) or not _uuid(event.get('eventId')):
+                    return {}, 'invalid_event_catalog'
+                if event['eventId'] in result:
+                    return {}, 'conflicting_event_catalog'
+                if event.get('league') == league and event.get('status') == 'OPEN_PREGAME':
+                    result[event['eventId']] = (event, receipt)
+            cursor = body.get('next')
+            if cursor is None:
+                return result, None
+            if not isinstance(cursor, str) or not 0 < len(cursor) <= 1024 or cursor in after_cursors:
+                return result, 'invalid_pagination'
+            after_cursors.add(cursor)
+            params = dict(params, after=cursor)
+        return result, 'catalog_truncated'
 
     async def read_checkpoint_slate(self, league, starts_at, cutoff):
         """Coalesce same-league games in one checkpoint without sharing later evidence."""
@@ -262,7 +340,12 @@ def _expiry(receipt, max_seconds):
     return _cache_origin(receipt) + timedelta(seconds=min(max_seconds, int(lifetime[1])))
 
 
-def _fresh(receipt, cutoff, max_seconds):
+def _missing(body, receipt, at, code):
+    return (isinstance(body, dict) and body.get('code') == code and receipt and receipt['status'] == 404
+            and not _fresh(receipt, at, CATALOG_FRESH_SECONDS, allow_no_store=True))
+
+
+def _fresh(receipt, cutoff, max_seconds, *, allow_no_store=False):
     """Age a body from its oldest HTTP clock through the decision cutoff."""
     try:
         requested, received = (stamp(receipt[key]) for key in ('requested_at', 'received_at'))
@@ -276,7 +359,11 @@ def _fresh(receipt, cutoff, max_seconds):
             return 'stale'
         # Date and Age have second precision. The minimum also prevents a
         # freshly served stale object from inheriting the local receipt clock.
-        if cutoff > _expiry(receipt, max_seconds):
+        if allow_no_store and receipt['cache-control'] == 'no-store':
+            expires = _cache_origin(receipt) + timedelta(seconds=max_seconds)
+        else:
+            expires = _expiry(receipt, max_seconds)
+        if cutoff > expires:
             return 'stale'
     except (AttributeError, KeyError, OverflowError, TypeError, ValueError):
         return 'cache_unverified'
@@ -405,6 +492,7 @@ def catalog_depth(binding, snapshot, cutoff):
             depth.update(received_at=receipt['received_at'], valid_until=expires.isoformat())
         depth['fee'] = _fee(market.get('fee'), cutoff)
         bid = opposite.get('bid')
+        depth['native_best_bid'] = bid
         if bid is None:
             return dict(depth, complete=True)
         price, quantity = _price_quantity(bid)
@@ -463,6 +551,7 @@ def book_depth(binding, snapshot, cutoff, *, catalog):
         if 'valid_until' in depth:
             depth.update(received_at=snapshot.receipt['received_at'], valid_until=min(
                 stamp(depth['valid_until']), _expiry(snapshot.receipt, BOOK_FRESH_SECONDS)).isoformat())
-        return dict(depth, complete=len(rows) < BOOK_LEVELS, sequence=book['seq'], levels=rows)
+        return dict(depth, complete=len(rows) < BOOK_LEVELS, sequence=book['seq'], levels=rows,
+                    native_orders=orders[:256],native_orders_truncated=len(orders)>256)
     except (ArithmeticError, AttributeError, KeyError, OverflowError, TypeError, ValueError):
         return dict(depth, reason='invalid_order_book')
