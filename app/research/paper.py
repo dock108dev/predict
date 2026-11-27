@@ -14,6 +14,7 @@ from app.comparison import current_pregame as math
 from app.comparison import fixed_profit
 from app.comparison.pregame_valuation import decimal_display, score
 from app.storage.store import hashed, stamp
+from . import paper_depth
 from .ev_movement import _role, exact_bet_identity, offer_measurements
 
 POLICY = dict(
@@ -190,7 +191,38 @@ def _market_exclusion(record, alternate_price_floor):
     return None
 
 
-def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None, counts=None):
+def _depth_candidate(offer, measurement, identity, index, quote_id, anchors, depth, *, target, minimum):
+    from app.comparison import experiment_depth_execution
+    from app.storage import experiment_depth
+
+    record = offer["record"]
+    receipt = experiment_depth.receipt_for(offer, depth["observations"])
+    if receipt is None:
+        venue = identity["venue"]
+        reason = ("authenticated_taker_depth_unavailable" if venue == "prophetx"
+                  else depth["source_gaps"].get(venue) or depth["reason"])
+        if reason:
+            receipt = {"reason": reason}
+    result, calculation = experiment_depth_execution.evaluate(offer, receipt, at=depth["target_at"],
+        game_key=identity["event"], target=target, minimum=minimum)
+    # A selected order trace is already retained in sized_calculation.fee.
+    # Rejected and partial cases can be reevaluated from the immutable bundle.
+    result.pop("modeled_fills", None)
+    if receipt and receipt.get("receipt_refs"):
+        result["receipt_refs"] = receipt["receipt_refs"]
+    selection = _selection_evidence(identity, _role(record)["status"], anchors)
+    row = dict(frozen_quote_id=quote_id, offer_index=index, exact_bet_id=identity["id"],
+        venue=identity["venue"], family=identity["family"], period=identity["period"],
+        side=identity["outcome"], line=identity["line"], portfolio_selection=selection,
+        label=(offer.get("calculation_payload") or {}).get("selection_label") or identity["outcome"],
+        posted_odds=(offer.get("calculation_payload", {}).get("display") or {}).get("posted_odds"),
+        screen_ev=measurement["screen"]["ev"], depth=result)
+    depth["candidates"].append(row)
+    return result, calculation
+
+
+def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MINIMUM, policy=None, counts=None,
+               depth=None):
     policy_id, scale, mode, target_profit, minimum_stake = POLICY_ID, SCALE, None, None, None
     if policy is not None:
         policy_id, minimum = hashed(policy), F(policy["minimum_ev"])
@@ -225,13 +257,27 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                 continue
             if counts is not None:
                 counts["evaluated_offers"] += 1
-            if F(raw_ev) < minimum or F(raw_ev) <= 0:
+            passes_screen = F(raw_ev) >= minimum and F(raw_ev) > 0
+            # A same-side main line can supply the capacity control even when it fails EV.
+            is_control = (depth is not None and identity["venue"] == "novig"
+                          and _role(offer["record"])["status"] == "main")
+            if not passes_screen and not is_control:
                 excluded["below_minimum_ev"] += 1
                 continue
             key = identity["id"]
             quote_id = hashed([checkpoint_id, index, key]) if mode or minimum_stake is not None else None
             sizing_stage = True
-            if mode == "fixed_profit":
+            if depth is not None:
+                execution, sized = _depth_candidate(offer, measurement, identity, index, quote_id, anchors,
+                    depth, target=target_profit, minimum=minimum)
+                if not passes_screen:
+                    execution.update(eligible=False, selection_exclusion="below_minimum_screen_ev")
+                    excluded["below_minimum_ev"] += 1
+                    continue
+                if not execution["eligible"]:
+                    raise ValueError(execution["reason"] or execution["status"])
+                target = None
+            elif mode == "fixed_profit":
                 if not isinstance(offer.get("fee_input"), dict):
                     raise ValueError("captured_fee_inputs_unavailable")
                 sized = fixed_profit.calculate(offer, at=stamp(at), game_key=game_id, target=target_profit)
@@ -246,6 +292,8 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
             if minimum_stake is not None:
                 commitment = F(sized["fee"]["committed_usd"])
                 if commitment < minimum_stake:
+                    if depth is not None:
+                        execution.update(eligible=False, selection_exclusion="sized_stake_below_minimum")
                     exclusion_details = dict(cash_commitment_usd=str(commitment),
                         minimum_stake_usd=str(minimum_stake), sized_ev=str(F(sized["raw"]["net_ev"])))
                     raise ValueError("sized_stake_below_minimum")
@@ -282,6 +330,10 @@ def candidates(snapshot, *, game_id, checkpoint_id, at, outcome=None, minimum=MI
                     reference_bankroll_usd=policy.get("reference_bankroll_usd"),
                     kelly_multiplier=policy.get("kelly_multiplier")))
                 ticket.update(frozen_quote_id=quote_id, sizing=sizing)
+            if depth is not None:
+                ticket["depth"] = execution
+                ticket["fee_mode"] = dict(version=execution["version"], enabled=True,
+                    assumption="Versioned public venue fees applied to modeled book fills.")
             if anchors is not None:
                 ticket["portfolio_selection"] = _selection_evidence(identity, _role(offer["record"])["status"], anchors)
             if key in tickets:
@@ -391,14 +443,31 @@ def summarize(tickets, *, as_of):
         by_game={k: money(v) for k, v in sorted(games.items())})
 
 
-def scoped_candidates(entry, checkpoint, policy):
+def scoped_candidates(entry, checkpoint, policy, *, depth_bundle=None):
     """Reprice a saved checkpoint and report its observed and evaluated offers."""
     snapshot = checkpoint["snapshot"]
     counts = dict(observed_offer_count=len(snapshot.get("offers", [])), evaluated_offers=0)
     reconstructed = entry["status"] == "reconstructed"
     at = checkpoint["received_at"] if reconstructed else checkpoint["persisted_at"]
+    depth = None
+    if policy.get("depth_policy"):
+        depth = dict(target_at=checkpoint["target_at"], candidates=[],
+                     observations=(depth_bundle or {}).get("observations", {}),
+                     reason=(depth_bundle or {}).get("reason"),
+                     source_gaps=(depth_bundle or {}).get("source_gaps", {}))
+        entry["depth_receipt_id"] = (depth_bundle or {}).get("id")
+        if depth_bundle:
+            entry["depth_metrics"] = depth_bundle.get("metrics", {})
     tickets, gaps = candidates(snapshot, game_id=entry["game_id"], checkpoint_id=entry["checkpoint_id"],
-                               at=at, policy=policy, counts=counts)
+                               at=at, policy=policy, counts=counts, depth=depth)
+    if depth is not None:
+        quoted_policy = {key: value for key, value in policy.items() if key not in ("depth_policy", "depth_receipts")}
+        quoted_policy["execution"] = POLICY["execution"]
+        quoted, _ = candidates(snapshot, game_id=entry["game_id"], checkpoint_id=entry["checkpoint_id"],
+                               at=at, policy=quoted_policy)
+        entry.update(depth_candidates=depth["candidates"],
+                     depth_comparison=paper_depth.compare_game(quoted, tickets, depth["candidates"],
+                         rank=lambda pool: best_tickets(pool, policy["portfolio_rule"])))
     entry.update(counts, tickets=len(tickets), coverage=snapshot.get("coverage"),
                  fee_mode=snapshot.get("fee_mode"), exclusions=gaps,
                  **{key: checkpoint.get(key) for key in
@@ -487,12 +556,25 @@ def scoped_reports(db, day, policies, *, population=None, as_of=None, evidence=F
     if any(policy is None or any(policy.get(key) != frozen.get(key) for key in binding_fields)
            for policy in policies[1:]):
         raise ValueError("paper_replay_checkpoint_policy_mismatch")
+    bundles = {}
+    depth_ids = {identity for policy in policies if policy for identity in policy.get("depth_receipts", {}).values()}
+    if depth_ids:
+        from app.storage import experiment_depth
+
+        bundles = experiment_depth.read_ids(db, depth_ids)
+        if depth_ids != bundles.keys():
+            raise ValueError("paper_depth_receipts_unavailable")
     replays = [(policy or POLICY, [], [], Counter()) for policy in policies]
     for _, entry, checkpoint, _ in _replay_games(db, day, at, shared, population):
         for policy, dispositions, tickets, exclusions in replays:
             disposition = dict(entry)
             if entry["status"] in ("captured", "reconstructed"):
-                found, gaps = scoped_candidates(disposition, checkpoint, policy)
+                bundle_id = policy.get("depth_receipts", {}).get(entry["game_id"])
+                bundle = bundles.get(bundle_id) if entry["status"] == "captured" else None
+                if bundle and (bundle["game_id"] != entry["game_id"] or bundle["schedule_id"] != entry["schedule_id"]
+                               or stamp(bundle["target_at"]) != stamp(checkpoint["target_at"])):
+                    raise ValueError("paper_depth_receipt_checkpoint_mismatch")
+                found, gaps = scoped_candidates(disposition, checkpoint, policy, depth_bundle=bundle)
                 tickets.extend(found)
                 exclusions.update(gaps)
             dispositions.append(disposition)
@@ -505,7 +587,7 @@ def report(db, day=POLICY["default_date"], *, evidence=False, policy=None, popul
     """Passive backtest, independent of early-positive retention and live prices."""
     from . import experiment as owner
 
-    if population is not None:
+    if population is not None or (policy and policy.get("depth_policy")):
         return scoped_reports(db, day, [policy], population=population, as_of=as_of, evidence=evidence)[0]
     date.fromisoformat(day)
     frozen_policy = policy or POLICY
@@ -571,6 +653,9 @@ def assemble(day, at, frozen_policy, dispositions, tickets, exclusions, *,
                       designation="Men’s D1 opportunity analysis. Sporting results are reported separately.")
     if frozen_policy.get("recovered_checkpoints"):
         result["reconstructed_games"] = sum(g["status"] == "reconstructed" for g in dispositions)
+    if frozen_policy.get("depth_policy"):
+        result["depth_analysis"] = paper_depth.summarize(dispositions)
+        result["designation"] = "Paper replay of frozen NCAAB full-game spreads and totals with public displayed capacity."
     if not evidence:
         for portfolio in values.values():
             portfolio["tickets"] = [{k: v for k, v in t.items() if k != "witness"} for t in portfolio["tickets"]]

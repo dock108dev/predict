@@ -18,6 +18,7 @@ class PregameOwner:
         self.last_research_capture = 0
         self.cohort_progress = {}
         self.experiment = None
+        self.experiment_depth = None
         self.fee_account_identity = object()
         from app.storage.ordinary_owner import OrdinaryOwner
 
@@ -35,9 +36,12 @@ class PregameOwner:
         await asyncio.to_thread(self.seed)
         await self.research.start()
         from .experiment_acquisition import ExperimentAcquisition
+        from .experiment_depth import ExperimentDepth
 
         self.experiment = ExperimentAcquisition(self.service)
+        self.experiment_depth = ExperimentDepth(self.service)
         await self.experiment.start()
+        await self.experiment_depth.start()
         self.task = asyncio.create_task(
             self.run(), name="predict-current-pregame-recovery"
         )
@@ -138,6 +142,7 @@ class PregameOwner:
                     research=self.research.progress,
                     cohorts=self.cohort_progress,
                     experiment=self.experiment.progress if self.experiment else {},
+                    experiment_depth=self.experiment_depth.progress if self.experiment_depth else {},
                 )
                 self.last_status = monotonic()
 
@@ -158,6 +163,8 @@ class PregameOwner:
     async def close(self):
         self.closed = True
         self.wake.set()
+        if self.experiment_depth:
+            await self.experiment_depth.close()
         if self.experiment:
             await self.experiment.close()
         await self.research.close()

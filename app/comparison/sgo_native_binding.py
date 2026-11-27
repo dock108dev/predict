@@ -378,6 +378,94 @@ def fee_offer_identity(source):
                                         'native_outcome_id', 'native_side', 'native_line')]
 
 
+def bind_pregame_line(record, witness, inventory, *, at):
+    """Resolve an alternate in the verified event's full native catalog.
+
+    Some aggregate alternate quotes carry only the event link. For a spread
+    the original dual-linked main anchors the native teams. Totals have typed
+    over/under outcomes. The selected contract must be unique in the catalog.
+    """
+    original = bind(record, witness, at=at)
+    if original['available'] or original['reason'] not in (
+            'sgo_native_outcome_link_unavailable', 'sgo_native_outcome_absent_from_catalog'):
+        return original
+    try:
+        quote, event, market = (record[k] for k in ('quote', 'event', 'market_identity'))
+        meta = record['comparison_source_metadata']
+        family = market['family']
+        if quote['venue'] != 'novig' or family not in ('spread', 'total') or not witness:
+            return original
+        native_event = witness['event']
+        event_id = event['shared_provider_ids']['novig_event']
+        if event_id != native_event['eventId'] or native_event['status'] != 'OPEN_PREGAME':
+            return original
+        source = quote['source']
+        line, side = Fraction(source['native_line']), SIDES[source['native_outcome_id']]
+        strike = -line if family == 'spread' and side == 'away' else line
+        link = outcome_link_id(meta.get('bookmaker_market_link'))
+        if meta.get('bookmaker_market_link') and not link and event_link_id(meta['bookmaker_market_link']) != event_id:
+            return original
+        roles = witness.get('subject_roles') or {}
+        if family == 'spread' and not link and (witness.get('subject_role_conflict') or not roles):
+            return dict(available=False, reason='unmatched_native_team_roles')
+        matches = []
+        for candidate in inventory.values():
+            if (candidate.get('eventId') != event_id or MARKET_TYPES.get(candidate.get('marketType')) != family
+                    or candidate.get('status') != 'OPEN' or Fraction(candidate['strike']) != strike
+                    or candidate.get('startsTs') != native_event['startsTs']):
+                continue
+            for outcome in candidate['outcomes']:
+                outcome_id = outcome['outcomeId']
+                if link and link != outcome_id:
+                    continue
+                if not _side_matches(outcome, side, event, family, line, roles):
+                    continue
+                linked_record = dict(record, comparison_source_metadata=dict(meta,
+                    bookmaker_market_link={'host': 'novig.com',
+                        'path': '/events/' + outcome_id + '/sportsgameodds'}))
+                exact = bind(linked_record, dict(witness, markets={outcome_id: candidate}), at=at)
+                if exact['available'] and exact['phase_verified'] and exact['phase'] == 'scheduled':
+                    matches.append(dict(exact, binding_method='aggregate_outcome_link' if link
+                                        else 'verified_event_catalog_side_line',
+                                        original_link=meta.get('bookmaker_market_link')))
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            return dict(available=False, reason='unmatched_ambiguous_native_contract')
+    except (ArithmeticError, AttributeError, KeyError, TypeError, ValueError):
+        return dict(available=False, reason='sgo_native_catalog_evidence_invalid')
+    return original
+
+
+def pregame_inventory_bindings(event, witness, inventory, *, at):
+    """Enumerate exact Novig sides before the SGO decision roster is known."""
+    for market in inventory.values():
+        family = MARKET_TYPES.get(market.get('marketType'))
+        if family not in ('spread', 'total'):
+            continue
+        try:
+            strike = Fraction(market['strike'])
+        except (ArithmeticError, KeyError, TypeError, ValueError):
+            continue
+        for odd_id, side in SIDES.items():
+            if (family == 'spread' and side not in ('home', 'away')
+                    or family == 'total' and side not in ('over', 'under')
+                    or family == 'spread' and '-sp-' not in odd_id):
+                continue
+            line = str(-strike if side == 'away' else strike)
+            selection = dict(participant=event.get(side), predicate=side if family == 'total' else 'cover',
+                             signed_line=line)
+            source = dict(provider='sportsgameodds', native_event_id=event['id'], native_line=line,
+                          native_outcome_id=odd_id, native_side='bookmaker_outcome')
+            record = dict(event=event, selection=selection,
+                market_identity=dict(family=family, period='full_game', scheduled_start=event['scheduled_start']),
+                comparison_source_metadata=dict(provider_phase='pregame'),
+                quote=dict(venue='novig', state='unavailable', source=source, original={}))
+            binding = bind_pregame_line(record, witness, {market['marketId']: market}, at=at)
+            if binding['available']:
+                yield record, binding
+
+
 def published_pregame_fee(record, binding, *, at, review):
     """Use the exact catalog when present, or the reviewed public straight schedule.
 

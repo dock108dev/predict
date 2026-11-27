@@ -462,6 +462,8 @@ def _ticket(run_id, ticket, witness, game, known):
         row.update(frozen_quote_id=ticket["frozen_quote_id"], sizing=ticket["sizing"])
     if "portfolio_selection" in ticket:
         row["portfolio_selection"] = ticket["portfolio_selection"]
+    if "depth" in ticket:
+        row["depth"] = ticket["depth"]
     row.update(grade=grade, occurrence_id=game["occurrence_id"], quote_receipt_sha256=quote_hashes,
                capture_origin="reconstructed" if game["capture_status"] == "reconstructed" else "frozen")
     return _money(row, stake=stake, expected_profit=expected, return_=returned,
@@ -566,7 +568,7 @@ def build_report(run, contexts):
     if "sizing_mode" in policy:
         report["sizing_policy"] = {key: policy[key] for key in ("sizing_mode", "sizing_rule", "target_profit_usd",
             "reference_bankroll_usd", "kelly_multiplier", "sizing_scale_usd", "minimum_ev", "minimum_stake_usd",
-            "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below")
+            "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below", "depth_policy")
             if key in policy}
     return report
 

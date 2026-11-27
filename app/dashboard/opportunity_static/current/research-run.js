@@ -288,12 +288,20 @@ export function renderSavedEvidence(root, value, {ticket, resultReview = false, 
     }, {reference, exact_probability:item.probability, exact_screen_ev:item.screen_ev, exact_sized_ev:item.ev});
     if (portfolioSelection?.tier) evidenceSection(root, 'Portfolio selection', mainFirstRule.description,
       showPortfolioSelection ? portfolioSelectionFields(portfolioSelection,item.family) : null, portfolioSelection);
-    const rule = fixed
+    const depth = evidence.depth;
+    const rule = depth ? 'The nearest permitted size at the frozen limit is modeled using public book levels and the versioned public venue fees.'
+      : fixed
       ? 'The closest positive modeled win profit wins, with ties going to the lower commitment. Quantity and fees are repriced at the frozen quote.'
       : 'The saved Kelly calculation uses the modeled win and loss returns, then applies the recorded multiplier and bankroll. Quantity and fee rounding determine the final commitment.';
-    evidenceSection(root, 'Paper sizing and fee treatment', `${capturedFee(item.fee_mode)}. ${rule}`, {
+    evidenceSection(root, 'Paper sizing and fee treatment', depth ? rule : `${capturedFee(item.fee_mode)}. ${rule}`, {
       'Fee evidence for an actual order':trade.fees?.actual_fee_evidence === 'unknown' ? 'Unknown' : trade.fees?.actual_fee_evidence,
-      'Executable size at the quoted price':trade.size?.executable_size_evidence === 'unavailable' ? 'Unavailable in captured evidence' : trade.size?.executable_size_evidence,
+      ...(depth ? {
+        'Displayed native quantity within limit':depth.available_native_quantity,
+        'Displayed purchase value within limit':exactMoney(depth.available_purchase_usd),
+        'Average modeled contract price':pct(depth.modeled_average_price),
+        'Public book receipt bundle':depth.bundle_id,
+      } : {'Executable size at the quoted price':trade.size?.executable_size_evidence === 'unavailable'
+        ? 'Unavailable in captured evidence' : trade.size?.executable_size_evidence}),
       ...(fixed ? {
         ...fixedProfitFields(sizing),
         'Sizing rule':sizing.rule,
@@ -314,7 +322,7 @@ export function renderSavedEvidence(root, value, {ticket, resultReview = false, 
       'Paper commitment':exactMoney(item.stake_usd),
       'Purchase':exactMoney(item.purchase_usd), Quantity:fee.quantity, 'Modeled entry fee':exactMoney(fee.entry_usd),
       'Expected profit at entry':exactMoney(item.expected_profit_usd),
-    }, {sizing, fee_input:offer.fee_input, sized_calculation:sized, trade_evidence:trade});
+    }, {sizing, fee_input:offer.fee_input, sized_calculation:sized, trade_evidence:trade, ...(depth ? {depth} : {})});
     if (!resultReview) {
       const result = evidence.sporting_result;
       evidenceSection(root, 'Sporting-result grading', 'This grade belongs to the original saved selection.', {

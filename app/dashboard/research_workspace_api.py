@@ -96,11 +96,13 @@ def mount(app, *, campaigns_only=False):
 
     async def campaign_trades(request):
         query = request.query
-        if set(query) - {'variant', 'mode'} or len(query) != len(set(query)):
+        if (set(query) - {'variant', 'mode', 'export'} or len(query) != len(set(query))
+                or query.get('export') not in (None, '1')):
             raise PublicRequestError('Select an experiment sizing mode and portfolio.')
-        value = await work(paper_campaigns.trades, _identity(request.match_info['campaign_id']),
-                           query.get('variant'), mode=query.get('mode'))
-        return _response(value)
+        identity = _identity(request.match_info['campaign_id'])
+        export = query.get('export') == '1'
+        value = await work(paper_campaigns.trades, identity, query.get('variant'), mode=query.get('mode'), export=export)
+        return _response(value, filename=f'predict-experiment-trades-{identity[:12]}.json' if export else None)
 
     async def run(request):
         query = dict(request.query)

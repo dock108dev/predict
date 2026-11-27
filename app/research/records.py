@@ -130,6 +130,12 @@ def retention_usage(db):
             + pg_total_relation_size('public.research_market_census_retry') bytes""").fetchone()['bytes']
         row['market_census_bytes'] = census_bytes
         row['total'] += census_bytes
+    if db.execute("SELECT to_regclass('public.ev_experiment_depth') r").fetchone()['r']:
+        depth = db.execute("""SELECT count(*) n,COALESCE(sum(payload_bytes),0) bytes
+            FROM public.ev_experiment_depth""").fetchone()
+        row['experiment_depth_bytes'] = depth['bytes']
+        row['total'] += depth['bytes']
+        row['records'] += depth['n']
     return row
 
 

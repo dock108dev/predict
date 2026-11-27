@@ -13,6 +13,11 @@ from .pregame_valuation_fees import retail_order
 RULE = "nearest-positive-net-win-lower-commitment-1"
 
 
+def preference(profit, commitment, ticks, target):
+    """Prefer the closest net win, then the smaller cash commitment."""
+    return abs(profit - target), commitment, ticks
+
+
 def _grid(record, row, terms, cost, original):
     quote, source = record["quote"], row["source"]
     metadata = record.get("comparison_source_metadata") or {}
@@ -97,7 +102,7 @@ def _nearest(quote_at, target, slope, rounding, profit_per_tick):
         profit, fill = quote_at(ticks)
         if abs(profit - slope * ticks) > rounding:
             raise ValueError("fixed_profit_fee_rounding_unverified")
-        return ((abs(profit - target), fill[0], ticks), profit, fill) if profit > 0 else None
+        return (preference(profit, fill[0], ticks, target), profit, fill) if profit > 0 else None
 
     best = min((result for ticks in seeds if (result := evaluate(ticks)) is not None), default=None)
     if best is None:

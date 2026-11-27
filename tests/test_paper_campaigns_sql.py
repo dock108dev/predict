@@ -393,6 +393,117 @@ class CampaignSQL(ResearchWorkspaceFixture):
             assert len(workspace.run_detail(db, run_id)['report']['games']) == 2
             assert campaign_view['selection'] is None
 
+    async def test_depth_receipts_replace_a_partial_main_and_pin_all_campaign_views(self):
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient, TestServer
+
+        from app.dashboard import research_workspace_api
+        from app.dashboard.request_guard import dashboard_guard
+        from app.research import experiment, paper_depth
+        from app.storage import experiment_depth
+        from tests.test_experiment_depth_execution import receipt
+
+        await super().asyncSetUp()
+        day = '2026-11-23'
+        game = self.game('depth', f'{day}T18:00:00Z')
+        main = frozen_priced('+300', venue='novig', line='-10.5')
+        alternate = frozen_priced('+300', venue='novig', line='-16.5', main=False)
+        for offer in (main, alternate):
+            record = offer['record']
+            record['event'].update(scheduled_start=game['starts_at'], competition='NCAAB')
+            record['market_identity']['rules'] = 'sportsgameodds-unverified-1'
+            record['result_policy'] = 'sportsgameodds-unverified-1:spread'
+            record['quote']['source'].update(native_event_id=game['source_event_id'],
+                native_outcome_id='points-home-game-sp-home', native_line=record['selection']['signed_line'])
+        snapshot = dict(event=dict(home='home', away='away', competition='NCAAB', scheduled_start=game['starts_at']),
+                        source_event=dict(event_id=game['source_event_id']), offers=[main, alternate],
+                        coverage=dict(incomplete=False))
+        config = fixed_config(name='Win $25 depth', end_date=day, scope=campaigns.ALL_SPORTS,
+                              market_scope=paper.MAIN_SPREADS_TOTALS, alternate_odds_below='400',
+                              target_profit_usd='25', kelly_comparison=False, portfolios=['best_venue'],
+                              portfolio_rule=paper.MAIN_FIRST_ONE_PER_GAME, depth_policy=paper_depth.VERSION)
+        for field in ('kelly_multiplier', 'reference_bankroll_usd'):
+            config.pop(field)
+        grading_clock = queue.utc
+        with (self.connect() as db, patch.object(queue, '_late_capture_due', return_value=False),
+              patch.object(queue, 'utc', side_effect=lambda: self.at),
+              patch.object(campaigns.mens_d1, 'daily_population', return_value=None)):
+            campaign = campaigns.create(db, config)
+            assert campaign['leagues'] == ['NCAAB']
+            experiment.discover(db, [game], at=self.at)
+            for checkpoint, at in (('early', self.at), ('late', stamp(f'{day}T17:50:00Z'))):
+                self.advance(db, at)
+                task, = experiment.due(db, at=self.at)
+                frozen = experiment.capture(db, task['game_id'], checkpoint, snapshot, token=task['token'],
+                    requested_at=at, received_at=at, known_at=at)
+                assert frozen['state'] == 'captured'
+            before = campaigns.tick(db)
+            old = workspace.run_detail(db, before, export=True)
+            assert old['depth_receipts'] == {}
+            assert old['report']['depth_analysis']['scenarios']['quoted']['unknown_reasons'] == {'no_decision_receipt': 1}
+            assert not old['report']['portfolios']['best_venue']['tickets']
+
+            # An independently known receipt may reach storage after the odds checkpoint.
+            observations = {
+                experiment_depth.offer_key(main['record']): receipt(('0.25', 2000)),
+                experiment_depth.offer_key(alternate['record']): receipt(('0.25', 4000)),
+            }
+            evidence = experiment_depth.save(db, task, known_at=self.at, observations=observations)
+            self.advance(db, self.at + timedelta(minutes=16))
+            after = campaigns.tick(db)
+            assert after != before
+            run = workspace.run_detail(db, after, export=True)
+            assert set(run['depth_receipts']) == {evidence['id']}
+            assert workspace.run_detail(db, before, export=True)['depth_receipts'] == {}
+            candidate, = run['report']['portfolios']['best_venue']['tickets']
+            assert F(candidate['line']) == F('-16.5')
+            assert candidate['depth']['status'] == 'full_size'
+            assert candidate['depth']['modeled_native_quantity'] == '3333'
+            assert candidate['depth']['modeled_win_profit_usd'] == '24.9975'
+            assert run['report']['depth_analysis']['scenarios']['depth']['replacements'] == 1
+            target = stamp(task['target_at'])
+            followup = experiment_depth.save(db, task, kind='followup', origin_id=evidence['id'],
+                known_at=target + timedelta(seconds=29),
+                cutoff_at=target + timedelta(seconds=30), observations={
+                    experiment_depth.offer_key(main['record']): receipt(reason='followup_cache_reuse'),
+                })
+            self.advance(db, self.at + timedelta(minutes=16))
+            assert campaigns.tick(db) == after
+            self.advance(db, stamp(f'{day}T20:00:00Z'))
+            observed = self.at.isoformat()
+            final = dict(game, source='sportsgameodds', final=True, result='completed', home_score=96,
+                         away_score=75, received_at=observed, knowledge_at=observed,
+                         receipt_sha256=hashed(['depth-result', 96]))
+            assert experiment.observe_outcomes(db, [final], at=self.at)['matched'] == 1
+            with patch.object(queue, 'utc', side_effect=grading_clock):
+                assert queue.dispatch(db) == 1
+                assert queue.process_one(db)
+                assert queue.process_one(db)
+            ledger = campaigns.trades(db, campaign['id'])
+            assert ledger['trades'][0]['grade']['state'] == 'win'
+            assert F(ledger['summary']['pnl_exact_usd']) == F('24.9975')
+
+        app = web.Application(middlewares=[dashboard_guard(None, logger=__name__)])
+        research_workspace_api.mount(app, campaigns_only=True)
+        route = f'{research_workspace_api.BASE}/campaigns/{campaign["id"]}'
+        with (patch.object(research_workspace_api, 'connect', side_effect=self.connect),
+              patch.object(queue, 'utc', side_effect=lambda: self.at)):
+            async with TestClient(TestServer(app)) as client:
+                trades = await client.get(route + '/trades')
+                days = await client.get(route)
+                export = await client.get(route + '/trades', params=dict(export='1'))
+                assert trades.status == days.status == export.status == 200
+                values, by_day, bundle = await trades.json(), await days.json(), await export.json()
+                assert values['depth_analysis'] == by_day['days'][0]['depth_analysis'] == bundle['depth_analysis']
+                assert values['trades'][0]['id'] == bundle['trades'][0]['id'] == candidate['id']
+                dispositions = {row['depth']['status']: row['depth'] for row in values['depth_candidates']}
+                assert dispositions['partial_size']['available_purchase_usd'] == '5'
+                assert dispositions['partial_size']['available_gross_win_profit_usd'] == '15'
+                assert set(bundle['depth_receipts']) == {evidence['id']}
+                assert bundle['depth_followups'][evidence['id']]['id'] == followup['id']
+                assert values['depth_followup_analysis']['cache_reuse_sides'] == 1
+                assert values['depth_followup_analysis'] == by_day['days'][0]['depth_followup_analysis']
+
     async def test_campaign_trade_route_reads_multiple_saved_dates_and_selected_portfolio(self):
         from aiohttp import web
         from aiohttp.test_utils import TestClient, TestServer

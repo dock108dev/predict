@@ -12,7 +12,7 @@ from psycopg.types.json import Jsonb
 from app.collection.current_policy import SPORTS
 from app.storage import paper_result_queue as queue
 from app.storage.store import encoded, hashed
-from . import mens_d1, paper, paper_evidence, paper_results, records, workspace
+from . import mens_d1, paper, paper_depth, paper_evidence, paper_results, records, workspace
 
 VERSION = 'ncaab-paper-campaign-1'
 SIZING_VERSION = 'ncaab-paper-campaign-2'
@@ -107,6 +107,16 @@ def configuration(body):
             odds_edges = _odds_edges(body['odds_bucket_edges'])
             if odds_edges != DEFAULT_ODDS_EDGES:
                 sizing['odds_bucket_edges'] = list(odds_edges)
+        if 'depth_policy' in body:
+            fields.add('depth_policy')
+            if (body['depth_policy'] != paper_depth.VERSION or scope != ALL_SPORTS or mode != 'fixed_profit'
+                    or sizing.get('target_profit_usd') != '25' or sizing.get('kelly_comparison')
+                    or sizing.get('portfolio_rule') != paper.MAIN_FIRST_ONE_PER_GAME
+                    or scope_options.get('market_scope') != paper.MAIN_SPREADS_TOTALS):
+                raise workspace.SelectionError(
+                    'Public book depth requires Win $25, Spreads and totals, and one trade per game.')
+            sizing['depth_policy'] = paper_depth.VERSION
+            scope_options['leagues'] = list(paper_depth.LEAGUES)
         if set(body) != fields:
             raise workspace.SelectionError('Provide the dates, EV rules and inputs for the selected sizing modes.')
     start, end = map(date.fromisoformat, (workspace.game_day(body['start_date']), workspace.game_day(body['end_date'])))
@@ -179,7 +189,7 @@ def create(db, body, *, discoverable=True):
     return dict(id=identity, **config)
 
 
-def _definition(parent, job, population, recovery, fingerprint, mode):
+def _definition(parent, job, population, recovery, fingerprint, mode, *, depth_receipts=None):
     config = job['config']
     values = {key: config[key] for key in workspace.ASSUMPTIONS if key in config}
     proposed = workspace._changed_definition(parent, values)
@@ -210,6 +220,9 @@ def _definition(parent, job, population, recovery, fingerprint, mode):
                                                'alternate_odds_below') if key in config})
     if config.get('portfolio_rule') == paper.MAIN_FIRST_ONE_PER_GAME:
         policy['duplicates'] = 'One trade per game; retain the best qualifying venue for the ranked bet.'
+    if config.get('depth_policy'):
+        policy.update(depth_policy=config['depth_policy'], depth_receipts=depth_receipts or {},
+                      execution='paper_only; full target within the frozen limit using public displayed capacity')
     if mode == 'fixed_profit':
         for key in ('reference_bankroll_usd', 'kelly_multiplier', 'sizing_scale_usd'):
             policy.pop(key, None)
@@ -224,7 +237,7 @@ def _definition(parent, job, population, recovery, fingerprint, mode):
 
 
 def _daily_tasks(db, day, now, leagues):
-    return list(db.execute('''SELECT g.id,g.schedule_id,g.late_id,t.state,t.last_reason,
+    return list(db.execute('''SELECT g.id,g.schedule_id,g.late_id,t.state,t.last_reason,t.target_at,
         (t.state IN ('pending','claimed') AND t.deadline_at<%s) AS window_closed
         FROM public.ev_experiment_game g JOIN public.ev_experiment_task t ON t.game_id=g.id
         WHERE t.checkpoint='late' AND g.event->>'league'=ANY(%s)
@@ -270,13 +283,23 @@ def tick(db):
                 tasks = _daily_tasks(db, day, now, ['NCAAB']) if population is not None else []
             if tasks or population is not None or (all_sports and run_id):
                 recovery = mens_d1.daily_recovery(db, day, d1_population) if d1_population is not None else {}
-                fingerprint = hashed([population['revision'] if population is not None else None,
-                    sorted(tasks,key=lambda t:t['id']), recovery,
+                inputs = [population['revision'] if population is not None else None,
+                    sorted(({k: v for k, v in task.items() if k != 'target_at'} for task in tasks),
+                           key=lambda task: task['id']), recovery,
                     # A pending task can expire without a write.
-                    today > job['game_date']])
+                    today > job['game_date']]
+                depth_receipts = None
+                if job['config'].get('depth_policy'):
+                    from app.storage import experiment_depth
+
+                    depth_receipts = experiment_depth.input_ids(db, (
+                        (task['id'], task['schedule_id'], task['target_at']) for task in tasks if task['late_id']))
+                    inputs.append(depth_receipts)
+                fingerprint = hashed(inputs)
                 if fingerprint != job['fingerprint'] or not run_id:
                     parent = workspace._definition(db, workspace.PILOT_VERSION)
-                    definitions = [_definition(parent, job, population, recovery, fingerprint, mode)
+                    definitions = [_definition(parent, job, population, recovery, fingerprint, mode,
+                                               depth_receipts=depth_receipts)
                                    for mode in modes(job['config'])]
                     reports = paper.scoped_reports(db, day, [definition['policy'] for definition in definitions],
                                                   population=deepcopy(population), as_of=now.isoformat(), evidence=True)
@@ -485,7 +508,8 @@ def _snapshot_reports(db, run_ids):
     rows = db.execute('''SELECT r.id,r.payload#>'{report,portfolios,all_venues,tickets}' tickets,
         (SELECT jsonb_agg(jsonb_build_object('status',game->'status',
             'coverage',jsonb_build_object('incomplete',game#>'{coverage,incomplete}'),
-            'sizing_exclusions',game->'sizing_exclusions')) FROM
+            'sizing_exclusions',game->'sizing_exclusions','depth_comparison',game->'depth_comparison',
+            'depth_receipt_id',game->'depth_receipt_id','depth_metrics',game->'depth_metrics')) FROM
             jsonb_array_elements(r.payload#>'{report,games}') game) games
         FROM public.research_workspace_run r WHERE r.id=ANY(%s)''', (list(run_ids),))
     return {row['id']: dict(games=row['games'] or [], portfolios=dict(all_venues=dict(tickets=row['tickets'])))
@@ -581,11 +605,18 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
     compare = include_comparison and config.get('kelly_comparison')
     report_ids = {run for runs in run_ids.values() for key, run in runs.items() if key == mode or compare}
     latest_reports = _snapshot_reports(db, report_ids) if config['version'] != VERSION else {}
+    followups = {}
+    if config.get('depth_policy'):
+        from app.storage import experiment_depth
+
+        followups = experiment_depth.followups(db, paper_depth.receipt_ids(
+            game for report in latest_reports.values() for game in report['games']))
     edges = config['bucket_edges']
     odds_edges = config.get('odds_bucket_edges', DEFAULT_ODDS_EDGES)
     portfolio_rule = config.get('portfolio_rule')
     comparison = Counter()
     selected_tickets, selected_days = [], 0
+    depth_games = []
     for day in day_rows:
         current_day = day['game_date']
         in_window = current_day <= today or game_date is not None
@@ -619,6 +650,12 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
             document = (dict(report=latest_reports[run_id]) if run_id in latest_reports else
                         workspace._run(db,run_id)['payload'])
             source = document['report']
+            if config.get('depth_policy'):
+                entry['depth_analysis'] = paper_depth.summarize(source['games'])
+                entry['depth_followup_analysis'] = paper_depth.followup_summary(
+                    [followups[receipt] for receipt in paper_depth.receipt_ids(source['games']) if receipt in followups])
+                if in_window:
+                    depth_games.extend(source['games'])
             entry['captures'] = dict(Counter(g['status'] for g in source['games']))
             usable = sum(entry['captures'].get(s, 0) for s in paper_results.CAPTURED)
             pending = sum(entry['captures'].get(s, 0) for s in ('pending', 'claimed'))
@@ -648,13 +685,17 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                     if config['version'] != VERSION and not state['pending'] and not state['error']:
                         entry['result_state'] = paper_results.portfolio_status(report, variant)
         days.append(entry)
-    return dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
+    value = dict(id=identity,config=config,variant=variant,mode=mode,available_modes=available_modes,days=days,
                 as_of=now.isoformat(),
                 selection=_selection_summary(selected_tickets, odds_edges) if selected_days else None,
                 weekly=_window_analysis(all_tickets, edges, variant, inputs=versions,
                                         portfolio_rule=portfolio_rule) if versions else None,
                 comparison=dict(comparison) if comparison else None,
                 reported_days=len(versions),provider_requests=0,orders_submitted=0)
+    if config.get('depth_policy'):
+        value['depth_analysis'] = paper_depth.summarize(depth_games)
+        value['depth_followup_analysis'] = paper_depth.followup_summary(list(followups.values()))
+    return value
 
 
 def daily(db, identity, game_date, variant=None):
@@ -670,7 +711,7 @@ def daily(db, identity, game_date, variant=None):
                 modes=days, provider_requests=0, orders_submitted=0)
 
 
-def trades(db, identity, variant=None, mode=None):
+def trades(db, identity, variant=None, mode=None, *, export=False):
     """Read selected trades and their published grades across current dated runs."""
     campaign = db.execute('SELECT payload FROM public.paper_campaign WHERE id=%s', (identity,)).fetchone()
     if not campaign:
@@ -692,11 +733,14 @@ def trades(db, identity, variant=None, mode=None):
         run_ids = [run for day in days if (run := _mode_runs(history.get(day['game_date'], []),
                                                           day['run_id'], primary).get(mode))]
 
-    rows = []
+    rows, depth_games, candidates, decisions = [], [], [], []
     selected = db.execute('''SELECT r.id,r.game_date,published.id result_id,
         r.payload#>ARRAY['report','portfolios',%s,'tickets'] frozen,
         published.payload#>ARRAY['portfolios',%s,'tickets'] graded,
-        (SELECT jsonb_object_agg(game->>'game_id',jsonb_build_object('title',game->'title','league',game->'league'))
+        (SELECT jsonb_object_agg(game->>'game_id',jsonb_build_object(
+            'title',game->'title','league',game->'league','status',game->'status','depth_comparison',game->'depth_comparison',
+            'depth_receipt_id',game->'depth_receipt_id','depth_candidates',game->'depth_candidates',
+            'depth_metrics',game->'depth_metrics'))
          FROM jsonb_array_elements(r.payload#>'{report,games}') game) games
         FROM public.research_workspace_run r
         LEFT JOIN public.paper_result_job j ON j.run_id=r.id
@@ -706,6 +750,14 @@ def trades(db, identity, variant=None, mode=None):
     for day in selected:
         graded = {ticket['id']:ticket for ticket in day['graded'] or ()}
         games = day['games'] or {}
+        if config.get('depth_policy'):
+            for game_id, game in sorted(games.items(), key=lambda pair: pair[1]['title'] or pair[0]):
+                depth_games.append(game)
+                context = dict(game_id=game_id, game_title=game['title'], game_date=str(day['game_date']),
+                               run_id=day['id'], depth_receipt_id=game.get('depth_receipt_id'))
+                if game.get('depth_comparison'):
+                    decisions.append(dict(context, **game['depth_comparison']))
+                candidates.extend(dict(candidate, **context) for candidate in (game.get('depth_candidates') or []))
         for ticket in day['frozen'] or ():
             publication = graded.get(ticket['id'])
             result_id = day['result_id'] if publication else None
@@ -718,14 +770,29 @@ def trades(db, identity, variant=None, mode=None):
             game = games.get(ticket['game_id'], {})
             entry = {key:ticket.get(key) for key in ('id', 'game_id', 'family', 'period', 'side', 'label', 'line',
                 'venue', 'posted_odds', 'ev', 'probability', 'screen_ev')}
+            if 'depth' in ticket:
+                entry['depth'] = ticket['depth']
             entry.update({key:publication.get(key) for key in ('stake_usd', 'stake_exact_usd',
                 'expected_profit_usd', 'expected_profit_exact_usd', 'return_usd', 'return_exact_usd',
                 'pnl_usd', 'pnl_exact_usd')})
             rows.append(dict(entry, grade=dict(state=publication['grade']['state']),
                 game_title=game.get('title') or ticket.get('title'), league=game.get('league') or fallback_league,
                 game_date=str(day['game_date']), run_id=day['id'], result_id=result_id))
-    return dict(id=identity, mode=mode, variant=variant, trades=rows, summary=paper_results._summary(rows),
+    value = dict(id=identity, mode=mode, variant=variant, trades=rows, summary=paper_results._summary(rows),
                 provider_requests=0, orders_submitted=0)
+    if config.get('depth_policy'):
+        from app.storage import experiment_depth
+
+        depth_ids = paper_depth.receipt_ids(depth_games)
+        followups = experiment_depth.followups(db, depth_ids)
+        value.update(depth_analysis=paper_depth.summarize(depth_games), depth_candidates=candidates,
+                     depth_decisions=decisions)
+        value['depth_followup_analysis'] = paper_depth.followup_summary(list(followups.values()))
+        if export:
+            value['depth_receipts'] = experiment_depth.read_ids(db, depth_ids)
+            value['depth_followups'] = followups
+            value['evidence_sha256'] = hashed(value)
+    return value
 
 
 def index(db, *, active_only=False):

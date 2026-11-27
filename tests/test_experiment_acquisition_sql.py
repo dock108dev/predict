@@ -132,6 +132,7 @@ class ExperimentAcquisitionSQL(PregameFixture):
         import asyncio
 
         from app.collection.activity_collector import ActivityBudgetDelayed
+        from app.collection.experiment_depth import ExperimentDepth
         from app.collection.original_receipts import read
         from app.collection.sportsgameodds_worker import SportsGameOddsWorker
         from app.research.capture_forecast import late_capture_forecast
@@ -159,11 +160,25 @@ class ExperimentAcquisitionSQL(PregameFixture):
 
         worker.transport.fetch = fetch
         scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
-        with patch.object(acquisition, 'connect', self.connect):
+        optional = ExperimentDepth(service)
+
+        async def missing_public_book(*_args):
+            await fetching.wait()
+            raise TimeoutError('fixture public venue timeout')
+
+        async def other_venues(*_args):
+            return {}
+
+        with (patch.object(acquisition, 'connect', self.connect),
+              patch.object(optional, '_market_reads', missing_public_book),
+              patch('app.collection.experiment_depth.failure')):
             running = asyncio.create_task(scheduler.tick())
+            venue = asyncio.create_task(optional._observe(None, SimpleNamespace(read_native=other_venues),
+                {}, {}, worker.now() + timedelta(seconds=1)))
             await asyncio.wait_for(fetching.wait(), timeout=5)
             with self.assertRaisesRegex(ActivityBudgetDelayed, 'protected_tminus10_capture_due'):
                 await SportsGameOddsWorker._fetch(worker, {'leagueID': 'NCAAB'})
+            self.assertEqual(await venue, ({}, {'novig': 'unavailable'}))
             self.assertTrue(await running)
             self.assertFalse(await scheduler.tick())
 

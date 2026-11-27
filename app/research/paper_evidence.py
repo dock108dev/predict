@@ -63,7 +63,16 @@ def inspect(ticket, checkpoint, offer, sized, policy):
     gross_ev = (str(Fraction(probability) * Fraction(decimal) - 1)
                 if probability is not None and decimal is not None else None)
     game = ticket.get("identity") or {}
+    depth = ticket.get("depth")
     fee_state = {False: "zero_assumed", True: "captured_fee_model"}.get(mode.get("enabled"), "unknown")
+    size = dict(paper_assumption="quoted_price_at_modeled_stake", executable_size_evidence="unavailable",
+                executable_size_usd=None)
+    if depth:
+        fee_state = "public_venue_fee_model"
+        size.update(paper_assumption="public_displayed_capacity_at_limit",
+                    displayed_purchase_usd=depth.get("available_purchase_usd"),
+                    displayed_native_quantity=depth.get("available_native_quantity"),
+                    displayed_availability_is_lower_bound=depth.get("availability_is_lower_bound", False))
     cashflows = fee.get("cashflows") or {}
     commitment = Fraction(fee["committed_usd"]) if fee.get("committed_usd") else None
     returns = {state: str(Fraction(value["net_receipt_usd"]) / commitment - 1)
@@ -99,5 +108,4 @@ def inspect(ticket, checkpoint, offer, sized, policy):
         probability=probability, gross_ev=gross_ev, screening_ev=ticket.get("screen_ev"), modeled_ev=ticket.get("ev"),
         kelly=kelly, sizing=sizing, frozen_quote_id=ticket.get("frozen_quote_id"),
         fees=dict(paper_assumption=fee_state, actual_fee_evidence="unknown", modeled_entry_usd=fee.get("entry_usd")),
-        size=dict(paper_assumption="quoted_price_at_modeled_stake", executable_size_evidence="unavailable",
-                  executable_size_usd=None))
+        size=size)

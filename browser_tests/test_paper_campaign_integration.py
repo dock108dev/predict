@@ -19,18 +19,180 @@ from playwright.async_api import async_playwright, expect
 from app.comparison import current_pregame, fee_mode
 from app.dashboard.request_guard import dashboard_guard
 from app.dashboard.research_workspace_api import BASE, mount
-from app.research import experiment, paper_campaigns
-from app.storage import database_roles
+from app.research import experiment, paper_campaigns, paper_depth
+from app.storage import database_roles, experiment_depth
 from app.storage import paper_result_queue as queue
 from app.storage.payload_codec import payload_row
 from app.storage.store import connect, hashed, stamp
 from browser_tests.test_pregame_current import ASSETS
-from tests.test_paper_experiments import priced
+from tests.test_paper_experiments import frozen_priced, priced
 from tests.test_paper_experiments_sql import ResearchWorkspaceFixture, SOCKET
 
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class ControlledWorkbench(ResearchWorkspaceFixture):
+    async def test_win25_depth_through_installed_experiments_routes(self):
+        from app.dashboard.workspace_app import create_app
+        from tests.current_fixture import InjectedTestProvider
+        from tests.test_current_state import owner
+        from tests.test_experiment_depth_execution import receipt
+
+        day = "2026-11-23"
+        event = self.game("depth-browser", day + "T18:00:00Z")
+        main = frozen_priced("+300", venue="novig", line="-10.5")
+        alternate = frozen_priced("+300", venue="novig", line="-16.5", main=False)
+        for offer in (main, alternate):
+            record = offer["record"]
+            record["event"].update(
+                competition="NCAAB", scheduled_start=event["starts_at"]
+            )
+            record["quote"]["source"].update(
+                native_event_id="depth-browser",
+                native_outcome_id="points-home-game-sp-home",
+                native_line=record["selection"]["signed_line"],
+            )
+        snapshot = dict(
+            event=dict(
+                home="home",
+                away="away",
+                competition="NCAAB",
+                scheduled_start=event["starts_at"],
+            ),
+            source_event=dict(event_id="depth-browser"),
+            offers=[main, alternate],
+            coverage=dict(incomplete=False),
+        )
+        with self.connect() as db:
+            experiment.discover(db, [event], at=self.at)
+            for capture, at in (
+                ("early", self.at),
+                ("late", stamp(day + "T17:50:00Z")),
+            ):
+                self.advance(db, at)
+                (task,) = experiment.due(db, at=self.at)
+                assert task["checkpoint"] == capture
+                assert (
+                    experiment.capture(
+                        db,
+                        task["game_id"],
+                        capture,
+                        snapshot,
+                        token=task["token"],
+                        requested_at=at,
+                        received_at=at,
+                        known_at=at,
+                    )["state"]
+                    == "captured"
+                )
+            decision = experiment_depth.save(
+                db,
+                task,
+                known_at=self.at,
+                observations={
+                    experiment_depth.offer_key(main["record"]): receipt(("0.25", 2000)),
+                    experiment_depth.offer_key(alternate["record"]): receipt(
+                        ("0.25", 4000)
+                    ),
+                },
+            )
+            database_roles.enable(db)
+
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        provider.status = lambda: {}
+        server = TestServer(create_app(provider, owner()))
+        await server.start_server()
+        self.addAsyncCleanup(server.close)
+        with (
+            patch.dict(os.environ, {"PREDICT_DB_ROLE": database_roles.WEB}),
+            patch(
+                "app.dashboard.research_workspace_api.connect",
+                side_effect=lambda: connect(self.name),
+            ),
+            patch.object(queue, "_late_capture_due", return_value=False),
+        ):
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+                )
+                page = await browser.new_page(viewport=dict(width=390, height=820))
+                await page.goto(str(server.make_url("/experiments?view=create")))
+                await page.get_by_label("Experiment name").fill(
+                    "Win $25 depth integration"
+                )
+                await page.get_by_label("Paper execution").select_option(
+                    paper_depth.VERSION
+                )
+                await page.get_by_label("First game date (Eastern)").fill(day)
+                await page.get_by_label("Last game date (Eastern)").fill(day)
+                await page.get_by_label("Minimum stake ($)").fill("")
+                await page.get_by_role("button", name="Review", exact=True).click()
+                await expect(
+                    page.get_by_role("region", name="Review experiment")
+                ).to_contain_text("NCAAB full-game spreads and totals")
+                async with page.expect_response(
+                    lambda res: (
+                        res.request.method == "POST"
+                        and res.url.endswith(BASE + "/campaigns")
+                    )
+                ) as saved:
+                    await page.get_by_role(
+                        "button", name="Save and run", exact=True
+                    ).click()
+                response = await saved.value
+                assert response.ok, await response.text()
+                await page.wait_for_url(re.compile(r"[?&]campaign=[0-9a-f]{64}"))
+                campaign = parse_qs(urlsplit(page.url).query)["campaign"][0]
+                with connect(self.name) as db:
+                    assert db.info.user == database_roles.WEB
+                    run_id = paper_campaigns.tick(db)
+                    assert run_id, db.execute(
+                        "SELECT state,last_error FROM public.paper_campaign_day"
+                    ).fetchall()
+                await page.reload(wait_until="domcontentloaded")
+                await page.get_by_role("link", name="All trades", exact=True).click()
+                selected = page.locator(".result-ledger-selection")
+                await expect(selected).to_contain_text("-16.5")
+                await selected.click()
+                await expect(page.locator(".result-inline-trade")).to_contain_text(
+                    "Full size"
+                )
+                await page.get_by_text(
+                    "Selected quotes by game and policy", exact=True
+                ).click()
+                quote = page.locator('[data-label="Quoted price"]')
+                modeled = page.locator('[data-label="Full public book size"]')
+                await expect(quote).to_contain_text("-10.5")
+                await expect(modeled).to_contain_text("-16.5")
+                await page.get_by_text(
+                    "Public book observations (2)", exact=True
+                ).click()
+                partial = page.get_by_role("row", name=re.compile("Partial size"))
+                await expect(partial).to_contain_text("2000")
+                async with page.expect_download() as export:
+                    await page.get_by_role(
+                        "link", name="Export trades and public book evidence"
+                    ).click()
+                download = await export.value
+                exported = json.loads(Path(await download.path()).read_text())
+                assert list(exported["depth_receipts"]) == [decision["id"]]
+                assert exported["trades"][0]["run_id"] == run_id
+                assert (
+                    exported["depth_analysis"]["scenarios"]["depth"]["replacements"]
+                    == 1
+                )
+                assert F(
+                    exported["depth_decisions"][0]["picks"]["quoted"]["line"]
+                ) == F("-10.5")
+                await page.get_by_role("link", name="Results by day").click()
+                await expect(
+                    page.get_by_role("columnheader", name="Full size / quoted picks")
+                ).to_be_visible()
+                await expect(
+                    page.get_by_role("row", name=re.compile("Nov 23, 2026"))
+                ).to_contain_text("0 / 1")
+                await browser.close()
+
     async def test_ui_save_drives_automatic_replay_before_and_after_result(self):
         day = "2026-11-20"
         self.at = stamp(day + "T17:00:00Z")

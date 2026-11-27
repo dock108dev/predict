@@ -105,6 +105,8 @@ def _grant_policy(db):
     grant(db, 'INSERT, UPDATE, DELETE', 'retained', ('current_grid_read_lease',), WEB)
     for privileges, names in COLLECTOR_WRITES.items():
         grant(db, privileges, 'public', names, COLLECTOR)
+    if db.execute("SELECT to_regclass('public.ev_experiment_depth') IS NOT NULL AS present").fetchone()['present']:
+        grant(db, 'INSERT', 'public', ('ev_experiment_depth',), COLLECTOR)
     if db.execute("SELECT to_regclass('public.pregame_cohort_work') IS NOT NULL AS present").fetchone()['present']:
         grant(db, 'SELECT, INSERT, UPDATE, DELETE', 'public', ('pregame_cohort_work',), COLLECTOR)
         db.execute(sql.SQL('REVOKE SELECT ON public.pregame_cohort_work FROM {}').format(sql.Identifier(WEB)))

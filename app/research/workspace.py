@@ -554,6 +554,10 @@ def run_detail(db, run_id, *, export=False):
     if export:
         result["witnesses"] = {identity:dict(offer_index=witness["offer_index"], sized_calculation=_sized_calculation(witness))
                                for identity, witness in row["payload"]["witnesses"].items()}
+        if report["policy"].get("depth_policy"):
+            from app.storage import experiment_depth
+
+            result["depth_receipts"] = experiment_depth.read_ids(db, set(report["policy"]["depth_receipts"].values()))
         claims = list(db.execute("""SELECT * FROM public.research_workspace_catalog
             WHERE version=ANY(%s) ORDER BY version""", (definition["claim_versions"],)))
         result["claims"] = [_record(claim) for claim in claims]
@@ -580,7 +584,7 @@ def offer_export_plan(db, run_id):
     if policy.get("sizing_mode"):
         fields["sizing"] = {key: policy[key] for key in (
             "sizing_mode", "sizing_rule", "target_profit_usd", "kelly_multiplier", "reference_bankroll_usd",
-            "minimum_stake_usd", "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below"
+            "minimum_stake_usd", "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below", "depth_policy"
         ) if key in policy}
     if policy.get("portfolio_rule") == paper.MAIN_FIRST_ONE_PER_GAME:
         selected["portfolio_selection"] = {
@@ -595,6 +599,8 @@ def offer_export_game(db, game, minimum, selected, *, sizing=None):
     entry = {key:game.get(key) for key in ("game_id", "title", "status", "checkpoint_id", "exclusions")}
     if "league" in game:
         entry["league"] = game["league"]
+    if "depth_comparison" in game:
+        entry.update(depth_comparison=game["depth_comparison"], depth_receipt_id=game["depth_receipt_id"])
     if game["status"] not in ("captured", "reconstructed"):
         return dict(entry, offers=None)
     identity = game["checkpoint_id"]
@@ -603,6 +609,7 @@ def offer_export_game(db, game, minimum, selected, *, sizing=None):
     at = checkpoint["received_at"] if game["status"] == "reconstructed" else experiment.clock(index[identity]["recorded_at"])
     offers = offer_rows(checkpoint, game_id=game["game_id"], minimum=minimum, at=at)
     sizing_exclusions = {item["offer_index"]: item for item in game.get("sizing_exclusions", ())}
+    depth = {item["offer_index"]: item["depth"] for item in game.get("depth_candidates", ())}
     portfolios = sizing.get("portfolios", selected) if sizing else selected
     selection_evidence = selected.get("portfolio_selection")
     show_line_role = selection_evidence is not None or (sizing and sizing.get("market_scope"))
@@ -614,6 +621,8 @@ def offer_export_game(db, game, minimum, selected, *, sizing=None):
             offer["source_line_role"] = _role(checkpoint["snapshot"]["offers"][position]["record"])
         if selection_evidence is not None and key in selection_evidence:
             offer["portfolio_selection"] = selection_evidence[key]
+        if position in depth:
+            offer["depth"] = depth[position]
         if sizing and position in sizing_exclusions:
             failure = sizing_exclusions[position]
             offer["sizing"] = dict(state="excluded", **{name: failure[name] for name in (
@@ -673,6 +682,8 @@ def ticket_detail(db, run_id, ticket_id):
         **{key: checkpoint.get(key) for key in ("target_at", "deadline_at", "requested_at", "received_at", "known_at", "source_kind", "recovery")}),
         trade=trade,
         sporting_result=outcome, original_offer=original_offer, sized_calculation=calculated, links=links)
+    if "depth" in ticket:
+        evidence["depth"] = dict(ticket["depth"], bundle_id=game["depth_receipt_id"])
     return dict(run=_run_summary(row), ticket=dict(ticket, witness=dict(original_offer=original_offer,
         sized_calculation=calculated)), evidence=evidence, provider_requests=0, orders_submitted=0)
 

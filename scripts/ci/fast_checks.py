@@ -143,6 +143,23 @@ def plan(root, paths):
         if path.startswith(("app/research/", "app/storage/")):
             scopes.add("research")
             sql.update(SQL_CORE)
+        if path.startswith(("app/", "tests/")) and any(
+            topic in candidate.name
+            for topic in ("experiment_depth", "paper_depth", "experiment_public_depth")
+        ):
+            pure.update(
+                {
+                    "tests/test_experiment_depth_execution.py",
+                    "tests/test_native_experiment_depth.py",
+                    "tests/test_novig_experiment_depth.py",
+                }
+            )
+            sql.update(
+                {
+                    "tests/test_experiment_depth_sql.py",
+                    "tests/test_native_experiment_depth.py::NativeReplacementSQL",
+                }
+            )
         if (
             path.startswith("app/research/paper")
             or path == "app/dashboard/paper_api.py"

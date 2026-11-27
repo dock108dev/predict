@@ -28,7 +28,7 @@ WORKSPACE_ASSETS = frozenset("""
     board-client.js board-contract.js board-elements.js board-read.js board-values.js
     comparison-board.js dashboard.css dashboard.js data-browser.css data-captures.js
     data-evidence.js data-market.js data-sessions.js data-workbench.js data.js
-    desk-preferences.js experiment-populations.js experiment-workspace.css
+    desk-preferences.js experiment-depth.js experiment-populations.js experiment-workspace.css
     experiment-workspace.js experiment.js ibm-plex-sans.woff2 manrope.ttf
     mens-d1-coverage.js predict-icon.png pregame-evidence.js pregame-explanation.js
     pregame-labels.js pregame-prices.js pregame-ranking.js pregame.css

@@ -10,6 +10,10 @@ from playwright.sync_api import expect, sync_playwright
 
 from app.research.paper import money
 from app.research.paper_campaigns import WIN_10_CAMPAIGN, analysis, configuration
+from app.research.paper_depth import (
+    VERSION as DEPTH_POLICY,
+    summarize as summarize_depth,
+)
 from app.research.paper_results import _summary
 from browser_tests.test_paper_results import FIRST, report
 from browser_tests.test_research_workspace import research_http_fixture
@@ -71,6 +75,149 @@ def test_create_all_sports_with_an_exclusive_alternate_price_cutoff():
         assert saved[0]["alternate_odds_below"] == "400"
         assert saved[0]["portfolios"] == ["all_venues"]
         assert "minimum_stake_usd" not in saved[0] and "portfolio_rule" not in saved[0]
+        browser.close()
+
+
+def test_win25_depth_companion_preserves_quote_campaign_and_shows_capacity():
+    endpoint = "/api/research/workspace/campaigns"
+    day, original_id, depth_id = "2026-11-23", "e" * 64, "f" * 64
+    original_config = fixed_config(
+        name="Win $25 · All sports",
+        end_date=day,
+        scope="all-sports",
+        market_scope="main_spreads_totals",
+        alternate_odds_below="400",
+        target_profit_usd="25",
+        kelly_comparison=False,
+        portfolios=["best_venue"],
+        portfolio_rule="main_first_one_per_game",
+    )
+    for field in ("kelly_multiplier", "reference_bankroll_usd"):
+        original_config.pop(field)
+    original = dict(configuration(original_config), id=original_id)
+    campaigns = [original]
+    partial = dict(
+        status="partial_size",
+        eligible=False,
+        reason=None,
+        intended_stake_usd="25/3",
+        available_native_quantity="2000",
+        available_purchase_usd="5",
+        available_gross_win_profit_usd="15",
+    )
+    pick = dict(
+        frozen_quote_id="frozen quote",
+        venue="novig",
+        family="spread",
+        portfolio_selection=dict(line_role="alternate", distance_points="6"),
+        posted_odds="+300",
+        cash_commitment_usd="25/3",
+        expected_profit_exact_usd="1",
+        depth=partial,
+    )
+    observation = dict(
+        game_date=day,
+        game_title="Away at Home",
+        label="Home",
+        line="-16.5",
+        venue="novig",
+        posted_odds="+300",
+        depth=partial,
+    )
+    analysis_data = summarize_depth(
+        [
+            dict(
+                status="captured",
+                depth_receipt_id="decision",
+                depth_comparison=dict(
+                    picks=dict(
+                        quoted=pick,
+                        novig_band=None,
+                        no_novig_alternates=None,
+                        depth=None,
+                    ),
+                    quoted_candidates=1,
+                    depth_candidates=1,
+                    main_line_control=None,
+                ),
+            )
+        ]
+    )
+    bundle = dict(
+        trades=[], depth_analysis=analysis_data, depth_candidates=[observation]
+    )
+    published = dict(
+        date=day,
+        capture_state="retained",
+        state="published",
+        result_state="no_selected_tickets",
+        depth_analysis=analysis_data,
+    )
+
+    def serve(route):
+        path = urlsplit(route.request.url).path
+        if path == "/experiments":
+            route.fulfill(path=ASSETS / "experiment-workspace.html")
+        elif path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(path).name)
+        elif path == "/api/workspace/collection":
+            route.fulfill(json={})
+        elif path == endpoint and route.request.method == "POST":
+            body = route.request.post_data_json
+            assert "supersedes" not in body
+            campaigns.append(dict(configuration(body), id=depth_id))
+            route.fulfill(json=campaigns[-1])
+        elif path == endpoint:
+            route.fulfill(json=dict(campaigns=campaigns))
+        elif path == f"{endpoint}/{depth_id}/trades":
+            route.fulfill(json=bundle)
+        elif path == f"{endpoint}/{depth_id}":
+            route.fulfill(
+                json=dict(
+                    mode="fixed_profit",
+                    days=[published],
+                    depth_analysis=analysis_data,
+                    as_of="2026-11-24T05:00:00Z",
+                )
+            )
+        else:
+            route.fulfill(status=404)
+
+    with research_http_fixture(serve) as base, sync_playwright() as runtime:
+        browser = runtime.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
+        page = browser.new_page(viewport={"width": 390, "height": 850})
+        page.goto(f"{base}/experiments?campaign={original_id}&view=revise")
+        page.get_by_label("Experiment name").fill("Win $25 public book pilot")
+        page.get_by_label("Paper execution").select_option(DEPTH_POLICY)
+        page.get_by_role("button", name="Review", exact=True).click()
+        preview = page.get_by_role("region", name="Review experiment")
+        expect(preview).to_contain_text("NCAAB full-game spreads and totals")
+        expect(preview).to_contain_text("separate experiment alongside the original")
+        page.get_by_role("button", name="Save and run").click()
+        expect(
+            page.get_by_role("heading", name="Public book comparison")
+        ).to_be_visible()
+        assert campaigns[-1]["leagues"] == ["NCAAB"]
+        assert campaigns[0]["id"] == original_id
+        expect(
+            page.get_by_text("0 of 1 quoted picks had full displayed size", exact=False)
+        ).to_be_visible()
+        page.get_by_text("Public book observations (1)", exact=True).click()
+        row = page.get_by_role("row", name=re.compile("Away at Home"))
+        expect(row).to_contain_text("Partial size")
+        expect(row).to_contain_text("2000")
+        expect(
+            page.get_by_role("link", name="Export trades and public book evidence")
+        ).to_have_attribute("href", re.compile(r"/trades\?.*export=1$"))
+        page.get_by_role("link", name="Results by day").click()
+        expect(
+            page.get_by_role("columnheader", name="Full size / quoted picks")
+        ).to_be_visible()
+        expect(
+            page.get_by_role("row", name=re.compile("Nov 23, 2026"))
+        ).to_contain_text("0 / 1")
         browser.close()
 
 

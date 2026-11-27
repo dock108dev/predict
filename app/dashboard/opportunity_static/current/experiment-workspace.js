@@ -4,6 +4,7 @@ import {coverageURL} from './mens-d1-coverage.js';
 import {campaignTradeLedger,campaignTradeEvidence,oddsBreakdown,renderResults} from './research-results.js';
 import {qualityComparison} from './research-quality.js';
 import {renderRun,renderSavedEvidence} from './research-run.js';
+import {depthCandidates,depthComparison,depthDecisions,depthTrade} from './experiment-depth.js';
 
 const endpoint='/api/research/workspace';
 // The saved Win $10 campaign has a fixed-profit results page. Other campaigns use their own rules.
@@ -228,9 +229,11 @@ function renderCampaignResults(body, reports, config, context) {
       return [link(displayDate.format(new Date(day.date+'T12:00:00Z')),
         url({...context.base,...context.filters,view:'daily',date:day.date,mode:context.mode})),status,
         selection ? node('span',`${count(summary?.resolved ?? 0)} / ${count(selection.tickets)}`,'experiment-day-graded') : '—',
-        money(summary?.pnl_usd),realized==='—' ? realized : node('span',realized,'experiment-day-roi')];
+        money(summary?.pnl_usd),realized==='—' ? realized : node('span',realized,'experiment-day-roi'),
+        ...(primary.depth_analysis ? [day.depth_analysis ? `${count(day.depth_analysis.scenarios.quoted.full_size)} / ${count(day.depth_analysis.scenarios.quoted.targeted_picks)}` : '—'] : [])];
     });
-    const dates=table(['Date (ET)','Status','Graded / selected','Paper P/L','Realized ROI'],rows);
+    const dates=table(['Date (ET)','Status','Graded / selected','Paper P/L','Realized ROI',
+      ...(primary.depth_analysis ? ['Full size / quoted picks'] : [])],rows);
     dates.classList.add('experiment-date-table');
     dates.tabIndex=0;
     dates.setAttribute('role','region');
@@ -267,7 +270,8 @@ function renderCampaignResults(body, reports, config, context) {
     if (quality) analysis.append(quality);
     history.append(analysis);
   }
-  body.replaceChildren(panel,history);
+  body.replaceChildren(panel,...(primary.depth_analysis ?
+    [depthComparison(primary.depth_analysis,primary.depth_followup_analysis)] : []),history);
 }
 
 function showResults(config, visible, context) {
@@ -369,11 +373,18 @@ function ledgerNavigation(mount, params, paint) {
   };
 }
 
-function paintCampaignTrades(body, {trades,summary}, context, query) {
+function paintCampaignTrades(body, {trades,summary,depth_analysis,depth_candidates,depth_decisions,depth_followup_analysis}, context, query) {
   const section=node('section',undefined,'experiment-detail');
   const historyPanel=campaignEvidence(context.config,context,context.sizingModes.map(mode=>({mode})));
   body.replaceChildren(section,historyPanel);
   if (summary) body.prepend(campaignResultSummary(summary));
+  if (depth_analysis) {
+    const exportParams=new URLSearchParams({mode:context.mode,variant:context.variant,export:'1'});
+    const actions=node('div',undefined,'workspace-links');
+    actions.append(action('Export trades and public book evidence',campaignAPI(context.campaign)+'/trades?'+exportParams));
+    historyPanel.before(depthComparison(depth_analysis,depth_followup_analysis),
+      depthDecisions(depth_decisions || []),depthCandidates(depth_candidates),actions);
+  }
   const readEvidence=new Map();
   function paint(params) {
     const navigation=ledgerNavigation(section,params,paint);
@@ -386,6 +397,7 @@ function paintCampaignTrades(body, {trades,summary}, context, query) {
       const grade=node('div');
       const details=node('details');
       details.append(node('summary','History & evidence'),frozen);
+      if (trade.depth) container.append(depthTrade(trade.depth));
       container.append(grade,details);
       frozen.append(node('p','Reading frozen trade evidence…'));
       const read=address=>{
@@ -432,6 +444,7 @@ function paintDay(body,data,config,context,detail) {
   body.replaceChildren(detail || node('p',context.visible ? dayStatus(day) : 'No saved snapshot','workspace-caption'));
   const totals=node('details',undefined,'experiment-totals');
   totals.append(node('summary','Daily totals'),comparisonTable(data,context),node('p',metricBasis,'workspace-caption'));
+  if (day.depth_analysis) totals.append(depthComparison(day.depth_analysis,day.depth_followup_analysis));
   const history=campaignEvidence(config,context);
   const snapshotsPanel=node('details');
   snapshotsPanel.append(node('summary','Saved snapshots'));
