@@ -206,12 +206,13 @@ def test_personal_check_selection_rejects_paths_outside_checkout():
         selected("../credentials")
 
 
-def test_validation_dispatches_concurrently_only_after_serial_baseline(monkeypatch):
+def test_secret_and_fixture_checks_run_concurrently_after_lint_and_workflow(monkeypatch):
     from threading import Barrier, Lock
     from types import SimpleNamespace
 
     module = load("fast_checks")
-    barrier = Barrier(2)
+    parallel = {"secrets", "portable", "postgres"}
+    barrier = Barrier(len(parallel))
     lock = Lock()
     events = []
     commands = [
@@ -223,10 +224,10 @@ def test_validation_dispatches_concurrently_only_after_serial_baseline(monkeypat
         (name,) = args
         with lock:
             events.append(name)
-            if name in ("portable", "postgres"):
-                assert events[:3] == ["lint", "workflow", "secrets"]
-        if name in ("portable", "postgres"):
-            # Neither command can finish until both have actually dispatched.
+            if name in parallel:
+                assert events[:2] == ["lint", "workflow"]
+        if name in parallel:
+            # No independent command can finish until all have dispatched.
             barrier.wait(timeout=5)
         return SimpleNamespace(returncode=0)
 
@@ -237,12 +238,12 @@ def test_validation_dispatches_concurrently_only_after_serial_baseline(monkeypat
     assert all(row["status"] == "PASS" and row["seconds"] >= 0 for row in checks)
 
 
-def test_failed_validation_waits_for_sibling_and_retains_both_reports(monkeypatch):
+def test_failed_secret_scan_waits_for_sql_and_keeps_both_reports(monkeypatch):
     from threading import Event, Thread
     from types import SimpleNamespace
 
     module = load("fast_checks")
-    portable_finished = Event()
+    scanner_finished = Event()
     postgres_started = Event()
     release_postgres = Event()
     postgres_finished = Event()
@@ -251,8 +252,8 @@ def test_failed_validation_waits_for_sibling_and_retains_both_reports(monkeypatc
 
     def run(args, *, cwd):
         (name,) = args
-        if name == "portable":
-            portable_finished.set()
+        if name == "secrets":
+            scanner_finished.set()
             return SimpleNamespace(returncode=7)
         postgres_started.set()
         assert release_postgres.wait(timeout=5)
@@ -263,14 +264,14 @@ def test_failed_validation_waits_for_sibling_and_retains_both_reports(monkeypatc
 
     def execute():
         result.append(
-            module.run_checks([("portable", ["portable"]), ("postgres", ["postgres"])])
+            module.run_checks([("secrets", ["secrets"]), ("postgres", ["postgres"])])
         )
         returned.set()
 
     thread = Thread(target=execute)
     thread.start()
     try:
-        assert portable_finished.wait(timeout=5)
+        assert scanner_finished.wait(timeout=5)
         assert postgres_started.wait(timeout=5)
         assert not returned.is_set()
     finally:
@@ -281,7 +282,7 @@ def test_failed_validation_waits_for_sibling_and_retains_both_reports(monkeypatc
     checks, code = result[0]
     assert code == 7
     assert [(row["name"], row["status"], row["returncode"]) for row in checks] == [
-        ("portable", "FAIL", 7),
+        ("secrets", "FAIL", 7),
         ("postgres", "PASS", 0),
     ]
 
@@ -294,7 +295,7 @@ def test_baseline_failure_refuses_validation_dispatch(monkeypatch):
 
     def run(args, *, cwd):
         ran.append(args[0])
-        return SimpleNamespace(returncode=3 if args[0] == "secrets" else 0)
+        return SimpleNamespace(returncode=3 if args[0] == "workflow" else 0)
 
     monkeypatch.setattr(module.subprocess, "run", run)
     checks, code = module.run_checks(
@@ -304,7 +305,7 @@ def test_baseline_failure_refuses_validation_dispatch(monkeypatch):
         ]
     )
     assert code == 3
-    assert ran == ["lint", "workflow", "secrets"]
+    assert ran == ["lint", "workflow"]
     assert checks[-1]["status"] == "FAIL"
 
 

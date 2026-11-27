@@ -473,13 +473,13 @@ def changed_paths(root):
 
 
 def run_checks(commands, *, root=ROOT):
-    """Pass the serial baseline, then join independent portable/SQL validation.
+    """Pass lint and workflow checks, then join independent validation.
 
     Each subprocess retains its own reports. A validation failure never abandons
     its sibling: both results and elapsed times are collected before returning.
     """
     checks = []
-    validation_names = {"portable", "postgres"}
+    validation_names = {"secrets", "portable", "postgres"}
 
     def measured(item):
         name, command = item
