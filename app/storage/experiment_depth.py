@@ -2,10 +2,11 @@
 from datetime import timezone
 from email.utils import parsedate_to_datetime
 from fractions import Fraction
+from hashlib import sha256
 
 from psycopg.types.json import Jsonb
 
-from app.storage.store import encoded, hashed, stamp
+from app.storage.store import encoded, exact_time, hashed, stamp
 
 VERSION = 'experiment-public-depth-1'
 POLICY = 'public-book-win25-1'
@@ -119,43 +120,54 @@ def _metrics(http_receipts, identity_receipts, cutoff, observations):
         cache_reuse_sides=sum(r.get('reason') == 'followup_cache_reuse' for r in observations.values()))
 
 
-def save(db, task, *, known_at, observations, reason=None, kind='decision', cutoff_at=None,
-         origin_id=None, source_gaps=None, preparation=(), protect_checkpoint=False):
-    """Return the original on idempotent retry, or None when a schedule changed.
+def _evidence_time(value):
+    return exact_time(value if isinstance(value, str) else value.isoformat())
 
-    The optional writer yields immediately when a protected writer owns the
-    database. A caller can retry the same already-frozen observation later.
-    """
-    from app.research import experiment, records
 
-    game_id, schedule_id = task['game_id'], task['schedule_id']
-    target_at = clock(task['target_at'])
-    known_at, cutoff_at = clock(known_at), clock(cutoff_at or target_at)
-    target, known, cutoff = map(stamp, (target_at, known_at, cutoff_at))
-    if (known > cutoff or kind == 'decision' and cutoff != target
+def validate(payload):
+    target, known, cutoff = (exact_time(payload[key]) for key in ('target_at', 'known_at', 'cutoff_at'))
+    kind, origin_id = payload['kind'], payload['origin_id']
+    if (known > cutoff or kind == 'decision' and (cutoff != target or origin_id is not None)
             or kind == 'followup' and (not origin_id or not target < known <= cutoff)
             or kind not in ('decision', 'followup')):
         raise ValueError('experiment_depth_cutoff')
     # Only causally available input is admitted. An HTTP Date or sequence
     # number is not a receipt clock.
+    http_receipts, identity_receipts = payload['http_receipts'], payload['identity_receipts']
+    for receipt in http_receipts.values():
+        if not _evidence_time(receipt['requested_at']) <= _evidence_time(receipt['received_at']) <= known:
+            raise ValueError('experiment_depth_receipt_clock')
+    for receipt in identity_receipts.values():
+        received = _evidence_time(receipt.get('received_at') or receipt['observed_at'])
+        if received > known or 'requested_at' in receipt and _evidence_time(receipt['requested_at']) > received:
+            raise ValueError('experiment_depth_receipt_clock')
+    for observation in payload['observations'].values():
+        received = observation.get('received_at')
+        if received and _evidence_time(received) > known:
+            raise ValueError('experiment_depth_receipt_clock')
+        if (any(ref not in http_receipts for ref in observation['receipt_refs'])
+                or any(ref not in identity_receipts for ref in observation['identity_receipt_refs'])):
+            raise ValueError('experiment_depth_receipt_reference')
+
+
+def normalize(task, *, known_at, observations, reason=None, kind='decision', cutoff_at=None,
+              origin_id=None, source_gaps=None, preparation=()):
+    """Freeze the same evidence for staging and eventual publication."""
+    game_id, schedule_id = task['game_id'], task['schedule_id']
+    target_at = clock(task['target_at'])
+    known_at, cutoff_at = clock(known_at), clock(cutoff_at or target_at)
     http_receipts, identity_receipts, normalized = {}, {}, {}
     for receipt in preparation:
-        observed = stamp(receipt['received_at'])
-        if not stamp(receipt['requested_at']) <= observed <= known:
+        if not _evidence_time(receipt['requested_at']) <= _evidence_time(receipt['received_at']) <= exact_time(known_at):
             raise ValueError('experiment_depth_receipt_clock')
         identity_receipts[hashed(receipt)] = receipt
     for key, observation in observations.items():
         refs, identity_refs = [], []
         for receipt in observation.get('receipts', ()):
-            observed = stamp(receipt['received_at'])
-            if not stamp(receipt['requested_at']) <= observed <= known:
-                raise ValueError('experiment_depth_receipt_clock')
             ref = hashed(receipt)
             http_receipts[ref] = receipt
             refs.append(ref)
         for receipt in observation.get('identity_receipts', ()):
-            if stamp(receipt.get('received_at') or receipt['observed_at']) > known:
-                raise ValueError('experiment_depth_receipt_clock')
             ref = hashed(receipt)
             identity_receipts[ref] = receipt
             identity_refs.append(ref)
@@ -164,12 +176,30 @@ def save(db, task, *, known_at, observations, reason=None, kind='decision', cuto
     payload = dict(version=VERSION, game_id=game_id, schedule_id=schedule_id,
         target_at=target_at, known_at=known_at, cutoff_at=cutoff_at, kind=kind,
         observations=normalized, http_receipts=http_receipts, identity_receipts=identity_receipts, reason=reason,
-        source_gaps=source_gaps or {}, origin_id=origin_id,
-        metrics=_metrics(http_receipts, identity_receipts, cutoff, observations))
+        source_gaps=source_gaps or {}, origin_id=origin_id)
+    validate(payload)
+    payload['metrics'] = _metrics(http_receipts, identity_receipts, stamp(cutoff_at), observations)
+    return payload
+
+
+def save(db, task, *, known_at, observations, reason=None, kind='decision', cutoff_at=None,
+         origin_id=None, source_gaps=None, preparation=(), protect_checkpoint=False):
+    payload = normalize(task, known_at=known_at, observations=observations, reason=reason, kind=kind,
+        cutoff_at=cutoff_at, origin_id=origin_id, source_gaps=source_gaps, preparation=preparation)
+    return publish(db, payload, protect_checkpoint=protect_checkpoint)
+
+
+def publish(db, payload, *, protect_checkpoint=False):
+    """Commit validated evidence once, or return None when its schedule changed."""
+    from app.research import experiment, records
+
+    game_id, schedule_id, target_at, kind, origin_id = (payload[key] for key in (
+        'game_id', 'schedule_id', 'target_at', 'kind', 'origin_id'))
+    target, known, cutoff = (stamp(payload[key]) for key in ('target_at', 'known_at', 'cutoff_at'))
     body = encoded(payload)
     if len(body) > MAX_BYTES:
         raise ValueError('experiment_depth_retention_limit')
-    identity = hashed(payload)
+    identity = sha256(body).hexdigest()
     with db.transaction():
         for lock in (records.CURRENT_LOCK, records.LOCK):
             if not db.execute('SELECT pg_try_advisory_xact_lock(%s) held', (lock,)).fetchone()['held']:

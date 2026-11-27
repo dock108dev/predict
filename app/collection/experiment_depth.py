@@ -3,6 +3,7 @@ import asyncio
 from collections import defaultdict
 from datetime import timedelta
 from fractions import Fraction
+from pathlib import Path
 
 from app.comparison.sgo_native_binding import (
     bind, bind_pregame_line, event_link_id, outcome_link_id, pregame_inventory_bindings,
@@ -10,7 +11,10 @@ from app.comparison.sgo_native_binding import (
 from app.diagnostics import failure
 from app.research import experiment
 from app.storage import experiment_depth as storage, sgo_native_catalog
-from app.storage.store import connect, hashed, stamp
+from app.storage.store import ROOT, connect, hashed, stamp
+
+from .bulk_checkpoint import owned_thread
+from .experiment_depth_stage import DepthStage, InvalidStagedReceipt, MAX_PENDING_BUNDLES
 
 # Prepare catalog identity early, then leave a bounded budget for the cached
 # markets request and selective second-tier reads before the decision itself.
@@ -22,7 +26,6 @@ MANUAL_DELAY = timedelta(seconds=30)
 # Allows a common kickoff cluster across leagues while network clients
 # independently bound concurrent requests and snapshots per venue.
 MAX_GAMES_IN_FLIGHT = 16
-MAX_PENDING_BUNDLES = 48
 
 
 def targets(db, at, *, exclude=()):
@@ -189,7 +192,7 @@ def _reuse(before, after):
 
 
 class ExperimentDepth:
-    def __init__(self, service, *, connector=connect, client_factory=None, now=experiment.utc):
+    def __init__(self, service, *, connector=connect, client_factory=None, now=experiment.utc, stage_path=None):
         from .dashboard_kalshi import Catalog
 
         self.service = service
@@ -198,7 +201,9 @@ class ExperimentDepth:
         self.now = now
         self.task = None
         self.running = {}
-        self.pending = {}
+        directory = getattr(service, 'directory', ROOT / '.local/predict-current')
+        self.stage = DepthStage(Path(stage_path or directory / 'experiment-depth-stage.sqlite3'))
+        self.stage_ready = False
         self.kalshi_catalog = Catalog()
         self.progress = dict(state='starting', version=storage.VERSION)
 
@@ -360,15 +365,14 @@ class ExperimentDepth:
         decision, failures = await self._observe(novig, native_client, plan, native, cutoff, **observation_options)
         source_gaps.update(failures)
         known = self.now()
-        if known > cutoff or not self.enabled():
+        if known > cutoff:
             return
-        key = (task['game_id'], task['schedule_id'])
-        self.pending[key] = dict(task=task, known_at=known, observations=decision,
+        origin_id = await owned_thread(self._stage, task, known_at=known, observations=decision,
             reason=None if plan or native else 'unmatched_no_pregame_offer_witness',
-            source_gaps=source_gaps, preparation=preparation, followup=None)
+            source_gaps=source_gaps, preparation=preparation)
         # Stable prospective sampling keeps a follow-up independent of the
         # market result, and keeps its later evidence out of the decision.
-        if not decision or int(hashed(key[0])[:8], 16) % 5:
+        if not decision or int(hashed(task['game_id'])[:8], 16) % 5:
             return
         later = cutoff + MANUAL_DELAY
         await asyncio.sleep(max(0, (later - READ_AHEAD - self.now()).total_seconds()))
@@ -376,12 +380,12 @@ class ExperimentDepth:
             return
         followup, failures = await self._observe(novig, native_client, plan, native, later, **observation_options)
         known = self.now()
-        if known <= later and self.enabled():
+        if cutoff < known <= later:
             for offer, observation in followup.items():
                 if _reuse(decision.get(offer, {}), observation):
                     observation.update(reason='followup_cache_reuse', complete=False)
-            self.pending[key]['followup'] = dict(known_at=known, observations=followup,
-                cutoff_at=later, source_gaps=failures)
+            await owned_thread(self._stage, task, kind='followup', origin_id=origin_id,
+                known_at=known, observations=followup, cutoff_at=later, source_gaps=failures)
 
     async def _observe(self, novig, native_client, plan, native, cutoff, *, slate=None):
         from .native_experiment_depth import VENUES
@@ -402,14 +406,33 @@ class ExperimentDepth:
                 observations.update(result)
         return observations, gaps
 
-    def _persist(self, pending):
+    def _stage(self, task, **evidence):
+        payload = storage.normalize(task, **evidence)
+        return self.stage.put(payload, task['deadline_at'], self.now())
+
+    def _persist(self, payload):
         with self.connector() as db:
-            kwargs = {k: v for k, v in pending.items() if k != 'followup'}
-            saved = storage.save(db, protect_checkpoint=True, **kwargs)
-            if saved and pending['followup']:
-                storage.save(db, pending['task'], kind='followup', origin_id=saved['id'], protect_checkpoint=True,
-                             **pending['followup'])
-            return saved
+            return storage.publish(db, payload, protect_checkpoint=True)
+
+    def _publish_staged(self, entry):
+        saved_id = None
+        try:
+            payload = self.stage.load(entry)
+            saved = self._persist(payload)
+        except InvalidStagedReceipt as exc:
+            reason = str(exc)
+        except ValueError as exc:
+            if str(exc) != 'experiment_depth_followup_origin':
+                raise
+            reason = str(exc)
+        else:
+            if saved is None:
+                reason = 'schedule_no_longer_current'
+            else:
+                saved_id = saved['id']
+                reason = 'published' if saved_id == entry['receipt_id'] else 'existing_receipt'
+        self.stage.finish(entry, reason, saved_id)
+        return reason, saved_id
 
     async def tick(self, client):
         for key in list(self.running):
@@ -421,36 +444,55 @@ class ExperimentDepth:
                 failure(__name__, 'experiment_depth_collect', error)
                 self.progress = dict(self.progress, state='degraded', reason=type(error).__name__)
         at = self.now()
+        if not self.stage_ready:
+            await owned_thread(self.stage.initialize)
+            self.stage_ready = True
+        staged = await asyncio.to_thread(self.stage.entries)
         if not self.enabled():
             for job in self.running.values():
                 job.cancel()
-            self.progress = dict(self.progress, state='paused')
+            self.progress = dict(self.progress, state='paused', active=len(self.running), pending=len(staged))
             return
         if not self._near_checkpoint():
-            for key in list(self.pending):
-                pending = self.pending[key]
-                if key in self.running or pending['task']['deadline_at'] > at:
+            from app.research.records import _retention_failure
+
+            for entry in staged:
+                try:
+                    deadline = stamp(entry['target_at']) + timedelta(seconds=experiment.LATE_TOLERANCE_SECONDS)
+                    valid_deadline = stamp(entry['deadline_at']) == deadline
+                except (ValueError, OverflowError):
+                    valid_deadline = False
+                if valid_deadline and deadline > at:
                     continue
                 try:
-                    saved = await asyncio.to_thread(self._persist, pending)
+                    if valid_deadline:
+                        reason, saved_id = await owned_thread(self._publish_staged, entry)
+                    else:
+                        reason, saved_id = 'experiment_depth_stage_deadline', None
+                        await owned_thread(self.stage.finish, entry, reason)
                 except BlockingIOError:
                     break
                 except Exception as exc:
-                    failure(__name__, 'experiment_depth_persist', exc)
-                    self.progress = dict(self.progress, state='degraded', reason=str(exc)[:140])
+                    deferred = _retention_failure(exc)
+                    if not deferred:
+                        failure(__name__, 'experiment_depth_persist', exc)
+                    self.progress = dict(self.progress, state='deferred' if deferred else 'degraded',
+                                         reason=str(exc) if deferred and not isinstance(exc, OSError)
+                                         else type(exc).__name__)
                 else:
                     self.progress = dict(self.progress, state='ready',
-                        last_saved_id=saved['id'] if saved else None)
-                del self.pending[key]
+                        last_disposition=reason, last_saved_id=saved_id)
+                    staged.remove(entry)
                 break  # Yield before pulling another persistence turn.
-        capacity = MAX_GAMES_IN_FLIGHT - len(self.running)
-        if capacity > 0 and len(self.pending) < MAX_PENDING_BUNDLES:
-            excluded = self.running.keys() | self.pending.keys()
+        # Every in-flight game can stage one decision and one separate follow-up.
+        capacity = min(MAX_GAMES_IN_FLIGHT, (MAX_PENDING_BUNDLES - len(staged)) // 2) - len(self.running)
+        if capacity > 0:
+            excluded = self.running.keys() | {(row['game_id'], row['schedule_id']) for row in staged}
             upcoming = await asyncio.to_thread(self._targets, at, excluded)
             for task in upcoming[:capacity]:
                 key = (task['game_id'], task['schedule_id'])
                 self.running[key] = asyncio.create_task(self._capture(client, task))
-        self.progress = dict(self.progress, active=len(self.running), pending=len(self.pending))
+        self.progress = dict(self.progress, active=len(self.running), pending=len(staged))
 
     async def run(self):
         from .native_trading import NativeTrading
