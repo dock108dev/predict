@@ -24,8 +24,10 @@ VERSION = "native-trading-offers-1"
 HORIZON = timedelta(hours=24)
 REFERENCE_AGE = timedelta(seconds=900)
 MAX_SNAPSHOT_BYTES = 512 * 1024
-SNAPSHOT_BUDGET = 128 * 1024 * 1024
-SUPERSEDED_EVIDENCE_AGE = timedelta(minutes=15)
+SNAPSHOT_BUDGET = 384 * 1024 * 1024
+SUPERSEDED_EVIDENCE_AGE = timedelta(minutes=5)
+SUPERSEDED_PRESSURE_AGE = timedelta(minutes=2)
+PAST_OFFER_AGE = timedelta(hours=2)
 PRIORITY_WINDOW = timedelta(hours=2)
 
 # The same negative authority applies to the board, the detail/amount route,
@@ -385,13 +387,14 @@ def publish(db, observations, *, at, prune=False):
     at = stamp(at)
     from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage
     from app.collection.sgo_capabilities import CURRENT_BOOKS
+    from .sportsgameodds_reference import HISTORY_RUNWAY
 
     with db.transaction():
         db.execute("SELECT pg_advisory_xact_lock(901128)")
         if prune:
             db.execute(
                 "DELETE FROM public.native_trading_offer WHERE starts_at<=%s",
-                (at - HORIZON,),
+                (at - PAST_OFFER_AGE,),
             )
             db.execute(
                 """DELETE FROM public.native_trading_snapshot s
@@ -401,12 +404,24 @@ def publish(db, observations, *, at, prune=False):
             )
         if not observations:
             return dict(state="ready", published=0)
-        if sql_usage(db) >= SQL_BYTE_CAP - MAX_SNAPSHOT_BYTES:
+        runway = max(0, (SQL_BYTE_CAP - HISTORY_RUNWAY - sql_usage(db)) // 2)
+        if runway < MAX_SNAPSHOT_BYTES:
             return dict(state="deferred", reason="native_storage_capacity", published=0)
         retained = db.execute(
             "SELECT COALESCE(sum(payload_bytes),0) n FROM public.native_trading_snapshot"
         ).fetchone()["n"]
-        available = SNAPSHOT_BUDGET - retained
+        if SNAPSHOT_BUDGET - retained < len(observations) * MAX_SNAPSHOT_BYTES:
+            expired = db.execute(
+                """WITH evict AS (
+                SELECT s.id FROM public.native_trading_snapshot s WHERE s.created_at<=%s
+                AND NOT EXISTS (SELECT 1 FROM public.native_trading_offer o WHERE o.snapshot_id=s.id)
+                ORDER BY s.created_at,s.id LIMIT 1024)
+                DELETE FROM public.native_trading_snapshot s USING evict WHERE s.id=evict.id
+                RETURNING s.payload_bytes""",
+                (at - SUPERSEDED_PRESSURE_AGE,),
+            ).fetchall()
+            retained -= sum(row["payload_bytes"] for row in expired)
+        available = min(runway, SNAPSHOT_BUDGET - retained)
         if available <= 0:
             return dict(
                 state="deferred", reason="native_snapshot_capacity", published=0

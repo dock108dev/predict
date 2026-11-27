@@ -16,6 +16,22 @@ from tests.test_liquidity_execution import admitted
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class NativeTradingSQL(PregameFixture):
+    async def test_storage_pressure_rotates_only_aged_superseded_evidence(self):
+        at = stamp(AT)
+        with self.connect() as db:
+            db.execute(
+                """INSERT INTO public.native_trading_snapshot
+                (id,offer_id,created_at,payload_bytes,payload) VALUES
+                ('expired','old',%s,%s,'{}'),('recent','current',%s,1024,'{}')""",
+                (at - timedelta(minutes=3), native_trading.SNAPSHOT_BUDGET, at),
+            )
+            report = native_trading.publish(db, {"fixture": {}}, at=at)
+            self.assertEqual(report["state"], "ready")
+            self.assertEqual(
+                db.execute("SELECT id FROM public.native_trading_snapshot").fetchall(),
+                [{"id": "recent"}],
+            )
+
     async def asyncSetUp(self):
         await super().asyncSetUp()
         with self.connect() as db:

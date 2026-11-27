@@ -50,12 +50,12 @@ The evidence drawer and JSON export use the saved native revision. Explicit
 amount requests use the latest fresh stored book for the same native instrument,
 occurrence and settlement terms, and return that book's evidence and price.
 Ordinary Dashboard and export reads do not acquire source data or schedule
-calculations. Native evidence has a separate 128 MiB logical allowance and the
-existing whole-database storage guard. Superseded native snapshots older than
-15 minutes are eligible for removal. The current pointer remains available
-through one day after kickoff. Export a native revision before it rotates to retain the
-evidence independently. Collection never prunes older experiment or accounting
-records through this path.
+calculations. Native evidence has a separate 384 MiB logical allowance and the
+existing whole-database storage guard. Superseded native snapshots are eligible
+for rotation after five minutes, or two minutes near the native allowance.
+The current pointer is eligible for rotation two hours after kickoff. Export a
+native revision to retain its evidence independently. This rotation applies to
+the Dashboard's native evidence tables.
 
 ## ProphetX access
 
