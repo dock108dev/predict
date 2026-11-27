@@ -216,6 +216,27 @@ class SportsGameOddsWorker:
             return await owned_thread(self.request_in_scope, params)
         return self.request_in_scope(params)
 
+    async def dispatch_in_scope(self, params):
+        from .activity_collector import ActivityBudgetDelayed
+        from .bulk_checkpoint import owned_thread
+        from .experiment_acquisition import late_protection_until
+
+        if not await self.request_in_scope_async(params):
+            return False
+        if not await owned_thread(self._renew_pull, self.collector.pull_id):
+            raise ValueError('ordinary_page_storage_reservation_expired')
+        until = late_protection_until(self)
+        if until and getattr(self.service, 'activity_mode_enabled', False):
+            raise ActivityBudgetDelayed('protected_tminus10_capture_due', until)
+        return not (until or self.experiment_late_waiting)
+
+    def _renew_pull(self, pull_id):
+        from app.storage.acquisition_snapshot import renew_ordinary_page
+        from app.storage.store import connect
+
+        with connect() as db:
+            return renew_ordinary_page(db, pull_id)
+
     def request_storage_interval(self):
         """Let the owned page settle and publish, then prevent another dispatch."""
         self.storage_interval_requested = True
@@ -263,6 +284,7 @@ class SportsGameOddsWorker:
         self.collector = GuardedPageCollector(self.ledger, self.window_id, self.transport,
                                               controls=self.controls, account_usage=pacing_usage,
                                               eligible=self.request_in_scope_async,
+                                              eligible_after_reservation=self.dispatch_in_scope,
                                               receipt_retainer=self.retain_original)
         self.metrics.update(state='waiting', account_tier=observed.get('tier'), reset_basis=reset_basis)
         self._account_status()
@@ -386,12 +408,10 @@ class SportsGameOddsWorker:
             return begin(db, params, at=self.now())
 
     def _retain_pull(self, page, retrieval):
-        from app.storage.acquisition_snapshot import accept, finish
+        from app.storage.acquisition_snapshot import accept_ordinary_page
         from app.storage.store import connect
         with connect() as db:
-            accept(db, page)
-            if retrieval is not None:
-                finish(db, page.pull_id, 'partial', details=dict(reason='working_surface_only', event_retrieval=retrieval))
+            accept_ordinary_page(db, page, retrieval)
 
     def _finish_discovery(self, page, traversal, reason):
         from app.storage.acquisition_snapshot import finish
@@ -408,7 +428,7 @@ class SportsGameOddsWorker:
         from app.storage.store import connect
         with connect() as db:
             if keep_cursor:
-                db.execute("""UPDATE public.market_pull SET details=details||
+                db.execute("""UPDATE public.market_pull SET details=(details-'ordinary_page_lease_until')||
                     jsonb_build_object('last_failed_cursor_attempt',%s::text)
                     WHERE pull_id=%s AND state='in_progress'""", (reason, pull_id))
             else:
@@ -544,6 +564,7 @@ class SportsGameOddsWorker:
                     type(exc).__name__, bool(params.get('cursor')) and not isinstance(exc, RejectedCursor))
             raise
         finally:
+            self.collector.pull_id = None
             self.page_in_progress = False
             self._account_status()
 

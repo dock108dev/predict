@@ -20,6 +20,7 @@ def acquisition_manifest(monkeypatch):
     # This module isolates scheduling from durable SQL. SQL acquisition tests
     # exercise the real manifest and its transaction/capacity boundaries.
     monkeypatch.setattr(SportsGameOddsWorker, '_begin_pull', lambda self, params: 'fixture-pull')
+    monkeypatch.setattr(SportsGameOddsWorker, '_renew_pull', lambda *args: True)
     monkeypatch.setattr(SportsGameOddsWorker, '_retain_pull', lambda *args: None)
     monkeypatch.setattr(SportsGameOddsWorker, '_fail_pull', lambda *args: None)
 

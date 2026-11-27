@@ -22,6 +22,7 @@ from tests.sportsgameodds_fixtures import NOW, event
 def acquisition_manifest(monkeypatch):
     # These scenarios supply provider pages and isolate the cursor owner.
     monkeypatch.setattr(SportsGameOddsWorker, '_begin_pull', lambda *args: 'discovery-pull')
+    monkeypatch.setattr(SportsGameOddsWorker, '_renew_pull', lambda *args: True)
     monkeypatch.setattr(SportsGameOddsWorker, '_retain_pull', lambda *args: None)
     monkeypatch.setattr(SportsGameOddsWorker, '_fail_pull', lambda *args: None)
     monkeypatch.setattr(SportsGameOddsWorker, '_finish_discovery', lambda *args: None)

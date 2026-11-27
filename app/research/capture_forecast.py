@@ -6,7 +6,7 @@ from math import ceil
 from app.collection.activity_mode import OBJECTS_PER_15_MINUTES, OBJECTS_PER_DAY, monitor_schedule
 from app.collection import experiment_acquisition as acquisition
 from app.storage.store import stamp
-from .experiment import MIN_CHECKPOINT_RUNWAY, _closure, _value, clock
+from .experiment import _closure, _value, clock, late_checkpoint_bytes
 
 SAMPLE_HOURS = 72
 
@@ -84,7 +84,7 @@ def _observed_batches(db, since, at):
 
 
 def _windows(db, at, headroom_bytes, observed):
-    rows = db.execute("""SELECT late.target_at,late.deadline_at,game.policy_id,
+    rows = db.execute("""SELECT late.target_at,late.deadline_at,game.policy_id,game.event->>'league' league,
         coalesce(game.event->>'league'='NCAAB',false) is_ncaab,
         coalesce(early.state IN ('pending','claimed'),false) early_work_pending,
         late.state='claimed' already_claimed, game.late_reserved_bytes reserved_bytes
@@ -150,6 +150,9 @@ def _windows(db, at, headroom_bytes, observed):
         monitor_slot = (stamp(monitor_schedule(monitor_settings, at=deadline)['current_slot_at'])
                         if monitor_settings else None)
         unreserved = sum(row['reserved_bytes'] == 0 for row in group)
+        top_ups = [late_checkpoint_bytes(row['league']) - row['reserved_bytes'] for row in group
+                   if not row['already_claimed'] and row['reserved_bytes'] < late_checkpoint_bytes(row['league'])]
+        minimum_top_up = min(top_ups, default=0)
         tasks = len(group)
         yield dict(target_at=clock(target), deadline_at=clock(deadline), scheduled_tasks=tasks,
             ncaab_tasks=sum(row['is_ncaab'] for row in group),
@@ -160,8 +163,9 @@ def _windows(db, at, headroom_bytes, observed):
             maximum_event_requests=tasks, maximum_event_objects=tasks,
             reserved_bytes=int(sum(row['reserved_bytes'] for row in group)),
             tasks_without_storage_reservation=unreserved,
-            unreserved_admission_floor_bytes=MIN_CHECKPOINT_RUNWAY if unreserved else 0,
-            current_headroom_below_unreserved_claim_floor=bool(unreserved and headroom_bytes < MIN_CHECKPOINT_RUNWAY),
+            unreserved_admission_floor_bytes=minimum_top_up,
+            estimated_storage_top_up_bytes=sum(top_ups),
+            current_headroom_below_unreserved_claim_floor=headroom_bytes < minimum_top_up,
             competing_non_late_tasks=len(deferred), competing_claimed_non_late_tasks=sum(
                 task['state'] == 'claimed' for task in deferred),
             ordinary_discovery_slot_at=clock(monitor_slot) if monitor_slot and monitor_slot >= lead_starts else None,
@@ -212,6 +216,6 @@ def late_capture_forecast(db, *, at, headroom_bytes):
         forecast_limitations=('Measured service uses successful fully published batches of the same sizes. '
             'Claim polling, an in-flight ordinary page or shared writer, and local rate waits can consume additional runway. '
             'Planning includes all declared late tasks, including any currently claimed members. '
-            'Each unreserved task may use shared headroom under fresh claim and actual-size admission checks. '
+            'Pending tasks below their league storage estimate use shared headroom at claim. '
             'Account, controls, early baselines and storage are rechecked at execution.'),
         windows=windows)

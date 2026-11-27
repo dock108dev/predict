@@ -69,7 +69,7 @@ price context and their own main progression without acquiring offer/fee support
 
 Shared event, quote, reference and fee subobjects are content-addressed immutable
 dependencies. Only required early/late checkpoints, schedule changes, bounded
-outcome follow-ups and their dependencies are retained. The 512 MiB logical
+outcome follow-ups and their dependencies are retained. The 2 GiB
 research allocation covers legacy evidence, checkpoint and market witnesses,
 workspace versions, operational metadata and late reservations. The previous
 128 MiB allocation filled as Data witnesses accumulated alongside the frozen
@@ -79,13 +79,24 @@ sublimit and individual response bounds still apply. Evidence stays immutable
 and refusals remain visible. This finite allocation gives continued collection
 room after rollout. It establishes no guaranteed collection period.
 
-New early captures reserve estimated space for both the late research packet
-and its inspectable Data publication. A claimed late task can spend its own
-protected space to record the pull manifest before dispatch. Existing late
-reservations and past refusals stay recorded. Settings reports unreserved
-space, protected reservations, separate SQL and disk guards, and the history
-of refused or missed checkpoints. An eligible attempt still depends on the
-source, account gates, and the declared capture window.
+Early captures reserve space for the late research packet and its Data
+publication. The estimate uses the larger of the early packet with margin and
+the floor for the league. Successful hosted captures measured complete late
+packets up to 5,730,514 bytes. The early packet with 25% margin was smaller
+than the late packet for 156 of 175 paired captures. The largest conservative
+publication estimate was 7,472,713 bytes including the checkpoint. Floors
+rounded up from league estimates are 8 MiB for NBA, 7 MiB for NCAAF and NFL,
+5 MiB for NCAAB, and 2 MiB for NHL. Other leagues use 8 MiB until they have
+comparable evidence.
+
+The collector tops up older reservations under the research writer lock,
+charges the manifest to its own game, and checks batch SQL and disk runway
+again before the paid dispatch. The captured packet and market publication
+still require exact-size admission. An unusually large response can exceed
+the estimate. Ordinary requests set aside the parser-bounded space required
+for paid response membership and release it when the page is retained or the
+in-flight lease ends. Settings reports protected reservations, estimated
+top-ups from shared space, separate SQL and disk guards, and refusals.
 
 The first deployed full-surface run measured 11.33 MB of shared-JSON evidence
 for a two-checkpoint game: thousands of small records and reference hashes still

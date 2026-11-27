@@ -123,6 +123,23 @@ def test_guarded_page_keeps_paid_receipt_and_dispatch_clocks(tmp_path):
     asyncio.run(scenario())
 
 
+def test_late_storage_runway_refusal_precedes_any_paid_request(tmp_path):
+    from app.collection.current_storage_policy import SQL_BYTE_CAP, MIB
+
+    async def scenario():
+        worker, task, _, dispatched = setup(tmp_path)
+        task['storage_reservation_bytes'] = 2 * MIB
+        with (storage_patches(),
+              patch('app.collection.current_storage_policy.sql_usage', return_value=SQL_BYTE_CAP - 10 * MIB),
+              pytest.raises(acquisition.CheckpointUnavailable, match='research_sql_runway') as failure):
+            await acquisition.acquire(worker, task)
+        assert not failure.value.dispatched and not dispatched
+        state = worker.ledger.status(worker.window_id)
+        assert (state['charged'], state['held'], state['interrupted']) == (0, 0, 0)
+
+    asyncio.run(scenario())
+
+
 def test_delayed_receipt_is_paid_but_never_backdated_into_checkpoint(tmp_path):
     async def scenario():
         worker, task, _, dispatched = setup(tmp_path, latency=61)

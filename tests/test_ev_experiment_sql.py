@@ -385,7 +385,8 @@ class ExperimentSQL(LatestBoardFixture):
             reserved = records.retention_usage(db)
             game = db.execute('SELECT late_reserved_bytes FROM public.ev_experiment_game').fetchone()
             combined = first['new_unique_payload_bytes'] + witness_bytes
-            self.assertEqual(game['late_reserved_bytes'], combined + max(owner.MIN_CHECKPOINT_RUNWAY, combined // 4))
+            self.assertEqual(game['late_reserved_bytes'], max(owner.late_checkpoint_bytes(event['league']),
+                combined + max(owner.MIN_CHECKPOINT_RUNWAY, combined // 4)))
             self.advance(owner.stamp(event['starts_at']) - timedelta(seconds=600))
             cap = reserved['total'] + reserved['reserved']
             with patch.object(records, 'TOTAL_BYTE_CAP', cap):

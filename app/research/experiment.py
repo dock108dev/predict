@@ -31,7 +31,12 @@ CLAIM_TIMEOUT_SECONDS = 120
 MAX_EVENT_BYTES = 8192
 MIN_CHECKPOINT_RUNWAY = 64 * 1024
 LATE_BATCH_SIZE = 25
-RETENTION_VERSION = 'checkpoint-and-market-witness-2'
+RETENTION_VERSION = 'checkpoint-and-market-witness-3'
+# Full checkpoint and conservative market publication admission estimates,
+# calibrated against completed hosted captures.
+# Early snapshots, especially for college basketball, can omit most late lines.
+LATE_CHECKPOINT_MIB = {'NBA': 8, 'NCAAB': 5, 'NCAAF': 7, 'NFL': 7, 'NHL': 2}
+DEFAULT_LATE_CHECKPOINT_MIB = 8
 
 
 def _retention_policy():
@@ -39,7 +44,12 @@ def _retention_policy():
         shared_inputs='content_addressed_nested_JSON', no_automatic_eviction=True,
         total_byte_cap=records.TOTAL_BYTE_CAP, max_games=MAX_GAMES,
         metadata_bytes_per_game=GAME_METADATA_BYTES,
-        late_reservation='early_unique_bytes_plus_market_publication_estimate_plus_max_64KiB_or_25_percent')
+        late_reservation='larger_of_early_paired_estimate_with_margin_or_observed_late_packet_floor',
+        late_reservation_floor_mib=dict(LATE_CHECKPOINT_MIB, other=DEFAULT_LATE_CHECKPOINT_MIB))
+
+
+def late_checkpoint_bytes(league):
+    return LATE_CHECKPOINT_MIB.get(league, DEFAULT_LATE_CHECKPOINT_MIB) * 1024 * 1024
 
 
 def utc():
@@ -97,11 +107,15 @@ def _admit(db, size, *, reserve=0):
     used = records.retention_usage(db)
     if used["total"] + used["reserved"] + size + reserve > records.TOTAL_BYTE_CAP:
         raise ValueError("research_retention_capacity")
+    _storage_runway(db, size + reserve)
+
+
+def _storage_runway(db, size):
     from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage, require_disk_space
     from app.storage.store import ROOT
-    if sql_usage(db) + (size + reserve) * 3 + 8 * 1024 * 1024 > SQL_BYTE_CAP:
+    if sql_usage(db) + size * 3 + 8 * 1024 * 1024 > SQL_BYTE_CAP:
         raise ValueError("research_sql_runway")
-    require_disk_space(ROOT / ".local/postgres", append_bytes=(size + reserve) * 3)
+    require_disk_space(ROOT / ".local/postgres", append_bytes=size * 3)
 
 
 def _write(db, kind, value, *, game_id=None, checkpoint=None, reserve=0, summary=None):
@@ -306,8 +320,9 @@ def discover(db, events, *, at=None):
                             (schedule_id, state, target, deadline, "cancelled" if cancelled else
                              "rescheduled_after_checkpoint" if checkpoint == "late" and row["late_id"] else None,
                              row["id"], checkpoint))
-                    if cancelled:
+                    if cancelled or at > stamp(schedule["deadline_at"]):
                         db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=0 WHERE id=%s", (row["id"],))
+                    if cancelled:
                         db.execute("UPDATE public.ev_experiment_task SET state='cancelled',last_reason='cancelled' WHERE game_id=%s AND checkpoint='early' AND state<>'captured'", (row["id"],))
                         result["cancelled"] += 1
                     if changed:
@@ -441,13 +456,20 @@ def due(db, *, at=None, limit=1, late_only=False, recheck_clock=False):
             if row["checkpoint"] == "outcome" and row["attempts"] >= len(OUTCOME_OFFSETS):
                 db.execute("UPDATE public.ev_experiment_task SET state='exhausted',last_reason='outcome_request_budget_exhausted',updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='outcome'", (row["game_id"],))
                 continue
-            own_reservation = row["late_reserved_bytes"] if row["checkpoint"] == "late" else 0
-            if usage["total"] + usage["reserved"] + MIN_CHECKPOINT_RUNWAY > records.TOTAL_BYTE_CAP + own_reservation:
+            late = row["checkpoint"] == "late"
+            own_reservation = row["late_reserved_bytes"] if late else 0
+            required = late_checkpoint_bytes(row["event"]["league"]) if late else MIN_CHECKPOINT_RUNWAY
+            additional = max(0, required - own_reservation)
+            if usage["total"] + usage["reserved"] + additional > records.TOTAL_BYTE_CAP:
                 db.execute("UPDATE public.ev_experiment_task SET state='refused',refusals=refusals+1,first_refused_at=COALESCE(first_refused_at,%s),last_refused_at=%s,last_reason='research_retention_capacity_before_dispatch' WHERE game_id=%s AND checkpoint=%s", (at,at,row["game_id"],row["checkpoint"]))
-                if row["checkpoint"] == "late":
+                if late:
                     db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=0 WHERE id=%s", (row["game_id"],))
                     usage["reserved"] -= own_reservation
                 continue
+            if late and additional:
+                db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=%s WHERE id=%s",
+                           (required, row["game_id"]))
+                usage["reserved"] += additional
             token = uuid4().hex
             db.execute("UPDATE public.ev_experiment_task SET state='claimed',token=%s,claimed_at=%s,attempts=attempts+1,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint=%s",
                        (token, at, row["game_id"], row["checkpoint"]))
@@ -458,7 +480,8 @@ def due(db, *, at=None, limit=1, late_only=False, recheck_clock=False):
                 policy_id=row['policy_id'], requested_scope=deepcopy(policies[row['policy_id']]['requested_scope']),
                 schedule_id=row["schedule_id"], event=row["event"], target_at=clock(row["target_at"]),
                 deadline_at=clock(row["deadline_at"]), requested_at=clock(at), attempt=row["attempts"]+1,
-                outcome_slot_index=row["slot_index"]))
+                outcome_slot_index=row["slot_index"],
+                storage_reservation_bytes=own_reservation + additional if late else 0))
     return claimed
 
 
@@ -721,6 +744,7 @@ def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
                 # games' reserved reproduction space remains protected.
                 db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=0 WHERE id=%s", (game_id,))
             identity, size = _write(db, "checkpoint", value, game_id=game_id, checkpoint=checkpoint,
+                reserve=market_publication_bytes,
                 summary=dict(requested_at=clock(requested),received_at=clock(received),known_at=clock(known),
                     target_at=clock(task["target_at"]),deadline_at=clock(task["deadline_at"]),
                     coverage=deepcopy(snapshot.get("coverage") or {}),
@@ -732,8 +756,9 @@ def capture(db, game_id, checkpoint, snapshot, *, token=None, requested_at=None,
                     # The late transaction must retain both immutable research
                     # inputs and the inspectable Data publication.
                     paired_bytes = size + market_publication_bytes
-                    reserve = paired_bytes + max(MIN_CHECKPOINT_RUNWAY, paired_bytes // 4)
-                    _admit(db, 0, reserve=reserve)
+                    reserve = max(late_checkpoint_bytes(game["event"]["league"]),
+                                  paired_bytes + max(MIN_CHECKPOINT_RUNWAY, paired_bytes // 4))
+                    _admit(db, market_publication_bytes, reserve=reserve)
                 else:
                     db.execute("UPDATE public.ev_experiment_task SET state='missed',token=NULL,last_reason=CASE WHEN last_reason='late_discovery_no_pre_target_baseline' THEN last_reason ELSE 'early_baseline_after_target' END,updated_at=clock_timestamp() WHERE game_id=%s AND checkpoint='late' AND state<>'captured'", (game_id,))
                 db.execute("UPDATE public.ev_experiment_game SET late_reserved_bytes=%s WHERE id=%s", (reserve,game_id))

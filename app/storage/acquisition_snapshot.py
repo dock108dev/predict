@@ -5,6 +5,7 @@ object returned in a closed explicit-ID request proves returned coverage, not
 that every requested book quotes every line or that omissions are withdrawals.
 """
 from dataclasses import dataclass
+from datetime import timedelta
 from uuid import uuid4
 from hashlib import sha256
 import json
@@ -12,10 +13,17 @@ import zlib
 from psycopg.types.json import Jsonb
 
 from app.collection.sportsgameodds_transport import ODD_IDS
+from app.collection.sportsgameodds_adapter import MAX_EVENTS, MAX_IDENTITY_CHARS
 from app.comparison.reference_scope import REQUEST_BOOKS
 from .store import encoded, stamp, hashed
 
 FAMILIES = ('moneyline', 'spread', 'total')
+# Membership plus request/return, omission and alias lists, including JSON
+# escapes and row overhead. The parser bounds the response independently of
+# the requested limit. A failed process releases only its storage lease.
+ORDINARY_PAGE_BYTES = 16 * MAX_EVENTS * (6 * MAX_IDENTITY_CHARS + 4) + 4096
+ORDINARY_LEASE_METADATA_BYTES = 128
+ORDINARY_PAGE_LEASE = timedelta(minutes=2)
 
 
 def _admit(db, size):
@@ -61,45 +69,85 @@ def start(db, params, *, at, pull_id=None, event=None, started_order=None, late_
     size += sum(256 + 2 * len(encoded(description)) for _, _, description in scopes)
     with db.transaction():
         if late_task:
-            # The manifest is written before a late response can release its
-            # reservation. Charge that small write to the active claim's own
-            # allowance, under the same lock as all research budget checks.
-            from app.research.experiment import _lock
+            from app.research.experiment import _lock, _storage_runway
             _lock(db)
-            db.execute('''UPDATE public.ev_experiment_game g
-                SET late_reserved_bytes=greatest(0, g.late_reserved_bytes-%s)
-                WHERE g.id=%s AND EXISTS(SELECT 1 FROM public.ev_experiment_task t
-                    WHERE t.game_id=g.id AND t.checkpoint='late' AND t.state='claimed' AND t.token=%s)''',
-                (size, late_task['game_id'], late_task['token']))
-        _admit(db, size)
-        if started_order is None:
-            db.execute('''INSERT INTO public.market_pull(pull_id,requested_at,request_scope,state,details)
-                VALUES(%s,%s,%s,'in_progress',%s)''',
-                (pull_id, at, Jsonb(scope), Jsonb(details)))
+            _storage_runway(db, size)
+            prior_scope_bytes = _scope_bytes(db)
         else:
-            db.execute('''INSERT INTO public.market_pull(pull_id,started_order,requested_at,request_scope,state,details)
-                VALUES(%s,%s,%s,%s,'in_progress',%s)''',
-                (pull_id,started_order,at,Jsonb(scope),Jsonb(details)))
+            _admit(db, size)
+        if started_order is None:
+            pull = db.execute('''INSERT INTO public.market_pull(pull_id,requested_at,request_scope,state,details)
+                VALUES(%s,%s,%s,'in_progress',%s) RETURNING allocation_bytes''',
+                (pull_id, at, Jsonb(scope), Jsonb(details))).fetchone()
+        else:
+            pull = db.execute('''INSERT INTO public.market_pull(pull_id,started_order,requested_at,request_scope,state,details)
+                VALUES(%s,%s,%s,%s,'in_progress',%s) RETURNING allocation_bytes''',
+                (pull_id,started_order,at,Jsonb(scope),Jsonb(details))).fetchone()
         for event_id, family, description in scopes:
             db.execute('''INSERT INTO public.market_pull_scope
                 (pull_id,event_id,family,coverage,state) VALUES(%s,%s,%s,%s,'in_progress')''',
                 (pull_id,event_id,family,Jsonb(description)))
+        if late_task:
+            # Scope rows can extend a PostgreSQL page, so consume the same
+            # charged growth that retention_usage sees while the lock is held.
+            charged = pull['allocation_bytes'] + max(0, _scope_bytes(db) - prior_scope_bytes)
+            debited = db.execute('''UPDATE public.ev_experiment_game g
+                SET late_reserved_bytes=g.late_reserved_bytes-%s
+                WHERE g.id=%s AND g.late_reserved_bytes>=%s AND EXISTS(
+                    SELECT 1 FROM public.ev_experiment_task t WHERE t.game_id=g.id AND t.checkpoint='late'
+                    AND t.state='claimed' AND t.token=%s AND t.schedule_id=g.schedule_id)
+                RETURNING g.id''', (charged, late_task['game_id'], charged, late_task['token'])).fetchone()
+            if not debited:
+                raise ValueError('experiment_authority_or_window_closed')
+            _admit(db, 0)
     return pull_id
+
+
+def _scope_bytes(db):
+    return db.execute("SELECT pg_total_relation_size('public.market_pull_scope') bytes").fetchone()['bytes']
 
 
 def begin(db, params, *, at):
     """Resume only a declared discovery chain's exact accepted next cursor."""
-    if params.get('cursor'):
-        scope = {key:value for key,value in params.items() if key != 'cursor'}
-        cursor_hash = sha256(params['cursor'].encode()).hexdigest()
-        row = db.execute('''SELECT pull_id FROM public.market_pull WHERE state='in_progress'
-            AND request_scope=%s AND details->>'next_cursor_hash'=%s
-            ORDER BY started_order DESC LIMIT 1''', (Jsonb(scope),cursor_hash)).fetchone()
-        if row:
-            return row['pull_id']
-        # A resumed old traversal without its authentic manifest remains a
-        # narrower, uncertain operation, never a fabricated complete pull.
-    return start(db, params, at=at)
+    from app.research.experiment import _lock
+
+    with db.transaction():
+        _lock(db)
+        pull_id = None
+        if params.get('cursor'):
+            scope = {key:value for key,value in params.items() if key != 'cursor'}
+            cursor_hash = sha256(params['cursor'].encode()).hexdigest()
+            row = db.execute('''SELECT pull_id FROM public.market_pull WHERE state='in_progress'
+                AND request_scope=%s AND details->>'next_cursor_hash'=%s
+                ORDER BY started_order DESC LIMIT 1''', (Jsonb(scope),cursor_hash)).fetchone()
+            if row:
+                pull_id = row['pull_id']
+        # A traversal without its authentic manifest remains uncertain.
+        pull_id = pull_id or start(db, params, at=at)
+        if db.execute('''SELECT 1 FROM public.market_pull WHERE pull_id=%s
+            AND (details->>'ordinary_page_lease_until')::timestamptz > clock_timestamp()''', (pull_id,)).fetchone():
+            raise ValueError('ordinary_page_storage_already_reserved')
+        _admit(db, ORDINARY_PAGE_BYTES + ORDINARY_LEASE_METADATA_BYTES)
+        db.execute('''UPDATE public.market_pull
+            SET details=details||jsonb_build_object('ordinary_page_lease_until',clock_timestamp()+%s)
+            WHERE pull_id=%s''', (ORDINARY_PAGE_LEASE, pull_id))
+    return pull_id
+
+
+def renew_ordinary_page(db, pull_id):
+    """Verify the storage lease again after the financial reservation."""
+    from app.research.experiment import _lock, _storage_runway
+
+    with db.transaction():
+        _lock(db)
+        held = db.execute('''UPDATE public.market_pull
+            SET details=details||jsonb_build_object('ordinary_page_lease_until',clock_timestamp()+%s)
+            WHERE pull_id=%s AND state='in_progress'
+              AND (details->>'ordinary_page_lease_until')::timestamptz > clock_timestamp()
+            RETURNING pull_id''', (ORDINARY_PAGE_LEASE, pull_id)).fetchone()
+        if held:
+            _storage_runway(db, ORDINARY_PAGE_BYTES)
+    return bool(held)
 
 
 def _membership(page):
@@ -110,13 +158,14 @@ def _membership(page):
     return result
 
 
-def accept(db, page):
+def accept(db, page, *, final_details=None):
     """Store the child ledger attempt and exact accepted response membership."""
     if not page.pull_id or not page.attempt_id or not page.received_at:
         raise ValueError('acquisition_membership_unverified')
     membership = _membership(page)
     with db.transaction():
-        _admit(db, len(encoded(membership))+256)
+        details_bytes = len(encoded(final_details)) * 2 + 256 if final_details else 0
+        _admit(db, 2 * len(encoded(membership)) + 256 + details_bytes)
         previous = db.execute('''SELECT receipt_sha256,received_at,membership FROM public.market_pull_receipt
             WHERE pull_id=%s AND attempt_id=%s''',(page.pull_id,page.attempt_id)).fetchone()
         if previous:
@@ -131,11 +180,25 @@ def accept(db, page):
             (Jsonb(dict(next_cursor_hash=sha256(page.next_cursor.encode()).hexdigest() if page.next_cursor else None)),page.pull_id))
 
 
+def accept_ordinary_page(db, page, retrieval):
+    """Transfer the in-flight receipt reservation into the exact retained page."""
+    from app.research.experiment import _lock
+
+    with db.transaction():
+        _lock(db)
+        db.execute('''UPDATE public.market_pull SET details=details-'ordinary_page_lease_until'
+            WHERE pull_id=%s AND details ? 'ordinary_page_lease_until' ''', (page.pull_id,))
+        details = dict(reason='working_surface_only', event_retrieval=retrieval) if retrieval is not None else None
+        accept(db, page, final_details=details)
+        if details is not None:
+            finish(db, page.pull_id, 'partial', details=details)
+
+
 def finish(db, pull_id, state, *, details=None):
     if state not in ('complete','partial','failed','cancelled','refused'):
         raise ValueError('invalid_acquisition_terminal_state')
     with db.transaction():
-        db.execute('''UPDATE public.market_pull SET state=%s,details=details||%s
+        db.execute('''UPDATE public.market_pull SET state=%s,details=(details-'ordinary_page_lease_until')||%s
             WHERE pull_id=%s AND state='in_progress' ''', (state,Jsonb(details or {}),pull_id))
         db.execute('''UPDATE public.market_pull_scope SET state=%s WHERE pull_id=%s
             AND state='in_progress' ''', (state,pull_id))

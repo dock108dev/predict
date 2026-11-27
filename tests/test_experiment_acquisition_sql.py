@@ -135,10 +135,16 @@ class ExperimentAcquisitionSQL(PregameFixture):
         from app.collection.experiment_depth import ExperimentDepth
         from app.collection.original_receipts import read
         from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+        from app.research import records
         from app.research.capture_forecast import late_capture_forecast
+        from app.storage import acquisition_snapshot
 
         at, bodies = self.late_pair()
         with self.connect() as db:
+            ordinary_request = dict(leagueID='NBA', oddID=','.join(sorted(acquisition.ODD_IDS)), limit=2)
+            ordinary_pull = acquisition_snapshot.begin(db, ordinary_request, at=at)
+            usage = records.retention_usage(db)
+            cap = usage['total'] + usage['reserved'] + 2 * experiment.late_checkpoint_bytes('NBA') + 256 * 1024
             before = late_capture_forecast(db, at=at, headroom_bytes=100_000_000)
             self.assertEqual(len(before['windows']), 1)
             self.assertEqual(before['windows'][0]['planned_event_requests'], 1)
@@ -170,12 +176,23 @@ class ExperimentAcquisitionSQL(PregameFixture):
             return {}
 
         with (patch.object(acquisition, 'connect', self.connect),
+              patch.object(records, 'TOTAL_BYTE_CAP', cap),
               patch.object(optional, '_market_reads', missing_public_book),
               patch('app.collection.experiment_depth.failure')):
             running = asyncio.create_task(scheduler.tick())
             venue = asyncio.create_task(optional._observe(None, SimpleNamespace(read_native=other_venues),
                 {}, {}, worker.now() + timedelta(seconds=1)))
             await asyncio.wait_for(fetching.wait(), timeout=5)
+            with self.connect() as db:
+                from app.storage import paper_result_queue
+
+                usage = records.retention_usage(db)
+                self.assertEqual(usage['market_page_reserved_bytes'], acquisition_snapshot.ORDINARY_PAGE_BYTES)
+                self.assertLess(cap - usage['total'] - usage['reserved'], experiment.late_checkpoint_bytes('NBA'))
+                with self.assertRaisesRegex(paper_result_queue.PublicationDeferred, 'protected_tminus10_capture_due'):
+                    with db.transaction():
+                        paper_result_queue._admit(db, 1024)
+                self.assertTrue(acquisition_snapshot.renew_ordinary_page(db, ordinary_pull))
             with self.assertRaisesRegex(ActivityBudgetDelayed, 'protected_tminus10_capture_due'):
                 await SportsGameOddsWorker._fetch(worker, {'leagueID': 'NCAAB'})
             self.assertEqual(await venue, ({}, {'novig': 'unavailable'}))
@@ -190,6 +207,8 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 FROM market_pull p JOIN market_pull_receipt r USING (pull_id)
                 WHERE p.state='complete' AND p.details ? 'timings'"""))
             states = list(db.execute("SELECT state,attempts FROM ev_experiment_task WHERE checkpoint='late'"))
+            acquisition_snapshot.finish(db, ordinary_pull, 'cancelled')
+            self.assertEqual(records.retention_usage(db)['market_page_reserved_bytes'], 0)
         self.assertEqual(states, [dict(state='captured', attempts=1)] * 2)
         self.assertEqual(len(pulls), 2)
         self.assertEqual(len({row['attempt_id'] for row in pulls}), 1)
@@ -207,6 +226,8 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 'response_received_at', 'original_retention_finished_at', 'parse_finished_at',
                 'calculation_finished_at', 'projection_ready_at', 'checkpoint_recorded_at')]
             self.assertEqual(ordered, sorted(ordered))
+            self.assertLessEqual(at - timedelta(seconds=2), ordered[0])
+            self.assertLessEqual(datetime.fromisoformat(clocks['persistence_checked_at']), at + timedelta(seconds=58))
 
         with self.connect() as db:
             before = list(db.execute('SELECT late_id,comparison_id FROM ev_experiment_game ORDER BY id'))
@@ -328,8 +349,8 @@ class ExperimentAcquisitionSQL(PregameFixture):
         _, bodies = self.late_pair()
         reserved, unreserved = bodies
         with self.connect() as db:
-            db.execute('UPDATE ev_experiment_game SET late_reserved_bytes=1048576 WHERE source_event_id=%s',
-                       (reserved,))
+            db.execute('UPDATE ev_experiment_game SET late_reserved_bytes=%s WHERE source_event_id=%s',
+                       (experiment.late_checkpoint_bytes('NBA'), reserved))
             usage = records.retention_usage(db)
         cap = usage['total'] + usage['reserved'] + experiment.MIN_CHECKPOINT_RUNWAY - 1
 
@@ -344,6 +365,37 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 SELECT g.source_event_id,t.state FROM ev_experiment_task t
                 JOIN ev_experiment_game g ON t.game_id=g.id WHERE t.checkpoint='late'""")}
         self.assertEqual(states, {reserved:'captured', unreserved:'refused'})
+
+    async def test_ordinary_paid_membership_reservation_expires_and_transfers_at_capacity(self):
+        from dataclasses import replace
+        from app.research import records
+        from app.storage import acquisition_snapshot as snapshots
+
+        now = datetime.now(timezone.utc)
+        data = source_data(now + timedelta(hours=1))
+        supplied = parse_page(json.dumps(data).encode(), now.isoformat())
+        params = dict(leagueID='NBA', oddID=','.join(sorted(acquisition.ODD_IDS)), limit=1)
+        with self.connect() as db:
+            base = records.retention_usage(db)
+            cap = base['total'] + base['reserved'] + snapshots.ORDINARY_PAGE_BYTES + 4096
+            with patch.object(records, 'TOTAL_BYTE_CAP', cap):
+                pull_id = snapshots.begin(db, params, at=now)
+                with self.assertRaisesRegex(ValueError, 'research_retention_capacity'):
+                    snapshots.begin(db, params, at=now)
+                db.execute('''UPDATE market_pull SET details=jsonb_build_object(
+                    'ordinary_page_lease_until',clock_timestamp()-interval '1 second') WHERE pull_id=%s''', (pull_id,))
+                self.assertFalse(snapshots.renew_ordinary_page(db, pull_id))
+                self.assertEqual(records.retention_usage(db)['market_page_reserved_bytes'], 0)
+                pull_id = snapshots.begin(db, params, at=now)
+                self.assertTrue(snapshots.renew_ordinary_page(db, pull_id))
+                received = replace(supplied, pull_id=pull_id, attempt_id='paid-page', received_at=now.isoformat(),
+                                   request_scope=params, next_cursor='fixture-cursor')
+                snapshots.accept_ordinary_page(db, received, None)
+                self.assertEqual(records.retention_usage(db)['market_page_reserved_bytes'], 0)
+                self.assertEqual(snapshots.begin(db, dict(params, cursor='fixture-cursor'), at=now), pull_id)
+                self.assertEqual(records.retention_usage(db)['market_page_reserved_bytes'], snapshots.ORDINARY_PAGE_BYTES)
+                self.assertEqual(db.execute('SELECT count(*) AS n FROM market_pull_receipt WHERE pull_id=%s',
+                                            (pull_id,)).fetchone()['n'], 1)
 
     async def test_postgame_followup_runs_without_browser_and_final_stops_future_requests(self):
         now=datetime.now(timezone.utc)

@@ -43,8 +43,8 @@ def report(db, experiment):
         block('research_source_unavailable', 'This research workflow requires the SportsGameOdds source.', 'sources')
 
     available = storage['remaining_bytes']
-    # This is the existing pre-dispatch minimum for a task with no reservation.
-    # A task with protected space can still proceed when its own guard allows it.
+    # Early and outcome claims check this minimum. Late claims use the storage
+    # estimate for their league and can consume their own reservation.
     if available < MIN_CHECKPOINT_RUNWAY:
         block('research_retention_capacity', 'Unreserved research capacity is too low for a new checkpoint.', 'storage')
     if database_bytes + MIN_CHECKPOINT_RUNWAY * 3 + 8 * MIB > SQL_BYTE_CAP:

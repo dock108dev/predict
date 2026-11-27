@@ -134,7 +134,9 @@ async function refreshDailyCoverage(){
     ['Next 24 hours, T−10 tasks',`${forecast.next_24h_cbb_late_tasks} college basketball · ${forecast.next_24h_late_tasks} all sports`]] : []),
    ...(busyWindow ? [['Busiest upcoming T−10 window',`${clock(busyWindow.target_at)} to ${clock(busyWindow.deadline_at)}`],
     ['Tasks and planned requests',`${busyWindow.scheduled_tasks} tasks · ${busyWindow.planned_event_requests} requests · ${busyWindow.ncaab_tasks} college basketball`],
-    ['Window storage',`${bytes(busyWindow.reserved_bytes)} reserved · ${busyWindow.tasks_without_storage_reservation} tasks use shared headroom`],
+    ['Window storage',`${bytes(busyWindow.reserved_bytes)} reserved · ${busyWindow.estimated_storage_top_up_bytes==null
+      ?`${busyWindow.tasks_without_storage_reservation} tasks use shared headroom`
+      :`${bytes(busyWindow.estimated_storage_top_up_bytes)} estimated from shared headroom`}`],
     ...(latency?[['Measured batch samples',`${latency.samples} successful captures · ${latency.observed_physical_requests} observed request receipts`]]:[]),
     ['Window capacity estimate',`${seconds(busyWindow.estimated_window_service_p95_seconds)} service · ${seconds(busyWindow.seconds_available)} available · ${words(busyWindow.risk)}`],
     ['Competing work',`${busyWindow.competing_non_late_tasks} ordinary checkpoint or result tasks · discovery slot ${clock(busyWindow.ordinary_discovery_slot_at)}`],

@@ -19,6 +19,7 @@ from .sgo_nhl_scoring import nhl_scoring
 MARKETS = MARKET_TYPES
 MAX_PAGE_BYTES = 16 * 1024 * 1024
 MAX_EVENTS = 100
+MAX_IDENTITY_CHARS = 256
 MAX_ODDS_PER_EVENT = 20000
 MAX_BOOKS_PER_ODD = 200
 P2P_BOOKS = frozenset(('novig', 'prophetx', PROPHETX_BOOKMAKER_ID, 'kalshi', 'polymarket', 'matchbook', 'betfairexchange'))
@@ -69,7 +70,7 @@ def _price(value):
 
 
 def _identity(value):
-    if not isinstance(value, str) or not value or len(value) > 256:
+    if not isinstance(value, str) or not value or len(value) > MAX_IDENTITY_CHARS:
         raise ValueError('invalid identity')
     return value
 

@@ -84,15 +84,21 @@ def retention_usage(db):
         if extra["latest"] and (not row["latest_recorded_at"] or extra["latest"] > row["latest_recorded_at"]):
             row["latest_recorded_at"] = extra["latest"]
     if db.execute("SELECT to_regclass('public.market_pull') r").fetchone()["r"]:
+        from app.storage.acquisition_snapshot import ORDINARY_PAGE_BYTES
+
         # The compressed witness is retained once. Charge its derived JSON
         # projection by the allocated relation, including TOAST and indexes.
         market = db.execute('''SELECT COALESCE(sum(bytes),0)
-            + pg_total_relation_size('public.market_pull_scope') bytes FROM (
-            SELECT allocation_bytes AS bytes FROM public.market_pull
-            UNION ALL SELECT allocation_bytes FROM public.market_pull_receipt
-            UNION ALL SELECT allocation_bytes FROM public.market_pull_evidence) allocation''').fetchone()
+            + pg_total_relation_size('public.market_pull_scope') bytes,
+            count(*) FILTER (WHERE page_lease_until > statement_timestamp()) active_pages FROM (
+            SELECT allocation_bytes AS bytes, CASE WHEN state='in_progress'
+                THEN (details->>'ordinary_page_lease_until')::timestamptz END page_lease_until FROM public.market_pull
+            UNION ALL SELECT allocation_bytes,NULL FROM public.market_pull_receipt
+            UNION ALL SELECT allocation_bytes,NULL FROM public.market_pull_evidence) allocation''').fetchone()
         row['market_snapshot_bytes'] = int(market['bytes'])
         row['total'] += row['market_snapshot_bytes']
+        row['market_page_reserved_bytes'] = market['active_pages'] * ORDINARY_PAGE_BYTES
+        row['reserved'] += row['market_page_reserved_bytes']
     if db.execute("SELECT to_regclass('public.research_workspace_run') r").fetchone()['r']:
         workspace = db.execute('''SELECT count(*) n, COALESCE(sum(payload_bytes),0) bytes FROM (
             SELECT payload_bytes FROM public.research_workspace_catalog
