@@ -629,6 +629,8 @@
       "tests/test_novig_live_fee.py",
       "tests/test_novig_experiment_depth.py",
       "tests/test_native_experiment_depth.py",
+      "tests/test_liquidity_execution.py",
+      "tests/test_dashboard_pmus.py",
       "tests/test_novig_v3_public.py",
       "tests/test_novig_v3_stream.py",
       "tests/test_public_fee_schedule.py",

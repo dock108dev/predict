@@ -7,10 +7,13 @@ from math import ceil, floor
 
 from app.storage.store import stamp
 
-from . import current_pregame, fixed_profit, scanner_kalshi, scanner_polymarket
+from . import current_pregame, execution_contract, fixed_profit, scanner_kalshi, scanner_polymarket
 from .cashflows import exact_wire as wire
+from .pregame_valuation import _cash_state, american, decimal_display, score, under_budget
 
 VERSION = "public-depth-fixed-profit-1"
+FIXED_PROFIT_VERSION = "public-depth-fixed-profit-2"
+STAKE_VERSION = "public-depth-requested-stake-1"
 NOVIG_PRICE_BANDS = (("0.001", "0.050", "0.001"), ("0.055", "0.945", "0.005"),
                      ("0.950", "0.999", "0.001"))
 _BOOK_ERRORS = (ArithmeticError, KeyError, TypeError, ValueError)
@@ -110,12 +113,20 @@ class NovigFill:
 
 
 def _book(receipt, quote_price, *, bands):
-    best_limit = native_limit(quote_price, bands)
+    if receipt['venue'] == 'prophetx':
+        prices = frozenset(map(F, receipt['legal_prices']))
+        if not prices or not all(0 < price < 1 for price in prices):
+            raise ValueError('depth_price_grid_unverified')
+        best_limit = max((price for price in prices if price <= quote_price), default=F(0))
+    else:
+        prices = None
+        best_limit = native_limit(quote_price, bands)
     levels = []
     for level in receipt["levels"]:
         price, quantity = F(level["price"]), F(level["quantity"])
         orders = tuple(map(F, level["orders"])) if "orders" in level else None
-        if (not 0 < price < 1 or price != native_limit(price, bands) or quantity <= 0
+        if (not 0 < price < 1 or (price not in prices if prices is not None else price != native_limit(price, bands))
+                or quantity <= 0
                 or (levels and price <= levels[-1][0])
                 or (orders is not None and (sum(orders) != quantity or any(size <= 0 for size in orders)))):
             raise ValueError("depth_book_invalid")
@@ -126,10 +137,13 @@ def _book(receipt, quote_price, *, bands):
     return best_limit, levels, [(p, q, orders) for p, q, orders in levels if p <= best_limit], complete
 
 
-def _availability(result, eligible, *, payout, complete):
+def _availability(result, eligible, *, payout, complete, stake_units=False):
+    def purchase(price, quantity):
+        return quantity if stake_units else price * quantity * payout
+
     result.update(available_native_quantity=wire(sum((q for _, q, _ in eligible), F(0))),
-        available_purchase_usd=wire(sum((p * q * payout for p, q, _ in eligible), F(0))),
-        available_gross_win_profit_usd=wire(sum(((1 - p) * q * payout for p, q, _ in eligible), F(0))),
+        available_purchase_usd=wire(sum((purchase(p, q) for p, q, _ in eligible), F(0))),
+        available_gross_win_profit_usd=wire(sum(((1 / p - 1) * purchase(p, q) for p, q, _ in eligible), F(0))),
         availability_is_lower_bound=not complete)
 
 
@@ -149,6 +163,26 @@ def _modeled(result, quantity, payout, fill, probability):
     return ev
 
 
+def _novig_orders(receipt, eligible):
+    payout = F(receipt["payout_usd"])
+    if payout != F("0.01") or F(receipt["quantity_increment"]) != 1:
+        raise ValueError("depth_quantity_grid_unverified")
+    terms = receipt["fee"]
+    if terms.get("model") != "novig_v3" or terms.get("coefficient") is None:
+        raise ValueError(terms.get("reason") or "fee_schedule_unverified")
+    coefficient, precision = F(terms["coefficient"]), F(terms["round_usd"])
+    if not 0 <= coefficient <= 1 or precision != F("0.00001"):
+        raise ValueError("fee_schedule_unverified")
+
+    orders = []
+    for price, quantity, sizes in eligible:
+        for size in (sizes if sizes is not None else (quantity,)):
+            if size.denominator != 1:
+                raise ValueError("depth_quantity_grid_unverified")
+            orders.append(Order(price, int(size), coefficient * price * (1 - price) * payout, sizes is not None))
+    return payout, coefficient, precision, orders
+
+
 def _novig_depth(result, receipt, quote_price, *, target, minimum, probability):
     payout = F(receipt["payout_usd"])
     if payout != F("0.01") or F(receipt["quantity_increment"]) != 1:
@@ -162,27 +196,18 @@ def _novig_depth(result, receipt, quote_price, *, target, minimum, probability):
         result.update(status="above_limit" if levels else "confirmed_empty", eligible=False, reason=None)
         return result, None
 
-    terms = receipt["fee"]
-    if terms.get("model") != "novig_v3" or terms.get("coefficient") is None:
-        return _unknown(result, terms.get("reason") or "fee_schedule_unverified")
-    coefficient, precision = F(terms["coefficient"]), F(terms["round_usd"])
-    if not 0 <= coefficient <= 1 or precision != F("0.00001"):
-        raise ValueError("fee_schedule_unverified")
-
-    def raw_fee(price):
-        return coefficient * price * (1 - price) * payout
-
-    orders = []
-    for price, quantity, sizes in eligible:
-        for size in (sizes if sizes is not None else (quantity,)):
-            if size.denominator != 1:
-                raise ValueError("depth_quantity_grid_unverified")
-            orders.append(Order(price, int(size), raw_fee(price), sizes is not None))
+    try:
+        payout, coefficient, precision, orders = _novig_orders(receipt, eligible)
+    except ValueError as exc:
+        if str(exc) != "depth_quantity_grid_unverified":
+            return _unknown(result, str(exc))
+        raise
 
     # At or below the limit a single additional legal contract has at least
     # this much net win. A missing next tick only matters if it can improve
     # the existing fixed-profit nearest-size result.
-    next_tick = payout * (1 - limit) - ceil(raw_fee(limit) / precision) * precision
+    next_fee = coefficient * limit * (1 - limit) * payout
+    next_tick = payout * (1 - limit) - ceil(next_fee / precision) * precision
     conservative = NovigFill(orders, payout=payout, precision=precision, fragmented=True)
     quantity, full = conservative.nearest(target, next_tick)
     if quantity is None:
@@ -218,7 +243,9 @@ def _novig_depth(result, receipt, quote_price, *, target, minimum, probability):
 def _native_fee_curve(venue, receipt, price, step):
     terms = receipt["fee"]
     if venue == "polymarket_us" and terms.get("model") == "polymarket_us_standard_taker_bound":
-        return F(terms["coefficient"]) * price * (1 - price) * step, F("0.005")
+        if terms.get('coefficient') is None or not 0 <= F(terms['coefficient']) <= 1:
+            raise ValueError(terms.get('reason') or 'fee_schedule_unverified')
+        return F(terms['coefficient']) * price * (1 - price) * step, F('0.005')
     if venue == "kalshi" and terms.get("model") == "kalshi_direct_taker_bound":
         model = dict(fee=terms["terms"], grid=dict(price_ranges=receipt["price_bands"]))
         # A 100-tick block aligns the scanner's published fee bound to the
@@ -226,6 +253,210 @@ def _native_fee_curve(venue, receipt, price, step):
         charge = scanner_kalshi.entry_fee(model, [(step * 100, price)]) / 100
         return charge, scanner_kalshi.DIRECT_PRECISION
     raise ValueError("fee_schedule_unverified")
+
+
+def _bands(receipt):
+    if receipt['venue'] == 'novig':
+        return NOVIG_PRICE_BANDS
+    if receipt['venue'] == 'prophetx':
+        return ()
+    return receipt['price_bands']
+
+
+def _round_cents(value):
+    """Upper bound for positive nearest-cent rounding at a midpoint."""
+    return F(floor(value * 100 + F(1, 2)), 100)
+
+
+class _StakePath:
+    """Price-time prefixes, expressed in the venue's own order increments."""
+
+    def __init__(self, receipt, levels, *, fragmented=True):
+        self.receipt = receipt
+        self.venue = receipt['venue']
+        self.stake_units = self.venue == 'prophetx'
+        self.payout = F(1) if self.stake_units else F(receipt['payout_usd'])
+        self.step = F(receipt['quantity_increment'])
+        minimum = F(receipt.get('quantity_minimum', self.step))
+        if not 0 < self.step <= minimum or minimum % self.step:
+            raise ValueError('depth_quantity_grid_unverified')
+        self.minimum_ticks = int(minimum / self.step)
+        self.levels = [(ask, size // self.step) for ask, size, _ in levels if size >= self.step]
+        self.total_ticks = sum(number for _, number in self.levels)
+        self.curves = {}
+        self.bound = False
+        self.novig = None
+        if self.venue == 'novig':
+            payout, coefficient, precision, orders = _novig_orders(receipt, levels)
+            self.novig = NovigFill(orders, payout=payout, precision=precision, fragmented=fragmented)
+            self.bound = bool(coefficient and any(not order.individually_identified for order in orders))
+        elif self.stake_units:
+            if receipt.get('quantity_unit') != 'usd_stake' or self.step != F('0.01') or minimum < 1:
+                raise ValueError('depth_quantity_grid_unverified')
+            fee = receipt['fee']
+            if (fee.get('model') != 'prophetx_market_commission' or not fee.get('schedule_revision')
+                    or fee.get('rounding') != 'nearest_cent_profit_then_commission'
+                    or not 0 <= F(fee['rate']) <= 1):
+                raise ValueError(fee.get('reason') or 'prophetx_account_fee_schedule_unverified')
+            self.bound = True
+        elif self.payout != 1:
+            raise ValueError('depth_quantity_grid_unverified')
+        else:
+            self.bound = True
+
+    def order(self, ticks):
+        if self.novig:
+            fill = self.novig.detail(ticks)
+            return fill, ticks * self.payout
+        remaining = ticks
+        legs, trace = [], []
+        purchase, gross, entry, commission = F(0), F(0), F(0), F(0)
+        for ask, available in self.levels:
+            take = min(remaining, available)
+            size = take * self.step
+            cost = size if self.stake_units else ask * size
+            face = size / ask if self.stake_units else size
+            purchase += cost
+            gross += face
+            leg_fee = F(0)
+            if self.venue == 'kalshi':
+                if ask not in self.curves:
+                    self.curves[ask] = _native_fee_curve(self.venue, self.receipt, ask, self.step)
+                rate, precision = self.curves[ask]
+                leg_fee = ceil(rate * take / precision) * precision
+            elif self.venue == 'polymarket_us':
+                terms = self.receipt['fee']
+                _native_fee_curve(self.venue, self.receipt, ask, self.step)
+                fills = [(quantity, price) for price, quantity in legs] + [(size, ask)]
+                leg_fee = scanner_polymarket.entry_fee(dict(fee=terms), fills) - entry
+            entry += leg_fee
+            trace.append(dict(price=wire(ask), native_quantity=wire(size), fee_usd=wire(leg_fee)))
+            legs.append((ask, face))
+            remaining -= take
+            if not remaining:
+                break
+        if self.stake_units:
+            # The public rule does not name midpoint direction. Use the
+            # lower possible winning credit and upper possible commission.
+            raw_profit = gross - purchase
+            profit = F(ceil(raw_profit * 100 - F(1, 2)), 100)
+            gross = purchase + profit
+            commission = _round_cents(F(self.receipt['fee']['rate']) * _round_cents(raw_profit))
+        cash = dict(settlement_fee_usd={'win': wire(commission)}) if commission else {}
+        return (purchase + entry, legs, purchase, entry, F(0), cash, trace), gross
+
+    def budget(self, amount):
+        if self.total_ticks < self.minimum_ticks:
+            return None
+        solved = under_budget(lambda ticks: (self.order(ticks)[0][0], ticks),
+                              amount, self.minimum_ticks, self.total_ticks)
+        if solved is None:
+            return None
+        ticks, _ = solved
+        fill, gross = self.order(ticks)
+        # If a displayed increment still fits, the binary search used it. For
+        # an unseen next level assume only its cheapest possible acquisition.
+        next_purchase = self.step if self.stake_units else self.levels[-1][0] * self.step * self.payout
+        full = ticks < self.total_ticks or fill[0] + next_purchase > amount
+        return ticks, fill, gross, full
+
+
+def _result_fields(result, receipt):
+    result.update({key: receipt[key] for key in ('venue', 'event_id', 'market_id', 'outcome_id',
+        'opposite_outcome_id', 'receipt_id', 'receipt_refs', 'contract_id', 'binding_revision',
+        'identity_revision', 'source_health', 'sequence') if key in receipt})
+    result.update(book_received_at=receipt.get('received_at'), book_source_at=receipt.get('source_at'),
+                  book_valid_until=receipt.get('valid_until'), book_complete=receipt.get('complete'))
+
+
+def _size_value(result, ticks, gross, fill, path):
+    committed, _, purchase, entry, reserve, cash, trace = fill
+    win = _cash_state('win', ordinary_win=gross, stake=purchase, committed=committed,
+                      entry=entry, reserve=reserve, fee_terms=cash, settlement={})[1]
+    result.update(modeled_native_quantity=wire(ticks * path.step), modeled_average_price=wire(purchase / gross),
+                  modeled_win_profit_usd=win['net_profit_usd'], modeled_stake_usd=wire(committed),
+                  modeled_purchase_usd=wire(purchase), modeled_fee_usd=win['total_fee_usd'],
+                  modeled_entry_fee_usd=wire(entry), fee_is_upper_bound=path.bound, modeled_fills=trace)
+
+
+def _execution_values(partition, settlement_rules, fill, gross):
+    committed, _, purchase, entry, reserve, fees, _ = fill
+    settlement = dict(venue_rules=dict(cashflow_states=settlement_rules))
+    cash = {state: _cash_state(state, ordinary_win=gross, stake=purchase, committed=committed,
+            entry=entry, reserve=reserve, fee_terms=fees, settlement=settlement)[1] for state in partition}
+    returns = {state: F(detail['net_return']) for state, detail in cash.items()}
+    ev = sum(probability * returns[state] for state, probability in partition.items())
+    return cash, ev, score(partition, returns, ev)
+
+
+def evaluate_at_stake(receipt, *, at, stake, probability, minimum, price_limit=None,
+                      probabilities=None, cashflow_rules=None, expected=None):
+    """Size a requested cash outlay on exact current depth and price its own EV."""
+    at, stake, minimum = stamp(at), F(stake), F(minimum)
+    if stake <= 0 or (stake * 100).denominator != 1:
+        raise ValueError('depth_requested_stake_invalid')
+    result = dict(version=STAKE_VERSION, as_of=at.isoformat(), intended_stake_usd=wire(stake),
+        size_status='unknown', full_size_supported=False, eligible=False, supported_eligible=False,
+        price_limit_policy='native_discovery' if price_limit is None else 'explicit_limit',
+        cashflow_scope='completed_full_game', actual_fills=None)
+    if not receipt:
+        return _unknown(result, 'no_book_receipt')[0]
+    _result_fields(result, receipt)
+    try:
+        if receipt.get('reason') and not receipt.get('catalog_lower_bound'):
+            return _unknown(result, receipt['reason'])[0]
+        contract = execution_contract.validate_receipt(receipt, at, expected)
+        stake_units = receipt['venue'] == 'prophetx'
+        payout = F(1) if stake_units else F(receipt['payout_usd'])
+        requested_limit = F(1) if price_limit is None else F(price_limit)
+        if not 0 < requested_limit <= 1:
+            raise ValueError('depth_price_limit_invalid')
+        limit, levels, eligible, complete = _book(receipt, requested_limit, bands=_bands(receipt))
+        _availability(result, eligible, payout=payout, complete=complete and not receipt.get('reason'),
+                      stake_units=stake_units)
+        result.update(quantity_unit='usd_stake' if stake_units else 'native_contracts', limit_price=wire(limit),
+                      best_price=wire(levels[0][0]) if levels else None)
+        if receipt.get('reason'):
+            return _unknown(result, receipt['reason'])[0]
+        if not eligible:
+            if not complete:
+                return _unknown(result, 'truncated')[0]
+            size = 'above_limit' if levels else 'confirmed_empty'
+            return dict(result, size_status=size, status=size, reason=None)
+        path = _StakePath(receipt, eligible)
+        proposal = path.budget(stake)
+        if not proposal:
+            if not complete and path.total_ticks < path.minimum_ticks:
+                return _unknown(result, 'truncated')[0]
+            return dict(result, status='partial_size', size_status='partial_size', reason='depth_below_minimum_order')
+        ticks, fill, gross, full = proposal
+        _size_value(result, ticks, gross, fill, path)
+        status = 'full_size' if full else 'partial_size' if complete else 'unknown'
+        result.update(size_status=status, full_size_supported=full)
+        try:
+            partition, rules = execution_contract.settled_partition(contract, probability, probabilities, cashflow_rules)
+        except _BOOK_ERRORS as exc:
+            return _unknown(result, str(exc) if isinstance(exc, ValueError) else 'depth_settlement_unverified')[0]
+        cash, ev, opportunity = _execution_values(partition, rules, fill, gross)
+        result.update(modeled_net_ev=wire(ev), modeled_score=wire(opportunity), modeled_cashflows=cash,
+                      modeled_expected_profit_usd=wire(fill[0] * ev),
+                      modeled_probabilities={key: wire(value) for key, value in partition.items()})
+        if receipt['venue'] == 'novig' and path.bound:
+            lower_path = _StakePath(receipt, eligible, fragmented=False)
+            lower_fill, same_gross = lower_path.order(ticks)
+            _, better_ev, _ = _execution_values(partition, rules, lower_fill, same_gross)
+            lower_result = lower_path.budget(stake)
+            result['fee_lower_bound_usd'] = wire(lower_fill[3])
+            result['fee_is_upper_bound'] = fill[3] != lower_fill[3]
+            if lower_result[-1] != full or (ev >= minimum) != (better_ev >= minimum):
+                return _unknown(result, 'fee_rounding_ambiguous')[0]
+        if status == 'unknown':
+            return _unknown(result, 'truncated')[0]
+        passed = ev >= minimum
+        return dict(result, status=status if passed else 'below_ev_floor', eligible=full and passed,
+                    supported_eligible=passed, reason=None if passed else 'net_ev_below_minimum')
+    except _BOOK_ERRORS as exc:
+        return _unknown(result, str(exc) if isinstance(exc, ValueError) else 'depth_inputs_invalid')[0]
 
 
 def _nearest_segment(quote_at, *, lower, upper, target, baseline, slope, error):
@@ -346,8 +577,30 @@ def needs_book(receipt, *, quote_price, target=25, minimum=None, probability=Non
         result.get("status") == "full_size" and result.get("fee_detail_needed"))
 
 
-def evaluate(offer, receipt, *, at, game_key, target, minimum):
-    """Return the depth disposition and, for a qualified fill, its gradeable cashflows."""
+def _priced_calculation(offer, receipt, result, fill, *, at, game_key, target, version, ordinary_win=None):
+    record, original = offer['record'], offer['calculation_payload']
+    depth_fee = dict(classification='public_depth_fee_model', available=True, evidence=receipt['fee'])
+    at = stamp(at)
+    row, cost, terms = current_pregame.posted_contract(record, depth_fee, at=at, amount=fill[0])
+    if cost != 1 / F(original['raw']['posted_decimal']):
+        raise ValueError('depth_frozen_odds_mismatch')
+    is_stake = receipt['venue'] == 'prophetx'
+    step = F(receipt['quantity_increment'])
+    terms.update(kind='exchange', increment=wire(step if is_stake else F(receipt['payout_usd']) * step))
+    calculation = current_pregame.posted_calculation(record, original['reference'], depth_fee, at=at,
+        game_key=game_key, amount=fill[0], contract=(row, cost, terms), fill=fill, evidence=receipt['fee'],
+        ordinary_win=ordinary_win)
+    calculation['sizing'] = dict(mode='fixed_profit', rule=fixed_profit.RULE, execution_rule=version,
+        target_profit_usd=wire(target), modeled_win_profit_usd=result['modeled_win_profit_usd'],
+        profit_difference_usd=wire(F(result['modeled_win_profit_usd']) - target),
+        ideal_purchase_usd=result['intended_stake_usd'], quantity=result['modeled_native_quantity'],
+        quantity_increment=receipt['quantity_increment'], quantity_unit='usd_stake' if is_stake else 'native_contracts',
+        price_increment=None, grid_basis='public_native_order_grid')
+    return calculation
+
+
+def _evaluate_pilot(offer, receipt, *, at, game_key, target, minimum):
+    """Frozen pilot interpretation retained for idempotent replays."""
     record, original = offer["record"], offer["calculation_payload"]
     payout = F(original["raw"]["posted_decimal"])
     quote_price, target, minimum = 1 / payout, F(target), F(minimum)
@@ -384,20 +637,123 @@ def evaluate(offer, receipt, *, at, game_key, target, minimum):
             minimum=minimum, probability=F(reference["probability"]))
         if fill is None or not result["eligible"]:
             return result, None
-        depth_fee = dict(classification="public_depth_fee_model", available=True, evidence=receipt["fee"])
-        at = stamp(at)
-        row, cost, terms = current_pregame.posted_contract(record, depth_fee, at=at, amount=fill[0])
-        if cost != quote_price:
-            return _unknown(result, "depth_frozen_odds_mismatch")
-        terms.update(kind="exchange", increment=wire(F(receipt["payout_usd"]) * F(receipt["quantity_increment"])))
-        calculation = current_pregame.posted_calculation(record, reference, depth_fee, at=at,
-            game_key=game_key, amount=fill[0], contract=(row, cost, terms), fill=fill, evidence=receipt["fee"])
+        calculation = _priced_calculation(offer, receipt, result, fill, at=at, game_key=game_key,
+                                           target=target, version=VERSION)
     except _BOOK_ERRORS as exc:
         return _unknown(result, str(exc) if isinstance(exc, ValueError) else "depth_inputs_invalid")
-    calculation["sizing"] = dict(mode="fixed_profit", rule=fixed_profit.RULE, execution_rule=VERSION,
-        target_profit_usd=wire(target), modeled_win_profit_usd=result["modeled_win_profit_usd"],
-        profit_difference_usd=wire(F(result["modeled_win_profit_usd"]) - target),
-        ideal_purchase_usd=result["intended_stake_usd"], quantity=result["modeled_native_quantity"],
-        quantity_increment=receipt["quantity_increment"], quantity_unit="native_contracts",
-        price_increment=None, grid_basis="public_native_order_grid")
     return result, calculation
+
+
+def _prophetx_fixed(offer, receipt, result, *, at, game_key, target, minimum):
+    limit, levels, eligible, complete = _book(receipt, F(result['quoted_price']), bands=())
+    _availability(result, eligible, payout=F(1), complete=complete, stake_units=True)
+    result.update(quantity_unit='usd_stake', limit_price=wire(limit),
+                  best_price=wire(levels[0][0]) if levels else None)
+    if not eligible:
+        if not complete:
+            return _unknown(result, 'truncated')
+        return dict(result, status='above_limit' if levels else 'confirmed_empty', eligible=False, reason=None), None
+    path = _StakePath(receipt, eligible)
+    rate = F(receipt['fee']['rate'])
+    prefix, baseline, best = 0, F(0), None
+    rounding = F('0.01')
+
+    def order_profit(ticks):
+        fill, gross = path.order(ticks)
+        fee = F(fill[5].get('settlement_fee_usd', {}).get('win', '0'))
+        return fill, gross, fee, gross - fill[0] - fee
+
+    for price, count in path.levels:
+        slope = path.step * (1 / price - 1) * (1 - rate)
+
+        def quote_at(ticks):
+            fill, _, fee, profit = order_profit(prefix + ticks)
+            return fill[0], fee, profit
+
+        chosen = _nearest_segment(quote_at, lower=max(1, path.minimum_ticks - prefix), upper=count,
+            target=target, baseline=baseline, slope=slope, error=rounding)
+        if chosen is not None:
+            ticks = prefix + chosen
+            fill, gross, _, profit = order_profit(ticks)
+            rank = fixed_profit.preference(profit, fill[0], ticks, target)
+            if best is None or rank < best[0]:
+                best = rank, ticks, fill, gross
+        prefix += count
+        baseline += count * slope
+    if best is None:
+        if not complete:
+            return _unknown(result, 'truncated')
+        return dict(result, status='partial_size', eligible=False, reason='positive_net_win_unavailable'), None
+    rank, ticks, fill, gross = best
+    _, _, _, highest_win = order_profit(path.total_ticks)
+    next_win = highest_win + path.step * (1 / limit - 1) * (1 - rate) - 2 * rounding
+    full = highest_win >= target or next_win - target >= rank[0]
+    _size_value(result, ticks, gross, fill, path)
+    reference = offer['calculation_payload']['reference']
+    p = F(reference['probability'])
+    _, ev, _ = _execution_values(dict(win=p, loss=1-p), {}, fill, gross)
+    result['modeled_net_ev'] = wire(ev)
+    if not full and not complete:
+        return _unknown(result, 'truncated')
+    result.update(status='full_size' if full else 'partial_size', eligible=full and ev >= minimum,
+                  reason='net_ev_below_minimum' if full and ev < minimum else None)
+    grade = _priced_calculation(offer, receipt, result, fill, at=at, game_key=game_key,
+        target=target, version=FIXED_PROFIT_VERSION, ordinary_win=gross) if result['eligible'] else None
+    return result, grade
+
+
+def _fixed_execution(offer, receipt, *, at, game_key, target, minimum):
+    record = offer['record']
+    target, minimum = F(target), F(minimum)
+    decimal = F(offer['calculation_payload']['raw']['posted_decimal'])
+    base = dict(version=FIXED_PROFIT_VERSION, as_of=stamp(at).isoformat(), quoted_price=wire(1 / decimal),
+                intended_stake_usd=wire(target / (decimal - 1)), target_profit_usd=wire(target),
+                size_status='unknown', full_size_supported=False,
+                cashflow_scope='completed_full_game', actual_fills=None)
+    if not receipt or receipt.get('reason') and not receipt.get('catalog_lower_bound'):
+        if receipt:
+            _result_fields(base, receipt)
+        return _unknown(base, (receipt or {}).get('reason') or 'no_decision_receipt')
+    _result_fields(base, receipt)
+    try:
+        contract = execution_contract.validate_receipt(receipt, at, execution_contract.expected(record))
+    except _BOOK_ERRORS as exc:
+        return _unknown(base, str(exc) if isinstance(exc, ValueError) else 'depth_contract_unverified')
+    if contract['family'] not in ('spread', 'total'):
+        return _unknown(base, 'depth_contract_outside_scope')
+    base['settlement'] = contract.get('settlement')
+    try:
+        if receipt['venue'] == 'prophetx':
+            if record['quote']['venue'] != 'prophetx':
+                return _unknown(base, 'receipt_venue_mismatch')
+            result, calculation = _prophetx_fixed(offer, receipt, dict(base), at=at,
+                game_key=game_key, target=target, minimum=minimum)
+        else:
+            result, calculation = _evaluate_pilot(offer, receipt, at=at, game_key=game_key, target=target, minimum=minimum)
+    except _BOOK_ERRORS as exc:
+        return _unknown(base, str(exc) if isinstance(exc, ValueError) else 'depth_inputs_invalid')
+    size = result['status']
+    result.update(base, size_status=size, full_size_supported=size == 'full_size')
+    if result['status'] in ('full_size', 'partial_size'):
+        reference = offer['calculation_payload']['reference']
+        try:
+            partition, _ = execution_contract.settled_partition(contract, reference['probability'])
+            if partition.keys() != {'win', 'loss'}:
+                raise ValueError('depth_grading_partition_unverified')
+        except _BOOK_ERRORS as exc:
+            result.pop('modeled_net_ev', None)
+            return _unknown(result, str(exc) if isinstance(exc, ValueError) else 'depth_settlement_unverified')
+    if result.get('reason') == 'net_ev_below_minimum':
+        result['status'] = 'below_ev_floor'
+    if calculation:
+        calculation['sizing']['execution_rule'] = FIXED_PROFIT_VERSION
+    return result, calculation
+
+
+def evaluate(offer, receipt, *, at, game_key, target, minimum, version=VERSION):
+    """Return a disposition and, for eligible fixed-profit fills, gradeable cashflows."""
+    if version == VERSION:
+        return _evaluate_pilot(offer, receipt, at=at, game_key=game_key, target=target, minimum=minimum)
+    if version == FIXED_PROFIT_VERSION:
+        return _fixed_execution(offer, receipt, at=at, game_key=game_key, target=target, minimum=minimum)
+    raise ValueError('depth_execution_version_unsupported')

@@ -11,7 +11,7 @@ from app.collection.sgo_nhl_scoring import BASIS as NHL_SCORE_BASIS, nhl_scoring
 from app.storage import mens_d1_coverage as d1
 from app.storage.mens_d1_occurrences import occurrence_ledger
 from app.storage.store import hashed, stamp
-from . import experiment, paper, records, workspace
+from . import experiment, paper, paper_depth, records, workspace
 
 VERSION = "paper-sporting-grades-1"
 NHL_VERSION = "paper-sporting-grades-nhl-2"
@@ -353,7 +353,15 @@ def _grading_rule(ticket, calculation, known):
         return "unsupported_sport_scoring", "No verified full-game scoring basis is available for this sport."
     if league == "NHL" and family in NHL_LINE_FAMILIES:
         venue = ticket["venue"]
-        if (venue not in NHL_LINE_VENUES or venue != identity.get("venue", venue) or
+        depth = ticket.get("depth") or {}
+        depth_settlement = depth.get("settlement") or {}
+        verified_depth = (depth.get("version") == (calculation.get("sizing") or {}).get("execution_rule")
+                          == paper_depth.FIXED_PROFIT_VERSION and depth.get("eligible") is True
+                          and depth_settlement.get("available") is True
+                          and depth_settlement.get("overtime") == "included"
+                          and depth_settlement.get("shootout") == "official_final_score"
+                          and depth_settlement.get("shootout_count") == "one_goal_to_winning_team")
+        if ((venue not in NHL_LINE_VENUES and not verified_depth) or venue != identity.get("venue", venue) or
                 venue != calculation.get("venue", venue)):
             return "unsupported_scoring_terms", "A full-game scoring rule for this NHL venue and market is unavailable."
     if scope.get("conflicts") or settlement.get("explicit") or (
@@ -568,7 +576,8 @@ def build_report(run, contexts):
     if "sizing_mode" in policy:
         report["sizing_policy"] = {key: policy[key] for key in ("sizing_mode", "sizing_rule", "target_profit_usd",
             "reference_bankroll_usd", "kelly_multiplier", "sizing_scale_usd", "minimum_ev", "minimum_stake_usd",
-            "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below", "depth_policy")
+            "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below", "depth_policy",
+            "depth_execution_version", "prospective_start_at", "decision_before")
             if key in policy}
     return report
 

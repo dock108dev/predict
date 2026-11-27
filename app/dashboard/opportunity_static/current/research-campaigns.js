@@ -10,6 +10,12 @@ const modes={fixed_profit:'Win fixed profit',kelly:'Kelly'};
 export const gameScopes={'mens-d1':'Men’s NCAA Division I vs. Division I','all-sports':'All supported sports'};
 const mainSpreadsTotals='main_spreads_totals';
 const depthPolicy='public-book-win25-1';
+const allSportsDepthPolicy='public-book-win25-2';
+const cutoffFormatter=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'short',
+  day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',timeZoneName:'short'});
+export const decisionCutoff=value=>cutoffFormatter.format(new Date(value));
+export const validCutoff=value=>/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,6})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value)
+  && Number.isFinite(Date.parse(value));
 export const mainFirstRule={
   id:'main_first_one_per_game',title:'One bet per game, main lines first',
   description:'Rank qualifying main lines by fair win probability, then net EV. If none qualify, consider eligible alternate lines closest to a recorded main line.',
@@ -139,8 +145,12 @@ export function ruleSummary(config) {
       ? `Full-game main spreads and totals plus alternates priced below +${config.alternate_odds_below}`
       : 'Full-game main spreads and totals only'} : {};
   return {
-    'Game scope':config.depth_policy ? 'NCAAB full-game spreads and totals' : gameScopes[config.scope] || gameScopes['mens-d1'],
+    'Game scope':config.depth_policy===depthPolicy ? 'NCAAB full-game spreads and totals'
+      : config.depth_policy===allSportsDepthPolicy ? 'NFL, NCAAF, NBA, NCAAB, MLB and NHL'
+        : gameScopes[config.scope] || gameScopes['mens-d1'],
     'Game dates':`${config.start_date} through ${config.end_date}, inclusive (Eastern)`,
+    ...(config.prospective_start_at ? {'First eligible T−10 decision':decisionCutoff(config.prospective_start_at)} : {}),
+    ...(config.retirement ? {'Retirement cutoff':decisionCutoff(config.retirement.cutoff_at)} : {}),
     ...marketRules,
     'Primary sizing':fixed ? `${sizingTitle(config)} per winning paper trade, using the nearest achievable positive net profit` : kelly,
     ...(fixed&&config.kelly_comparison ? {'Kelly comparison':kelly} : {}),
@@ -171,7 +181,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     minimum_ev:'4', minimum_stake_usd:'1.00', sizing_mode:'fixed_profit', target_profit_usd:'10', kelly_comparison:false,
     kelly_multiplier:'2.5', reference_bankroll_usd:'10000', bucket_edges:'4, 8, 15, 25', portfolios:allPortfolios,
     odds_bucket_edges:oddsEdgeList(defaultOddsEdges), portfolio_rule:'', market_scope:'', alternate_odds_below:'',
-    depth_policy:'',
+    depth_policy:'', prospective_start_at:'',
   };
   if(config)Object.assign(defaults,config,{
     sizing_mode:config.sizing_mode || 'kelly', minimum_ev:percent(config.minimum_ev),
@@ -235,7 +245,14 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   fields.append(retained);
   field(fields,'sizing_mode','Sizing method',{options:modes});
   const execution=field(fields,'depth_policy','Paper execution',{required:false,
-    options:{'':'Quoted price only',[depthPolicy]:'Win $25 using public book size (NCAAB pilot)'}});
+    options:{'':'Quoted price only',[allSportsDepthPolicy]:'Win $25 using public book size (all sports)',
+      [depthPolicy]:'Win $25 using public book size (NCAAB pilot)'}});
+  const prospective=field(fields,'prospective_start_at','First eligible T−10 decision cutoff',{required:false,maxLength:36});
+  prospective.placeholder='YYYY-MM-DDTHH:MM:SS-05:00';
+  const prospectiveHelp=node('small','Include the time zone. Decisions at this instant or later can qualify.');
+  prospectiveHelp.id='campaign-start-cutoff-help';
+  prospective.setAttribute('aria-describedby',prospectiveHelp.id);
+  prospective.parentElement.append(prospectiveHelp);
   const fixed=node('fieldset',undefined,'campaign-fields');
   fixed.append(node('legend','Fixed profit settings'));
   field(fixed,'target_profit_usd','Target win profit ($)');
@@ -315,14 +332,25 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   };
   selectionRule.onchange();
   const scopeLabel=inputs.scope.querySelector('option[value="all-sports"]');
-  const labelDepthScope=()=>scopeLabel.textContent=execution.value ? 'NCAAB public book pilot' : gameScopes['all-sports'];
-  labelDepthScope();
+  function updateExecutionScope() {
+    scopeLabel.textContent=execution.value===depthPolicy ? 'NCAAB public book pilot' : gameScopes['all-sports'];
+    prospective.hidden=prospective.parentElement.hidden=execution.value!==allSportsDepthPolicy;
+    prospective.required=execution.value===allSportsDepthPolicy;
+  }
+  updateExecutionScope();
   execution.onchange=()=>{
-    labelDepthScope();
+    updateExecutionScope();
     if (!execution.value) return;
     inputs.scope.value='all-sports';
     marketScope.value=mainSpreadsTotals;
-    if (!alternateOdds.value) alternateOdds.value='400';
+    if (execution.value===allSportsDepthPolicy) {
+      alternateOdds.value='400';
+      minimumStake.value='';
+      if (number(inputs.minimum_ev.value)!==4) {
+        inputs.minimum_ev.value='4';
+        inputs.bucket_edges.value='4, 8, 15, 25';
+      }
+    } else if (!alternateOdds.value) alternateOdds.value='400';
     marketScope.onchange();
     inputs.sizing_mode.value='fixed_profit';
     inputs.target_profit_usd.value='25';
@@ -391,7 +419,13 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
        body.portfolio_rule!==mainFirstRule.id)) {
       throw Error('Public book depth requires Win $25, Spreads and totals, and one trade per game.');
     }
-    if(revision && Boolean(config?.depth_policy)===Boolean(body.depth_policy))body.supersedes=revision;
+    if(body.depth_policy===allSportsDepthPolicy) {
+      if(!validCutoff(body.prospective_start_at))throw Error('Enter the first eligible T−10 cutoff with a time zone.');
+      if(body.alternate_odds_below!=='400' || body.minimum_stake_usd!=null || number(body.minimum_ev)!==0.04) {
+        throw Error('All-sports depth uses 4% minimum EV, no minimum stake, and alternates below +400.');
+      }
+    } else delete body.prospective_start_at;
+    if(revision && config?.depth_policy===body.depth_policy)body.supersedes=revision;
     return body;
   }
   let reviewed;
@@ -408,7 +442,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
         const body=build();
         review.replaceChildren(reviewHeading,node('p',body.name),pairs(ruleSummary(body)),
           node('p','Elapsed dates replay automatically from retained evidence. Future dates wait for their capture windows. All results are paper only.'),actions);
-        if (config && Boolean(config.depth_policy)!==Boolean(body.depth_policy)) {
+        if (config && config.depth_policy!==body.depth_policy) {
           review.insertBefore(node('p','This saves a separate experiment alongside the original.'),actions);
         }
         reviewed=body;fields.hidden=next.hidden=true;review.hidden=false;

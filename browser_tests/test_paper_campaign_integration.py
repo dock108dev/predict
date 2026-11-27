@@ -5,6 +5,7 @@ import os
 import re
 from contextlib import ExitStack
 from copy import deepcopy
+from datetime import timedelta
 from fractions import Fraction as F
 from pathlib import Path
 from unittest import skipUnless
@@ -31,6 +32,275 @@ from tests.test_paper_experiments_sql import ResearchWorkspaceFixture, SOCKET
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class ControlledWorkbench(ResearchWorkspaceFixture):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        with self.connect() as db:
+            db.execute("""TRUNCATE public.ev_experiment_game,public.ev_experiment_record,public.paper_campaign,
+                public.research_workspace_run,public.paper_result_input CASCADE""")
+            db.execute(
+                "INSERT INTO public.ev_experiment_accounting(singleton) VALUES (true) ON CONFLICT DO NOTHING"
+            )
+
+    async def test_prepare_and_retire_all_sports_win25_through_installed_routes(self):
+        from app.dashboard.workspace_app import create_app
+        from tests.current_fixture import InjectedTestProvider
+        from tests.test_current_state import owner
+        from tests.test_experiment_depth_execution import receipt
+
+        now = queue.utc()
+        first = (now.astimezone(paper_campaigns.EASTERN) + timedelta(days=2)).replace(
+            hour=17, minute=50, second=0, microsecond=0
+        )
+        day = first.date().isoformat()
+        start = first + timedelta(minutes=10)
+        fixtures = {}
+        for label in ("in-window", "past-t9"):
+            game = dict(self.game(label, start.isoformat()), league="NBA")
+            offer = frozen_priced("+300", venue="novig", line="-5.5")
+            record = offer["record"]
+            record["event"].update(competition="NBA", scheduled_start=game["starts_at"])
+            record["market_identity"]["rules"] = "sportsgameodds-unverified-1"
+            record["result_policy"] = "sportsgameodds-unverified-1:spread"
+            record["quote"]["source"].update(
+                native_event_id=label,
+                native_outcome_id="points-home-game-sp-home",
+                native_line="-5.5",
+            )
+            snapshot = dict(
+                event=dict(
+                    home="home",
+                    away="away",
+                    competition="NBA",
+                    title=game["title"],
+                    scheduled_start=game["starts_at"],
+                ),
+                source_event=dict(event_id=label),
+                offers=[offer],
+                coverage=dict(incomplete=False),
+            )
+            fixtures[label] = game, snapshot, offer
+        with self.connect() as db:
+            db.execute("""ALTER TABLE public.ev_experiment_depth ALTER COLUMN recorded_at
+                SET DEFAULT public.workspace_fixture_now()""")
+            database_roles.enable(db)
+        provider = InjectedTestProvider()
+        provider.database_mode = True
+        provider.status = lambda: {}
+        server = TestServer(create_app(provider, owner()))
+        await server.start_server()
+        self.addAsyncCleanup(server.close)
+
+        with (
+            patch.dict(os.environ, {"PREDICT_DB_ROLE": database_roles.WEB}),
+            patch(
+                "app.dashboard.research_workspace_api.connect",
+                side_effect=lambda: connect(self.name),
+            ),
+            patch.object(queue, "utc", side_effect=lambda: self.at),
+            patch.object(queue, "_late_capture_due", return_value=False),
+        ):
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+                )
+                page = await browser.new_page(viewport=dict(width=390, height=820))
+                await page.goto(str(server.make_url("/experiments?view=create")))
+                await page.get_by_label("Experiment name").fill(
+                    "Win $25 six-sport cutover fixture"
+                )
+                await page.get_by_label("Paper execution").select_option(
+                    paper_depth.ALL_SPORTS_VERSION
+                )
+                await page.get_by_label("First game date (Eastern)").fill(day)
+                await page.get_by_label("Last game date (Eastern)").fill(day)
+                await page.get_by_label("First eligible T−10 decision cutoff").fill(
+                    first.isoformat()
+                )
+                await page.get_by_role("button", name="Review", exact=True).click()
+                review = page.get_by_role("region", name="Review experiment")
+                await expect(review).to_contain_text(
+                    "NFL, NCAAF, NBA, NCAAB, MLB and NHL"
+                )
+                await expect(review).to_contain_text("No minimum")
+                await expect(review).to_contain_text("priced below +400")
+                await page.get_by_role(
+                    "button", name="Save and run", exact=True
+                ).click()
+                await page.wait_for_url(re.compile(r"[?&]campaign=[0-9a-f]{64}"))
+                campaign = parse_qs(urlsplit(page.url).query)["campaign"][0]
+                config_path = str(server.make_url(f"{BASE}/campaigns/{campaign}"))
+                before = (await (await page.request.get(config_path)).json())["config"]
+                assert stamp(before["prospective_start_at"]) == first
+                assert before["depth_policy"] == paper_depth.ALL_SPORTS_VERSION
+
+                with self.connect() as db:
+                    self.advance(db, first - timedelta(hours=1))
+                    experiment.discover(
+                        db, [fixture[0] for fixture in fixtures.values()], at=self.at
+                    )
+                    for task in experiment.due(db, at=self.at, limit=2):
+                        _, snapshot, _ = fixtures[task["event"]["source_event_id"]]
+                        assert (
+                            experiment.capture(
+                                db,
+                                task["game_id"],
+                                "early",
+                                snapshot,
+                                token=task["token"],
+                                requested_at=self.at,
+                                received_at=self.at,
+                                known_at=self.at,
+                            )["state"]
+                            == "captured"
+                        )
+                    self.advance(db, first)
+                    tasks = {
+                        task["event"]["source_event_id"]: task
+                        for task in experiment.due(
+                            db, at=self.at, limit=2, late_only=True
+                        )
+                    }
+                    selected_task = tasks["in-window"]
+                    game, snapshot, offer = fixtures["in-window"]
+                    native_receipt = dict(
+                        receipt(("0.25", 4000)),
+                        received_at=(first - timedelta(seconds=2)).isoformat(),
+                        valid_until=(first + timedelta(seconds=3)).isoformat(),
+                        contract=dict(
+                            league="NBA",
+                            family="spread",
+                            period="full_game",
+                            starts_at=game["starts_at"],
+                            selected_side="home",
+                            signed_line="-5.5",
+                            phase="pregame",
+                            settlement=dict(
+                                available=True,
+                                rule_id="fixture",
+                                overtime="included",
+                                equality="not_feasible",
+                            ),
+                        ),
+                    )
+                    decision = experiment_depth.save(
+                        db,
+                        selected_task,
+                        known_at=first - timedelta(seconds=1),
+                        observations={
+                            experiment_depth.offer_key(offer["record"]): native_receipt
+                        },
+                    )
+                    self.advance(db, first + timedelta(seconds=59, milliseconds=500))
+                    receipt_time = first + timedelta(seconds=50)
+                    accepted = experiment.capture(
+                        db,
+                        selected_task["game_id"],
+                        "late",
+                        snapshot,
+                        token=selected_task["token"],
+                        requested_at=first,
+                        received_at=receipt_time,
+                        known_at=receipt_time,
+                    )
+                    assert accepted["state"] == "captured"
+                    assert stamp(accepted["recorded_at"]) < stamp(
+                        selected_task["deadline_at"]
+                    )
+                    self.advance(db, first + timedelta(seconds=60, milliseconds=1))
+                    rejected_task = tasks["past-t9"]
+                    rejected = experiment.capture(
+                        db,
+                        rejected_task["game_id"],
+                        "late",
+                        fixtures["past-t9"][1],
+                        token=rejected_task["token"],
+                        requested_at=first,
+                        received_at=receipt_time,
+                        known_at=receipt_time,
+                    )
+                    assert (
+                        rejected["state"] == "missed"
+                        and rejected["reason"] == "experiment_checkpoint_window_missed"
+                    )
+                with connect(self.name) as db:
+                    run_id = paper_campaigns.tick(db)
+                    assert run_id and queue.process_one(db)
+                await page.reload(wait_until="domcontentloaded")
+                await page.locator(".result-ledger-selection").click()
+                history = page.get_by_role(
+                    "link", name="Open exact dated trade and evidence"
+                )
+                bookmark = await history.get_attribute("href")
+                assert bookmark and "run=" + run_id in bookmark
+                await expect(page.locator(".result-inline-trade")).to_contain_text(
+                    "Full size"
+                )
+                await page.get_by_text("Retire experiment", exact=True).click()
+                cutoff = first + timedelta(minutes=2)
+                await page.get_by_label("Retirement cutoff").fill(cutoff.isoformat())
+                await page.get_by_role(
+                    "button", name="Confirm retirement", exact=True
+                ).click()
+                await expect(
+                    page.get_by_text(
+                        "Saved runs and sporting grades remain available.", exact=False
+                    )
+                ).to_be_visible()
+                with self.connect() as db:
+                    self.advance(db, start + timedelta(hours=3))
+                    observed = self.at.isoformat()
+                    final = dict(
+                        game,
+                        source="sportsgameodds",
+                        final=True,
+                        result="completed",
+                        home_score=96,
+                        away_score=80,
+                        received_at=observed,
+                        knowledge_at=observed,
+                        receipt_sha256=hashed(["post-retirement-fixture", 96]),
+                    )
+                    assert (
+                        experiment.observe_outcomes(db, [final], at=self.at)["matched"]
+                        == 1
+                    )
+                with connect(self.name) as db:
+                    assert queue.dispatch(db) == 1
+                    assert queue.process_one(db)
+                await page.set_viewport_size(dict(width=1280, height=820))
+                await page.clock.set_fixed_time(self.at)
+                await page.goto(str(server.make_url(bookmark)))
+                await expect(
+                    page.get_by_role("heading", name=before["name"])
+                ).to_be_visible()
+                await expect(page.get_by_text("Retired ·", exact=False)).to_be_visible()
+                assert parse_qs(urlsplit(page.url).query)["run"] == [run_id]
+                frozen_path = str(server.make_url(f"{BASE}/runs/{run_id}?export=1"))
+                frozen = await (await page.request.get(frozen_path)).json()
+                assert list(frozen["depth_receipts"]) == [decision["id"]]
+                assert frozen["report"]["games"][0]["status"] in ("captured", "missed")
+                assert sorted(row["status"] for row in frozen["report"]["games"]) == [
+                    "captured",
+                    "missed",
+                ]
+                await page.get_by_role("link", name="All trades", exact=True).click()
+                async with page.expect_download() as traded:
+                    await page.get_by_role(
+                        "link", name="Export trades and public book evidence"
+                    ).click()
+                exported = json.loads(
+                    Path(await (await traded.value).path()).read_text()
+                )
+                (ticket,) = exported["trades"]
+                assert ticket["run_id"] == run_id and ticket["grade"]["state"] == "win"
+                assert F(ticket["pnl_exact_usd"]) == F("24.9975")
+                assert list(exported["depth_receipts"]) == [decision["id"]]
+                after = (await (await page.request.get(config_path)).json())["config"]
+                retirement = after.pop("retirement")
+                assert after == before
+                assert stamp(retirement["cutoff_at"]) == cutoff
+                await browser.close()
+
     async def test_win25_depth_through_installed_experiments_routes(self):
         from app.dashboard.workspace_app import create_app
         from tests.current_fixture import InjectedTestProvider
@@ -333,15 +603,31 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     executable_path=os.getenv("PREDICT_CI_CHROMIUM")
                 )
                 page = await browser.new_page(viewport=dict(width=390, height=820))
-                await page.goto(str(server.make_url(
-                    f"/experiments?view=create&from=data&date={day}&provider=sportsgameodds&family=spread"
-                )))
-                await expect(page.get_by_label("First game date (Eastern)")).to_have_value(day)
-                await expect(page.get_by_label("Last game date (Eastern)")).to_have_value(day)
-                await expect(page.get_by_label("Game scope", exact=True)).to_have_value("")
-                await expect(page.get_by_text("sportsgameodds",exact=True)).to_be_visible()
-                await page.get_by_label("Game scope", exact=True).select_option("mens-d1")
-                await page.get_by_label("Use the experiment’s game scope and dates").check()
+                await page.goto(
+                    str(
+                        server.make_url(
+                            f"/experiments?view=create&from=data&date={day}&provider=sportsgameodds&family=spread"
+                        )
+                    )
+                )
+                await expect(
+                    page.get_by_label("First game date (Eastern)")
+                ).to_have_value(day)
+                await expect(
+                    page.get_by_label("Last game date (Eastern)")
+                ).to_have_value(day)
+                await expect(page.get_by_label("Game scope", exact=True)).to_have_value(
+                    ""
+                )
+                await expect(
+                    page.get_by_text("sportsgameodds", exact=True)
+                ).to_be_visible()
+                await page.get_by_label("Game scope", exact=True).select_option(
+                    "mens-d1"
+                )
+                await page.get_by_label(
+                    "Use the experiment’s game scope and dates"
+                ).check()
                 await page.get_by_label("Experiment name").fill(
                     "Controlled $7.51 replay"
                 )
@@ -350,7 +636,9 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 await page.get_by_label("Target win profit ($)").fill("7.51")
                 await page.get_by_label("Compare with Kelly").check()
                 minimum = page.get_by_label("Minimum stake ($)")
-                edges = page.get_by_label("Posted odds bucket boundaries (American odds)")
+                edges = page.get_by_label(
+                    "Posted odds bucket boundaries (American odds)"
+                )
                 await expect(minimum).to_have_value("1.00")
                 await expect(edges).to_have_value("+200, +300, +500, +1000")
                 await minimum.fill("2.50")
@@ -372,9 +660,13 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert response.ok, response.status
                 await page.wait_for_url(re.compile(r"[?&]campaign=[0-9a-f]{64}"))
                 campaign = parse_qs(urlsplit(page.url).query)["campaign"][0]
-                config = (await (await page.request.get(str(
-                    server.make_url(f"{BASE}/campaigns/{campaign}")
-                ))).json())["config"]
+                config = (
+                    await (
+                        await page.request.get(
+                            str(server.make_url(f"{BASE}/campaigns/{campaign}"))
+                        )
+                    ).json()
+                )["config"]
                 assert F(config["minimum_stake_usd"]) == F("2.50")
                 assert config["odds_bucket_edges"] == ["175", "300", "500", "1000"]
 
@@ -387,21 +679,37 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                         "SELECT state,last_error FROM public.paper_campaign_day"
                     ).fetchall()
                 await page.reload(wait_until="domcontentloaded")
-                await page.get_by_role("link", name="Results by day", exact=True).click()
+                await page.get_by_role(
+                    "link", name="Results by day", exact=True
+                ).click()
                 await page.locator(".experiment-history > summary").click()
                 odds_title = "Posted odds buckets · Win $7.51"
                 await page.get_by_text(odds_title, exact=True).click()
                 odds_table = page.get_by_role("table", name=odds_title)
-                await expect(odds_table.get_by_text("+175 to under +300", exact=True)).to_be_visible()
+                await expect(
+                    odds_table.get_by_text("+175 to under +300", exact=True)
+                ).to_be_visible()
                 odds_row = odds_table.get_by_role(
                     "row", name=re.compile(r"\+300 to under \+500")
                 )
-                await expect(odds_row.locator('[data-label="Selected trades"]')).to_have_text("1")
-                await expect(odds_row.locator('[data-label="Graded trades"]')).to_have_text("0")
-                await expect(odds_row.locator('[data-label="Stake"]')).to_have_text("$2.50")
-                await expect(odds_row.locator('[data-label="Stake share"]')).to_have_text("100.00%")
-                await expect(odds_row.locator('[data-label="Expected ROI"]')).to_have_text("8.00%")
-                await expect(odds_row.locator('[data-label="Paper P/L"]')).to_have_text("—")
+                await expect(
+                    odds_row.locator('[data-label="Selected trades"]')
+                ).to_have_text("1")
+                await expect(
+                    odds_row.locator('[data-label="Graded trades"]')
+                ).to_have_text("0")
+                await expect(odds_row.locator('[data-label="Stake"]')).to_have_text(
+                    "$2.50"
+                )
+                await expect(
+                    odds_row.locator('[data-label="Stake share"]')
+                ).to_have_text("100.00%")
+                await expect(
+                    odds_row.locator('[data-label="Expected ROI"]')
+                ).to_have_text("8.00%")
+                await expect(odds_row.locator('[data-label="Paper P/L"]')).to_have_text(
+                    "—"
+                )
                 with connect_web() as db:
                     queue.process_one(db)
                     queue.process_one(db)
@@ -448,24 +756,51 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     assert graded in grades
                 await page.reload(wait_until="domcontentloaded")
                 await expect(
-                    page.get_by_role("heading", name="Controlled $7.51 replay", exact=True)
+                    page.get_by_role(
+                        "heading", name="Controlled $7.51 replay", exact=True
+                    )
                 ).to_be_visible()
-                await expect(page.locator(".experiment-campaign-pnl")).to_contain_text("$7.50")
+                await expect(page.locator(".experiment-campaign-pnl")).to_contain_text(
+                    "$7.50"
+                )
                 await page.get_by_text("Campaign totals", exact=True).click()
-                await expect(page.locator(".experiment-totals table").get_by_role(
-                    "row", name=re.compile("^ROI"))).to_contain_text("300.00% on $2.50 graded stake")
-                await page.get_by_role("region", name="Results by date").locator(f'a[href*="date={day}"]').click()
-                await page.get_by_label("Portfolio", exact=True).select_option("all_venues")
+                await expect(
+                    page.locator(".experiment-totals table").get_by_role(
+                        "row", name=re.compile("^ROI")
+                    )
+                ).to_contain_text("300.00% on $2.50 graded stake")
+                await (
+                    page.get_by_role("region", name="Results by date")
+                    .locator(f'a[href*="date={day}"]')
+                    .click()
+                )
+                await page.get_by_label("Portfolio", exact=True).select_option(
+                    "all_venues"
+                )
                 await page.get_by_text("Daily totals", exact=True).click()
                 await page.get_by_text(odds_title, exact=True).click()
-                await expect(odds_row.locator('[data-label="Graded trades"]')).to_have_text("1")
-                await expect(odds_row.locator('[data-label="Paper P/L"]')).to_have_text("$7.50")
-                await expect(odds_row.locator('[data-label="Realized ROI"]')).to_have_text("300.00% on $2.50 graded stake")
-                comparison=page.locator(".experiment-totals table").first
-                await expect(comparison.get_by_role("columnheader", name="Win $7.51")).to_be_visible()
-                await expect(comparison.get_by_role("columnheader", name="Kelly")).to_be_visible()
-                await expect(comparison.get_by_role("row", name=re.compile("^ROI"))).to_contain_text("300.00% on $2.50 graded stake")
-                await expect(comparison.get_by_role("row", name=re.compile("^Expected ROI"))).not_to_contain_text("—")
+                await expect(
+                    odds_row.locator('[data-label="Graded trades"]')
+                ).to_have_text("1")
+                await expect(odds_row.locator('[data-label="Paper P/L"]')).to_have_text(
+                    "$7.50"
+                )
+                await expect(
+                    odds_row.locator('[data-label="Realized ROI"]')
+                ).to_have_text("300.00% on $2.50 graded stake")
+                comparison = page.locator(".experiment-totals table").first
+                await expect(
+                    comparison.get_by_role("columnheader", name="Win $7.51")
+                ).to_be_visible()
+                await expect(
+                    comparison.get_by_role("columnheader", name="Kelly")
+                ).to_be_visible()
+                await expect(
+                    comparison.get_by_role("row", name=re.compile("^ROI"))
+                ).to_contain_text("300.00% on $2.50 graded stake")
+                await expect(
+                    comparison.get_by_role("row", name=re.compile("^Expected ROI"))
+                ).not_to_contain_text("—")
                 await expect(
                     page.locator(".result-ledger-table tbody tr")
                 ).to_have_count(1)
@@ -473,9 +808,15 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     page.locator(".result-ledger-table tbody tr")
                 ).to_contain_text("$2.50")
                 await page.locator(".result-ledger-table tbody tr a").click()
-                await page.get_by_role("button", name="Review trade evidence", exact=True).click()
-                await page.get_by_text("Trade calculation and frozen evidence", exact=True).click()
-                await expect(page.get_by_role("heading", name="Paper sizing and fee treatment")).to_be_visible()
+                await page.get_by_role(
+                    "button", name="Review trade evidence", exact=True
+                ).click()
+                await page.get_by_text(
+                    "Trade calculation and frozen evidence", exact=True
+                ).click()
+                await expect(
+                    page.get_by_role("heading", name="Paper sizing and fee treatment")
+                ).to_be_visible()
                 api = str(
                     server.make_url(f"{BASE}/runs/{run}/results?variant=all_venues")
                 )
@@ -486,12 +827,21 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert F(ticket["return_exact_usd"]) == 10
                 assert F(ticket["pnl_exact_usd"]) == F("7.50")
                 assert data["summary"]["roi"] == "3"
-                exported = await (await page.request.get(api + f"&version={graded}&export=report")).json()
-                saved_odds = exported["report"]["portfolios"]["all_venues"]["odds_buckets"]
+                exported = await (
+                    await page.request.get(api + f"&version={graded}&export=report")
+                ).json()
+                saved_odds = exported["report"]["portfolios"]["all_venues"][
+                    "odds_buckets"
+                ]
                 assert saved_odds == data["odds_buckets"]
-                assert any(bucket["label"] == "+175 to under +300" for bucket in saved_odds)
-                assert [bucket["summary"]["roi"] for bucket in saved_odds
-                        if bucket["summary"]["tickets"]] == ["3"]
+                assert any(
+                    bucket["label"] == "+175 to under +300" for bucket in saved_odds
+                )
+                assert [
+                    bucket["summary"]["roi"]
+                    for bucket in saved_odds
+                    if bucket["summary"]["tickets"]
+                ] == ["3"]
                 async with page.expect_download() as trade_file:
                     await page.get_by_role("link", name="Export trade rows").click()
                 trades = json.loads(
@@ -520,21 +870,34 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert report["provider_requests"] == report["orders_submitted"] == 0
                 await expect(page).to_have_url(re.compile(f"campaign={campaign}.*"))
 
-                await page.get_by_role("link", name="Edit experiment", exact=True).click()
+                await page.get_by_role(
+                    "link", name="Edit experiment", exact=True
+                ).click()
                 await expect(minimum).to_have_value("2.5")
                 await expect(edges).to_have_value("+175, +300, +500, +1000")
                 await minimum.fill("2.51")
                 await page.get_by_role("button", name="Review", exact=True).click()
                 async with page.expect_response(
-                    lambda res: res.request.method == "POST" and res.url.endswith(BASE + "/campaigns")
+                    lambda res: (
+                        res.request.method == "POST"
+                        and res.url.endswith(BASE + "/campaigns")
+                    )
                 ) as revised:
-                    await page.get_by_role("button", name="Save and run", exact=True).click()
+                    await page.get_by_role(
+                        "button", name="Save and run", exact=True
+                    ).click()
                 assert (await revised.value).ok
-                await page.wait_for_url(re.compile(rf"[?&]campaign=(?!{campaign})[0-9a-f]{{64}}"))
+                await page.wait_for_url(
+                    re.compile(rf"[?&]campaign=(?!{campaign})[0-9a-f]{{64}}")
+                )
                 revision_id = parse_qs(urlsplit(page.url).query)["campaign"][0]
-                revision = (await (await page.request.get(str(
-                    server.make_url(f"{BASE}/campaigns/{revision_id}")
-                ))).json())["config"]
+                revision = (
+                    await (
+                        await page.request.get(
+                            str(server.make_url(f"{BASE}/campaigns/{revision_id}"))
+                        )
+                    ).json()
+                )["config"]
                 assert revision["supersedes"] == campaign
                 assert F(revision["minimum_stake_usd"]) == F("2.51")
                 assert revision["odds_bucket_edges"] == config["odds_bucket_edges"]
@@ -544,64 +907,138 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                     queue.process_one(db)
                     queue.process_one(db)
                 await page.reload(wait_until="domcontentloaded")
-                await expect(page.get_by_text("Stake ≥$2.51", exact=False)).to_be_visible()
+                await expect(
+                    page.get_by_text("Stake ≥$2.51", exact=False)
+                ).to_be_visible()
                 await page.locator(".experiment-history > summary").click()
                 await page.get_by_text("Sizing exclusions", exact=True).click()
-                await expect(page.get_by_text("Stake below minimum after sizing", exact=True)).to_be_visible()
-                assert (await (await page.request.get(api + f"&version={graded}&export=report")).json()) == exported
+                await expect(
+                    page.get_by_text("Stake below minimum after sizing", exact=True)
+                ).to_be_visible()
+                assert (
+                    await (
+                        await page.request.get(api + f"&version={graded}&export=report")
+                    ).json()
+                ) == exported
 
-                old_query = urlencode(dict(campaign=campaign, date=day, variant="all_venues",
-                    mode="fixed_profit", run=run, trade=ticket["id"], trade_page=1))
+                old_query = urlencode(
+                    dict(
+                        campaign=campaign,
+                        date=day,
+                        variant="all_venues",
+                        mode="fixed_profit",
+                        run=run,
+                        trade=ticket["id"],
+                        trade_page=1,
+                    )
+                )
                 old_url = str(server.make_url("/experiments?" + old_query))
                 await page.goto(old_url, wait_until="domcontentloaded")
-                await expect(page.get_by_text("This link used previous rules. Showing current results.")).to_be_visible()
+                await expect(
+                    page.get_by_text(
+                        "This link used previous rules. Showing current results."
+                    )
+                ).to_be_visible()
                 current = parse_qs(urlsplit(page.url).query)
-                assert current == dict(campaign=[revision_id], date=[day], variant=["all_venues"],
-                                       view=["daily"], ledger_view=["trades"])
-                await expect(page.get_by_text("No selected paper trades in this portfolio.", exact=True)).to_be_visible()
+                assert current == dict(
+                    campaign=[revision_id],
+                    date=[day],
+                    variant=["all_venues"],
+                    view=["daily"],
+                    ledger_view=["trades"],
+                )
+                await expect(
+                    page.get_by_text(
+                        "No selected paper trades in this portfolio.", exact=True
+                    )
+                ).to_be_visible()
                 await page.reload(wait_until="domcontentloaded")
-                await page.get_by_role("link", name="Open archived snapshot", exact=True).click()
-                await expect(page.get_by_text("Archived experiment · previous rules", exact=True)).to_be_visible()
+                await page.get_by_role(
+                    "link", name="Open archived snapshot", exact=True
+                ).click()
+                await expect(
+                    page.get_by_text("Archived experiment · previous rules", exact=True)
+                ).to_be_visible()
                 assert parse_qs(urlsplit(page.url).query)["snapshot"] == ["1"]
-                await expect(page.locator(".paper-result-trade")).to_contain_text("$2.50")
-                await page.get_by_role("link", name="Open current results", exact=True).click()
-                await expect(page.get_by_text("No selected paper trades in this portfolio.", exact=True)).to_be_visible()
+                await expect(page.locator(".paper-result-trade")).to_contain_text(
+                    "$2.50"
+                )
+                await page.get_by_role(
+                    "link", name="Open current results", exact=True
+                ).click()
+                await expect(
+                    page.get_by_text(
+                        "No selected paper trades in this portfolio.", exact=True
+                    )
+                ).to_be_visible()
 
-                await page.goto(old_url + f"&result={graded}", wait_until="domcontentloaded")
-                await expect(page.get_by_text("Archived experiment · previous rules", exact=True)).to_be_visible()
-                await expect(page.locator(".paper-result-trade")).to_contain_text("$2.50")
+                await page.goto(
+                    old_url + f"&result={graded}", wait_until="domcontentloaded"
+                )
+                await expect(
+                    page.get_by_text("Archived experiment · previous rules", exact=True)
+                ).to_be_visible()
+                await expect(page.locator(".paper-result-trade")).to_contain_text(
+                    "$2.50"
+                )
                 assert parse_qs(urlsplit(page.url).query)["result"] == [graded]
 
-                await page.get_by_role("link", name="Open current results", exact=True).click()
-                await page.get_by_role("link", name="Edit experiment", exact=True).click()
+                await page.get_by_role(
+                    "link", name="Open current results", exact=True
+                ).click()
+                await page.get_by_role(
+                    "link", name="Edit experiment", exact=True
+                ).click()
                 selection = page.get_by_label("Bet selection", exact=True)
                 await expect(selection).to_have_value("")
                 await selection.select_option("main_first_one_per_game")
-                await expect(page.get_by_label("Best venue only", exact=True)).to_be_checked()
-                await expect(page.get_by_label("All qualifying venues", exact=True)).not_to_be_checked()
+                await expect(
+                    page.get_by_label("Best venue only", exact=True)
+                ).to_be_checked()
+                await expect(
+                    page.get_by_label("All qualifying venues", exact=True)
+                ).not_to_be_checked()
                 await minimum.fill("2.50")
                 await page.get_by_label("Compare with Kelly").uncheck()
                 await page.get_by_role("button", name="Review", exact=True).click()
                 async with page.expect_response(
-                    lambda res: res.request.method == "POST" and res.url.endswith(BASE + "/campaigns")
+                    lambda res: (
+                        res.request.method == "POST"
+                        and res.url.endswith(BASE + "/campaigns")
+                    )
                 ) as saved_rule:
-                    await page.get_by_role("button", name="Save and run", exact=True).click()
+                    await page.get_by_role(
+                        "button", name="Save and run", exact=True
+                    ).click()
                 assert (await saved_rule.value).ok
-                await page.wait_for_url(re.compile(rf"[?&]campaign=(?!{revision_id})[0-9a-f]{{64}}"))
+                await page.wait_for_url(
+                    re.compile(rf"[?&]campaign=(?!{revision_id})[0-9a-f]{{64}}")
+                )
                 single_id = parse_qs(urlsplit(page.url).query)["campaign"][0]
                 with connect_web() as db:
                     single_run = paper_campaigns.tick(db)
                     assert single_run and single_run != revised_run
                     queue.process_one(db)
                     selected = paper_campaigns.view(db, single_id)
-                    assert selected["config"]["portfolio_rule"] == "main_first_one_per_game"
+                    assert (
+                        selected["config"]["portfolio_rule"]
+                        == "main_first_one_per_game"
+                    )
                     assert selected["config"]["portfolios"] == ["best_venue"]
                     assert selected["weekly"]["summary"]["tickets"] == 1
                 await page.reload(wait_until="domcontentloaded")
-                await expect(page.get_by_text("One trade per game, main lines first", exact=False).first).to_be_visible()
+                await expect(
+                    page.get_by_text(
+                        "One trade per game, main lines first", exact=False
+                    ).first
+                ).to_be_visible()
                 await page.get_by_role("link", name="All trades", exact=True).click()
-                await expect(page.locator(".result-ledger-table tbody tr")).to_have_count(1)
+                await expect(
+                    page.locator(".result-ledger-table tbody tr")
+                ).to_have_count(1)
                 await page.locator(".result-ledger-table tbody tr a").click()
                 await page.locator(".result-inline-trade > details > summary").click()
-                await expect(page.locator(".result-inline-trade")).to_contain_text("Qualifying main line")
+                await expect(page.locator(".result-inline-trade")).to_contain_text(
+                    "Qualifying main line"
+                )
                 await browser.close()

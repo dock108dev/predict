@@ -57,25 +57,25 @@ def catalog():
     )
 
 
-def fraction(path):
+def fraction(path, payload="payload"):
     # Paths are module-owned constants, never request text.
-    text = "payload#>>'{" + path + "}'"
+    text = payload + "#>>'{" + path + "}'"
     return f"(split_part({text},'/',1)::numeric / COALESCE(NULLIF(split_part({text},'/',2),''),'1')::numeric)"
 
 
-def expression(selected):
+def expression(selected, *, payload="payload"):
     """SQL ordering over the whole qualified cohort, before LIMIT/OFFSET."""
     selected = method(selected)
-    ev = fraction("raw,net_ev")
-    score = fraction("raw,opportunity_score")
+    ev = fraction("raw,net_ev", payload)
+    score = fraction("raw,opportunity_score", payload)
     if selected == "ev":
         return f"100*{ev}"
     if selected == "score":
         return score
-    p = fraction("reference,probability")
-    committed = fraction("fee,committed_usd")
-    win = f"({fraction('fee,cashflows,win,net_receipt_usd')}/{committed}-1)"
-    loss = f"({fraction('fee,cashflows,loss,net_receipt_usd')}/{committed}-1)"
+    p = fraction("reference,probability", payload)
+    committed = fraction("fee,committed_usd", payload)
+    win = f"({fraction('fee,cashflows,win,net_receipt_usd', payload)}/{committed}-1)"
+    loss = f"({fraction('fee,cashflows,loss,net_receipt_usd', payload)}/{committed}-1)"
     if selected == "balanced":
         return f"CASE WHEN {win}>0 THEN 10000*{ev}/sqrt({win}) END"
     if selected == "edge":
@@ -118,6 +118,8 @@ def present(payload, value, selected):
             shown = "+" + shown
         if selected == "ev":
             shown += "%"
+    liquidity = payload.get("liquidity")
+    basis = dict(basis="public_book" if liquidity.get("eligible") else "indicative_quote") if liquidity else {}
     return dict(
         payload,
         ranking=dict(
@@ -127,5 +129,6 @@ def present(payload, value, selected):
             unit=info["unit"],
             value=exact,
             display=shown or "—",
+            **basis,
         ),
     )

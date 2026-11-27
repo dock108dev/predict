@@ -24,32 +24,40 @@ MAX_PENDING_BUNDLES = 48
 
 
 def targets(db, at, *, exclude=()):
+    from .current_policy import SPORTS
+
     games, schedules = zip(*exclude, strict=True) if exclude else ((), ())
     return list(db.execute('''SELECT t.game_id,t.schedule_id,t.target_at,t.deadline_at,
             g.source_event_id,g.event,g.early_id,
             EXISTS (SELECT 1 FROM public.ev_experiment_depth d
                 WHERE (d.game_id,d.schedule_id,d.target_at,d.kind)=
-                      (t.game_id,t.schedule_id,t.target_at,'decision')) AS observed
+                      (t.game_id,t.schedule_id,t.target_at,'decision')) AS observed,
+            campaigns.all_sports
         FROM public.ev_experiment_task t JOIN public.ev_experiment_game g ON g.id=t.game_id
+        JOIN LATERAL (SELECT bool_or(c.payload->>'depth_policy'=%s) AS all_sports
+             FROM public.paper_campaign c
+             JOIN public.paper_campaign_day d ON d.campaign_id=c.id
+             LEFT JOIN public.paper_campaign_retirement retired ON retired.campaign_id=c.id
+             WHERE (c.payload->>'depth_policy'=%s AND g.event->>'league'='NCAAB'
+                 OR c.payload->>'depth_policy'=%s AND t.target_at>=(c.payload->>'prospective_start_at')::timestamptz)
+             AND c.created_at<=%s
+             AND (retired.cutoff_at IS NULL OR t.target_at<retired.cutoff_at)
+             AND d.game_date=((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date
+             AND NOT EXISTS (SELECT 1 FROM public.paper_campaign revision WHERE revision.payload->>'supersedes'=c.id)
+        ) AS campaigns ON campaigns.all_sports IS NOT NULL
         WHERE t.checkpoint='late' AND t.state='pending' AND g.early_id IS NOT NULL
-          AND t.target_at>%s AND t.target_at<=%s AND g.event->>'league'='NCAAB'
+          AND t.target_at>%s AND t.target_at<=%s AND g.event->>'league'=ANY(%s)
           AND NOT EXISTS (SELECT 1 FROM unnest(%s::text[],%s::text[]) AS x(game_id,schedule_id)
               WHERE (x.game_id,x.schedule_id)=(t.game_id,t.schedule_id))
-          AND EXISTS (SELECT 1 FROM public.paper_campaign c
-              JOIN public.paper_campaign_day d ON d.campaign_id=c.id
-              WHERE c.payload->>'depth_policy'=%s AND c.created_at<=%s
-              AND d.game_date=((g.event->>'starts_at')::timestamptz
-                  AT TIME ZONE 'America/New_York')::date
-              AND NOT EXISTS (SELECT 1 FROM public.paper_campaign revision
-                  WHERE revision.payload->>'supersedes'=c.id))
         ORDER BY t.target_at,t.game_id LIMIT %s''',
-        (at, at + PREPARE_AHEAD, list(games), list(schedules), storage.POLICY, at, MAX_GAMES_IN_FLIGHT)))
+        (storage.ALL_SPORTS_POLICY, storage.POLICY, storage.ALL_SPORTS_POLICY, at,
+         at, at + PREPARE_AHEAD, SPORTS, list(games), list(schedules), MAX_GAMES_IN_FLIGHT)))
 
 
-def supports(record):
+def supports(record, *, moneyline=False):
     market = record['market_identity']
     return (record['quote']['venue'] == 'novig' and market['period'] == 'full_game'
-            and market['family'] in ('spread', 'total')
+            and (market['family'] in ('spread', 'total') or moneyline and market['family'] == 'moneyline')
             and record['quote']['state'] == 'available')
 
 
@@ -60,6 +68,7 @@ def _binding(record, witness, *, at, inventory=None):
         return dict(venue='novig', reason=result.get('reason') or 'unmatched_pregame_phase',
                     levels=[], complete=False)
     return dict(result, family=record['market_identity']['family'],
+                league=record['event']['competition'],
                 starts_at=record['event']['scheduled_start'])
 
 
@@ -120,11 +129,11 @@ def _current_prices(db, source_id, event, at):
     return prices
 
 
-def plan_from_snapshot(snapshot, witness, at):
+def plan_from_snapshot(snapshot, witness, at, *, moneyline=False):
     result, unresolved = {}, []
     for offer in snapshot.get('offers', ()):
         record = offer['record']
-        if not supports(record):
+        if not supports(record, moneyline=moneyline):
             continue
         original = record['quote']['original']
         odds = Fraction(original['value'])
@@ -152,7 +161,8 @@ def _reconcile(plan, witness, unresolved, catalog, at, *, event=None, prices=Non
             key = storage.offer_key(record)
             scope = (record['market_identity']['family'], binding['selected_side'], Fraction(binding['signed_line']))
             price = (prices or {}).get(scope, plan.get(key, (None, None))[1])
-            entries[key].append((dict(binding, family=scope[0], starts_at=event['scheduled_start']), price))
+            entries[key].append((dict(binding, family=scope[0], league=event['competition'],
+                                      starts_at=event['scheduled_start']), price))
         for key, matches in entries.items():
             if len(matches) > 1:
                 existing, _ = plan.get(key, ({}, None))
@@ -178,6 +188,8 @@ def _reuse(before, after):
 
 class ExperimentDepth:
     def __init__(self, service, *, connector=connect, client_factory=None, now=experiment.utc):
+        from .dashboard_kalshi import Catalog
+
         self.service = service
         self.connector = connector
         self.client_factory = client_factory
@@ -185,6 +197,7 @@ class ExperimentDepth:
         self.task = None
         self.running = {}
         self.pending = {}
+        self.kalshi_catalog = Catalog()
         self.progress = dict(state='starting', version=storage.VERSION)
 
     def enabled(self):
@@ -209,12 +222,53 @@ class ExperimentDepth:
 
     def _bindings(self, task, at):
         from .native_experiment_depth import VENUES, native_bindings
+        from app.fees.product_schedules import read_all
 
         with self.connector() as db:
             plan, witness, unresolved, event, prices, source_offers = bindings(db, task, at)
             native = native_bindings(db, task, at, source_offers,
                                      venues=[venue for venue in VENUES if self.venue_enabled(venue)])
-        return plan, witness, unresolved, event, prices, native
+            products = read_all(db) if task.get('all_sports') else {}
+        return plan, witness, unresolved, event, prices, native, source_offers, products
+
+    def _still_targeted(self, task):
+        identity = (task['game_id'], task['schedule_id'], task['target_at'])
+        at = self.now()
+        with self.connector() as db:
+            return any((row['game_id'], row['schedule_id'], row['target_at']) == identity and not row['observed']
+                       for row in targets(db, at))
+
+    async def _prospective_native(self, client, task, offers, cutoff, products):
+        """Bind the frozen strategy's quote to an independently listed instrument."""
+        from .dashboard_pmus import read as pmus
+
+        league = task['event']['league']
+        records = {task['source_event_id']: [(storage.offer_key(r), None, r) for r in
+            (offer.get('record', offer) for offer in offers)
+            if r['market_identity']['family'] in ('spread', 'total')
+            and r['market_identity']['period'] == 'full_game']}
+        reads = []
+        if self.venue_enabled('kalshi'):
+            reads.append(self.kalshi_catalog.read(client, league, records, cutoff=cutoff, products=products))
+        if self.venue_enabled('polymarket_us'):
+            reads.append(pmus(client, league, records, at=self.now(), cutoff=cutoff, products=products))
+        result = {}
+        for group in await asyncio.gather(*reads, return_exceptions=True):
+            if isinstance(group, Exception):
+                failure(__name__, 'experiment_native_discovery', group)
+            else:
+                result.update(group)
+        for key, _, record in records[task['source_event_id']]:
+            binding = result.get(key)
+            if not binding or record['quote']['venue'] != 'polymarket_us':
+                continue
+            if record['quote']['source']['provider'] == 'polymarket_us':
+                continue
+            link = (record.get('comparison_source_metadata') or {}).get('bookmaker_market_link') or {}
+            if (link.get('host') not in ('polymarket.us', 'www.polymarket.us', 'gateway.polymarket.us')
+                    or binding['route'] not in link.get('path', '').split('/')):
+                result.pop(key)
+        return result
 
     async def _market_reads(self, client, plan, cutoff):
         from .novig_experiment_depth import book_depth, catalog_depth
@@ -265,7 +319,12 @@ class ExperimentDepth:
     async def _capture(self, client, task):
         cutoff = task['target_at']
         novig, native_client = client
-        plan, witness, unresolved, event, prices, native = await asyncio.to_thread(self._bindings, task, self.now())
+        plan, witness, unresolved, event, prices, native, offers, products = await asyncio.to_thread(
+            self._bindings, task, self.now())
+        native_preparation = None
+        if task.get('all_sports'):
+            native_preparation = asyncio.create_task(self._prospective_native(
+                native_client, task, offers, cutoff-READ_AHEAD, products))
         preparation, source_gaps = (), {}
         if witness and (event or unresolved) and self.venue_enabled('novig') and self.now() < cutoff - READ_AHEAD:
             inventory = await novig.read_event(witness['event']['eventId'], cutoff - READ_AHEAD)
@@ -278,8 +337,11 @@ class ExperimentDepth:
             source_gaps['novig'] = 'source_paused'
         elif not plan:
             source_gaps['novig'] = 'unmatched_pregame_event'
+        if native_preparation is not None:
+            native.update(await native_preparation)
         await asyncio.sleep(max(0, (cutoff - READ_AHEAD - self.now()).total_seconds()))
-        if not self.enabled() or self.now() >= cutoff:
+        if (not self.enabled() or self.now() >= cutoff
+                or task.get('all_sports') and not await asyncio.to_thread(self._still_targeted, task)):
             return
         decision, failures = await self._observe(novig, native_client, plan, native, cutoff)
         source_gaps.update(failures)
@@ -312,7 +374,8 @@ class ExperimentDepth:
 
         book_sides = await asyncio.gather(
             self._market_reads(novig, plan, cutoff),
-            native_client.read_native(native, cutoff - ASSEMBLY_RESERVE),
+            native_client.read_native(native, cutoff - ASSEMBLY_RESERVE,
+                                      batch=any(binding.get('contract') for binding in native.values())),
             return_exceptions=True,
         )
         observations, gaps = {}, {}
@@ -375,19 +438,27 @@ class ExperimentDepth:
         self.progress = dict(self.progress, active=len(self.running), pending=len(self.pending))
 
     async def run(self):
+        from .dashboard_depth import DashboardDepth
         from .native_experiment_depth import NativeExperimentDepth
         from .novig_experiment_depth import NovigExperimentDepth
 
         try:
             async with ((self.client_factory or NovigExperimentDepth)() as novig,
                         NativeExperimentDepth(now=self.now, allowed=self.venue_enabled) as native):
-                while True:
-                    try:
-                        await self.tick((novig, native))
-                    except Exception as exc:
-                        failure(__name__, 'experiment_depth_poll', exc)
-                        self.progress = dict(self.progress, state='degraded', reason=type(exc).__name__)
-                    await asyncio.sleep(2)
+                dashboard = DashboardDepth(self, connector=self.connector, now=self.now)
+                self.dashboard_progress = dashboard.progress
+                task = asyncio.create_task(dashboard.run(novig, native), name='predict-dashboard-public-depth')
+                try:
+                    while True:
+                        try:
+                            await self.tick((novig, native))
+                        except Exception as exc:
+                            failure(__name__, 'experiment_depth_poll', exc)
+                            self.progress = dict(self.progress, state='degraded', reason=type(exc).__name__)
+                        await asyncio.sleep(2)
+                finally:
+                    task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
         finally:
             for job in self.running.values():
                 job.cancel()

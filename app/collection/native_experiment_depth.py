@@ -1,7 +1,7 @@
 """Bounded public book reads for native markets matched to frozen paper offers."""
 
 import asyncio
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from fractions import Fraction as F
@@ -20,6 +20,7 @@ from app.dashboard.current_contract import price
 from app.dashboard.session_projection import stable
 from app.fees.product_schedules import for_offer, read_all
 from app.storage import current_native_desk, experiment_depth, native_market_metadata
+from app.storage.current_rows import event_id as current_event_id
 from app.storage.store import exact_time, stamp
 from .public_fee_refresh import REVIEW_WINDOW
 
@@ -215,6 +216,47 @@ def native_bindings(db, task, at, pregame_offers, *, venues=VENUES):
     return results
 
 
+def synchronized_kalshi(db, bindings, *, at, cutoff):
+    """Use a current synchronized ladder for the exact market and selected side."""
+    selected = {key: binding for key, binding in bindings.items()
+                if binding['venue'] == 'kalshi' and binding.get('contract') and not binding['reason']}
+    if not selected:
+        return {}
+    keys = {(current_event_id('kalshi', b['event_id']), b['market_id'], b['outcome_id']) for b in selected.values()}
+    events, markets, sides = [list(values) for values in zip(*keys, strict=True)]
+    floor = cutoff-timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS)
+    rows = db.execute('''SELECT b.event_id,b.native_market_id,b.source_at,b.received_at,b.revision,b.sequence,
+               wanted.side,e.scheduled_start,d.levels
+        FROM unnest(%s::text[],%s::text[],%s::text[]) wanted(event_id,market_id,side)
+        JOIN native_book_revision b ON b.event_id=wanted.event_id AND b.native_market_id=wanted.market_id
+        JOIN current_event e ON e.id=b.event_id AND e.provider='kalshi'
+        JOIN native_ladder_revision d ON d.id=b.ladder_refs#>>ARRAY[wanted.side,'asks']
+        WHERE b.venue='kalshi' AND b.is_current AND b.state='active' AND b.sync='synchronized'
+          AND b.quantity_units='contracts' AND b.source_order>=extract(epoch FROM %s::timestamptz)
+          AND b.received_order<=extract(epoch FROM %s::timestamptz)''', (events,markets,sides,floor,at))
+    exact = {(row['event_id'],row['native_market_id'],row['side']):row for row in rows}
+    results = {}
+    for key,b in selected.items():
+        row = exact.get((current_event_id('kalshi', b['event_id']), b['market_id'], b['outcome_id']))
+        if not row or stamp(row['scheduled_start']) != stamp(b['scheduled_start']):
+            continue
+        source, received = stamp(row['source_at']), stamp(row['received_at'])
+        expires = min(source+timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS),
+                      stamp(b['scheduled_start']), stamp(b['terms_valid_until']))
+        if not floor <= source <= received <= at <= cutoff < expires:
+            continue
+        ladder = row['levels']
+        if not all(price_unit == 'usd_per_contract' and size_unit == 'contracts'
+                   for _,price_unit,_,size_unit in ladder):
+            continue
+        evidence = dict(observed_at=row['received_at'], source_at=row['source_at'],
+                        source='synchronized_native_book', revision=row['revision'], sequence=row['sequence'])
+        results[key] = dict(b, levels=[dict(price=p,quantity=q) for p,_,q,_ in ladder[:DEPTH]],
+            complete=False, source_at=row['source_at'], received_at=row['received_at'],
+            valid_until=expires.isoformat(), identity_receipts=[*b['identity_receipts'],evidence])
+    return results
+
+
 class NativeExperimentDepth:
     def __init__(self, *, client=None, now=None, concurrency=3, timeout=2.0, allowed=None):
         self.client = client
@@ -222,6 +264,7 @@ class NativeExperimentDepth:
         self.semaphore = asyncio.Semaphore(concurrency)
         self.timeout = timeout
         self.blocked_until = {}
+        self.requests = Counter()
         self.allowed = allowed or (lambda _venue: True)
 
     async def __aenter__(self):
@@ -238,7 +281,7 @@ class NativeExperimentDepth:
                         url=str(url), status=None, failure=reason)
         return None, evidence if finished <= cutoff else None, reason
 
-    async def _read(self, venue, url, cutoff, *, params=None):
+    async def _read(self, venue, url, cutoff, *, params=None, body_limit=512 * 1024):
         async with self.semaphore:
             if not self.allowed(venue):
                 return None, None, 'source_paused'
@@ -248,13 +291,14 @@ class NativeExperimentDepth:
                 return None, None, 'cutoff_passed'
             if self.blocked_until.get(venue, sent) > sent:
                 return None, None, 'throttled'
+            self.requests[venue] += 1
             try:
                 async with asyncio.timeout(seconds):
                     async with self.client.stream('GET', url, params=params, timeout=seconds) as response:
                         chunks, size = [], 0
                         async for chunk in response.aiter_bytes():
                             size += len(chunk)
-                            if size > 512 * 1024:
+                            if size > body_limit:
                                 return self._failed_read(response.url, sent, cutoff, 'native_book_capacity')
                             chunks.append(chunk)
                         body = b''.join(chunks)
@@ -309,6 +353,11 @@ class NativeExperimentDepth:
         ticker = bindings[0]['market_id']
         base = kalshi.REST_URL + '/markets/' + quote(ticker, safe='')
         book, evidence, reason = await self._read('kalshi', base + '/orderbook', cutoff, params={'depth': DEPTH})
+        return await self._kalshi_levels(bindings, cutoff, book, evidence, reason)
+
+    async def _kalshi_levels(self, bindings, cutoff, book, evidence, reason):
+        ticker = bindings[0]['market_id']
+        base = kalshi.REST_URL + '/markets/' + quote(ticker, safe='')
         receipts = [evidence] if evidence else []
         if reason:
             return [dict(binding, reason=reason, receipts=receipts) for binding in bindings]
@@ -333,7 +382,8 @@ class NativeExperimentDepth:
             for binding in bindings:
                 levels = sorted(native[binding['opposite_outcome_id']].items(), reverse=True)
                 normalized = [dict(price=str(1 - F(bid)), quantity=str(size)) for bid, size in levels]
-                rows.append(dict(binding, levels=normalized[:DEPTH], complete=len(levels) < DEPTH, receipts=receipts))
+                rows.append(dict(binding, levels=normalized[:DEPTH], complete=len(levels) < DEPTH,
+                    receipts=receipts, **self._book_window(binding, evidence)))
             return rows
         except ERRORS:
             return [dict(binding, reason='native_book_invalid', receipts=receipts) for binding in bindings]
@@ -365,13 +415,43 @@ class NativeExperimentDepth:
                         normalized = [dict(price=str(ask), quantity=str(size)) for ask, size in levels[:DEPTH]]
                         # REST documents no complete-depth guarantee for PMUS.
                         results.append(dict(binding, levels=normalized, complete=False,
-                            source_at=source_at, receipts=receipts))
+                            source_at=source_at, receipts=receipts, **self._book_window(binding, evidence, source_at)))
                     return results
             except ERRORS:
                 reason = 'native_book_invalid'
         return [dict(binding, reason=reason, source_at=source_at, receipts=receipts) for binding in bindings]
 
-    async def read_native(self, bindings, cutoff):
+    @staticmethod
+    def _book_window(binding, evidence, source_at=None):
+        lifetime = timedelta(seconds=NATIVE_BOOK_MAX_AGE_SECONDS)
+        received = stamp(evidence['received_at'])
+        headers = evidence['headers']
+        earliest = min(received-timedelta(seconds=int(headers.get('age', '0'))),
+            parsedate_to_datetime(headers['date']), stamp(source_at) if source_at else received)
+        expiry = earliest+lifetime
+        if binding.get('scheduled_start'):
+            expiry = min(expiry, stamp(binding['scheduled_start']))
+        if binding.get('terms_valid_until'):
+            expiry = min(expiry, stamp(binding['terms_valid_until']))
+        return dict(received_at=evidence['received_at'], valid_until=expiry.isoformat())
+
+    async def _kalshi_batch(self, markets, cutoff):
+        payload, evidence, reason = await self._read('kalshi', kalshi.REST_URL+'/markets/orderbooks', cutoff,
+                                                     params=[('tickers', ticker) for ticker, _ in markets])
+        rows = defaultdict(list)
+        for row in (payload or {}).get('orderbooks', []):
+            rows[row.get('ticker')].append(row)
+        results = {}
+        for ticker, pairs in markets:
+            keys, bindings = zip(*pairs, strict=True)
+            matched = rows[ticker]
+            data = matched[0] if len(matched) == 1 else None
+            items = await self._kalshi_levels(bindings, cutoff, data, evidence,
+                                             reason or (None if data else 'native_book_unobserved'))
+            results.update(zip(keys, items, strict=True))
+        return results
+
+    async def read_native(self, bindings, cutoff, *, batch=False):
         """Read each matched market once for all selected sides at this cutoff."""
         cutoff = stamp(cutoff)
         queries = defaultdict(list)
@@ -391,5 +471,14 @@ class NativeExperimentDepth:
             read = self._kalshi if venue == 'kalshi' else self._polymarket
             results.update(zip(keys, await read(items, cutoff), strict=True))
 
-        await asyncio.gather(*(observation(venue, pairs) for (venue, _), pairs in queries.items()))
+        kalshi_markets = [(ticker, pairs) for (venue, ticker), pairs in queries.items() if venue == 'kalshi']
+
+        async def batch_observation(markets):
+            results.update(await self._kalshi_batch(markets, cutoff))
+
+        # Keep public response size and list length bounded independently of the external maximum.
+        reads = [observation(venue, pairs) for (venue, _), pairs in queries.items() if venue != 'kalshi' or not batch]
+        if batch:
+            reads += [batch_observation(kalshi_markets[i:i+16]) for i in range(0, len(kalshi_markets), 16)]
+        await asyncio.gather(*reads)
         return results

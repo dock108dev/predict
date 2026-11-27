@@ -18,7 +18,8 @@ from .novig_v3_public import HOST, MAX_BODY
 
 
 MARKETS_PATH = '/v3/public/catalog/markets'
-MARKET_TYPES = {'spread': 'SPREAD', 'total': 'TOTAL'}
+EVENTS_PATH = '/v3/public/catalog/events'
+MARKET_TYPES = {'moneyline': 'MONEY', 'spread': 'SPREAD', 'total': 'TOTAL'}
 PAGE_SIZE = 240
 PAGE_LIMIT = 4
 BOOK_LEVELS = 20
@@ -29,6 +30,7 @@ REQUEST_SPACING_SECONDS = 0.65
 # allowance is outside the decision freshness budget.
 CATALOG_FRESH_SECONDS = 10
 BOOK_FRESH_SECONDS = 5
+EVENT_FRESH_SECONDS = 15
 FEE_SOURCE = 'https://docs.novig.com/api/concepts/fees#from-december-1-2026'
 CUTOVER_DATE_UTC = datetime(2026, 12, 1, tzinfo=timezone.utc)
 CUTOVER_DATE_ET = CUTOVER_DATE_UTC + timedelta(hours=5)
@@ -156,12 +158,40 @@ class NovigExperimentDepth:
             receipt['received_at'] = ended.isoformat()
         return None, receipt, reason
 
-    async def read_event(self, event_id, cutoff):
-        cutoff = stamp(cutoff)
+    async def read_event(self, event_id, cutoff, *, moneyline=False):
         if not _uuid(event_id):
             return PublicEventDepth({}, (), 'unmatched')
         params = dict(event=event_id, eventStatus='OPEN_PREGAME',
-                      marketType='SPREAD,TOTAL', limit=PAGE_SIZE)
+                      marketType='MONEY,SPREAD,TOTAL' if moneyline else 'SPREAD,TOTAL', limit=PAGE_SIZE)
+        return await self._read_catalog(params, stamp(cutoff))
+
+    async def read_event_metadata(self, event_id, cutoff):
+        """Verify the exact event and its phase before rebuilding identity."""
+        if not _uuid(event_id):
+            return None, None, 'unmatched'
+        event, receipt, reason = await self._read(f'{EVENTS_PATH}/{event_id}', {}, stamp(cutoff))
+        if reason:
+            return None, receipt, reason
+        reason = _fresh(receipt, self.clock(), EVENT_FRESH_SECONDS)
+        if reason:
+            return None, receipt, reason
+        if (not isinstance(event, dict) or event.get('eventId') != event_id
+                or event.get('status') != 'OPEN_PREGAME'):
+            return None, receipt, 'identity_conflict'
+        return event, receipt, None
+
+    async def read_slate(self, league, *, after, before, cutoff):
+        """Read a bounded kickoff window with all three pregame market families."""
+        from .current_policy import SPORTS
+
+        if league not in SPORTS or stamp(after) >= stamp(before):
+            return PublicEventDepth({}, (), 'invalid_scope')
+        params = dict(league=league, startsAfter=int(stamp(after).timestamp() * 1000),
+                      startsBefore=int(stamp(before).timestamp() * 1000), eventStatus='OPEN_PREGAME',
+                      marketType='MONEY,SPREAD,TOTAL', limit=PAGE_SIZE)
+        return await self._read_catalog(params, stamp(cutoff))
+
+    async def _read_catalog(self, params, cutoff):
         markets, receipts, seen_cursors = {}, [], set()
         for _ in range(PAGE_LIMIT):
             page, receipt, reason = await self._read(MARKETS_PATH, params, cutoff)
@@ -173,7 +203,8 @@ class NovigExperimentDepth:
                 return PublicEventDepth(markets, tuple(receipts), 'invalid_response')
             for market in page['items']:
                 market_id = market.get('marketId') if isinstance(market, dict) else None
-                if (not _uuid(market_id) or market.get('eventId') != event_id or market_id in markets):
+                if (not _uuid(market_id) or not _uuid(market.get('eventId'))
+                        or params.get('event', market['eventId']) != market['eventId'] or market_id in markets):
                     return PublicEventDepth({}, tuple(receipts), 'identity_conflict')
                 markets[market_id] = dict(market, receipt=receipt)
             cursor = page.get('next')
@@ -203,6 +234,13 @@ def _cache_origin(receipt):
                stamp(receipt['received_at']) - timedelta(seconds=int(receipt.get('age', '0'))))
 
 
+def _expiry(receipt, max_seconds):
+    lifetime = re.search(r'(?:^|,)\s*max-age=([0-9]{1,10})(?:\s*,|\s*$)', receipt['cache-control'], re.I)
+    if not lifetime:
+        raise ValueError('cache_lifetime_unavailable')
+    return _cache_origin(receipt) + timedelta(seconds=min(max_seconds, int(lifetime[1])))
+
+
 def _fresh(receipt, cutoff, max_seconds):
     """Age a body from its oldest HTTP clock through the decision cutoff."""
     try:
@@ -215,14 +253,9 @@ def _fresh(receipt, cutoff, max_seconds):
                 or dated > received + timedelta(seconds=1)
                 or receipt.get('warning', '').startswith(('110 ', '111 '))):
             return 'stale'
-        lifetime = re.search(r'(?:^|,)\s*max-age=([0-9]{1,10})(?:\s*,|\s*$)', receipt['cache-control'], re.I)
-        if not lifetime:
-            return 'cache_unverified'
         # Date and Age have second precision. The minimum also prevents a
         # freshly served stale object from inheriting the local receipt clock.
-        origin = _cache_origin(receipt)
-        allowed = min(max_seconds, int(lifetime[1]))
-        if (cutoff - origin).total_seconds() > allowed:
+        if cutoff > _expiry(receipt, max_seconds):
             return 'stale'
     except (AttributeError, KeyError, OverflowError, TypeError, ValueError):
         return 'cache_unverified'
@@ -260,15 +293,17 @@ def _base(binding):
 def _outcomes(market, binding, cutoff):
     market_type = MARKET_TYPES.get(binding.get('family'))
     side = binding.get('selected_side')
-    line = Fraction(binding['signed_line'])
-    strike = -line if side == 'away' else line
+    line = None if market_type == 'MONEY' else Fraction(binding['signed_line'])
+    strike = Fraction(0) if line is None else -line if side == 'away' else line
+    observed_strike = market.get('strike')
     starts = stamp(binding['starts_at'])
     if (not market_type or not binding.get('available') or binding.get('phase') != 'scheduled'
             or not binding.get('phase_verified') or cutoff >= starts
             or market.get('marketType') != market_type or market.get('status') != 'OPEN'
             or type(market.get('startsTs')) is not int
             or datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(milliseconds=market['startsTs']) != starts
-            or Fraction(market['strike']) != strike):
+            or (Fraction(observed_strike) if observed_strike is not None else None)
+                   not in ((None, strike) if market_type == 'MONEY' else (strike,))):
         raise ValueError('market identity conflict')
     members = market['outcomes']
     outcomes = {outcome['outcomeId']: outcome for outcome in members}
@@ -287,9 +322,9 @@ def _outcomes(market, binding, cutoff):
             raise ValueError('total outcome conflict')
     elif (side not in {'away', 'home'} or not _uuid(selected.get('subjectId'))
           or not _uuid(opposite.get('subjectId')) or selected['subjectId'] == opposite['subjectId']
-          or Fraction(selected['name'].rsplit(' ', 1)[-1]) != line
-          or Fraction(opposite['name'].rsplit(' ', 1)[-1]) != -line):
-        raise ValueError('spread outcome conflict')
+          or (line is not None and (Fraction(selected['name'].rsplit(' ', 1)[-1]) != line
+              or Fraction(opposite['name'].rsplit(' ', 1)[-1]) != -line))):
+        raise ValueError('team outcome conflict')
     elif binding.get('subject_role_anchors'):
         other_side = 'home' if side == 'away' else 'away'
         if any(anchor[f'{side}_subject'] != selected['subjectId']
@@ -335,6 +370,16 @@ def catalog_depth(binding, snapshot, cutoff):
                                  labels=[selected['name'], opposite['name']],
                                  subjects=[selected.get('subjectId'), opposite.get('subjectId')],
                                  binding_revision=binding.get('revision'))
+        if binding.get('league'):
+            from app.comparison.sgo_native_binding import settlement_profile
+
+            line = binding['signed_line']
+            settlement = settlement_profile(binding['league'], binding['family'],
+                                             Fraction(line) if line is not None else None, market.get('voids'))
+            depth['contract'].update(league=binding['league'], period='full_game', phase='pregame',
+                                     settlement=settlement)
+            depth.update(received_at=receipt['received_at'], valid_until=min(
+                _expiry(receipt, CATALOG_FRESH_SECONDS), stamp(binding['starts_at'])).isoformat())
         depth['fee'] = _fee(market.get('fee'), cutoff)
         bid = opposite.get('bid')
         if bid is None:
@@ -392,6 +437,9 @@ def book_depth(binding, snapshot, cutoff, *, catalog):
         # order. A disagreeing older book cannot supersede a later best bid.
         if top != catalog['levels'] and _cache_origin(snapshot.receipt) < _cache_origin(catalog['receipts'][0]):
             return dict(depth, reason='older_book_top_conflict', catalog_lower_bound=True)
+        if 'valid_until' in depth:
+            depth.update(received_at=snapshot.receipt['received_at'], valid_until=min(
+                stamp(depth['valid_until']), _expiry(snapshot.receipt, BOOK_FRESH_SECONDS)).isoformat())
         return dict(depth, complete=len(rows) < BOOK_LEVELS, sequence=book['seq'], levels=rows)
     except (ArithmeticError, AttributeError, KeyError, OverflowError, TypeError, ValueError):
         return dict(depth, reason='invalid_order_book')

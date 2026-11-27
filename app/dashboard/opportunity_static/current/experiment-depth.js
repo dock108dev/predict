@@ -11,6 +11,7 @@ const states={
   partial_size:'Partial size',
   confirmed_empty:'Confirmed empty',
   above_limit:'Price above limit',
+  below_ev_floor:'Below EV floor',
   unknown:'Unknown',
 };
 const cohortTitles={
@@ -51,7 +52,7 @@ export function depthComparison(analysis, followup) {
   const targeted=original.targeted_picks;
   const missingBooks=targeted-original.usable_books;
   section.append(node('h3','Public book comparison'),
-    node('p',`NCAAB full-game spreads and totals · ${count(analysis.frozen_game_decisions)} frozen games · ${count(analysis.venue_receipt_games)} games with public receipts.`,
+    node('p',`${analysis.scope} · ${count(analysis.frozen_game_decisions)} frozen games · ${count(analysis.venue_receipt_games)} games with book receipts.`,
       'workspace-caption'),
     node('p',`${count(original.full_size)} of ${count(targeted)} quoted picks had full displayed size. ${count(original.usable_books)} picks had usable evidence.${missingBooks ? ` Coverage is partial for this comparison, with ${count(missingBooks)} unknown.` : ''} Public book size is displayed capacity. Actual fills remain unknown.`,
       'workspace-caption'));

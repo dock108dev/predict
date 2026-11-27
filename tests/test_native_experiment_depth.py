@@ -65,6 +65,28 @@ def test_kalshi_empty_book_first_confirms_exact_open_market():
     assert len(routes) == 2 and books['one']['reason'] == 'native_market_open_unverified'
 
 
+def test_public_kalshi_batch_does_not_treat_a_missing_ticker_as_empty():
+    calls = []
+
+    def serve(request):
+        calls.append(request.url.params.get_list('tickers'))
+        body = {'orderbooks': [{'ticker': 'one', 'orderbook_fp': {
+            'yes_dollars': [['0.47', '250']], 'no_dollars': [['0.50', '300']],
+        }}]}
+        return httpx.Response(200, headers={'Date': format_datetime(AT)}, json=body)
+
+    async def read():
+        async with NativeExperimentDepth(client=httpx.AsyncClient(transport=httpx.MockTransport(serve)), now=lambda: AT) as venue:
+            return await venue.read_native({'one': binding('kalshi', 'one', 'yes', 'no'),
+                                            'two': binding('kalshi', 'two', 'yes', 'no')},
+                                           AT + timedelta(seconds=1), batch=True)
+
+    books = asyncio.run(read())
+    assert calls == [['one', 'two']]
+    assert books['one']['levels'] == [dict(price='1/2', quantity='300')]
+    assert books['two']['reason'] == 'native_book_unobserved'
+
+
 def test_polymarket_short_sizes_come_from_long_bids_and_clock_is_source_bound():
     def serve(request):
         data = dict(marketSlug='slug', state='MARKET_STATE_OPEN', transactTime=AT.isoformat(),

@@ -377,11 +377,11 @@ def calculate(record, ref, fee, *, at, game_key, amount=COMPARISON_USD):
                               amount=amount, contract=(row, cost, terms), fill=fill, evidence=evidence)
 
 
-def posted_calculation(record, ref, fee, *, at, game_key, amount, contract, fill, evidence):
+def posted_calculation(record, ref, fee, *, at, game_key, amount, contract, fill, evidence, ordinary_win=None):
     row, cost, terms = contract
     committed, legs, wager, entry, reserve, cash, trace = fill
     stake = terms["kind"] == "stake"
-    gross = wager / cost if stake else sum(quantity for _, quantity in legs)
+    gross = ordinary_win if ordinary_win is not None else wager / cost if stake else sum(quantity for _, quantity in legs)
     states = {state: posted_cash_state(state, gross, wager, committed, entry, reserve, cash)
               for state in ("win", "loss")}
     after = F(states["win"]["net_receipt_usd"]) / committed

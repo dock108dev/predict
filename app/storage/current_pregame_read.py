@@ -34,6 +34,7 @@ def read(db, query, *, at=None, clock, configured_routes):
 def _read(db, query, *, at=None, clock, configured_routes):
     """Read committed complete rows; grouping and exact values precede pagination."""
     from . import pregame_ranking as ranking
+    from .current_pregame_depth import BOARD_STAKE
 
     selected_sort = ranking.method(query.get("sort"))
     at = at or clock()
@@ -53,6 +54,13 @@ def _read(db, query, *, at=None, clock, configured_routes):
         (at, at, query.get("_scope_seconds"), query.get("_scope_seconds")),
     ).fetchone()
     deadline, boundary = deadlines["next"], deadlines["previous"]
+    depth_revision = db.execute("""
+        SELECT (SELECT published_at FROM public.current_pregame_depth ORDER BY published_at DESC LIMIT 1) AS publication,
+               (SELECT valid_until FROM public.current_pregame_depth WHERE valid_until>%s ORDER BY valid_until LIMIT 1) AS next,
+               (SELECT valid_until FROM public.current_pregame_depth WHERE valid_until<=%s ORDER BY valid_until DESC LIMIT 1) AS previous
+        """, (at, at)).fetchone()
+    if depth_revision["next"] is not None:
+        deadline = min(deadline, depth_revision["next"]) if deadline else depth_revision["next"]
     public_revision = db.execute(
         "SELECT revision,current_schema() AS cohort_schema FROM public.current_pregame_revision WHERE singleton"
     ).fetchone()
@@ -71,6 +79,8 @@ def _read(db, query, *, at=None, clock, configured_routes):
             revision["revision"],
             authority,
             str(boundary),
+            str(depth_revision["publication"]),
+            str(depth_revision["previous"]),
         ]
     )
     base = dict(
@@ -84,12 +94,14 @@ def _read(db, query, *, at=None, clock, configured_routes):
         refresh_at=deadline.isoformat() if deadline else None,
         notice="Odds may be delayed.",
         sort=selected_sort,
+        liquidity_stake_usd=BOARD_STAKE,
     )
     if query.get("updates") == "1":
         return dict(base, changed=query.get("after") != cursor, poll_after_ms=500)
     compare = bool(query.get("bet_id") or query.get("id"))
+    coverage = query.get("liquidity_coverage") == "1"
     include_unavailable = (
-        compare or query.get("browse") == "1" or query.get("view") in ("games", "game")
+        compare or coverage or query.get("browse") == "1" or query.get("view") in ("games", "game")
     )
     relation = "eligible_calculations"
     if include_unavailable:
@@ -120,7 +132,7 @@ def _read(db, query, *, at=None, clock, configured_routes):
             AND c.facts#>>'{market_identity,family}' IN ('spread','total')
           THEN mod((c.facts#>>'{market_identity,line}')::numeric*2,1)=0 ELSE true END""",
     ]
-    params = [at, at, at]
+    params = [at, at, at, at]
     if query.get("_scope_seconds"):
         clauses.append("p.start_at<=%s")
         params.append(at + timedelta(seconds=int(query["_scope_seconds"])))
@@ -147,10 +159,12 @@ def _read(db, query, *, at=None, clock, configured_routes):
         params.extend([cutoff, at])
     positive = (
         not compare
+        and not coverage
         and query.get("browse") != "1"
         and query.get("view") not in ("games", "game")
     )
-    prefix = """WITH eligible_calculations AS MATERIALIZED (
+    prefix = """WITH read_clock AS (SELECT %s::timestamptz AS at),
+        eligible_calculations AS MATERIALIZED (
         SELECT calc.* FROM current_pregame_calculation calc
         WHERE calc.payload#>>'{acquisition,eligible}'='true'
           AND calc.payload#>>'{acquisition,pull_id}' IS NOT NULL
@@ -170,9 +184,14 @@ def _read(db, query, *, at=None, clock, configured_routes):
     if positive:
         relation = "candidate_prices"
         prefix += (
-            "candidate_prices AS MATERIALIZED (SELECT * FROM eligible_calculations "
-            "WHERE bet_id IN (SELECT bet_id FROM eligible_calculations "
-            "WHERE reason IS NULL AND net_ev>0)), "
+            """candidate_prices AS MATERIALIZED (SELECT * FROM eligible_calculations
+            WHERE bet_id IN (
+              SELECT bet_id FROM eligible_calculations WHERE reason IS NULL AND net_ev>0
+              UNION
+              SELECT c.bet_id FROM public.current_pregame_depth d JOIN eligible_calculations c USING(contract_id)
+              WHERE c.reason IS NULL AND d.valid_until>(SELECT at FROM read_clock)
+                AND d.published_at<=(SELECT at FROM read_clock)
+                AND (d.valuations->c.input_revision->>'effective_ev')::numeric>0)), """
         )
     # A stored row from an older writer must not bypass the current owner rule.
     clauses.append("""(p.payload ? 'ev_unavailable_reason' OR (SELECT count(*) FROM jsonb_object_keys(
@@ -192,6 +211,7 @@ def _read(db, query, *, at=None, clock, configured_routes):
     if (
         not query.get("id")
         and not query.get("bet_id")
+        and not coverage
         and (
             query.get("view") == "games"
             or (query.get("view") != "game" and query.get("lines") != "all")
@@ -233,26 +253,104 @@ def _read(db, query, *, at=None, clock, configured_routes):
         " FROM "
         + relation
         + """ p JOIN current_contract c ON c.id=p.contract_id
-        JOIN current_offer_storage o ON o.contract_id=c.id JOIN LATERAL (SELECT * FROM current_event WHERE id=c.event_id LIMIT 1) e ON true WHERE """
+        JOIN current_offer_storage o ON o.contract_id=c.id
+        JOIN LATERAL (SELECT * FROM current_event WHERE id=c.event_id LIMIT 1) e ON true
+        LEFT JOIN public.current_pregame_depth d ON d.contract_id=p.contract_id
+          AND d.published_at<=(SELECT at FROM read_clock)
+        LEFT JOIN LATERAL (
+          SELECT d.valuations->(p.payload->>'input_revision') AS value
+          WHERE d.contract_revision=c.revision AND d.valid_until>(SELECT at FROM read_clock)
+        ) depth ON true WHERE """
         + where
     )
     # Multiple native aliases can describe one venue's same logical offer.
     # Source evidence order chooses its observation before EV chooses a venue.
     recency = "(payload#>>'{times,source_at}' IS NOT NULL) DESC,(payload#>>'{times,source_at}')::timestamptz DESC NULLS LAST,(payload#>>'{times,received_at}')::timestamptz DESC,contract_id"
+    participation = """
+        SELECT p.*, depth.value->'rank_payload' AS native_rank,
+          (depth.value->>'effective_ev')::numeric AS native_ev,
+          COALESCE(depth.value->'result', jsonb_build_object(
+            'status','unknown','size_status','unknown','intended_stake_usd',%s::text,
+            'reason', CASE WHEN d.contract_id IS NULL THEN 'book_unobserved'
+                WHEN d.contract_revision<>c.revision THEN 'identity_revision_changed'
+                WHEN d.valid_until<=(SELECT at FROM read_clock) THEN 'stale_book'
+                ELSE 'reference_revision_changed' END))
+          || jsonb_strip_nulls(jsonb_build_object('receipt_id',d.receipt_id,'book_known_at',d.known_at,
+                'valid_until',d.valid_until,'published_at',d.published_at)) AS liquidity
+        """
+    if compare:
+        participation += """, CASE WHEN depth.value IS NOT NULL THEN
+          jsonb_strip_nulls(jsonb_build_object(
+            'event_id',d.receipt->'event_id','market_id',d.receipt->'market_id',
+            'outcome_id',d.receipt->'outcome_id','opposite_outcome_id',d.receipt->'opposite_outcome_id',
+            'sequence',d.receipt->'sequence','market_revision',d.receipt->'market_revision',
+            'binding_revision',d.receipt->'binding_revision','contract',d.receipt->'contract',
+            'fee',jsonb_strip_nulls(jsonb_build_object(
+                'version',d.receipt#>'{fee,version}','schedule_revision',d.receipt#>'{fee,schedule_revision}')),
+            'levels',(SELECT jsonb_agg(jsonb_build_object('price',level->'price','quantity',level->'quantity') ORDER BY n)
+                FROM jsonb_array_elements(CASE WHEN jsonb_typeof(d.receipt->'levels')='array'
+                    THEN d.receipt->'levels' ELSE '[]'::jsonb END) WITH ORDINALITY AS level(level,n)),
+            'receipts',(SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+                'sha256',proof->'sha256','status',proof->'status','requested_at',proof->'requested_at',
+                'received_at',proof->'received_at','observed_at',proof->'observed_at',
+                'date',proof->'date','age',proof->'age','etag',proof->'etag',
+                'cache_control',COALESCE(proof->'cache-control',proof->'cache_control'),
+                'sequence',proof->'sequence')) ORDER BY n)
+                FROM jsonb_array_elements(CASE WHEN jsonb_typeof(d.receipt->'receipts')='array'
+                    THEN d.receipt->'receipts' ELSE '[]'::jsonb END) WITH ORDINALITY AS proof(proof,n))))
+          END AS liquidity_evidence"""
+    else:
+        participation += ", NULL::jsonb AS liquidity_evidence"
+    # The single projection parameter follows the clock parameter and precedes the
+    # established candidate guards that already use the same read timestamp.
+    params.insert(1, BOARD_STAKE)
     logical = (
         prefix
-        + "available AS (SELECT p.*"
+        + "available AS ("
+        + participation
         + source
-        + "), logical AS (SELECT DISTINCT ON (bet_id,venue) * FROM available ORDER BY bet_id,venue,"
+        + """), projected AS (
+            SELECT *, COALESCE(native_rank,payload) AS ranking_payload,
+                COALESCE(native_ev,CASE WHEN liquidity->>'status'='unknown' THEN net_ev END) AS effective_ev,
+                native_ev IS NOT NULL AS depth_supported,
+                payload || jsonb_build_object('liquidity',liquidity)
+                  || CASE WHEN liquidity_evidence IS NOT NULL THEN jsonb_build_object('liquidity_evidence',liquidity_evidence)
+                    ELSE '{}'::jsonb END AS display_payload
+            FROM available), logical AS (
+            SELECT DISTINCT ON (bet_id,venue) * FROM projected ORDER BY bet_id,venue,"""
         + recency
         + ") "
     )
+    if coverage:
+        rows = db.execute(logical + """, sizes AS (
+          SELECT league,venue,family,main,liquidity->>'status' AS status,
+            liquidity->>'size_status' AS size_status,liquidity->>'reason' AS reason,
+            liquidity->>'modeled_net_ev' AS modeled_ev,
+            CASE WHEN liquidity->>'size_status' IS DISTINCT FROM 'unknown'
+                OR liquidity->>'availability_is_lower_bound'='true' THEN
+                split_part(liquidity->>'modeled_stake_usd','/',1)::numeric
+                / COALESCE(NULLIF(split_part(liquidity->>'modeled_stake_usd','/',2),''),'1')::numeric END AS stake
+          FROM logical), reasons AS (
+            SELECT league,venue,family,main,reason,count(*) AS rows FROM sizes
+            WHERE reason IS NOT NULL GROUP BY league,venue,family,main,reason
+          ) SELECT league,venue,family,main,count(*) AS opportunities,
+            count(*) FILTER (WHERE size_status<>'unknown') AS assessable,
+            count(*) FILTER (WHERE size_status='full_size') AS full_size,
+            count(*) FILTER (WHERE status<>'unknown' AND modeled_ev IS NOT NULL) AS ev_assessable,
+            (count(*)*%s::numeric)::text AS intended_stake_usd,
+            COALESCE(sum(stake),0)::text AS observed_supported_stake_usd,
+            COALESCE((SELECT jsonb_object_agg(reason,rs.rows) FROM reasons rs
+              WHERE (rs.league,rs.venue,rs.family,rs.main)=(s.league,s.venue,s.family,s.main)),
+              '{}'::jsonb) AS reasons
+          FROM sizes s GROUP BY league,venue,family,main ORDER BY league,venue,family,main DESC""",
+          (*params, BOARD_STAKE)).fetchall()
+        return dict(base, coverage=rows, total=sum(row["opportunities"] for row in rows))
     if compare:
         entries = db.execute(
             logical
-            + "SELECT payload,"
-            + ranking.expression(selected_sort)
-            + " AS ranking_value FROM logical ORDER BY net_ev DESC NULLS LAST,contract_id",
+            + "SELECT display_payload AS payload,"
+            + ranking.expression(selected_sort, payload="ranking_payload")
+            + " AS ranking_value FROM logical ORDER BY depth_supported DESC,effective_ev DESC NULLS LAST,net_ev DESC NULLS LAST,contract_id",
             params,
         ).fetchall()
         from .pregame_sportsbooks import read_prices
@@ -271,8 +369,11 @@ def _read(db, query, *, at=None, clock, configured_routes):
         )
     grouped = (
         logical.rstrip()
-        + ", qualified AS (SELECT *,row_number() OVER (PARTITION BY bet_id ORDER BY net_ev DESC NULLS LAST,contract_id) AS venue_order FROM logical), best AS (SELECT * FROM qualified WHERE venue_order=1"
-        + (" AND net_ev>0" if positive else "")
+        + """, qualified AS (SELECT *,row_number() OVER (PARTITION BY bet_id ORDER BY
+          (effective_ev>0) DESC NULLS LAST,depth_supported DESC,effective_ev DESC NULLS LAST,
+          net_ev DESC NULLS LAST,contract_id
+          ) AS venue_order FROM logical), best AS (SELECT * FROM qualified WHERE venue_order=1"""
+        + (" AND effective_ev>0" if positive else "")
         + ") "
     )
     if query.get("view") == "game":
@@ -281,7 +382,7 @@ def _read(db, query, *, at=None, clock, configured_routes):
         rows = [
             r["payload"]
             for r in db.execute(
-                grouped + "SELECT payload FROM best ORDER BY main DESC,family,bet_id",
+                grouped + "SELECT display_payload AS payload FROM best ORDER BY main DESC,family,bet_id",
                 params,
             )
         ]
@@ -296,7 +397,7 @@ def _read(db, query, *, at=None, clock, configured_routes):
             SELECT b.game_key,p.kickoff,
                 jsonb_build_object('game_key',b.game_key,'game',min(b.payload->>'game'),
                   'league',min(b.league),'kickoff',p.kickoff,
-                  'rows',jsonb_agg(b.payload ORDER BY b.family,b.bet_id)) AS game
+                  'rows',jsonb_agg(b.display_payload ORDER BY b.family,b.bet_id)) AS game
             FROM best b JOIN page p USING(game_key) GROUP BY b.game_key,p.kickoff)
             SELECT count(*) AS total,
               (SELECT jsonb_agg(game ORDER BY kickoff,game_key) FROM page_games) AS games
@@ -311,7 +412,7 @@ def _read(db, query, *, at=None, clock, configured_routes):
             offset=offset,
             limit=limit,
         )
-    order = "ranking_value DESC NULLS LAST,net_ev DESC,bet_id"
+    order = "depth_supported DESC,ranking_value DESC NULLS LAST,effective_ev DESC,bet_id"
     if order_by in ("newest", "oldest"):
         direction = "DESC" if order_by == "newest" else "ASC"
         order = (
@@ -324,9 +425,9 @@ def _read(db, query, *, at=None, clock, configured_routes):
     page = db.execute(
         grouped
         + ", ranked AS (SELECT *,"
-        + ranking.expression(selected_sort)
+        + ranking.expression(selected_sort, payload="ranking_payload")
         + " AS ranking_value FROM best) SELECT count(*) AS total,"
-        + "(SELECT jsonb_agg(jsonb_build_array(payload,ranking_value::text) ORDER BY "
+        + "(SELECT jsonb_agg(jsonb_build_array(display_payload,ranking_value::text) ORDER BY "
         + order
         + ") FROM (SELECT * FROM ranked ORDER BY "
         + order

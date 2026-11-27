@@ -1,5 +1,5 @@
 import {byId,card,count,link,node,pairs,pct,readJSON,table,time,usd} from './workspace-ui.js';
-import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,mainFirstRule,ruleSummary,sizingTitle} from './research-campaigns.js';
+import {band,campaignDays,campaignForm,configuredModes,configuredPortfolio,decisionCutoff,mainFirstRule,ruleSummary,sizingTitle,validCutoff} from './research-campaigns.js';
 import {coverageURL} from './mens-d1-coverage.js';
 import {campaignTradeLedger,campaignTradeEvidence,oddsBreakdown,renderResults} from './research-results.js';
 import {qualityComparison} from './research-quality.js';
@@ -103,6 +103,8 @@ function dayStatus(day) {
   };
   if (day.error) return 'Replay failed';
   if (day.result_error) return day.analysis ? 'Saved grades · grading update failed' : 'Grading failed';
+  if (day.replay_state==='before_first_decision') return 'Before the first decision cutoff';
+  if (day.replay_state==='retired') return 'Retired before this game date';
   if (day.capture_state==='missing') return 'Missing usable T−10 evidence';
   if (day.replay_state==='scheduled') return 'Scheduled';
   if (day.replay_state==='replaying') return day.run_id ? 'Saved snapshot · replaying update' : 'Replaying retained odds';
@@ -284,10 +286,16 @@ function showResults(config, visible, context) {
     'Open current results',context.currentHref));
   if (context.archiveHref) panel.append(versionNotice('This link used previous rules. Showing current results.',
     'Open archived snapshot',context.archiveHref));
+  if (config.retirement) {
+    const cutoff=config.retirement.cutoff_at;
+    const state=Date.parse(cutoff)<=Date.now() ? 'Retired' : 'Retirement scheduled';
+    panel.append(node('p',`${state} · ${decisionCutoff(cutoff)}. Saved runs and sporting grades remain available.`,'workspace-notice'));
+  }
   const dates=campaignDays(config).map(value=>[value,displayDate.format(new Date(value+'T12:00:00Z'))]);
   const portfolios=(config.portfolios || Object.keys(portfolioTitles)).map(value=>[value,portfolioTitles[value]]);
   if (visible && context.experiments.length>1) {
-    const picker=field('Experiment',context.experiments.map(item=>[item.id,item.name]),context.campaign,
+    const picker=field('Experiment',context.experiments.map(item=>[item.id,
+      item.retirement && Date.parse(item.retirement.cutoff_at)<=Date.now() ? item.name+' · Retired' : item.name]),context.campaign,
       campaign=>change({campaign,view:context.games ? 'daily' : context.allTrades ? 'trades' : 'by-day',
         ledger_view:context.games ? 'games' : null}), 'experiment-choice');
     picker.classList.add('experiment-picker');
@@ -331,18 +339,59 @@ function showResults(config, visible, context) {
     config.minimum_stake_usd != null && `Stake ≥${money(config.minimum_stake_usd)}`,
     sizingTitle(config,context.mode).replace(/^Win /,'Win\u00a0'),
   ].filter(Boolean).join(' · '),'workspace-caption'));
-  if (visible) {
+  if (config.prospective_start_at) activeRules.append(node('p',
+    'First eligible T−10 decision · '+decisionCutoff(config.prospective_start_at),'workspace-caption'));
+  if (visible && !config.retirement) {
     const edit=link('Edit experiment',url({...context.base,view:'revise'}));
     edit.setAttribute('aria-label','Edit experiment');
     edit.replaceChildren(node('span','Edit experiment','experiment-tab-full'),node('span','Edit','experiment-tab-short'));
     activeRules.append(edit);
+    panel.append(controls,activeRules,retirementForm(context.campaign));
+  } else {
+    panel.append(controls,activeRules);
   }
-  panel.append(controls);
-  panel.append(activeRules);
   const body=node('div');
   body.id='experiment-comparison-body';
   panel.append(body);
   return panel;
+}
+
+function retirementForm(campaign) {
+  const section=node('details');
+  const form=node('form',undefined,'workspace-form');
+  const label=node('label','Retirement cutoff');
+  const cutoff=node('input');
+  cutoff.type='text';
+  cutoff.maxLength=36;
+  cutoff.placeholder='YYYY-MM-DDTHH:MM:SS-05:00';
+  label.append(cutoff);
+  const save=node('button','Confirm retirement');
+  save.type='submit';
+  const feedback=node('p');
+  feedback.setAttribute('role','status');
+  section.append(node('summary','Retire experiment'),node('p',
+    'Decisions before the cutoff can finish. Saved runs and sporting grades stay available. Leave the cutoff blank to retire now.',
+    'workspace-caption'),form,feedback);
+  form.append(label,save);
+  form.onsubmit=async event=>{
+    event.preventDefault();
+    const value=cutoff.value.trim();
+    if (value && !validCutoff(value)) {
+      feedback.textContent='Enter a retirement cutoff with a time zone.';
+      return;
+    }
+    save.disabled=true;
+    try {
+      await readJSON(campaignAPI(campaign)+'/retire',{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cutoff_at:value || null}),
+      });
+      await render();
+    } catch (error) {
+      feedback.textContent=error.message;
+      save.disabled=false;
+    }
+  };
+  return section;
 }
 
 function ledgerNavigation(mount, params, paint) {
@@ -671,7 +720,7 @@ async function render({keepComparison=false,focus=null}={}) {
     const games=day && (query.get('ledger_view')==='games' || query.has('game') || query.has('filter'));
     const base={campaign:id,date:day ? date : undefined,variant,
       view:allTrades ? 'trades' : day ? 'daily' : 'by-day',...(!known ? {snapshot:'1'} : {})};
-    if (known && query.get('view')==='revise') {
+    if (known && !config.retirement && query.get('view')==='revise') {
       root.replaceChildren();
       setStatus();
       campaignForm(root,config,id,variant,base,{

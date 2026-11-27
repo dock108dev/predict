@@ -9,6 +9,7 @@ import {priceDisplay,hasVenuePrice} from './pregame-prices.js';
 import {addMath} from './pregame-math.js';
 import {rankingCatalog} from './pregame-ranking.js';
 import {freshness,freshnessText,payoutExample,feeRows} from './pregame-evidence.js';
+import {liquidityBadge,liquidityDetails,coverageRows} from './pregame-liquidity.js';
 const $=id=>document.getElementById(id);
 const initial=new URLSearchParams(location.search), browse=location.pathname==='/browse-odds'||location.pathname==='/game';
 const gameView=location.pathname==='/game', gameBoard=location.pathname==='/browse-odds'&&!initial.has('bet_id')&&!initial.has('id')&&!initial.has('line')&&!initial.has('quote_key');
@@ -67,10 +68,10 @@ function ticket(row,compare=true,previousAction){
  link.onclick=event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openGame({game_key:row.game_key,game:row.game,league:row.league,kickoff:row.kickoff,rows:[row],family:row.family},event.currentTarget);};
  const context=node('p',undefined,'context');context.append(node('strong',row.league),node('time',date.toLocaleString('en-US',{...opts,month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'));
  body.append(title,link,context,freshness(row));
- const rank=rankInfo(row),ranking=node('div',undefined,'ranking-hint score');ranking.append(node('span',rank.column+': '),mathValue(row,'ranking',rank.display),node('span',rank.unit));body.append(ranking);article.append(body);
+ const rank=rankInfo(row),ranking=node('div',undefined,'ranking-hint score');ranking.append(node('span',rank.column+': '),rankingValue(row),node('span',rank.unit));body.append(ranking);article.append(body);
  const cell=(cls,label,after)=>{const d=node('div',undefined,'board-number '+cls),display=priceDisplay(row,after);d.append(node('span',label,'mobile-label'),node('span',display.primary));if(after||hasVenuePrice(row))addMath(d,row,after?'after':'posted');appendPriceContext(d,display);article.append(d);return d;};
  cell('posted','Source quote',false).append(node('small',venues[row.venue]||row.venue,'source-venue'));cell('after','After fees',true);
- const ev=node('div',undefined,'board-number ev'+((row.display.net_ev||'').startsWith('-')?' negative':''));ev.append(node('span','Net EV','mobile-label'),node('span',row.display.net_ev||'Unavailable'));if(row.reference)addMath(ev,row,'ev');article.append(ev);
+ const ev=node('div',undefined,'board-number ev'+((row.display.net_ev||'').startsWith('-')?' negative':''));ev.append(node('span','Quote EV','mobile-label'),node('span',row.display.net_ev||'Unavailable'));if(row.reference)addMath(ev,row,'ev');const liquidity=liquidityBadge(row);if(liquidity)ev.append(liquidity);article.append(ev);
  const save=journalAction('ev',row,'Save '+pick(row)+' to research',previousAction);save.classList.add('row-save');save.setCompact();article.append(save);
  return article;
 }
@@ -78,6 +79,26 @@ function query(){const data=new FormData(filters),q=new URLSearchParams({limit:'
 async function get(q,updates=false,controller=new AbortController()){
  const timer=setTimeout(()=>controller.abort(new DOMException('Stored-price request exceeded 12 seconds.','TimeoutError')),12000);
  try{const response=await fetch(`/api/pregame${updates?'/updates':''}?${q}`,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error(`HTTP ${response.status}`);return await response.json();}finally{clearTimeout(timer);}
+}
+const coverage=$('liquidity-coverage');
+let coverageRequest;
+async function loadCoverage(){
+ coverageRequest?.abort();
+ const controller=coverageRequest=new AbortController(),content=$('liquidity-coverage-content');
+ const q=query();q.set('liquidity_coverage','1');
+ for(const name of ['id','bet_id','limit','offset','sort','order','view','lines'])q.delete(name);
+ content.replaceChildren(node('p','Reading stored coverage…'));
+ try{
+  const packet=await get(q,false,controller);
+  if(controller!==coverageRequest)return;
+  const rows=packet.coverage||[];
+  content.replaceChildren(rows.length?coverageRows(rows,bookName):node('p','No in-scope quotes for these filters.'));
+ }catch(error){if(controller===coverageRequest)content.replaceChildren(node('p','Coverage could not be read. Choose Refresh coverage to retry.'));}
+}
+if(coverage){
+ coverage.hidden=browse;
+ coverage.addEventListener('toggle',()=>{if(coverage.open)loadCoverage();else{coverageRequest?.abort();coverageRequest=null;}});
+ $('refresh-liquidity-coverage').onclick=loadCoverage;
 }
 function render(packet){
  modeSettings.update(packet.activity_mode);
@@ -124,7 +145,8 @@ function quoteTable(headers, rows, className){
 function appendPriceContext(cell,display){if(display.price)cell.append(node('small',display.price,'price-equivalent'));if(display.secondary)cell.append(node('small',display.secondary,'american-equivalent'));}
 function venuePrice(row,after=false){const display=priceDisplay(row,after),cell=node('span',undefined,'math-value');cell.append(node('span',display.primary));if(after||hasVenuePrice(row))addMath(cell,row,after?'after':'posted');appendPriceContext(cell,display);return cell;}
 function mathValue(row,kind,value){const cell=node('span',undefined,'math-value');if(!row.reference||value===null||value===undefined){cell.append(node('span',kind==='ev'?'EV unavailable':'Unavailable'));const reason=row.ev_unavailable_reason?.replaceAll('_',' ')||'Reference probability not available';cell.append(node('small',reason,'unavailable-reason'));return cell;}cell.append(node('span',value));addMath(cell,row,kind);if(kind==='fair')cell.append(node('small',bookName(row.reference.book)+' ('+referencePrice(row)+')','reference'));return cell;}
-function exchangePrices(rows){const previous=new Map([...$('comparison-content').querySelectorAll('.journal-action')].map(e=>[e.dataset.quoteId,e]));return quoteTable(['Venue','Price','After fees','Fair odds','Net EV',rankingMethods[appliedRanking].column,'My Bets'],rows.map(r=>{const label='Save '+bookName(r.venue)+' to My Bets',action=r.reference?journalAction('ev',r,label,previous.get(r.id)):node('span','EV unavailable; price remains inspectable.','unavailable-reason'),button=action.querySelector('button');action.dataset.quoteId=r.id;if(button){button.dataset.shortLabel='Save';button.dataset.focusKey='save-'+r.id;button.setAttribute('aria-label',label);if(!button.disabled)button.textContent='Save';}const venue=node('span',venues[r.venue]||r.venue);venue.append(freshness(r));return [venue,venuePrice(r),venuePrice(r,true),mathValue(r,'fair',r.display.fair_odds),mathValue(r,'ev',r.display.net_ev),mathValue(r,'ranking',rankInfo(r).display),action];}),'exchange-prices');}
+function rankingValue(row){const rank=rankInfo(row);return row.liquidity?.eligible?node('span',rank.display,'depth-ranking'):mathValue(row,'ranking',rank.display);}
+function exchangePrices(rows){const previous=new Map([...$('comparison-content').querySelectorAll('.journal-action')].map(e=>[e.dataset.quoteId,e]));return quoteTable(['Venue','Price','After fees','Fair odds','Quote EV / liquidity',rankingMethods[appliedRanking].column,'My Bets'],rows.map(r=>{const label='Save '+bookName(r.venue)+' to My Bets',action=r.reference?journalAction('ev',r,label,previous.get(r.id)):node('span','EV unavailable; price remains inspectable.','unavailable-reason'),button=action.querySelector('button');action.dataset.quoteId=r.id;if(button){button.dataset.shortLabel='Save';button.dataset.focusKey='save-'+r.id;button.setAttribute('aria-label',label);if(!button.disabled)button.textContent='Save';}const venue=node('span',venues[r.venue]||r.venue);venue.append(freshness(r));const ev=mathValue(r,'ev',r.display.net_ev),liquidity=liquidityBadge(r);if(liquidity)ev.append(liquidity);return [venue,venuePrice(r),venuePrice(r,true),mathValue(r,'fair',r.display.fair_odds),ev,rankingValue(r),action];}),'exchange-prices');}
 function sportsbookPrices(selected,quotes=[],state='loading'){
  const section=node('section',undefined,'sportsbook-comparison');section.append(node('h3','Sportsbook prices'));
  const reference=referenceQuote(selected),rows=[];
@@ -147,14 +169,15 @@ function renderComparison(rows,quotes=[],state='loading'){
  const scroll=content.scrollTop;
  const game=node('p',selected.game,'comparison-context'),offers=node('section',undefined,'exchange-comparison'),evidence=node('section',undefined,'calculation-evidence');
  offers.append(node('h3','Exchange prices'),exchangePrices(rows));
- for(const [index,row]of rows.entries()){const detail=details(row);if(index)detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';detail.open=expanded.has(detail.querySelector('summary').textContent);evidence.append(detail);}
+ for(const [index,row]of rows.entries()){const detail=details(row);if(index)detail.querySelector('summary').textContent=(venues[row.venue]||row.venue)+' · Fee and calculation details';detail.open=expanded.has(detail.querySelector('summary').textContent);const liquidity=liquidityDetails(row);if(liquidity&&row.id!==selected.id)detail.append(liquidity);evidence.append(detail);}
  const inputKey=JSON.stringify([selected.posted,selected.times,selected.reference,selected.fee]),previousResearch=content.querySelector('.amount-research');
  const sameInputs=previousResearch?.dataset.inputKey===inputKey;
  const research=sameInputs?previousResearch:amountResearch('ev',selected,(output,modeled)=>{
  const summary=node('section',undefined,'selected-summary');summary.setAttribute('aria-label','Selected price and reference');
  for(const [label,value]of [['Source · '+bookName(modeled.venue),venuePrice(modeled)],['Effective after fees',venuePrice(modeled,true)],['Net EV',mathValue(modeled,'ev',modeled.display.net_ev)],['Fair / no-vig reference',mathValue(modeled,'fair',modeled.display.fair_odds)]]){const line=node('div');line.append(node('span',label),value);summary.append(line);}
  for(const button of summary.querySelectorAll('[data-focus-key]'))button.dataset.focusKey='selected-'+button.dataset.focusKey;
- output.replaceChildren(summary,payoutExample(modeled),sizeEvidence(selected));
+ const liquidity=liquidityDetails(modeled);
+ output.replaceChildren(summary,payoutExample(modeled),liquidity||sizeEvidence(selected));
  },{dataType:activeComparison?.dataType||'all'});research.dataset.inputKey=inputKey;
  if(previousResearch&&!sameInputs){research.querySelector('input').value=previousResearch.querySelector('input').value;queueMicrotask(()=>research.querySelector('form').requestSubmit());}
  const previous=content.querySelector('.comparison-record'),sameQuote=previous?.dataset.quoteId===selected.id;
@@ -164,7 +187,7 @@ function renderComparison(rows,quotes=[],state='loading'){
  const provenance=node('p',selected.native_price?.text?'Native source display retained.':selected.source.provider==='sportsgameodds'?'Source-site units converted from aggregate American odds; native price precision unverified.':'Stored source observation; verify venue price and size.','price-provenance');
  const status=comparisonStatus(state);if(state==='historical'){status.replaceChildren(node('strong','Historical research snapshot · no longer current for this view. Not executable.'),node('p','The viewed quote, reference and calculation are retained.'));const current=node('button','Check current alternatives');current.onclick=()=>{$('comparison').addEventListener('close',()=>openGame({...selected,rows:[selected]}),{once:true});$('comparison').close();};status.append(current);}
  content.replaceChildren(game,status,freshness(selected),research,provenance,explain,verification(selected,pick(selected)),actions,offers,sportsbookPrices(selected,quotes,state),evidence);for(const detail of content.querySelectorAll('details'))detail.open=expanded.has(detail.querySelector('summary')?.textContent);
- research.querySelector('.size-evidence')?.replaceWith(sizeEvidence(selected));
+ if(sameInputs&&!research.dataset.evaluatedAmount){const liquidity=liquidityDetails(selected);if(liquidity)research.querySelector('.liquidity-details,.size-evidence')?.replaceWith(liquidity);}
  if(focused)[...content.querySelectorAll('[data-focus-key]')].find(e=>e.dataset.focusKey===focused)?.focus({preventScroll:true});
  content.scrollTop=scroll;
 }

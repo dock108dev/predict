@@ -5,7 +5,7 @@ from fractions import Fraction
 import re
 
 from app.normalization.registry import Registry
-from app.storage.store import stamp
+from app.storage.store import hashed, stamp
 
 VERSION = 'sgo-native-contract-1'
 CATALOG_SOURCE = 'novig-public-v3-catalog'
@@ -188,6 +188,31 @@ def capture_catalog(sgo_event_id, event_id, event, event_receipt, pages, linked_
                 expires_at=expiry.isoformat(), event_receipt=event_receipt, markets=matched,
                 subject_roles=roles, subject_role_anchors=anchors, subject_role_conflict=conflicts,
                 event={key:event.get(key) for key in ('eventId','league','startsTs','status')})
+
+
+def fresh_pregame_witness(sgo_event_id, event, event_receipt, market_rows, linked_outcomes, *,
+                          sgo_frame=None):
+    """Recover current identity from an exact event receipt and linked market rows."""
+    if event.get('status') != 'OPEN_PREGAME':
+        raise ValueError('sgo_native_catalog_event_invalid')
+    selected = set(linked_outcomes)
+    grouped = {}
+    for market in market_rows.values():
+        if not selected.intersection(outcome['outcomeId'] for outcome in market['outcomes']):
+            continue
+        receipt = market['receipt']
+        if receipt.get('status') != 200:
+            raise ValueError('sgo_native_catalog_market_receipt_invalid')
+        proof = dict(receipt, observed_at=receipt['received_at'])
+        key = hashed(proof)
+        page, _ = grouped.setdefault(key, (dict(items=[]), proof))
+        page['items'].append(market)
+    if event_receipt.get('status') != 200 or not grouped:
+        raise ValueError('sgo_native_catalog_event_unmatched')
+    proof = dict(event_receipt, observed_at=event_receipt['received_at'])
+    witness = capture_catalog(sgo_event_id, event['eventId'], event, proof, list(grouped.values()),
+                              linked_outcomes, sgo_frame=sgo_frame)
+    return dict(witness, revision=hashed(witness))
 
 
 def _team(name, league, expected):

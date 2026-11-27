@@ -9,6 +9,7 @@ from app.storage.store import encoded, hashed, stamp
 
 VERSION = 'experiment-public-depth-1'
 POLICY = 'public-book-win25-1'
+ALL_SPORTS_POLICY = 'public-book-win25-2'
 MAX_BYTES = 512 * 1024
 
 

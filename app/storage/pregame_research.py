@@ -41,7 +41,7 @@ def research(db, body, *, at):
             entries.append(None)
             continue
         entry = db.execute(
-            """SELECT p.payload,p.record,p.fee_input,c.payload AS calculation
+            """SELECT p.payload,p.record,p.fee_input,c.payload AS calculation,c.valid_until AS calculation_valid_until
             FROM current_pregame_price p LEFT JOIN current_pregame_calculation c
             ON c.contract_id=p.contract_id WHERE p.contract_id=%s""",
             (row["id"],),
@@ -91,6 +91,13 @@ def research(db, body, *, at):
             amount=F(amount),
         )
         result["ev_unavailable_reason"] = rows[0].get("ev_unavailable_reason")
+        from .current_pregame_depth import preview
+
+        depth_payload = dict(result, reference=reference if entry["calculation_valid_until"]
+                             and entry["calculation_valid_until"] > at else None)
+        result["liquidity"] = preview(db, depth_payload, entry["record"], at=at, stake=amount)
+        if depth_payload["reference"] is None and reference is not None and not result["liquidity"].get("reason"):
+            result["liquidity"]["reason"] = "reference_stale"
     else:
         result = evaluate(*entries, at=at, budget=F(amount), positive_only=False)
         if result is None:

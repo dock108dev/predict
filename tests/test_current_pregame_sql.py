@@ -21,6 +21,87 @@ from app.storage import current_pregame as board
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class CurrentPregameSQL(PregameFixture):
+    async def test_current_book_can_admit_a_venue_before_the_positive_quote_filter(self):
+        from datetime import timedelta
+
+        from aiohttp import web
+        from aiohttp.test_utils import TestClient, TestServer
+        from app.comparison.execution_contract import expected
+        from app.dashboard import current_pregame_api
+        from app.storage.current_pregame_depth import publish
+        from app.storage.pregame_research import research
+
+        at = stamp(AT)
+        source = page()
+        for odd in source["data"][0]["odds"].values():
+            odd["byBookmaker"]["prophetx"]["odds"] = "-200"
+        with self.connect() as db:
+            self.ingest(db, source)
+            self.process(db)
+            current = db.execute("""SELECT p.record,c.payload,k.revision
+                FROM public.current_pregame_price p
+                JOIN public.current_pregame_calculation c USING(contract_id)
+                JOIN public.current_contract_storage k ON k.id=p.contract_id
+                WHERE c.venue='prophetx' AND c.net_ev<0 AND c.reason IS NULL
+                ORDER BY c.contract_id LIMIT 1""").fetchone()
+            contract = expected(current["record"])
+            cid = contract["contract_id"]
+            before = board.read(db, dict(lines="all"), at=at)
+            self.assertNotIn(cid, [row["id"] for row in before["rows"]])
+            self.assertLess(Fraction(current["payload"]["raw"]["net_ev"]), 0)
+            valid_until = at + timedelta(seconds=20)
+            receipt = dict(venue="prophetx", contract=dict(contract, phase="pregame", settlement=dict(
+                available=True, rule_id="test-spread-rule", overtime="included", equality="not_feasible")),
+                event_id="native-event", market_id="native-strike", outcome_id="native-outcome",
+                received_at=at.isoformat(), valid_until=valid_until.isoformat(), complete=True,
+                payout_usd="1", quantity_increment="0.01", quantity_minimum="1", quantity_unit="usd_stake",
+                fee=dict(model="prophetx_market_commission", schedule_revision="test-v1", rate="0.05",
+                         rounding="nearest_cent_profit_then_commission"),
+                legal_prices=["2/5"], levels=[dict(price="2/5", quantity="200")])
+            item = dict(contract_id=cid, contract_revision=current["revision"], receipt=receipt,
+                        known_at=at, valid_until=valid_until)
+            self.assertEqual(publish(db, [item], at=at), 1)
+            # Replaying the same evidence is idempotent and does not bump polling.
+            self.assertEqual(publish(db, [item], at=at), 0)
+            with db.transaction():
+                db.execute("SET TRANSACTION READ ONLY")
+                packet = board.read(db, dict(sort="ev", lines="all"), at=at)
+                detail = board.read(db, dict(id=cid), at=at)["rows"][0]
+                row = next((row for row in packet["rows"] if row["id"] == cid), None)
+                self.assertIsNotNone(row, detail["liquidity"])
+                self.assertLess(Fraction(row["raw"]["net_ev"]), 0)
+                self.assertGreater(Fraction(row["liquidity"]["modeled_net_ev"]), 0)
+                self.assertEqual(row["liquidity"]["modeled_stake_usd"], "100")
+                self.assertEqual(row["liquidity"]["status"], "full_size")
+                self.assertNotEqual(packet["cursor"], before["cursor"])
+                self.assertEqual(packet["provider_requests"], 0)
+                self.assertEqual(detail["liquidity_evidence"]["market_id"], "native-strike")
+                request = dict(kind="ev", snapshot=detail, amount="25")
+                smaller = research(db, request, at=at)["result"]["liquidity"]
+                self.assertEqual(smaller["modeled_stake_usd"], "25")
+                self.assertEqual(Fraction(smaller["modeled_win_profit_usd"]), Fraction("35.62"))
+                coverage = board.read(db, dict(liquidity_coverage="1"), at=at)["coverage"]
+                self.assertTrue(any(entry["venue"] == "prophetx" and entry["full_size"] for entry in coverage))
+            self.assertEqual(board.read(db, dict(id=cid), at=valid_until)["rows"][0]["liquidity"]["reason"],
+                             "stale_book")
+            self.assertEqual(publish(db, [dict(item, contract_revision="superseded-revision")], at=at), 0)
+
+        application = web.Application()
+        current_pregame_api.mount(application)
+        with (patch.object(current_pregame_api, "connect", self.connect),
+              patch.object(board, "utc", return_value=at)):
+            async with TestClient(TestServer(application)) as client:
+                response = await client.get("/api/pregame?data_type=all&lines=all&sort=ev")
+                self.assertEqual(response.status, 200, await response.text())
+                board_packet = await response.json()
+                native = next(row for row in board_packet["rows"] if row["id"] == cid)
+                self.assertEqual(native["liquidity"]["status"], "full_size")
+                self.assertEqual(native["ranking"]["basis"], "public_book")
+                self.assertEqual(board_packet["provider_requests"], 0)
+                sizes = await client.get("/api/pregame?data_type=all&liquidity_coverage=1")
+                self.assertEqual(sizes.status, 200, await sizes.text())
+                self.assertTrue(any(row["full_size"] for row in (await sizes.json())["coverage"]))
+
     async def test_research_amounts_are_read_only_and_bind_price_fee_reference(self):
         from app.storage.pregame_research import research, ChangedInputs
         from app.storage.pregame_quote_evidence import enrich

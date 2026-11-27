@@ -339,3 +339,48 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 .prism-page #comparison .amount-research h3{margin:12px 0 5px}.prism-page .amount-research .comparison-context{margin:4px 0 8px}
 body.prism-page #comparison .math-trigger,body.prism-page .arb-price-value .math-trigger{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px}
 body.prism-page .amount-result .selected-summary>div{justify-content:flex-start}
+
+.liquidity-badge {
+  display: block;
+  margin-top: .35rem;
+  color: var(--muted);
+  font-weight: 650;
+  font-size: .72rem;
+  line-height: 1.35;
+}
+.liquidity-badge span { display: block; font-weight: 500; }
+.liquidity-badge[data-depth-status="full_size"] { color: #76dcb2; }
+.liquidity-badge[data-depth-status="partial_size"],
+.liquidity-badge[data-depth-status="below_ev_floor"] { color: #f2ce85; }
+.liquidity-details {
+  margin: .65rem 0;
+  padding: .65rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.liquidity-details h3 { margin: 0 0 .3rem; font-size: .92rem; }
+.liquidity-details dl { overflow-wrap: anywhere; }
+.liquidity-details details { margin: .5rem 0 0; }
+.liquidity-levels {
+  margin: .55rem 0 0;
+  max-height: 12rem;
+  overflow: auto;
+  font-variant-numeric: tabular-nums;
+}
+.depth-ranking { color: #76dcb2; }
+@media (max-width: 640px) {
+  .liquidity-details { padding: .6rem; }
+}
+.liquidity-coverage {
+  margin: 0 0 .75rem;
+  color: var(--muted);
+  font-size: .8rem;
+}
+.liquidity-coverage summary { cursor: pointer; width: max-content; }
+.liquidity-coverage button { margin: .3rem 0; }
+#liquidity-coverage-content { overflow: auto; }
+.liquidity-coverage-table { border-collapse: collapse; text-align: left; }
+.liquidity-coverage-table :is(th,td) {
+  padding: .35rem .5rem;
+  border-bottom: 1px solid var(--line);
+}

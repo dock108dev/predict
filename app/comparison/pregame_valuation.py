@@ -89,6 +89,21 @@ def _offer_fee(row, terms, cost):
     return retail_order(row, terms, cost, fee)
 
 
+def under_budget(order, amount, low, high):
+    """Highest legal quantity tick whose modeled commitment fits the budget."""
+    best = order(low)
+    if best[0] > amount:
+        return None
+    while low < high:
+        mid = (low + high + 1) // 2
+        fill = order(mid)
+        if fill[0] <= amount:
+            low, best = mid, fill
+        else:
+            high = mid - 1
+    return low, best
+
+
 def _fill(terms, amount, cost, fees, payout):
     kind = terms['kind']
     step, minimum = F(terms['increment']), F(terms['minimum'])
@@ -138,17 +153,10 @@ def _fill(terms, amount, cost, fees, payout):
         return stake + entry + reserve, legs, stake, entry, reserve, cash_terms, trace
 
     # Supported order schedules have nondecreasing committed cash on the legal grid.
-    low = minimum // step
-    best = order(low)
-    if best[0] > amount:
+    selected = under_budget(order, amount, minimum // step, high)
+    if selected is None:
         raise ValueError('unit_fill_below_minimum')
-    while low < high:
-        mid = (low + high + 1) // 2
-        fill = order(mid)
-        if fill[0] <= amount:
-            low, best = mid, fill
-        else:
-            high = mid - 1
+    low, best = selected
     tolerance = min(F(1), amount / 100)
     reason = None
     if amount - best[0] > tolerance:
@@ -175,6 +183,11 @@ def _cash_state(state, *, ordinary_win, stake, committed, entry, reserve, fee_te
         if not 0 <= fraction <= 1:
             raise ValueError('unit_settlement_cashflow_unverified')
         gross = stake * fraction
+    elif isinstance(basis, dict) and basis.get('face_fraction') is not None:
+        fraction = F(basis['face_fraction'])
+        if not 0 <= fraction <= 1:
+            raise ValueError('unit_settlement_cashflow_unverified')
+        gross = ordinary_win * fraction
     elif basis in bases:
         gross = bases[basis]
     else:

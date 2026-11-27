@@ -1,0 +1,141 @@
+"""Collector-owned current depth and passive Dashboard size calculations."""
+
+from psycopg.types.json import Jsonb
+
+from app.comparison import current_pregame as math, execution_contract
+from .database_roles import COHORTS
+from .store import encoded, hashed, stamp
+
+
+MAX_RECEIPT_BYTES = 512 * 1024
+BOARD_STAKE = str(math.COMPARISON_USD)
+PRESENT_FIELDS = (
+    "fee_is_upper_bound", "fee_lower_bound_usd", "limit_price", "price_limit_policy", "requested_stake_usd",
+    "intended_stake_usd", "available_purchase_usd", "available_native_quantity",
+    "availability_is_lower_bound", "modeled_purchase_usd", "modeled_stake_usd",
+    "modeled_win_profit_usd", "modeled_loss_usd", "modeled_average_price",
+    "modeled_fee_usd", "modeled_net_ev", "status", "size_status", "reason", "eligible",
+    "supported_eligible", "as_of", "book_received_at", "book_source_at", "receipt_id", "source_health",
+)
+
+
+def unknown(reason, *, stake=BOARD_STAKE):
+    return dict(status="unknown", size_status="unknown", reason=reason, eligible=False,
+                supported_eligible=False, intended_stake_usd=str(stake))
+
+
+def _clocks(receipt, known):
+    for field in ("receipts", "identity_receipts"):
+        for proof in receipt.get(field, ()):
+            observed_at = proof.get("received_at") or proof.get("observed_at")
+            if not observed_at:
+                raise ValueError("dashboard_depth_receipt_clock_unverified")
+            received = stamp(observed_at)
+            if received > known or (proof.get("requested_at") and stamp(proof["requested_at"]) > received):
+                raise ValueError("dashboard_depth_receipt_clock_unverified")
+
+
+def _value(payload, record, receipt, *, at, stake):
+    from app.comparison.experiment_depth_execution import evaluate_at_stake
+
+    reference = payload.get("reference") or {}
+    return evaluate_at_stake(receipt, at=at, stake=stake, probability=reference.get("probability"),
+                             minimum="0", expected=execution_contract.expected(record))
+
+
+def _present(result):
+    return {key: result[key] for key in PRESENT_FIELDS if key in result}
+
+
+def _projection(payload, record, receipt, *, at):
+    from .current_pregame import numeric
+
+    result = _value(payload, record, receipt, at=at, stake=BOARD_STAKE)
+    valuation = {"result": _present(result)}
+    if not result.get("eligible"):
+        return valuation
+    states = result["modeled_cashflows"]
+    valuation["rank_payload"] = dict(reference=payload["reference"],
+        raw=dict(net_ev=result["modeled_net_ev"], opportunity_score=result["modeled_score"]),
+        fee=dict(committed_usd=result["modeled_stake_usd"], cashflows=states))
+    valuation["effective_ev"] = format(numeric(result["modeled_net_ev"]), "f")
+    return valuation
+
+
+def publish(db, items, *, at):
+    """Replace current observations only for the same active contract revision."""
+    at = stamp(at)
+    items = list(items)
+    if not items:
+        return 0
+    contracts = {item["contract_id"] for item in items}
+    rows = db.execute("""SELECT c.id,c.revision,p.record,p.payload AS price
+        FROM public.current_contract_storage c
+        JOIN public.current_pregame_price p ON p.contract_id=c.id
+        WHERE c.active AND c.id=ANY(%s) AND p.start_at>%s""", (list(contracts), at)).fetchall()
+    exact = {row["id"]:row for row in rows}
+    valuation_inputs = {}
+    selection = "SELECT contract_id,input_revision,payload FROM {}.current_pregame_calculation WHERE contract_id=ANY(%s) AND reason IS NULL AND valid_until>%s"
+    for schema in ("public", *COHORTS):
+        for row in db.execute(selection.format(schema), (list(contracts), at)):
+            valuation_inputs.setdefault(row["contract_id"], {})[row["input_revision"]] = row["payload"]
+    output = []
+    for item in items:
+        cid = item["contract_id"]
+        row = exact.get(cid)
+        if not row or row["revision"] != item["contract_revision"]:
+            continue
+        receipt = item["receipt"]
+        if not isinstance(receipt, dict) or len(encoded(receipt)) > MAX_RECEIPT_BYTES:
+            continue
+        if receipt.get("venue") != row["price"]["venue"] or receipt.get("contract_id") not in (None, cid):
+            continue
+        known, expires = (stamp(item[field]) for field in ("known_at", "valid_until"))
+        expires = min(expires, stamp(row["price"]["kickoff"]))
+        if not known <= at < expires:
+            continue
+        observed_at = receipt.get("received_at")
+        if observed_at and stamp(observed_at) > known:
+            continue
+        _clocks(receipt, known)
+        receipt_id = hashed(receipt)
+        receipt = dict(receipt, receipt_id=receipt_id, contract_id=cid)
+        current = valuation_inputs.get(cid, {})
+        valuations = {key:_projection(payload, row["record"], receipt, at=at)
+                      for key, payload in current.items()}
+        # A missing probability witness still permits inspection of depth.
+        if row["price"]["input_revision"] not in valuations:
+            valuations[row["price"]["input_revision"]] = {
+                "result": _present(_value(row["price"], row["record"], receipt, at=at, stake=BOARD_STAKE))
+            }
+        output.append((cid, row["revision"], receipt_id, known, expires, at, Jsonb(receipt), Jsonb(valuations)))
+    if not output:
+        return 0
+    with db.cursor() as cursor:
+        cursor.executemany("""INSERT INTO public.current_pregame_depth AS existing
+            (contract_id,contract_revision,receipt_id,known_at,valid_until,published_at,receipt,valuations)
+            SELECT %s,%s,%s,%s,%s,%s,%s,%s
+            WHERE EXISTS (SELECT 1 FROM public.current_contract_storage c
+                WHERE c.id=%s AND c.revision=%s AND c.active)
+            ON CONFLICT(contract_id) DO UPDATE SET contract_revision=excluded.contract_revision,
+                receipt_id=excluded.receipt_id,known_at=excluded.known_at,valid_until=excluded.valid_until,
+                published_at=excluded.published_at,receipt=excluded.receipt,valuations=excluded.valuations
+            WHERE existing.known_at<=excluded.known_at AND
+              (existing.contract_revision,existing.receipt_id,existing.valid_until,existing.valuations)
+              IS DISTINCT FROM
+              (excluded.contract_revision,excluded.receipt_id,excluded.valid_until,excluded.valuations)
+            """, [entry + entry[:2] for entry in output])
+        return cursor.rowcount
+
+
+def preview(db, payload, record, *, at, stake):
+    """Revalue a requested size from the retained current book, without acquisition."""
+    found = db.execute("""SELECT d.receipt,d.published_at,d.valid_until
+        FROM public.current_pregame_depth d JOIN current_contract c ON c.id=d.contract_id
+        WHERE d.contract_id=%s AND d.contract_revision=c.revision AND d.published_at<=%s""",
+        (payload["id"], at)).fetchone()
+    if not found or found["valid_until"] <= at:
+        return unknown("stale_book" if found else "book_unobserved", stake=stake)
+    result = _value(payload, record, found["receipt"], at=at, stake=stake)
+    return dict(_present(result), modeled_fills=result.get("modeled_fills"),
+                published_at=found["published_at"].isoformat(), valid_until=found["valid_until"].isoformat())

@@ -2,7 +2,7 @@
 from bisect import bisect_right
 from collections import Counter
 from copy import deepcopy
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from fractions import Fraction as F
 import re
 from zoneinfo import ZoneInfo
@@ -11,7 +11,7 @@ from psycopg.types.json import Jsonb
 
 from app.collection.current_policy import SPORTS
 from app.storage import paper_result_queue as queue
-from app.storage.store import encoded, hashed
+from app.storage.store import encoded, hashed, stamp
 from . import mens_d1, paper, paper_depth, paper_evidence, paper_results, records, workspace
 
 VERSION = 'ncaab-paper-campaign-1'
@@ -26,6 +26,16 @@ VARIANTS = paper_results.VARIANTS
 MODES = ('fixed_profit', 'kelly')
 AGE_BUCKETS = ('up_to_60', 'over_60_to_300', 'over_300', 'unknown', 'future')
 DEFAULT_ODDS_EDGES = ('200', '300', '500', '1000')
+
+
+def _cutoff(value):
+    if not isinstance(value, str) or not re.fullmatch(
+            r'\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,6})?)?(?:Z|[+-]\d\d:\d\d)', value):
+        raise workspace.SelectionError('Enter a cutoff with a date, time and time zone offset.')
+    try:
+        return stamp(value).astimezone(timezone.utc)
+    except (ValueError, OverflowError):
+        raise workspace.SelectionError('Enter a valid cutoff with a date, time and time zone offset.') from None
 
 
 def _odds_edges(value):
@@ -109,14 +119,22 @@ def configuration(body):
                 sizing['odds_bucket_edges'] = list(odds_edges)
         if 'depth_policy' in body:
             fields.add('depth_policy')
-            if (body['depth_policy'] != paper_depth.VERSION or scope != ALL_SPORTS or mode != 'fixed_profit'
+            depth_policy = body['depth_policy']
+            if (depth_policy not in (paper_depth.VERSION, paper_depth.ALL_SPORTS_VERSION)
+                    or scope != ALL_SPORTS or mode != 'fixed_profit'
                     or sizing.get('target_profit_usd') != '25' or sizing.get('kelly_comparison')
                     or sizing.get('portfolio_rule') != paper.MAIN_FIRST_ONE_PER_GAME
                     or scope_options.get('market_scope') != paper.MAIN_SPREADS_TOTALS):
                 raise workspace.SelectionError(
                     'Public book depth requires Win $25, Spreads and totals, and one trade per game.')
-            sizing['depth_policy'] = paper_depth.VERSION
-            scope_options['leagues'] = list(paper_depth.LEAGUES)
+            sizing['depth_policy'] = depth_policy
+            if depth_policy == paper_depth.ALL_SPORTS_VERSION:
+                fields.add('prospective_start_at')
+                scope_options['prospective_start_at'] = _cutoff(body.get('prospective_start_at')).isoformat()
+                if scope_options.get('alternate_odds_below') != '400' or 'minimum_stake_usd' in sizing:
+                    raise workspace.SelectionError('All-sports depth requires alternates below +400 and no minimum stake.')
+            else:
+                scope_options['leagues'] = list(paper_depth.LEAGUES)
         if set(body) != fields:
             raise workspace.SelectionError('Provide the dates, EV rules and inputs for the selected sizing modes.')
     start, end = map(date.fromisoformat, (workspace.game_day(body['start_date']), workspace.game_day(body['end_date'])))
@@ -127,6 +145,8 @@ def configuration(body):
     if not isinstance(body['name'], str) or not 1 <= len(body['name'].strip()) <= 120:
         raise workspace.SelectionError('Use an experiment name of 1–120 characters.')
     values = workspace.assumptions({k: body[k] for k in workspace.ASSUMPTIONS if k in body})
+    if sizing.get('depth_policy') == paper_depth.ALL_SPORTS_VERSION and F(values['minimum_ev']) != paper.MINIMUM:
+        raise workspace.SelectionError('All-sports depth requires a 4% minimum EV.')
     edges = body['bucket_edges']
     if not isinstance(edges, list) or not edges or len(edges) > 12:
         raise workspace.SelectionError('Provide between one and twelve ascending EV boundaries.')
@@ -167,16 +187,23 @@ def create(db, body, *, discoverable=True):
             if previous is None:
                 raise workspace.UnknownSelection('Unknown experiment to revise.')
             prior_config = previous['payload']
+            if prior_config.get('depth_policy') != config.get('depth_policy'):
+                raise workspace.SelectionError('Save a different execution policy as a separate experiment.')
             prior = {k: v for k, v in prior_config.items() if k not in ('supersedes', 'discoverable')}
             if (config == prior or prior['version'] == VERSION
                     and config == dict(prior, version=SIZING_VERSION, sizing_mode='kelly', kelly_rule=paper.KELLY_RULE)):
                 return dict(id=ancestor, **prior_config)
+            if db.execute('SELECT 1 FROM public.paper_campaign_retirement WHERE campaign_id=%s', (ancestor,)).fetchone():
+                raise workspace.SelectionError('Save a new experiment when revisiting a retired campaign.')
             config['supersedes'] = ancestor
         if discoverable:
             config['discoverable'] = True
         identity = hashed(config)
         if db.execute('SELECT 1 FROM public.paper_campaign WHERE id=%s', (identity,)).fetchone():
             return dict(id=identity, **config)
+        now = db.execute('SELECT clock_timestamp() now').fetchone()['now']
+        if config.get('prospective_start_at') and stamp(config['prospective_start_at']) <= now:
+            raise workspace.SelectionError('The first eligible T−10 decision cutoff must be in the future.')
         workspace._admit(db, len(encoded(config)))
         db.execute('INSERT INTO public.paper_campaign VALUES (%s,DEFAULT,%s,%s) ON CONFLICT DO NOTHING',
                    (identity, Jsonb(config), len(encoded(config))))
@@ -187,6 +214,43 @@ def create(db, body, *, discoverable=True):
                 VALUES (%s,%s,%s) ON CONFLICT DO NOTHING''', (identity, day, _initial_check(day, now)))
             day += timedelta(days=1)
     return dict(id=identity, **config)
+
+
+def retire(db, identity, body):
+    if not isinstance(body, dict) or set(body) != {'cutoff_at'}:
+        raise workspace.SelectionError('Choose an experiment retirement cutoff.')
+    requested = _cutoff(body['cutoff_at']) if body['cutoff_at'] is not None else None
+    with db.transaction():
+        records._writer_lock(db)
+        if not db.execute('SELECT 1 FROM public.paper_campaign WHERE id=%s', (identity,)).fetchone():
+            raise workspace.UnknownSelection('Unknown scheduled experiment.')
+        prior = db.execute('''SELECT cutoff_at,recorded_at AS retirement_recorded_at FROM public.paper_campaign_retirement
+            WHERE campaign_id=%s''', (identity,)).fetchone()
+        if prior:
+            if requested is not None and requested != prior['cutoff_at']:
+                raise workspace.SelectionError('This experiment already has a retirement cutoff.')
+            return dict(id=identity, **_retirement(prior))
+        now = db.execute('SELECT clock_timestamp() now').fetchone()['now']
+        cutoff = requested if requested is not None else now
+        if cutoff < now:
+            raise workspace.SelectionError('The retirement cutoff must be now or later.')
+        db.execute('''INSERT INTO public.paper_campaign_retirement(campaign_id,cutoff_at,recorded_at)
+            VALUES (%s,%s,%s)''', (identity, cutoff, now))
+    return dict(id=identity, **_retirement(dict(cutoff_at=cutoff, retirement_recorded_at=now)))
+
+
+def _retirement(row):
+    return dict(cutoff_at=row['cutoff_at'].astimezone(timezone.utc).isoformat(),
+                recorded_at=row['retirement_recorded_at'].astimezone(timezone.utc).isoformat())
+
+
+def _retirement_fields(row):
+    return {'retirement': _retirement(row)} if row['cutoff_at'] else {}
+
+
+def _target_day(at):
+    # Game dates refer to kickoff. T−10 may fall on the previous Eastern day.
+    return (stamp(at) + timedelta(seconds=paper.POLICY['target_seconds_before_start'])).astimezone(EASTERN).date()
 
 
 def _definition(parent, job, population, recovery, fingerprint, mode, *, depth_receipts=None):
@@ -211,10 +275,17 @@ def _definition(parent, job, population, recovery, fingerprint, mode, *, depth_r
     else:
         sizing = f"targeting {paper.money(F(config['target_profit_usd']))} USD net win profit"
     definition['question'] = f'Which {subject} T−10 paper opportunities qualify at {threshold}% minimum EV {sizing}?'
-    if config['version'] == VERSION:
-        definition['version'] = hashed([definition['version'], job['campaign_id']])
-        return definition
     policy = definition['policy']
+    if 'prospective_start_at' in config:
+        policy['prospective_start_at'] = config['prospective_start_at']
+    if job.get('decision_before'):
+        policy['decision_before'] = job['decision_before']
+    if config['version'] == VERSION:
+        fields = [definition['version'], job['campaign_id']]
+        if job.get('decision_before'):
+            fields.append(policy['decision_before'])
+        definition['version'] = hashed(fields)
+        return definition
     policy.update(sizing_mode=mode, portfolios=config['portfolios'])
     policy.update({key: config[key] for key in ('minimum_stake_usd', 'portfolio_rule', 'market_scope',
                                                'alternate_odds_below') if key in config})
@@ -223,6 +294,8 @@ def _definition(parent, job, population, recovery, fingerprint, mode, *, depth_r
     if config.get('depth_policy'):
         policy.update(depth_policy=config['depth_policy'], depth_receipts=depth_receipts or {},
                       execution='paper_only; full target within the frozen limit using public displayed capacity')
+        if config['depth_policy'] == paper_depth.ALL_SPORTS_VERSION:
+            policy['depth_execution_version'] = paper_depth.FIXED_PROFIT_VERSION
     if mode == 'fixed_profit':
         for key in ('reference_bankroll_usd', 'kelly_multiplier', 'sizing_scale_usd'):
             policy.pop(key, None)
@@ -236,13 +309,15 @@ def _definition(parent, job, population, recovery, fingerprint, mode, *, depth_r
     return definition
 
 
-def _daily_tasks(db, day, now, leagues):
+def _daily_tasks(db, day, now, leagues, *, begin=None, end=None):
     return list(db.execute('''SELECT g.id,g.schedule_id,g.late_id,t.state,t.last_reason,t.target_at,
         (t.state IN ('pending','claimed') AND t.deadline_at<%s) AS window_closed
         FROM public.ev_experiment_game g JOIN public.ev_experiment_task t ON t.game_id=g.id
         WHERE t.checkpoint='late' AND g.event->>'league'=ANY(%s)
+        AND (%s::timestamptz IS NULL OR t.target_at>=%s)
+        AND (%s::timestamptz IS NULL OR t.target_at<%s)
         AND ((g.event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s''',
-        (now, leagues, day)))
+        (now, leagues, begin, begin, end, end, day)))
 
 
 def tick(db):
@@ -253,13 +328,20 @@ def tick(db):
     today = now.astimezone(EASTERN).date()
     lease_until = now + timedelta(minutes=15)
     with db.transaction():
-        active_ids = [campaign['id'] for campaign in index(db, active_only=True)]
+        active_ids = [campaign['id'] for campaign in discovery(db)['campaigns']]
         if not active_ids:
             return
-        job = db.execute('''SELECT d.*,c.payload config FROM public.paper_campaign_day d
+        job = db.execute('''SELECT d.*,c.payload config,retirement.cutoff_at FROM public.paper_campaign_day d
             JOIN public.paper_campaign c ON c.id=d.campaign_id
+            LEFT JOIN public.paper_campaign_retirement retirement ON retirement.campaign_id=c.id
             WHERE next_check_at<=%s AND (lease_until IS NULL OR lease_until<=%s) AND game_date<=%s
               AND d.campaign_id=ANY(%s)
+              AND (retirement.cutoff_at IS NULL OR
+                  d.game_date <= (((retirement.cutoff_at + interval '10 minutes' - interval '1 microsecond')
+                    AT TIME ZONE 'America/New_York')::date))
+              AND (c.payload->>'prospective_start_at' IS NULL OR
+                  d.game_date >= ((((c.payload->>'prospective_start_at')::timestamptz + interval '10 minutes')
+                    AT TIME ZONE 'America/New_York')::date))
             ORDER BY (game_date >= %s) DESC,next_check_at,game_date
             FOR UPDATE OF d SKIP LOCKED LIMIT 1''', (now, now, today, active_ids, today-timedelta(days=2))).fetchone()
         if job is None:
@@ -273,21 +355,32 @@ def tick(db):
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
             day = str(job['game_date'])
+            begin = job['config'].get('prospective_start_at')
+            cutoff = job['cutoff_at']
+            end = cutoff if cutoff and job['game_date'] == _target_day(cutoff - timedelta(microseconds=1)) else None
+            job['decision_before'] = end.astimezone(timezone.utc).isoformat() if end else None
             all_sports = job['config']['scope'] == ALL_SPORTS
             if all_sports:
-                tasks = _daily_tasks(db, day, now, job['config']['leagues'])
+                tasks = _daily_tasks(db, day, now, job['config']['leagues'], begin=begin, end=end)
                 d1_population = mens_d1.daily_population(db, day) if tasks else None
                 population = None
             else:
                 population = d1_population = mens_d1.daily_population(db, day)
-                tasks = _daily_tasks(db, day, now, ['NCAAB']) if population is not None else []
+                tasks = _daily_tasks(db, day, now, ['NCAAB'], begin=begin, end=end) if population is not None else []
             if tasks or population is not None or (all_sports and run_id):
                 recovery = mens_d1.daily_recovery(db, day, d1_population) if d1_population is not None else {}
+                if (begin or end) and recovery.get('recovered_checkpoints'):
+                    eligible_ids = {task['id'] for task in tasks}
+                    recovery = dict(recovery, recovered_checkpoints={
+                        identity: evidence for identity, evidence in recovery['recovered_checkpoints'].items()
+                        if identity in eligible_ids})
                 inputs = [population['revision'] if population is not None else None,
                     sorted(({k: v for k, v in task.items() if k != 'target_at'} for task in tasks),
                            key=lambda task: task['id']), recovery,
                     # A pending task can expire without a write.
                     today > job['game_date']]
+                if begin or end:
+                    inputs.append(dict(prospective_start_at=begin, decision_before=job['decision_before']))
                 depth_receipts = None
                 if job['config'].get('depth_policy'):
                     from app.storage import experiment_depth
@@ -295,6 +388,8 @@ def tick(db):
                     depth_receipts = experiment_depth.input_ids(db, (
                         (task['id'], task['schedule_id'], task['target_at']) for task in tasks if task['late_id']))
                     inputs.append(depth_receipts)
+                    if job['config']['depth_policy'] == paper_depth.ALL_SPORTS_VERSION:
+                        inputs.append(paper_depth.FIXED_PROFIT_VERSION)
                 fingerprint = hashed(inputs)
                 if fingerprint != job['fingerprint'] or not run_id:
                     parent = workspace._definition(db, workspace.PILOT_VERSION)
@@ -313,7 +408,11 @@ def tick(db):
                 (*key, lease_until, queue.utc())).fetchone()
             if not owned:
                 return None
-            if replays and queue._late_capture_due(db, queue.utc()):
+            current_cutoff = db.execute('''SELECT cutoff_at FROM public.paper_campaign_retirement
+                WHERE campaign_id=%s''', (key[0],)).fetchone()
+            if replays and (current_cutoff or {}).get('cutoff_at') != job['cutoff_at']:
+                state, fingerprint = 'deferred_for_campaign_cutoff', job['fingerprint']
+            elif replays and queue._late_capture_due(db, queue.utc()):
                 state, fingerprint = 'deferred_for_capture', job['fingerprint']
             elif replays:
                 run_ids = [workspace._publish(db, day, parent, definition, report, details=False)
@@ -333,6 +432,8 @@ def _finish(db, job, lease_until, state, run_id, fingerprint, error):
     # Continue checking older days for newly retained original evidence, at a lower cadence.
     recent = job['game_date'] >= now.astimezone(EASTERN).date() - timedelta(days=2)
     interval = timedelta(minutes=15) if recent or state in ('failed', 'deferred_for_capture') else timedelta(days=1)
+    if state == 'deferred_for_campaign_cutoff':
+        interval = timedelta(0)
     db.execute('''UPDATE public.paper_campaign_day SET lease_until=NULL,next_check_at=%s,
         state=%s,last_error=%s,run_id=%s,fingerprint=%s,updated_at=%s
         WHERE campaign_id=%s AND game_date=%s AND lease_until=%s''',
@@ -588,10 +689,12 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
         raise workspace.SelectionError('Select Best venue or All qualifying venues.')
     if mode is not None and mode not in MODES:
         raise workspace.SelectionError('Select fixed profit or Kelly sizing.')
-    row = db.execute('SELECT * FROM public.paper_campaign WHERE id=%s',(identity,)).fetchone()
+    row = db.execute('''SELECT c.*,r.cutoff_at,r.recorded_at retirement_recorded_at FROM public.paper_campaign c
+        LEFT JOIN public.paper_campaign_retirement r ON r.campaign_id=c.id WHERE c.id=%s''', (identity,)).fetchone()
     if not row:
         raise workspace.UnknownSelection('Unknown scheduled experiment.')
-    config, days, all_tickets, versions = row['payload'], [], [], []
+    config = dict(row['payload'], **_retirement_fields(row))
+    days, all_tickets, versions = [], [], []
     available_modes = modes(config)
     mode = mode if mode in available_modes else available_modes[0]
     variant = variant if variant in config['portfolios'] else config['portfolios'][0]
@@ -617,6 +720,8 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
     comparison = Counter()
     selected_tickets, selected_days = [], 0
     depth_games = []
+    first_day = _target_day(config['prospective_start_at']) if config.get('prospective_start_at') else None
+    last_day = _target_day(row['cutoff_at'] - timedelta(microseconds=1)) if row['cutoff_at'] else None
     for day in day_rows:
         current_day = day['game_date']
         in_window = current_day <= today or game_date is not None
@@ -627,7 +732,11 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
         snapshots = [dict(id=r['id'], recorded_at=r['recorded_at'].isoformat())
                      for r in history.get(current_day, []) if r['mode'] == mode]
         replay_state = day['state']
-        if day['lease_until'] and day['lease_until'] > now:
+        if first_day and current_day < first_day and not run_id:
+            replay_state = 'before_first_decision'
+        elif last_day and current_day > last_day and not run_id:
+            replay_state = 'retired'
+        elif day['lease_until'] and day['lease_until'] > now:
             replay_state = 'replaying'
         elif replay_state == 'scheduled' and current_day <= today:
             replay_state = 'replay_queued'
@@ -651,7 +760,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                         workspace._run(db,run_id)['payload'])
             source = document['report']
             if config.get('depth_policy'):
-                entry['depth_analysis'] = paper_depth.summarize(source['games'])
+                entry['depth_analysis'] = paper_depth.summarize(source['games'], version=config['depth_policy'])
                 entry['depth_followup_analysis'] = paper_depth.followup_summary(
                     [followups[receipt] for receipt in paper_depth.receipt_ids(source['games']) if receipt in followups])
                 if in_window:
@@ -693,7 +802,7 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
                 comparison=dict(comparison) if comparison else None,
                 reported_days=len(versions),provider_requests=0,orders_submitted=0)
     if config.get('depth_policy'):
-        value['depth_analysis'] = paper_depth.summarize(depth_games)
+        value['depth_analysis'] = paper_depth.summarize(depth_games, version=config['depth_policy'])
         value['depth_followup_analysis'] = paper_depth.followup_summary(list(followups.values()))
     return value
 
@@ -713,7 +822,8 @@ def daily(db, identity, game_date, variant=None):
 
 def trades(db, identity, variant=None, mode=None, *, export=False):
     """Read selected trades and their published grades across current dated runs."""
-    campaign = db.execute('SELECT payload FROM public.paper_campaign WHERE id=%s', (identity,)).fetchone()
+    campaign = db.execute('''SELECT c.payload,r.cutoff_at,r.recorded_at retirement_recorded_at FROM public.paper_campaign c
+        LEFT JOIN public.paper_campaign_retirement r ON r.campaign_id=c.id WHERE c.id=%s''', (identity,)).fetchone()
     if not campaign:
         raise workspace.UnknownSelection('Unknown scheduled experiment.')
     config = campaign['payload']
@@ -779,14 +889,16 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
                 game_title=game.get('title') or ticket.get('title'), league=game.get('league') or fallback_league,
                 game_date=str(day['game_date']), run_id=day['id'], result_id=result_id))
     value = dict(id=identity, mode=mode, variant=variant, trades=rows, summary=paper_results._summary(rows),
-                provider_requests=0, orders_submitted=0)
+                provider_requests=0, orders_submitted=0, **_retirement_fields(campaign))
     if config.get('depth_policy'):
         from app.storage import experiment_depth
 
         depth_ids = paper_depth.receipt_ids(depth_games)
         followups = experiment_depth.followups(db, depth_ids)
-        value.update(depth_analysis=paper_depth.summarize(depth_games), depth_candidates=candidates,
+        value.update(depth_analysis=paper_depth.summarize(depth_games, version=config['depth_policy']), depth_candidates=candidates,
                      depth_decisions=decisions)
+        if config.get('prospective_start_at'):
+            value['prospective_start_at'] = config['prospective_start_at']
         value['depth_followup_analysis'] = paper_depth.followup_summary(list(followups.values()))
         if export:
             value['depth_receipts'] = experiment_depth.read_ids(db, depth_ids)
@@ -796,16 +908,25 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
 
 
 def index(db, *, active_only=False):
-    campaigns = [dict(id=r['id'], **r['payload']) for r in db.execute(
-        'SELECT id,payload FROM public.paper_campaign ORDER BY created_at DESC,id')]
-    return _discovery(campaigns)['campaigns'] if active_only else campaigns
+    campaigns = [dict(id=r['id'], **r['payload'], **_retirement_fields(r)) for r in db.execute('''
+        SELECT c.id,c.payload,r.cutoff_at,r.recorded_at retirement_recorded_at FROM public.paper_campaign c
+        LEFT JOIN public.paper_campaign_retirement r ON r.campaign_id=c.id ORDER BY c.created_at DESC,c.id''')]
+    if not active_only:
+        return campaigns
+    now = queue.utc()
+    return [campaign for campaign in _discovery(campaigns, now)['campaigns'] if not _retired(campaign, now)]
 
 
 def discovery(db):
-    return _discovery(index(db))
+    return _discovery(index(db), queue.utc())
 
 
-def _discovery(campaigns):
+def _retired(campaign, now):
+    retirement = campaign.get('retirement')
+    return retirement is not None and stamp(retirement['cutoff_at']) <= now
+
+
+def _discovery(campaigns, now):
     parents = {campaign['id']: campaign.get('supersedes') for campaign in campaigns}
     visible = [campaign for campaign in campaigns
                if campaign['id'] == WIN_10_CAMPAIGN or campaign.get('discoverable') is True]
@@ -823,5 +944,5 @@ def _discovery(campaigns):
             successors[ancestor] = campaign['id']
             ancestor = parents.get(ancestor)
     preferred = successors.get(WIN_10_CAMPAIGN, WIN_10_CAMPAIGN)
-    active.sort(key=lambda campaign: campaign['id'] != preferred)
+    active.sort(key=lambda campaign: (_retired(campaign, now), campaign['id'] != preferred))
     return dict(campaigns=active, successors=successors)

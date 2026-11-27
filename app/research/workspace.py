@@ -584,7 +584,8 @@ def offer_export_plan(db, run_id):
     if policy.get("sizing_mode"):
         fields["sizing"] = {key: policy[key] for key in (
             "sizing_mode", "sizing_rule", "target_profit_usd", "kelly_multiplier", "reference_bankroll_usd",
-            "minimum_stake_usd", "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below", "depth_policy"
+            "minimum_stake_usd", "portfolio_rule", "portfolios", "market_scope", "alternate_odds_below",
+            "depth_policy", "depth_execution_version", "prospective_start_at", "decision_before"
         ) if key in policy}
     if policy.get("portfolio_rule") == paper.MAIN_FIRST_ONE_PER_GAME:
         selected["portfolio_selection"] = {

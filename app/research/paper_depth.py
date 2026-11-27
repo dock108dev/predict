@@ -3,7 +3,8 @@
 from collections import Counter
 from fractions import Fraction as F
 
-from app.storage.experiment_depth import POLICY as VERSION
+from app.comparison.experiment_depth_execution import FIXED_PROFIT_VERSION as FIXED_PROFIT_VERSION
+from app.storage.experiment_depth import ALL_SPORTS_POLICY as ALL_SPORTS_VERSION, POLICY as VERSION
 from app.storage.store import stamp
 
 LEAGUES = ("NCAAB",)
@@ -86,10 +87,11 @@ def _odds_band(odds):
 def _available_support(picks):
     sizes = Counter(pick["depth"]["status"] for pick in picks)
     usable = len(picks) - sizes["unknown"]
-    full = sizes["full_size"]
+    physically_full = [pick for pick in picks if pick["depth"]["status"] != "unknown"
+                       and pick["depth"].get("full_size_supported", pick["depth"]["status"] == "full_size")]
+    full = len(physically_full)
     total_stake = sum((F(pick["cash_commitment_usd"]) for pick in picks), F(0))
-    supported_stake = sum((F(pick["cash_commitment_usd"]) for pick in picks
-                           if pick["depth"]["status"] == "full_size"), F(0))
+    supported_stake = sum((F(pick["cash_commitment_usd"]) for pick in physically_full), F(0))
     usable_stake = sum((F(pick["cash_commitment_usd"]) for pick in picks
                         if pick["depth"]["status"] != "unknown"), F(0))
     gross_capacity_stake = sum((F(pick["cash_commitment_usd"]) * min(
@@ -111,7 +113,7 @@ def _available_support(picks):
                 dispositions=dict(sizes), unknown_reasons=dict(unknown_reasons))
 
 
-def summarize(games):
+def summarize(games, *, version=VERSION):
     comparisons = [game["depth_comparison"] for game in games if game.get("depth_comparison")]
     picks = {name: [comparison["picks"][name] for comparison in comparisons if comparison["picks"][name]]
              for name in SCENARIOS}
@@ -141,7 +143,9 @@ def summarize(games):
             new_picks=sum(bool(after and not before) for before, after in changes),
             expected_profit_usd=str(sum((F(pick["expected_profit_exact_usd"]) for pick in picks[name]), F(0))))
     controls = [item["main_line_control"] for item in comparisons if item["main_line_control"]]
-    return dict(version=VERSION, scope="NCAAB full-game spreads and totals",
+    scope = ("Six configured leagues · full-game spreads and totals" if version == ALL_SPORTS_VERSION
+             else "NCAAB full-game spreads and totals")
+    return dict(version=version, scope=scope,
                 frozen_game_decisions=len(comparisons), venue_receipt_games=sum(bool(game.get("depth_receipt_id"))
                                                                               for game in games),
                 capture_states=dict(Counter(game.get("status", "unknown") for game in games)),

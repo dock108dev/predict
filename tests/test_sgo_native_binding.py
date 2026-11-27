@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from app.collection.novig_v3_public import NovigPublicDiscovery
-from app.comparison.sgo_native_binding import bind, capture_catalog, event_link_id, pregame_fee, settlement_profile
+from app.comparison.sgo_native_binding import bind, capture_catalog, event_link_id, fresh_pregame_witness, pregame_fee, settlement_profile
 from app.storage.store import stamp
 
 AT = '2026-11-12T16:54:00+00:00'
@@ -124,6 +124,27 @@ def test_provider_age_shortens_proof_and_cross_event_outcomes_are_rejected():
     with pytest.raises(ValueError, match='membership_conflict'):
         capture_catalog(SGO,EVENT,event,receipt(EVENT_PATH),
                         [(dict(items=[market,dict(market, marketId=EVENT)]),receipt(MARKETS_PATH))],{HOME})
+
+
+def test_explicit_fresh_event_and_market_receipts_recover_missing_witness_without_reschedule():
+    record, event, market = fixture()
+    event_proof = dict(path=EVENT_PATH, status=200, sha256='2'*64, received_at=AT)
+    market_proof = dict(path=MARKETS_PATH, status=200, sha256='3'*64, received_at=AT)
+    inventory = {MARKET: dict(market, receipt=market_proof)}
+    assert not bind(record, None, at=AT)['available']
+    replay = fresh_pregame_witness(SGO, event, event_proof, inventory, {HOME, AWAY})
+    result = bind(record, replay, at=AT)
+    assert result['phase_verified'] and result['outcome_id'] == HOME
+    assert result['event_receipt']['sha256'] == event_proof['sha256']
+    assert result['market_receipt']['sha256'] == market_proof['sha256']
+
+    five_minutes_later = 5*60*1000
+    changed = dict(event, startsTs=event['startsTs']+five_minutes_later)
+    delayed = {MARKET: dict(inventory[MARKET], startsTs=changed['startsTs'])}
+    new_witness = fresh_pregame_witness(SGO, changed, event_proof, delayed, {HOME, AWAY})
+    assert bind(record, new_witness, at=AT)['reason'] == 'sgo_native_kickoff_conflict'
+    with pytest.raises(ValueError, match='event_invalid'):
+        fresh_pregame_witness(SGO, dict(event, status='OPEN_INGAME'), event_proof, inventory, {HOME})
 
 
 def test_immutable_subject_roles_from_typed_spread_verify_unresolved_college_winner():

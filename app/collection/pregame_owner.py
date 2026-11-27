@@ -143,6 +143,7 @@ class PregameOwner:
                     cohorts=self.cohort_progress,
                     experiment=self.experiment.progress if self.experiment else {},
                     experiment_depth=self.experiment_depth.progress if self.experiment_depth else {},
+                    dashboard_depth=getattr(self.experiment_depth, 'dashboard_progress', {}),
                 )
                 self.last_status = monotonic()
 

@@ -145,11 +145,14 @@ def plan(root, paths):
             sql.update(SQL_CORE)
         if path.startswith(("app/", "tests/")) and any(
             topic in candidate.name
-            for topic in ("experiment_depth", "paper_depth", "experiment_public_depth")
+            for topic in ("experiment_depth", "paper_depth", "experiment_public_depth", "execution_contract",
+                          "liquidity_execution", "dashboard_depth", "dashboard_kalshi", "dashboard_pmus")
         ):
             pure.update(
                 {
                     "tests/test_experiment_depth_execution.py",
+                    "tests/test_liquidity_execution.py",
+                    "tests/test_dashboard_pmus.py",
                     "tests/test_native_experiment_depth.py",
                     "tests/test_novig_experiment_depth.py",
                 }
@@ -178,6 +181,7 @@ def plan(root, paths):
             "app/dashboard/research_workspace_api.py",
             "app/storage/migrations/120_paper_results.sql",
             "app/storage/migrations/121_paper_campaigns.sql",
+            "app/storage/migrations/126_paper_campaign_retirement.sql",
         ):
             pure.update(
                 {"tests/test_paper_results.py", "tests/test_paper_results_api.py"}

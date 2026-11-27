@@ -6,7 +6,7 @@ claims that a bet was entered at that time. Exports carry their sizing witnesses
 
 from collections import Counter, defaultdict
 from copy import deepcopy
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from fractions import Fraction as F
 from zoneinfo import ZoneInfo
 
@@ -204,7 +204,7 @@ def _depth_candidate(offer, measurement, identity, index, quote_id, anchors, dep
         if reason:
             receipt = {"reason": reason}
     result, calculation = experiment_depth_execution.evaluate(offer, receipt, at=depth["target_at"],
-        game_key=identity["event"], target=target, minimum=minimum)
+        game_key=identity["event"], target=target, minimum=minimum, **depth["execution_version"])
     # A selected order trace is already retained in sized_calculation.fee.
     # Rejected and partial cases can be reevaluated from the immutable bundle.
     result.pop("modeled_fills", None)
@@ -454,14 +454,17 @@ def scoped_candidates(entry, checkpoint, policy, *, depth_bundle=None):
         depth = dict(target_at=checkpoint["target_at"], candidates=[],
                      observations=(depth_bundle or {}).get("observations", {}),
                      reason=(depth_bundle or {}).get("reason"),
-                     source_gaps=(depth_bundle or {}).get("source_gaps", {}))
+                     source_gaps=(depth_bundle or {}).get("source_gaps", {}),
+                     execution_version=({"version": policy["depth_execution_version"]}
+                                        if policy.get("depth_execution_version") else {}))
         entry["depth_receipt_id"] = (depth_bundle or {}).get("id")
         if depth_bundle:
             entry["depth_metrics"] = depth_bundle.get("metrics", {})
     tickets, gaps = candidates(snapshot, game_id=entry["game_id"], checkpoint_id=entry["checkpoint_id"],
                                at=at, policy=policy, counts=counts, depth=depth)
     if depth is not None:
-        quoted_policy = {key: value for key, value in policy.items() if key not in ("depth_policy", "depth_receipts")}
+        quoted_policy = {key: value for key, value in policy.items()
+                         if key not in ("depth_policy", "depth_receipts", "depth_execution_version")}
         quoted_policy["execution"] = POLICY["execution"]
         quoted, _ = candidates(snapshot, game_id=entry["game_id"], checkpoint_id=entry["checkpoint_id"],
                                at=at, policy=quoted_policy)
@@ -487,13 +490,18 @@ def _replay_games(db, day, at, policy, population):
     frozen_policy = policy or POLICY
     reconciled = population is not None and population["kind"] == "reconciled_occurrences"
     leagues = frozen_policy.get("leagues")
+    begin, end = (stamp(frozen_policy[key]) if frozen_policy.get(key) else None
+                  for key in ("prospective_start_at", "decision_before"))
     games = list(db.execute("""SELECT g.* FROM public.ev_experiment_game g
         WHERE event->>'league'=ANY(%s) AND
         ((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
         AND (NOT %s OR EXISTS (SELECT 1 FROM public.ev_experiment_task t
-            WHERE t.game_id=g.id AND t.checkpoint='late'))
+            WHERE t.game_id=g.id AND t.checkpoint='late'
+                AND (%s::timestamptz IS NULL OR t.target_at>=%s)
+                AND (%s::timestamptz IS NULL OR t.target_at<%s)))
         ORDER BY (event->>'starts_at')::timestamptz,id""",
-        (list(leagues) if leagues is not None else [frozen_policy["league"]], day, reconciled or leagues is not None)))
+        (list(leagues) if leagues is not None else [frozen_policy["league"]], day,
+         reconciled or leagues is not None or bool(begin or end), begin, begin, end, end)))
     untracked = []
     if population is not None:
         by_provider = {game["event"]["source_event_id"]: game["id"] for game in games}
@@ -503,6 +511,12 @@ def _replay_games(db, day, at, policy, population):
                 continue
             if not reconciled:
                 continue
+            if begin or end:
+                if not row.get("starts_at"):
+                    continue
+                target = stamp(row["starts_at"]) - timedelta(seconds=owner.LATE_SECONDS)
+                if (begin and target < begin) or (end and target >= end):
+                    continue
             row["game_id"] = hashed([day, row["occurrence_id"], "absent_capture_task"])
             untracked.append(dict(game_id=row["game_id"], occurrence_id=row["occurrence_id"],
                 title=row.get("title") or row["occurrence_id"], starts_at=row.get("starts_at"),
@@ -552,7 +566,8 @@ def scoped_reports(db, day, policies, *, population=None, as_of=None, evidence=F
     at = (stamp(as_of) if as_of is not None else datetime.now(timezone.utc)).isoformat()
     shared = policies[0]
     frozen = shared or POLICY
-    binding_fields = ("league", "leagues", "recovered_checkpoints", "defer_results")
+    binding_fields = ("league", "leagues", "recovered_checkpoints", "defer_results",
+                      "prospective_start_at", "decision_before")
     if any(policy is None or any(policy.get(key) != frozen.get(key) for key in binding_fields)
            for policy in policies[1:]):
         raise ValueError("paper_replay_checkpoint_policy_mismatch")
@@ -654,8 +669,9 @@ def assemble(day, at, frozen_policy, dispositions, tickets, exclusions, *,
     if frozen_policy.get("recovered_checkpoints"):
         result["reconstructed_games"] = sum(g["status"] == "reconstructed" for g in dispositions)
     if frozen_policy.get("depth_policy"):
-        result["depth_analysis"] = paper_depth.summarize(dispositions)
-        result["designation"] = "Paper replay of frozen NCAAB full-game spreads and totals with public displayed capacity."
+        result["depth_analysis"] = paper_depth.summarize(dispositions, version=frozen_policy["depth_policy"])
+        result["designation"] = ("Paper replay of frozen " + result["depth_analysis"]["scope"]
+                                 + " with public displayed capacity.")
     if not evidence:
         for portfolio in values.values():
             portfolio["tickets"] = [{k: v for k, v in t.items() if k != "witness"} for t in portfolio["tickets"]]

@@ -190,10 +190,16 @@ def test_archived_nhl_shootout_credits_one_goal_for_spreads_and_totals(monkeypat
     assert checked["scores"] == {"home": 3, "away": 2}
     assert results._nhl_result_scoring(frozen, item, source, lambda _: (raw, raw)) is None
     proof = dict(item, nhl_scoring=checked)
+    depth_pick = ticket("depth_kalshi", league="NHL", venue="kalshi", side="home", line="-0.5")
+    depth_pick[0]["depth"] = dict(version=results.paper_depth.FIXED_PROFIT_VERSION, eligible=True,
+        settlement=dict(available=True, overtime="included", shootout="official_final_score",
+                        shootout_count="one_goal_to_winning_team"))
+    depth_pick[1]["sized_calculation"]["sizing"] = dict(execution_rule=results.paper_depth.FIXED_PROFIT_VERSION)
     picks = [ticket("under", league="NHL", family="total", side="under", line="4.5"),
              ticket("over", league="NHL", family="total", side="over", line="5.5"),
              ticket("away", league="NHL", side="away", line="0.5"),
              ticket("home", league="NHL", venue="polymarket_us", side="home", line="-0.5"),
+             depth_pick,
              ticket("unknown_terms", league="NHL", venue="example_venue", side="home", line="-0.5")]
     saved = run(*picks)
     saved["payload"]["report"]["games"] = [entry]
@@ -201,7 +207,7 @@ def test_archived_nhl_shootout_credits_one_goal_for_spreads_and_totals(monkeypat
     assert report["grading_rule"] == results.NHL_VERSION
     assert report["games"][0]["result"]["nhl_scoring"] == checked
     rows = report["portfolios"]["all_venues"]["tickets"]
-    assert [row["grade"]["state"] for row in rows] == ["loss", "loss", "loss", "win", "unsupported"]
+    assert [row["grade"]["state"] for row in rows] == ["loss", "loss", "loss", "win", "win", "unsupported"]
     assert rows[-1]["grade"]["reason"] == "unsupported_scoring_terms"
     assert all("including one goal for the shootout winner" in row["grade"]["explanation"] for row in rows[:-1])
     with_missing_receipt = results.build_report(saved, [context(entry, frozen, [item])])

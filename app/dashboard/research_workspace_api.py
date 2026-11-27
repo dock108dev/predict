@@ -84,6 +84,13 @@ def mount(app, *, campaigns_only=False):
         name = f'predict-week-{value["config"]["start_date"]}-{value["mode"]}-{value["variant"]}.json'
         return _response(value, filename=name if query.get('export') else None)
 
+    async def retire_campaign(request):
+        if request.query:
+            raise PublicRequestError('A retirement cutoff belongs in the JSON body.')
+        value = await work(paper_campaigns.retire, _identity(request.match_info['campaign_id']),
+                           await read_json(request), read_only=False)
+        return _response(value)
+
     async def campaign_day(request):
         query = request.query
         if (set(query) - {'variant', 'export'} or len(query) != len(set(query))
@@ -260,6 +267,7 @@ def mount(app, *, campaigns_only=False):
     app.router.add_get(BASE + '/campaigns', campaigns)
     app.router.add_post(BASE + '/campaigns', campaigns)
     app.router.add_get(BASE + '/campaigns/{campaign_id}', campaign)
+    app.router.add_post(BASE + '/campaigns/{campaign_id}/retire', retire_campaign)
     app.router.add_get(BASE + '/campaigns/{campaign_id}/days/{game_date}', campaign_day)
     app.router.add_get(BASE + '/campaigns/{campaign_id}/trades', campaign_trades)
     app.router.add_get(BASE + "/result-evidence/{result_id}", result_evidence)
