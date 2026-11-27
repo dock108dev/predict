@@ -9,6 +9,10 @@ on:
         description: Check and publish current main without changing the server
         type: boolean
         default: false
+      schema_maintenance:
+        description: Deploy current main through the guarded backup and migration release
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,7 +30,7 @@ jobs:
     name: Personal beta checks and deploy
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 2
+    timeout-minutes: ${{ inputs.schema_maintenance && 360 || 2 }}
     environment: hetzner
     permissions:
       contents: read
@@ -42,6 +46,7 @@ jobs:
       - uses: ./.github/actions/personal-release
         with:
           publish-only: ${{ inputs.publish_only || false }}
+          schema-maintenance: ${{ inputs.schema_maintenance || false }}
         env:
           RELEASE_SHA: ${{ github.sha }}
           GH_TOKEN: ${{ github.token }}

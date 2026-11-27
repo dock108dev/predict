@@ -4,12 +4,16 @@ inputs:
   publish-only:
     description: Publish images without accessing the server
     default: 'false'
+  schema-maintenance:
+    description: Run the host's guarded backup and migration protocol
+    default: 'false'
 runs:
   using: composite
   steps:
-    - name: Validate, prepare images and release within the personal CI budget
+    - name: Validate, prepare images and release checked main
       shell: bash
       env:
         RELEASE_PUBLISH_ONLY: ${{ inputs.publish-only }}
+        RELEASE_SCHEMA_MAINTENANCE: ${{ inputs.schema-maintenance }}
         PG_CONFIG: /usr/lib/postgresql/16/bin/pg_config
       run: python deploy/fast-release.py

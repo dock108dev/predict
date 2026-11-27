@@ -94,10 +94,13 @@ publication and deployment times. An intentional stale/disabled skip is explicit
 
 Normal releases use the fast image-manifest protocol and refuse unapplied schema
 migrations before stopping or reconfiguring services. A full database backup can
-exceed the normal two-minute budget. An engineer prepares schema changes through
-the guarded maintenance release, retaining the pre-migration backup, then resumes
-the normal fast path. The two-minute timeout must never be used to interrupt a
-live backup or migration. This is maintenance work, not additional owner setup.
+exceed the normal two-minute budget. For an authorized schema release, choose
+**Run workflow** on **CI**, select `main`, and enable `schema_maintenance`, or run
+`gh workflow run ci.yml --ref main -f schema_maintenance=true`. Leave
+`publish_only` off. The same focused checks and current-main checks run before
+the guarded release. The maintenance run uses GitHub's standard job allowance
+while the host retains its pre-migration backup, applies the migration, and
+verifies service health. Subsequent pushes use the normal fast path.
 
 The deploy job requires `HETZNER_DEPLOY_ENABLED=true` and a branch allowed by
 the `hetzner` GitHub environment. Set `HETZNER_HOST` and the pinned `HETZNER_KNOWN_HOSTS`

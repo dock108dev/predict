@@ -44,11 +44,13 @@ class Release:
         self.started = int(os.environ.get("PREDICT_CICD_STARTED", time.time()))
         self.sha = os.environ["RELEASE_SHA"]
         self.publish_only = os.environ.get("RELEASE_PUBLISH_ONLY") == "true"
+        self.schema_maintenance = os.environ.get("RELEASE_SCHEMA_MAINTENANCE") == "true"
         self.phases = {}
         self.result = dict(
             schema=1,
             sha=self.sha,
             publish_only=self.publish_only,
+            schema_maintenance=self.schema_maintenance,
             status="FAIL",
             deployed=False,
             phases=self.phases,
@@ -64,7 +66,9 @@ class Release:
                 stderr=errors,
                 env=env,
                 cwd=cwd,
-                timeout=max(1, remaining(self.started)),
+                timeout=None
+                if self.schema_maintenance
+                else max(1, remaining(self.started)),
                 text=True,
             )
         if name == "focused-checks" and process.stdout:
@@ -201,6 +205,8 @@ class Release:
         return dict(image, digest=image_digest(json.loads(value)))
 
     def execute(self):
+        if self.publish_only and self.schema_maintenance:
+            raise ValueError("Publish-only and schema maintenance cannot run together")
         if not re.fullmatch(r"[a-f0-9]{40}", self.sha):
             raise ValueError("Exact release SHA required")
         actual = self.run(["git", "rev-parse", "HEAD"], name="checkout").stdout.strip()
@@ -209,7 +215,8 @@ class Release:
         if not self.publish_only and not self.current():
             self.result.update(status="SKIPPED", reason="Main advanced before build")
             return
-        require_time(self.started, 45, "image verification")
+        if not self.schema_maintenance:
+            require_time(self.started, 45, "image verification")
         self.run(
             [
                 "docker",
@@ -250,7 +257,8 @@ class Release:
                 status="SKIPPED", reason="Main advanced before server handoff"
             )
             return
-        require_time(self.started, 55, "server handoff")
+        if not self.schema_maintenance:
+            require_time(self.started, 55, "server handoff")
         host = os.environ["SSH_HOST"]
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]+", host):
             raise ValueError("Invalid deployment host")
@@ -264,8 +272,12 @@ class Release:
             path.write_text(value + "\n")
             path.chmod(0o600)
         manifest = "".join(i["digest"] + " " + i["inputs"] + "\n" for i in images)
+        protocol = (
+            "predict-images-v1" if self.schema_maintenance else "predict-images-fast-v1"
+        )
         request = (
-            "predict-images-fast-v1\n"
+            protocol
+            + "\n"
             + os.environ["GITHUB_ACTOR"]
             + "\n"
             + os.environ["GH_TOKEN"]
@@ -300,7 +312,7 @@ class Release:
     def report(self):
         self.result.update(
             elapsed_seconds=round(time.time() - self.started, 3),
-            budget_seconds=BUDGET_SECONDS,
+            budget_seconds=None if self.schema_maintenance else BUDGET_SECONDS,
             observed_at=datetime.now(timezone.utc).isoformat(),
         )
         output = Path("test-results/release")

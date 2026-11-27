@@ -28,6 +28,7 @@ def release(tmp_path, monkeypatch):
         monkeypatch.setenv(key, value)
     monkeypatch.delenv("PREDICT_CICD_STARTED", raising=False)
     monkeypatch.delenv("RELEASE_PUBLISH_ONLY", raising=False)
+    monkeypatch.delenv("RELEASE_SCHEMA_MAINTENANCE", raising=False)
 
     class Fixture(module["Release"]):
         def __init__(self):
@@ -77,8 +78,12 @@ def test_checked_revision_must_match_checkout_before_any_release(release):
 
 
 @pytest.mark.parametrize("tips", [["b" * 40], [SHA, "b" * 40]])
-def test_main_advancing_before_build_or_handoff_never_contacts_server(release, tips):
-    release.tips = tips
+@pytest.mark.parametrize("maintenance", [False, True])
+def test_main_advancing_before_build_or_handoff_never_contacts_server(
+    release, tips, maintenance
+):
+    release.schema_maintenance = maintenance
+    release.tips = list(tips)
     release.execute()
     assert release.result["status"] == "SKIPPED"
     assert not release.result["deployed"]
@@ -100,6 +105,47 @@ def test_current_checked_revision_hands_only_pinned_manifest_to_server(release):
     assert sum(command[0] == "ssh" for command in release.commands) == 1
     assert len(release.result["images"]) == 3
     assert release.requests[0].startswith("predict-images-fast-v1\n")
+
+
+def test_schema_maintenance_sends_checked_full_protocol_past_fast_budget(release):
+    release.schema_maintenance = True
+    release.started = int(time.time()) - 120
+    release.execute()
+    assert release.result["status"] == "PASS" and release.result["deployed"]
+    assert ["python", "scripts/ci/fast_checks.py"] in release.commands
+    (request,) = release.requests
+    assert request.splitlines() == [
+        "predict-images-v1",
+        "fixture",
+        "fixture-token",
+        *(
+            image["digest"] + " " + image["inputs"]
+            for image in release.result["images"]
+        ),
+    ]
+
+
+def test_schema_maintenance_uses_runner_deadline_for_ssh(release, monkeypatch):
+    deadlines = []
+
+    def run(command, *, timeout, **_):
+        assert command == ["ssh"]
+        deadlines.append(timeout)
+        return SimpleNamespace(returncode=0, stdout="")
+
+    monkeypatch.setattr("subprocess.run", run)
+    module["Release"].run(release, ["ssh"], name="server-release")
+    release.schema_maintenance = True
+    module["Release"].run(release, ["ssh"], name="server-release")
+    assert 0 < deadlines[0] <= module["BUDGET_SECONDS"]
+    assert deadlines[1] is None
+
+
+def test_publish_only_and_maintenance_are_rejected_before_runner_work(release):
+    release.schema_maintenance = release.publish_only = True
+    with pytest.raises(ValueError, match="cannot run together"):
+        release.execute()
+    assert not release.commands and not release.requests
 
 
 @pytest.mark.parametrize("stage", ["proxy", "publish"])
