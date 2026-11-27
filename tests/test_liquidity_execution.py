@@ -35,6 +35,7 @@ def test_partial_has_own_ev_payout_and_cash_commitment():
     assert result['available_native_quantity'] == '2000'
     assert result['available_purchase_usd'] == result['modeled_stake_usd'] == '5'
     assert result['modeled_win_profit_usd'] == '15'
+    assert result['modeled_loss_usd'] == '-5'
     assert result['modeled_net_ev'] == '0.2'
     assert result['modeled_cashflows']['loss']['net_profit_usd'] == '-5'
     assert result['supported_eligible'] and not result['eligible']

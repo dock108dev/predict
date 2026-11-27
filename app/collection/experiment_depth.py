@@ -266,7 +266,7 @@ class ExperimentDepth:
                 continue
             link = (record.get('comparison_source_metadata') or {}).get('bookmaker_market_link') or {}
             if (link.get('host') not in ('polymarket.us', 'www.polymarket.us', 'gateway.polymarket.us')
-                    or binding['route'] not in link.get('path', '').split('/')):
+                    or binding.get('route') not in link.get('path', '').split('/')):
                 result.pop(key)
         return result
 
@@ -372,10 +372,10 @@ class ExperimentDepth:
     async def _observe(self, novig, native_client, plan, native, cutoff):
         from .native_experiment_depth import VENUES
 
+        native_options = dict(batch=True) if any(binding.get('contract') for binding in native.values()) else {}
         book_sides = await asyncio.gather(
             self._market_reads(novig, plan, cutoff),
-            native_client.read_native(native, cutoff - ASSEMBLY_RESERVE,
-                                      batch=any(binding.get('contract') for binding in native.values())),
+            native_client.read_native(native, cutoff - ASSEMBLY_RESERVE, **native_options),
             return_exceptions=True,
         )
         observations, gaps = {}, {}

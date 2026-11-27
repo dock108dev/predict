@@ -363,8 +363,8 @@ class _StakePath:
 
 def _result_fields(result, receipt):
     result.update({key: receipt[key] for key in ('venue', 'event_id', 'market_id', 'outcome_id',
-        'opposite_outcome_id', 'receipt_id', 'receipt_refs', 'contract_id', 'binding_revision',
-        'identity_revision', 'source_health', 'sequence') if key in receipt})
+        'opposite_outcome_id', 'receipt_id', 'receipt_ids', 'receipt_refs', 'contract_id', 'binding_revision',
+        'binding_method', 'market_revision', 'identity_revision', 'source_health', 'sequence') if key in receipt})
     result.update(book_received_at=receipt.get('received_at'), book_source_at=receipt.get('source_at'),
                   book_valid_until=receipt.get('valid_until'), book_complete=receipt.get('complete'))
 
@@ -373,8 +373,11 @@ def _size_value(result, ticks, gross, fill, path):
     committed, _, purchase, entry, reserve, cash, trace = fill
     win = _cash_state('win', ordinary_win=gross, stake=purchase, committed=committed,
                       entry=entry, reserve=reserve, fee_terms=cash, settlement={})[1]
+    loss = _cash_state('loss', ordinary_win=gross, stake=purchase, committed=committed,
+                       entry=entry, reserve=reserve, fee_terms=cash, settlement={})[1]
     result.update(modeled_native_quantity=wire(ticks * path.step), modeled_average_price=wire(purchase / gross),
-                  modeled_win_profit_usd=win['net_profit_usd'], modeled_stake_usd=wire(committed),
+                  modeled_win_profit_usd=win['net_profit_usd'], modeled_loss_usd=loss['net_profit_usd'],
+                  modeled_stake_usd=wire(committed),
                   modeled_purchase_usd=wire(purchase), modeled_fee_usd=win['total_fee_usd'],
                   modeled_entry_fee_usd=wire(entry), fee_is_upper_bound=path.bound, modeled_fills=trace)
 

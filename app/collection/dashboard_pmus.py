@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 from collections import defaultdict
 from datetime import timedelta
 from email.utils import parsedate_to_datetime
@@ -14,7 +15,7 @@ from app.comparison.native_scoring_scope import source_rules
 from app.dashboard.session_projection import stable
 from app.storage.store import stamp
 
-from .admission_enrichment import resolve_team, us_score
+from .admission_enrichment import resolve_team, source_team_label, us_score
 from .native_experiment_depth import ERRORS, _pmus_fee
 from .native_selectors import LEAGUES
 from .public_fee_refresh import REVIEW_WINDOW
@@ -25,6 +26,7 @@ PAGE_SIZE = 20
 MAX_PAGES = 3
 MAX_BOOKS = 4
 MAX_TRACKED_SLOTS = 128
+WINNER = re.compile(r'^This market will settle to the winner of the (.+?) vs\.? (.+?) game\b')
 
 
 class BookSelector:
@@ -95,6 +97,7 @@ def _proof_clock(evidence, cutoff):
 
 async def _family(client, slug, kind, start, end, cutoff):
     matched = {}
+    evidence = None
     try:
         for page in range(MAX_PAGES):
             # The public gateway currently applies only the first repeated
@@ -106,23 +109,23 @@ async def _family(client, slug, kind, start, end, cutoff):
             body, evidence, reason = await client._read('polymarket_us', pmus.GATEWAY+'/v1/events', cutoff,
                 params=params, body_limit=DOCUMENT_BYTES)
             if reason:
-                return {}
+                return {}, evidence, reason
             expiration = _proof_clock(evidence, cutoff)
             # Transport uses Decimal for exact JSON numerics. Admit exact
             # number text before reusing the shared stable market witness.
             events = json.loads(json.dumps(body['events'], default=str))
             if not isinstance(events, list) or len(events) > PAGE_SIZE:
-                return {}
+                return {}, evidence, 'native_catalog_invalid'
             for event in events:
                 eid = pmus.identifier(event['id'])
                 if eid in matched:
-                    return {}
+                    return {}, evidence, 'native_catalog_invalid'
                 matched[eid] = event, evidence, expiration
             if len(events) < PAGE_SIZE:
-                return matched
-    except ERRORS:
-        return {}
-    return {}
+                return matched, evidence, None
+    except ERRORS as error:
+        return {}, evidence, 'stale' if str(error) == 'polymarket_us_catalog_stale' else 'native_catalog_invalid'
+    return {}, evidence, 'native_book_capacity'
 
 
 def _outcomes(market, family, event, roles, ids, start):
@@ -144,10 +147,16 @@ def _outcomes(market, family, event, roles, ids, start):
             for side in sides.values()):
             return []
     if family == 'moneyline':
-        if not market['description'].startswith('This market will settle to the winner of '):
+        wording = market['description']
+        match = WINNER.match(wording)
+        if not match or any(fragment in wording.casefold() for fragment in
+              ('first half', 'second half', 'end of regulation', 'first 5 innings')):
             return []
-        if any(fragment in market['description'].casefold() for fragment in
-               ('winner of the first', 'winner of the second', 'end of regulation', 'first 5 innings')):
+        first = source_team_label(match[1], event)
+        words = match[2].split()
+        second = {team for i in range(1, len(words)+1)
+                  if (team := source_team_label(' '.join(words[:i]), event))}
+        if len(second) != 1 or second | {first} != set(roles.values()):
             return []
         return [(long_role, None, True, 'winner'), (short_role, None, False, 'winner')]
     fact = us_score(market, dict(family=family, period='full_game', total_scope='combined'), event)
@@ -218,7 +227,7 @@ def _binding(market, *, eid, cid, expected, is_long, predicate, rule, fee,
         market_revision=stable(market), binding_method='public_pmus_typed_event_and_selected_side',
         scheduled_start=expected['starts_at'], terms_valid_until=expiry.isoformat(),
         contract_id=cid, contract=dict(expected, phase='pregame', settlement=_settlement(market, rule, predicate)),
-        fee=fee, payout_usd='1', quantity_increment=grid['increment'], quantity_minimum=grid['minimum'],
+        fee=fee, currency='USD', payout_usd='1', quantity_increment=grid['increment'], quantity_minimum=grid['minimum'],
         price_bands=[[grid['minimum_price'], grid['maximum_price'], grid['tick']]],
         identity_receipts=[role_proof, family_proof], levels=[], receipts=[], reason=None, complete=False)
 
@@ -251,8 +260,9 @@ async def read(client, league, events, *, at, cutoff, products):
     types = dict(zip(('moneyline', 'spread', 'total'), pmus.full_game_types(slug), strict=True))
     present = {key[0] for strikes in keys.values() for key in strikes}
     requested = {family: kind for family, kind in types.items() if family in present or family == 'moneyline'}
-    catalog = dict(zip(requested, await asyncio.gather(*(
+    scans = dict(zip(requested, await asyncio.gather(*(
         _family(client, slug, kind, min(starts), max(starts), cutoff) for kind in requested.values())), strict=True))
+    catalog = {family: result[0] for family, result in scans.items()}
     now = client.now()
     try:
         fee = _pmus_fee(products, now)
@@ -276,6 +286,13 @@ async def read(client, league, events, *, at, cutoff, products):
         except ERRORS:
             continue
     output = {}
+    for strikes in keys.values():
+        for (family, _, _), entries in strikes.items():
+            _, proof, failure = scans['moneyline'] if scans['moneyline'][2] else scans[family]
+            if failure:
+                for cid, _ in entries:
+                    output[cid] = dict(venue='polymarket_us', reason=failure, complete=False, levels=[],
+                                       receipts=[proof] if proof else [])
     for occurrence, options in occurrences.items():
         if len(options) != 1:
             continue
@@ -289,11 +306,14 @@ async def read(client, league, events, *, at, cutoff, products):
             if not listing or not rule:
                 continue
             row, evidence, listing_expiry = listing
-            if not _compatible_group(row, winner, start):
-                continue
-            markets = [m for m in row.get('markets', ()) if m.get('sportsMarketType') == kind]
-            if (len({str(m.get('id')) for m in markets}) != len(markets)
-                    or len({m.get('slug') for m in markets}) != len(markets)):
+            try:
+                if not _compatible_group(row, winner, start):
+                    continue
+                markets = [m for m in row.get('markets', ()) if m.get('sportsMarketType') == kind]
+                if (len({str(m.get('id')) for m in markets}) != len(markets)
+                        or len({m.get('slug') for m in markets}) != len(markets)):
+                    continue
+            except ERRORS:
                 continue
             for market in markets:
                 try:
