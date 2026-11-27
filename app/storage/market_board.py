@@ -241,19 +241,19 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
             winner.depth_until,winner.current AND winner.eligible_until>(SELECT at FROM read_clock) current
           FROM upcoming s LEFT JOIN LATERAL (
             SELECT o.value best, """ + NET_EV + """ net_ev,
-              CASE WHEN book.projection->>'effective_ev' IS NOT NULL
-                  THEN (book.projection->>'effective_ev')::numeric
-                WHEN book.projection#>>'{result,size_status}' IN ('partial_size','confirmed_empty','above_limit') THEN 0
+              CASE WHEN o.projection->>'effective_ev' IS NOT NULL
+                  THEN (o.projection->>'effective_ev')::numeric
+                WHEN o.projection#>>'{result,size_status}' IN ('partial_size','confirmed_empty','above_limit') THEN 0
                 ELSE """ + NET_EV + """ END effective_ev,
-              CASE WHEN book.projection IS NOT NULL
-                  THEN book.projection->'result' || jsonb_build_object('valid_until',d.valid_until,
-                     'published_at',d.published_at,'book_known_at',d.known_at)
+              CASE WHEN o.projection IS NOT NULL
+                  THEN o.projection->'result' || jsonb_build_object('valid_until',o.valid_until,
+                     'published_at',o.published_at,'book_known_at',o.known_at)
                 ELSE jsonb_build_object('status','unknown','size_status','unknown',
-                  'reason',CASE WHEN d.receipt_id IS NULL THEN 'book_unobserved'
-                    WHEN NOT book.current THEN 'stale_book' ELSE 'reference_revision_changed' END,
+                  'reason',CASE WHEN o.receipt_id IS NULL THEN 'book_unobserved'
+                    WHEN NOT o.book_current THEN 'stale_book' ELSE 'reference_revision_changed' END,
                   'intended_stake_usd','100') END liquidity,
-              CASE WHEN book.projection IS NOT NULL AND book.projection->'result'->>'status'<>'unknown'
-                   THEN d.valid_until END depth_until,
+              CASE WHEN o.projection IS NOT NULL AND o.projection->'result'->>'status'<>'unknown'
+                   THEN o.valid_until END depth_until,
               LEAST(s.start_at,(o.value#>>'{calculation_payload,acquisition,received_from}')::timestamptz
                 + %s*interval '1 second') eligible_until,
               (NOT s.phase_closed AND (s.confirmed_start IS NULL OR s.confirmed_start=s.start_at)
@@ -272,18 +272,25 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
                     AND (s.family='moneyline' OR (r.facts->>'line')::numeric=""" + line + """ * CASE
                       WHEN s.family='spread' AND r.facts->>'side'<>o.value#>>'{display_offer,side}' THEN -1 ELSE 1 END)
                     AND """ + reference_known_unavailable('r.id') + """)) current
-            FROM jsonb_array_elements(COALESCE(s.snapshot->'offers','[]'::jsonb)) o(value)
-            LEFT JOIN public.current_contract_storage identity ON identity.id=o.value#>>'{calculation_payload,id}' AND identity.active
-            LEFT JOIN public.current_pregame_depth d ON d.contract_id=identity.id AND d.contract_revision=identity.revision
-            LEFT JOIN LATERAL (SELECT d.valid_until>(SELECT at FROM read_clock)
-                       AND d.known_at<=(SELECT at FROM read_clock) AND d.published_at<=(SELECT at FROM read_clock) current,
-                       CASE WHEN d.valid_until>(SELECT at FROM read_clock) AND d.known_at<=(SELECT at FROM read_clock)
-                             AND d.published_at<=(SELECT at FROM read_clock)
-                         THEN d.valuations->('dashboard:'||s.pull_id||':'||(o.value#>>'{display_offer,revision}')) END projection
-            ) book ON true
+            FROM LATERAL (
+              SELECT v.value,d.receipt_id,d.valid_until,d.published_at,d.known_at,
+                     book.book_current,book.projection
+              FROM jsonb_array_elements(COALESCE(s.snapshot->'offers','[]'::jsonb)) v(value)
+              LEFT JOIN public.current_contract_storage identity ON identity.id=v.value#>>'{calculation_payload,id}' AND identity.active
+              LEFT JOIN public.current_pregame_depth d ON d.contract_id=identity.id AND d.contract_revision=identity.revision
+              LEFT JOIN LATERAL (SELECT d.valid_until>(SELECT at FROM read_clock)
+                        AND d.known_at<=(SELECT at FROM read_clock) AND d.published_at<=(SELECT at FROM read_clock) book_current,
+                        CASE WHEN d.valid_until>(SELECT at FROM read_clock) AND d.known_at<=(SELECT at FROM read_clock)
+                              AND d.published_at<=(SELECT at FROM read_clock)
+                          THEN d.valuations->('dashboard:'||s.pull_id||':'||(v.value#>>'{display_offer,revision}')) END projection
+              ) book ON true
+              WHERE v.value#>>'{main,status}'='main' OR (book.projection->>'effective_ev')::numeric>0
+              -- Keep the cheap line/book selection ahead of the per-offer
+              -- acquisition and sportsbook withdrawal evidence reads.
+              OFFSET 0
+            ) o
             WHERE s.state='complete' AND o.value#>>'{record,market_identity,family}'=s.family
               AND o.value#>>'{record,market_identity,period}'=s.period AND """ + candidates + """
-              AND (o.value#>>'{main,status}'='main' OR (book.projection->>'effective_ev')::numeric>0)
           ) winner ON true
           WHERE s.start_at>%s AND (s.confirmed_start IS NULL OR s.confirmed_start>%s)
         ), positive_scopes AS (
