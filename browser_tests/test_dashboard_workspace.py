@@ -132,8 +132,8 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
                     "availability": states[mode["state"]],
                 }
             )
-        elif url.path == "/api/pregame":
-            assert parse_qs(url.query) == {"data_type": ["all"], "liquidity_coverage": ["1"]}
+        elif url.path == "/api/research/dashboard-coverage":
+            assert parse_qs(url.query) == {}
             route.fulfill(json={"provider_requests": 0, "coverage": [
                 dict(venue="prophetx", league="NBA", family="spread", main=True, opportunities=4,
                      assessable=2, full_size=1, ev_assessable=2, intended_stake_usd="400",

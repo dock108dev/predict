@@ -319,11 +319,11 @@ async function refreshCoverage() {
   coverageRead?.abort();
   const controller = new AbortController();
   coverageRead = controller;
-  const query = {data_type: 'all', liquidity_coverage: '1'};
-  for (const name of filterNames) if (field(name).value) query[name === 'sport' ? 'league' : name] = field(name).value;
+  const query = {};
+  for (const name of filterNames) if (field(name).value) query[name] = field(name).value;
   coverageContent.replaceChildren(node('p', 'Reading stored coverage…'));
   try {
-    const packet = await get('/api/pregame', query, AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]));
+    const packet = await get('/api/research/dashboard-coverage', query, AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]));
     if (coverageRead !== controller || !coverage.open) return;
     coverageContent.replaceChildren(packet.coverage?.length ? coverageRows(packet.coverage, bookName)
       : node('p', 'No stored pregame offers for these filters.'));

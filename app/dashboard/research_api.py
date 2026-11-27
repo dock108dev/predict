@@ -288,6 +288,13 @@ def mount(app, *, campaigns_only=False):
                 db.execute("SET LOCAL statement_timeout='10s'")
                 db.execute("SET LOCAL jit='off'")
                 at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
+                if request.path == '/api/research/dashboard-coverage':
+                    from app.storage.current_pregame import read as read_pregame
+                    from app.storage.pregame_cohorts import select
+
+                    select(db, 'all')
+                    scope = {'league' if key == 'sport' else key: query[key] for key in filters if query.get(key)}
+                    return read_pregame(db, dict(scope, liquidity_coverage='1', data_type='all'), at=at)
                 mode = db.execute('SELECT settings FROM public.activity_mode WHERE singleton').fetchone()
                 settings = mode['settings'] if mode else DEFAULT_SETTINGS
                 horizon = settings['monitor_horizon_seconds']
@@ -476,6 +483,7 @@ def mount(app, *, campaigns_only=False):
 
     app.router.add_get('/api/research/markets', markets)
     app.router.add_get('/api/research/dashboard', dashboard)
+    app.router.add_get('/api/research/dashboard-coverage', dashboard)
     app.router.add_post('/api/research/dashboard-liquidity', dashboard_liquidity)
     app.router.add_get('/api/research/market', market)
     app.router.add_get('/api/research/market-export', market)

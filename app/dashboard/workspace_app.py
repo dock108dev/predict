@@ -31,8 +31,8 @@ WORKSPACE_ASSETS = frozenset("""
     desk-preferences.js experiment-depth.js experiment-populations.js experiment-workspace.css
     experiment-workspace.js experiment.js ibm-plex-sans.woff2 manrope.ttf
     mens-d1-coverage.js predict-icon.png pregame-evidence.js pregame-explanation.js
-    pregame-labels.js pregame-prices.js pregame-ranking.js pregame.css
-    research-campaigns.js research-issues.js research-ledger.js research-quality.js
+    pregame-labels.js pregame-liquidity.js pregame-prices.js pregame-ranking.js pregame.css
+    research-campaigns.js research-issues.js research-ledger.js research-quality.js research-tools.js
     research-results.js research-run.js research-workspace.css research.css
     settings-accounting.js settings.css settings.js workbench-shell.css
     workspace-format.js workspace-nav.js workspace-scope.js workspace-ui.js
