@@ -2,16 +2,67 @@
 
 from copy import deepcopy
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest import skipUnless
 
 from psycopg.types.json import Jsonb
 
+from app.collection.native_trading import NativeTrading
 from app.collection.native_trading_identity import native_event, record, expected
 from app.storage import native_trading
 from app.storage.store import stamp
 from tests.latest_board_fixture import SOCKET
 from tests.pregame_fixture import AT, PregameFixture, page
 from tests.test_liquidity_execution import admitted
+
+
+def native_book(db, at):
+    source = db.execute(
+        "SELECT facts FROM current_event WHERE provider='sportsgameodds' LIMIT 1"
+    ).fetchone()["facts"]
+    event = native_event(
+        "novig",
+        "native-fixture-event",
+        source["competition"],
+        source["scheduled_start"],
+        {side: source[side] for side in ("home", "away")},
+        {
+            side: next(
+                name
+                for name, cid in source["participants"].items()
+                if cid == source[side]
+            )
+            for side in ("home", "away")
+        },
+        proof={"fixture": "both-source-roles"},
+    )
+    row = record(
+        "novig",
+        event,
+        "native-fixture-market",
+        "native-fixture-outcome",
+        "buy",
+        "spread",
+        "home",
+        "-1.5",
+        settlement={},
+        main=False,
+    )
+    book = admitted((".25", 200000), league=source["competition"], line="-1.5")
+    book.update(
+        event_id=event["id"],
+        market_id="native-fixture-market",
+        outcome_id="native-fixture-outcome",
+        native_side="buy",
+        opposite_outcome_id="native-fixture-opposite",
+        source_at=(at - timedelta(seconds=2)).isoformat(),
+        received_at=at.isoformat(),
+        valid_until=(at + timedelta(seconds=20)).isoformat(),
+        _record=row,
+        sequence=10,
+    )
+    book["contract"] = dict(book["contract"], **expected(row))
+    return source, book
 
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
@@ -38,6 +89,102 @@ class NativeTradingSQL(PregameFixture):
             db.execute(
                 "TRUNCATE native_trading_offer,native_trading_snapshot,native_trading_sgo_game"
             )
+            db.execute(
+                "DELETE FROM public.delivery_clock WHERE provider='sportsgameodds'"
+            )
+
+    async def test_later_monitor_page_revalues_same_book_after_deferred_publication(
+        self,
+    ):
+        from app.collection.native_reference_refresh import targets
+        from app.storage.delivery_clocks import sgo_admitted
+
+        at = stamp(AT)
+        now = at + timedelta(seconds=3)
+        fixture = page()
+        for odd in fixture["data"][0]["odds"].values():
+            odd["byBookmaker"].pop("draftkings", None)
+        with self.connect() as db:
+            self.ingest(db, fixture)
+            source, book = native_book(db, at)
+            native_trading.publish(db, {"book": book}, at=at)
+            original = db.execute("SELECT * FROM native_trading_offer").fetchone()
+            self.assertIsNone(original["reference_valid_until"])
+            (refresh_target,) = targets(
+                db, at=at, until=stamp(source["scheduled_start"])
+            )
+            self.assertEqual(refresh_target["event_id"], source["id"])
+            self.assertEqual(refresh_target["book_until"], original["book_valid_until"])
+            with db.transaction():
+                for pull, requested, received in (
+                    (
+                        "monitor-first",
+                        at - timedelta(minutes=1),
+                        at - timedelta(seconds=3),
+                    ),
+                    (
+                        "checkpoint-newer",
+                        at - timedelta(seconds=2),
+                        at - timedelta(seconds=1),
+                    ),
+                ):
+                    db.execute(
+                        """INSERT INTO market_pull(pull_id,requested_at,request_scope,state)
+                        VALUES(%s,%s,'{}','in_progress')""",
+                        (pull, requested),
+                    )
+                    db.execute(
+                        """INSERT INTO market_pull_receipt
+                        (pull_id,attempt_id,receipt_sha256,received_at,membership)
+                        VALUES(%s,%s,'fixture',%s,'{}')""",
+                        (pull, pull, received),
+                    )
+
+        owner = SimpleNamespace(
+            service=SimpleNamespace(
+                dispatch=True, globally_stopped=False, paused_sources=[]
+            )
+        )
+        trader = NativeTrading(owner, connector=self.connect, now=lambda: now)
+        trader.protected = lambda: False
+        cursor, _ = trader.reference_changes(None)
+        with self.connect() as db, db.transaction():
+            self.ingest(db, page())
+            sgo_admitted(db, [source["competition"]], now)
+            db.execute(
+                """INSERT INTO market_pull_receipt
+                (pull_id,attempt_id,receipt_sha256,received_at,membership)
+                VALUES('monitor-first','monitor-later','fixture',%s,'{}')""",
+                (now,),
+            )
+        overrides = [{"state": "deferred", "reason": "protected_checkpoint"}]
+
+        def write(books):
+            if overrides:
+                return overrides.pop()
+            with self.connect() as db:
+                return native_trading.publish(db, books, at=now)
+
+        trader.write = write
+        self.assertEqual(await trader.revalue_references(cursor), cursor)
+        self.assertEqual(trader.progress["reason"], "protected_checkpoint")
+        after = await trader.revalue_references(cursor)
+        self.assertNotEqual(after, cursor)
+        self.assertEqual(trader.reference_changes(after), (after, {}))
+        with self.connect() as db:
+            updated = db.execute("SELECT * FROM native_trading_offer").fetchone()
+            newest_pull = db.execute(
+                "SELECT pull_id FROM market_pull ORDER BY started_order DESC LIMIT 1"
+            ).fetchone()
+            self.assertEqual(newest_pull["pull_id"], "checkpoint-newer")
+            self.assertEqual(updated["book"], original["book"])
+            self.assertEqual(updated["book_valid_until"], original["book_valid_until"])
+            self.assertGreater(updated["reference_valid_until"], now)
+            self.assertGreater(updated["net_ev"], 0)
+            (shown,) = native_trading.dashboard(
+                db, at=now, until=now + timedelta(hours=24)
+            )["rows"]
+            self.assertEqual(shown["times"]["source_at"], book["source_at"])
 
     async def test_sgo_anchor_keeps_first_valid_identity_and_separates_independent_events(
         self,
@@ -93,51 +240,7 @@ class NativeTradingSQL(PregameFixture):
         at = stamp(AT)
         with self.connect() as db:
             self.ingest(db, page())
-            source = db.execute(
-                "SELECT facts FROM current_event WHERE provider='sportsgameodds' LIMIT 1"
-            ).fetchone()["facts"]
-            event = native_event(
-                "novig",
-                "native-fixture-event",
-                source["competition"],
-                source["scheduled_start"],
-                {side: source[side] for side in ("home", "away")},
-                {
-                    side: next(
-                        name
-                        for name, cid in source["participants"].items()
-                        if cid == source[side]
-                    )
-                    for side in ("home", "away")
-                },
-                proof={"fixture": "both-source-roles"},
-            )
-            row = record(
-                "novig",
-                event,
-                "native-fixture-market",
-                "native-fixture-outcome",
-                "buy",
-                "spread",
-                "home",
-                "-1.5",
-                settlement={},
-                main=False,
-            )
-            book = admitted((".25", 200000), league=source["competition"], line="-1.5")
-            book.update(
-                event_id=event["id"],
-                market_id="native-fixture-market",
-                outcome_id="native-fixture-outcome",
-                native_side="buy",
-                opposite_outcome_id="native-fixture-opposite",
-                source_at=(at - timedelta(seconds=2)).isoformat(),
-                received_at=at.isoformat(),
-                valid_until=(at + timedelta(seconds=20)).isoformat(),
-                _record=row,
-                sequence=10,
-            )
-            book["contract"] = dict(book["contract"], **expected(row))
+            source, book = native_book(db, at)
             before = db.execute(
                 "SELECT id,revision FROM public.sgo_quote_revision ORDER BY id,revision"
             ).fetchall()
@@ -200,6 +303,23 @@ class NativeTradingSQL(PregameFixture):
                 self.assertEqual(census["total"], 1)
                 self.assertEqual(census["coverage"][0]["unique_books"], 1)
                 exported = native_trading.detail(db, query, at=at, frozen=True)
+
+                expired = stamp(shown["eligible_until"])
+                stale_board = native_trading.dashboard(
+                    db, at=expired, until=expired + timedelta(hours=24), view="all"
+                )
+                (stale,) = stale_board["rows"]
+                self.assertEqual(stale["book_status"], "stale")
+                self.assertIsNone(stale["posted"]["value"])
+                self.assertIsNone(stale["calculation"]["net_ev_ratio"])
+                live_board = native_trading.dashboard(
+                    db,
+                    at=expired,
+                    until=expired + timedelta(hours=24),
+                    view="unavailable",
+                )
+                self.assertEqual(live_board["stored_offers"], 1)
+                self.assertEqual(live_board["rows"], [])
 
             later = at + timedelta(seconds=2)
             refreshed = dict(

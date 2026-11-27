@@ -39,6 +39,19 @@ def budget_admit(ledger, window_id, requested, at):
             )
 
 
+def admit_dispatch(worker, status, objects, *, extra_objects=0, extra_requests=0):
+    if status.get("retention", {}).get("staged_bytes", 0) >= 32 * 1024 * 1024:
+        raise ActivityBudgetDelayed("archive_backlog", worker.now() + timedelta(seconds=30))
+    budget_admit(worker.ledger, worker.window_id, objects + extra_objects
+                 + max(0, getattr(worker, "experiment_reserved_objects", 0)), worker.now())
+    reserved_requests = extra_requests + max(0, getattr(worker, "experiment_reserved_requests", 0))
+    if reserved_requests and worker.ledger is not None and worker.window_id is not None:
+        rate = worker.ledger.request_capacity(worker.window_id, now=worker.now())
+        if rate['available'] <= reserved_requests:
+            raise ActivityBudgetDelayed('experiment_checkpoint_rate_headroom',
+                                        max(worker.now()+timedelta(seconds=1), rate['next_at']))
+
+
 class ModeStore:
     def __init__(self, connector=connect):
         self.connector = connector
@@ -60,9 +73,10 @@ class ModeStore:
 class ActivityCollector:
     """Page through league discovery without paid saved-game refresh loops."""
 
-    def __init__(self, worker, *, store=None):
+    def __init__(self, worker, *, store=None, refresh_references=None):
         self.worker = worker
         self.store = store or ModeStore()
+        self.refresh_references = refresh_references
         self.monitor = None
         self.monitor_due = None
         self.last_monitor_slot = None
@@ -111,19 +125,7 @@ class ActivityCollector:
 
     async def dispatch(self, job, params, status):
         worker = self.worker
-        if status.get("retention", {}).get("staged_bytes", 0) >= 32 * 1024 * 1024:
-            raise ActivityBudgetDelayed(
-                "archive_backlog", worker.now() + timedelta(seconds=30)
-            )
-        budget_admit(worker.ledger, worker.window_id,
-                     params["limit"] + max(0, getattr(worker, 'experiment_reserved_objects', 0)),
-                     worker.now())
-        reserved_requests = max(0, getattr(worker, 'experiment_reserved_requests', 0))
-        if reserved_requests and worker.ledger is not None and worker.window_id is not None:
-            rate = worker.ledger.request_capacity(worker.window_id, now=worker.now())
-            if rate['available'] <= reserved_requests:
-                raise ActivityBudgetDelayed('experiment_checkpoint_rate_headroom',
-                                            max(worker.now()+timedelta(seconds=1), rate['next_at']))
+        admit_dispatch(worker, status, params["limit"])
         previous = getattr(worker, "collection_run", None)
         worker.collection_run = job["run"]
         worker.activity_status = status
@@ -230,6 +232,8 @@ class ActivityCollector:
                 )["next_monitor_at"]
             )
         job = self.monitor
+        if self.refresh_references is not None and await self.refresh_references(status):
+            return
         if job is not None:
             try:
                 await self.monitor_turn(status)

@@ -15,10 +15,10 @@ are reported as unclassified.
 existing native catalog parsers and exact sizing model. Discovery traverses the
 configured six-league 24-hour window separately from book refresh, alternating
 the nearest window with the remaining slate. Book requests group both sides of
-one native market. The two-hour window prioritizes exact sportsbook-reference
-candidates and leaves capacity for the rest of the slate. Kalshi REST reads
-are batched. Each venue refreshes and publishes independently. Upcoming Kalshi
-and Polymarket US occurrences get exact-kickoff catalog refreshes ahead of
+one native market. The two-hour window prioritizes books with exact usable
+references and keeps room for upcoming offers without them and the later slate.
+Kalshi REST reads are batched. Each venue refreshes and publishes independently.
+Upcoming Kalshi and Polymarket US occurrences get exact-kickoff catalog refreshes ahead of
 metadata expiry. Depth reads require current instrument terms. A bounded
 Polymarket US subscription reuses a fresh two-sided
 market image for priority slugs when the read-only stream is available.
@@ -41,9 +41,16 @@ ordered lifecycle evidence can invalidate it earlier. A new sportsbook reference
 can revalue the retained book without re-dating that book.
 
 The existing exact reference policy requires two complete trusted sportsbook
-pairs at the selected signed line. References have an independent source-clock
-deadline. The reader also checks known reference withdrawals and schedule/phase
-changes. Whole-line pushes, NFL ties and unverified settlement terms do not
+pairs at the selected signed line. The collector interleaves paced exact-event
+requests for known exact games in the next two hours with ordinary monitor pages.
+The requests use the shared source controls, account and operational budgets,
+and preserve headroom for the next monitor page and protected checkpoint work.
+They use the established alternate-line bookmaker scope to preserve source event
+matches and audit inputs. References have an independent source-clock deadline.
+New SGO admissions trigger revaluation of retained fresh books in the affected
+league. Deferred revaluations retry using the current admission clock. The reader
+also checks known reference withdrawals and schedule or phase changes.
+Whole-line pushes, NFL ties and unverified settlement terms do not
 receive invented probabilities. Quantity and observed price can still be shown
 when fees or settlement prevent EV. The saved fee-mode setting is captured with
 each valuation; original native fee terms remain in the receipt.
@@ -93,6 +100,7 @@ pairs, both-role matching, schedule skew, price audit and shared book reads.
 `tests/test_native_observation.py` exercises failed, repeated and out-of-order
 updates. `tests/test_native_trading_sql.py` belongs in the disposable PostgreSQL
 harness. Hosted qualification additionally requires real source receipts,
-coverage over several refresh cycles, signed-in desktop/phone checks and
+coverage over a representative busy refresh interval through the reference-expiry
+period, signed-in desktop/phone checks and
 before/after protected-state fingerprints. Fixture results do not establish
 those hosted outcomes.

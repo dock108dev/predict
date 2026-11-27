@@ -98,17 +98,18 @@ class NativeTrading:
         values = list(observations.items())
         for start in range(0, len(values) or 1, WRITE_BATCH):
             if not self.enabled() or self.protected():
-                return
+                return False
             result = await asyncio.to_thread(
                 self.write, dict(values[start : start + WRITE_BATCH])
             )
             self.references.update(result.pop("references", {}))
             if result.get("state") == "deferred":
                 self.progress.update(result)
-                return
+                return False
         self.progress.update(
             state="ready", reason=None, last_publication=self.now().isoformat()
         )
+        return True
 
     async def discovery(self, novig, native):
         leagues = aggregate_scope(self.owner.service.config)
@@ -270,23 +271,28 @@ class NativeTrading:
                 self.references.get(cid) and self.references[cid] > at
                 for cid in bindings
             )
-            hot = exact_ref and starts <= at + timedelta(hours=2)
+            near = starts <= at + timedelta(hours=2)
+            hot = exact_ref and near
             due += timedelta(seconds=3 if hot else 30)
-            return due, starts, key, hot, bindings
+            return due, starts, key, hot, near, bindings
 
         result, hot_pmus = {}, {}
         for venue, groups in by_venue.items():
             due = sorted(
-                ranked for item in groups.items() if (ranked := rank(item))[0] <= at
+                ranked for item in groups.items()
+                if (ranked := rank(item))[0] <= at < ranked[1]
             )
             hot = [row for row in due if row[3]]
-            background = [row for row in due if not row[3]]
+            near = [row for row in due if row[4] and not row[3]]
+            distant = [row for row in due if not row[4]]
             limit = BOOKS_PER_TURN[venue]
-            reserve = max(1, limit // 4) if background else 0
-            first = min(len(hot), limit - reserve)
-            background_size = min(len(background), limit - first)
-            selected = hot[: limit - background_size] + background[:background_size]
-            for _, _, key, hot_book, bindings in selected:
+            share = max(1, limit // 4)
+            distant_reserve = min(len(distant), share)
+            near_reserve = min(len(near), share)
+            hot_count = min(len(hot), limit - near_reserve - distant_reserve)
+            near_count = min(len(near), limit - hot_count - distant_reserve)
+            selected = hot[:hot_count] + near[:near_count] + distant[: limit - hot_count - near_count]
+            for _, _, key, _, _, bindings in selected:
                 self.attempted[key] = at
                 result.update(bindings)
             if venue == "polymarket_us":
@@ -296,7 +302,7 @@ class NativeTrading:
                     map(rank, groups.items()),
                     key=lambda row: (not row[3], row[1], row[2]),
                 )
-                for _, _, _, hot_book, bindings in subscribed[:32]:
+                for _, _, _, hot_book, _, bindings in subscribed[:32]:
                     if hot_book:
                         hot_pmus.update(bindings)
         return result, hot_pmus
@@ -528,23 +534,35 @@ class NativeTrading:
             await asyncio.sleep(2)
 
     def reference_changes(self, previous):
-        """Replay only retained hot books when independent SGO inputs advance."""
+        """Revalue retained books against committed SGO ingress, by league."""
         from app.comparison.fee_mode import read as read_fee_mode
 
         with self.connector() as db, db.transaction():
             db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
-            latest = db.execute("""SELECT p.started_order,r.received_at FROM public.market_pull p
-                JOIN public.market_pull_receipt r USING(pull_id)
-                ORDER BY p.started_order DESC,r.received_at DESC LIMIT 1""").fetchone()
-            cursor = latest, read_fee_mode(db)
-            if previous == cursor:
+            # The admission clock is written in the current-reference transaction.
+            # A later page of an earlier started pull can advance it independently
+            # of checkpoints, which retain their own frozen acquisition evidence.
+            admissions = {
+                row["league"]: row["admitted_at"]
+                for row in db.execute("""SELECT league,max(admitted_at) admitted_at
+                    FROM public.current_sgo_delivery_clock WHERE admitted_at IS NOT NULL
+                    GROUP BY league""")
+            }
+            fee_revision = read_fee_mode(db)["revision"]
+            cursor = admissions, fee_revision
+            changed = None
+            if previous is not None and previous[1] == fee_revision:
+                changed = [league for league, admitted in admissions.items()
+                           if previous[0].get(league) != admitted]
+            if changed == []:
                 return cursor, {}
             at = self.now()
             rows = db.execute(
                 """SELECT id,book,record FROM public.native_trading_offer
                 WHERE active AND starts_at>%s AND starts_at<=%s AND book_valid_until>%s
+                AND (%s::text[] IS NULL OR league=ANY(%s))
                 ORDER BY starts_at,id""",
-                (at, at + timedelta(hours=24), at),
+                (at, at + timedelta(hours=24), at, changed, changed),
             ).fetchall()
             return cursor, {
                 row["id"]: dict(row["book"], _record=row["record"]) for row in rows
@@ -554,14 +572,14 @@ class NativeTrading:
         previous = None
         while True:
             if self.enabled() and not self.protected():
-                cursor, books = await asyncio.to_thread(
-                    self.reference_changes, previous
-                )
-                if books:
-                    await self.save(books)
-                if self.enabled() and not self.protected():
-                    previous = cursor
+                previous = await self.revalue_references(previous)
             await asyncio.sleep(5)
+
+    async def revalue_references(self, previous):
+        cursor, books = await asyncio.to_thread(self.reference_changes, previous)
+        if books and not await self.save(books):
+            return previous
+        return cursor
 
     async def run(self, novig, native):
         from .native_trading_prophetx import MarketData, credentials

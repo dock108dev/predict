@@ -907,7 +907,8 @@ class SportsGameOddsWorker:
                     await asyncio.sleep(60)
             if getattr(self.service, 'activity_mode_enabled', False):
                 from .activity_collector import ActivityCollector
-                await ActivityCollector(self).run()
+                from .native_reference_refresh import NativeReferenceRefresh
+                await ActivityCollector(self, refresh_references=NativeReferenceRefresh(self)).run()
                 return
             next_scan = self.now()
             policy = None

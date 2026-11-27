@@ -30,26 +30,40 @@ SUPERSEDED_PRESSURE_AGE = timedelta(minutes=2)
 PAST_OFFER_AGE = timedelta(hours=2)
 PRIORITY_WINDOW = timedelta(hours=2)
 
+
 # The same negative authority applies to the board, the detail/amount route,
 # and the coverage report. The historical evidence stays replayable as saved.
-REFERENCE_CURRENT = (
-    "NOT COALESCE(" + phase_closed("source_event") + ",false)"
-    " AND (source_event.scheduled_start IS NULL OR source_event.scheduled_start::timestamptz"
-    " = (s.payload#>>'{game_link,sgo_start}')::timestamptz)"
-    " AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE("
-    " s.payload#>'{reference,required_input_prices}',s.payload#>'{reference,prices}',"
-    " '[]'::jsonb)) witness WHERE "
-    + reference_known_unavailable("witness->>'input_id'")
-    + ")"
-)
-SOURCE_EVENT = (
-    " LEFT JOIN public.current_event source_event ON source_event.provider='sportsgameodds'"
-    " AND source_event.native_event_id=s.payload#>>'{game_link,sgo_event_id}' "
-)
-GAME_CLOSED = (
-    "COALESCE(" + phase_closed("source_event") + " OR "
-    "COALESCE(source_event.scheduled_start,s.payload#>>'{game_link,sgo_start}')::timestamptz<=%s,false)"
-)
+def _reference_current(game_link):
+    return (
+        "NOT COALESCE(" + phase_closed("source_event") + ",false)"
+        " AND (source_event.scheduled_start IS NULL OR source_event.scheduled_start::timestamptz"
+        f" = ({game_link}->>'sgo_start')::timestamptz)"
+        " AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE("
+        " s.payload#>'{reference,required_input_prices}',s.payload#>'{reference,prices}',"
+        " '[]'::jsonb)) witness WHERE "
+        + reference_known_unavailable("witness->>'input_id'")
+        + ")"
+    )
+
+
+def _source_event(game_link):
+    return (
+        " LEFT JOIN public.current_event source_event ON source_event.provider='sportsgameodds'"
+        f" AND source_event.native_event_id={game_link}->>'sgo_event_id' "
+    )
+
+
+def _game_closed(game_link, clock_parameter="%s"):
+    return (
+        "COALESCE(" + phase_closed("source_event") + " OR "
+        f"COALESCE(source_event.scheduled_start,{game_link}->>'sgo_start')::timestamptz"
+        f"<={clock_parameter},false)"
+    )
+
+
+REFERENCE_CURRENT = _reference_current("(s.payload->'game_link')")
+SOURCE_EVENT = _source_event("(s.payload->'game_link')")
+GAME_CLOSED = _game_closed("(s.payload->'game_link')")
 
 
 def _current_reference(row, at):
@@ -479,7 +493,6 @@ def publish(db, observations, *, at, prune=False):
                 cached[eid] = reference_inputs(eid, rows, at), rows
             indexed, rows = cached[eid]
             ref, reference_until, reason = reference(record, game_link, indexed, at=at)
-            refs[cid] = reference_until
             payload = projection(
                 record,
                 receipt,
@@ -505,6 +518,7 @@ def publish(db, observations, *, at, prune=False):
                 ]
             )
             if prior and prior["snapshot_id"] == snapshot:
+                refs[cid] = reference_until
                 continue
             payload["row"].update(
                 revision=snapshot,
@@ -577,6 +591,7 @@ def publish(db, observations, *, at, prune=False):
                 ),
             )
             count += 1
+            refs[cid] = reference_until
         return dict(state="ready", published=count, references=refs)
 
 
@@ -602,58 +617,56 @@ def dashboard(
 
     mode = read_fee_mode(db)
     rows = db.execute(
-        """SELECT s.payload,o.reference_valid_until,o.book_valid_until,o.active,
+        """SELECT o.reference_valid_until,o.book_valid_until,o.active,
+        CASE WHEN o.active AND (%(show_all)s OR o.book_valid_until>%(at)s)
+            THEN s.payload->'row' END dashboard_row,
+        CASE WHEN o.active AND o.book_valid_until>%(at)s THEN s.payload->'fee_mode' END fee_mode,
+        CASE WHEN %(show_all)s AND COALESCE(o.book_valid_until<=%(at)s,true)
+            THEN o.book->>'reason' END book_reason,
+        CASE WHEN %(show_all)s AND COALESCE(o.book_valid_until<=%(at)s,true)
+            THEN o.book->'levels' NOT IN ('[]'::jsonb,'null'::jsonb)
+                OR o.book->'complete'='true'::jsonb END book_observed,
+        CASE WHEN o.active AND o.book_valid_until>%(at)s AND o.reference_valid_until IS NOT NULL THEN
         """
-        + REFERENCE_CURRENT
-        + """ reference_current,
+        + _reference_current("o.game_link")
+        + """ ELSE true END reference_current,
         """
-        + GAME_CLOSED
+        + _game_closed("o.game_link", "%(at)s")
         + """ game_closed
         FROM public.native_trading_offer o JOIN public.native_trading_snapshot s ON s.id=o.snapshot_id
         """
-        + SOURCE_EVENT
+        + _source_event("o.game_link")
         + """
-        WHERE o.starts_at>%s AND o.starts_at<=%s AND (%s::text IS NULL OR o.league=%s)
-          AND (%s::text IS NULL OR o.family=%s) AND (%s::text IS NULL OR o.venue=%s)
-        ORDER BY o.net_ev DESC NULLS LAST,o.starts_at,o.id""",
-        (
-            at,
-            at,
-            min(until, at + HORIZON),
-            sport or None,
-            sport or None,
-            family or None,
-            family or None,
-            venue or None,
-            venue or None,
+        WHERE o.starts_at>%(at)s AND o.starts_at<=%(until)s
+          AND (%(sport)s::text IS NULL OR o.league=%(sport)s)
+          AND (%(family)s::text IS NULL OR o.family=%(family)s)
+          AND (%(venue)s::text IS NULL OR o.venue=%(venue)s)""",
+        dict(
+            at=at,
+            until=min(until, at + HORIZON),
+            show_all=view == "all",
+            sport=sport or None,
+            family=family or None,
+            venue=venue or None,
         ),
     ).fetchall()
     grouped = {}
     current = []
     for found in rows:
-        row = deepcopy(found["payload"]["row"])
-        if not found["active"] or found["game_closed"]:
+        if found["dashboard_row"] is None or found["game_closed"]:
             continue
-        book = found["payload"]["book"]
+        row = found["dashboard_row"]
         if not found["book_valid_until"] or found["book_valid_until"] <= at:
-            if view != "all":
-                continue
-            row["book_status"] = (
-                "stale" if book.get("levels") or book.get("complete") else "unobserved"
-            )
+            row["book_status"] = "stale" if found["book_observed"] else "unobserved"
             row["posted"] = dict(
                 row["posted"], value=None, native_price_probability=None
             )
             row["display"]["posted_odds"] = None
-            row["liquidity"] = unknown(book.get("reason") or "stale_book")
+            row["liquidity"] = unknown(found["book_reason"] or "stale_book")
         else:
             row["book_status"] = "fresh"
         invalid = _current_reference(found, at)
-        if (
-            row["book_status"] != "fresh"
-            or invalid
-            or found["payload"].get("fee_mode") != mode
-        ):
+        if row["book_status"] != "fresh" or invalid or found["fee_mode"] != mode:
             row["display"].update(fair_odds=None, net_ev=None)
             row["calculation"].update(
                 status="unavailable", net_ev_ratio=None, net_ev_percent=None
@@ -854,20 +867,26 @@ def coverage(db, *, at, sport=None, family=None, venue=None):
         o.starts_at,o.active,o.book_valid_until,o.reference_valid_until,
         o.game_link->>'status' match_status,o.game_link->>'reason' match_reason,
         o.book->>'reason' book_reason,
-        s.payload#>'{row,liquidity}' liquidity,s.payload->'fee_mode' fee_mode,
+        s.payload->>'reference_reason' reference_reason,
+        CASE WHEN o.active AND o.book_valid_until>%(at)s
+             THEN s.payload#>'{row,liquidity}' ELSE '{}'::jsonb END liquidity,
+        CASE WHEN o.active AND o.book_valid_until>%(at)s THEN s.payload->'fee_mode' END fee_mode,
+        CASE WHEN o.reference_valid_until IS NOT NULL THEN
         """
-        + REFERENCE_CURRENT
-        + """ reference_current,
+        + _reference_current("o.game_link")
+        + """ ELSE true END reference_current,
         """
-        + GAME_CLOSED
+        + _game_closed("o.game_link", "%(at)s")
         + """ game_closed
         FROM public.native_trading_offer o JOIN public.native_trading_snapshot s ON s.id=o.snapshot_id
         """
-        + SOURCE_EVENT
+        + _source_event("o.game_link")
         + """
-        WHERE o.starts_at>%s AND o.starts_at<=%s AND (%s::text IS NULL OR o.league=%s)
-        AND (%s::text IS NULL OR o.family=%s) AND (%s::text IS NULL OR o.venue=%s)""",
-        (at, at, at + HORIZON, sport, sport, family, family, venue, venue),
+        WHERE o.starts_at>%(at)s AND o.starts_at<=%(until)s
+        AND (%(sport)s::text IS NULL OR o.league=%(sport)s)
+        AND (%(family)s::text IS NULL OR o.family=%(family)s)
+        AND (%(venue)s::text IS NULL OR o.venue=%(venue)s)""",
+        dict(at=at, until=at + HORIZON, sport=sport, family=family, venue=venue),
     ).fetchall()
     groups = {}
     for row in rows:
@@ -897,10 +916,11 @@ def coverage(db, *, at, sport=None, family=None, venue=None):
             fresh_books.add(book_key)
             if priority:
                 priority_books.add(book_key)
+        reference_gap = _current_reference(row, at)
         usable = bool(
             not row["game_closed"]
             and row["reference_valid_until"]
-            and not _current_reference(row, at)
+            and not reference_gap
         )
         size = value.get("size_status")
         counts = dict(
@@ -908,6 +928,7 @@ def coverage(db, *, at, sport=None, family=None, venue=None):
             exact_matches=int(row["match_status"] == "matched"),
             fresh_books=int(fresh),
             usable_references=int(usable),
+            fresh_books_with_usable_reference=int(fresh and usable),
             assessable=int(fresh and size != "unknown"),
             full_size=int(fresh and size == "full_size"),
             ev_assessable=int(
@@ -925,6 +946,10 @@ def coverage(db, *, at, sport=None, family=None, venue=None):
         states = set()
         if row["match_status"] != "matched":
             states.add(row["match_reason"] or "unmatched")
+        elif not row["game_closed"] and not usable:
+            states.add(
+                reference_gap or row["reference_reason"] or "reference_unavailable"
+            )
         if row["game_closed"]:
             states.add("game_no_longer_pregame")
         elif not row["active"]:

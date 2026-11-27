@@ -103,6 +103,26 @@ def test_one_venue_turn_keeps_both_sides_and_does_not_advance_another_venue():
     assert trader._identity_scope("polymarket_us", {("NBA", start): at}) is None
 
 
+def test_due_book_turn_prioritizes_usable_references_and_keeps_cold_cohorts():
+    at = stamp("2026-11-27T23:50:00Z")
+    trader = NativeTrading(None, now=lambda: at)
+    for cohort, starts in (("hot", 1), ("near", 1), ("distant", 3)):
+        for count in range(20):
+            cid = f"{cohort}-{count:02}"
+            trader.bindings[cid] = dict(
+                venue="kalshi", event_id=cid, market_id=cid,
+                terms_valid_until=(at + timedelta(minutes=1)).isoformat(),
+                _record={"event": {"scheduled_start": (at + timedelta(hours=starts)).isoformat()}},
+            )
+            if cohort == "hot":
+                trader.references[cid] = at + timedelta(minutes=1)
+                trader.attempted[("kalshi", cid, cid)] = at - timedelta(seconds=4)
+    plan, _ = trader._book_plan("kalshi")
+    actual = {cohort: sum(cid.startswith(cohort) for cid in plan)
+              for cohort in ("hot", "near", "distant")}
+    assert actual == {"hot": 8, "near": 4, "distant": 4}
+
+
 def test_cache_clock_is_independent_of_receive_time_and_age():
     previous = book()
     previous.pop("source_at")

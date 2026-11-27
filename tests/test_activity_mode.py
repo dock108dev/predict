@@ -500,6 +500,69 @@ class Worker:
         )
 
 
+def test_dashboard_reference_refresh_keeps_due_monitor_and_protected_headroom(monkeypatch):
+    from contextlib import nullcontext
+    from app.collection import native_reference_refresh as refresh
+    from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+    from app.comparison.reference_scope import REQUEST_BOOKS
+
+    async def scenario():
+        store, worker = Store(), Worker()
+        worker.page_limit = 2
+        worker.experiment_reserved_requests = 1
+        worker.experiment_reserved_objects = 2
+        worker.experiment_late_waiting = False
+        worker.events["near"]["received_at"] = (AT - timedelta(minutes=12)).isoformat()
+        worker.events["cold"] = dict(worker.events["near"], event_id="cold")
+        controls = dict(available=2)
+        worker.ledger = SimpleNamespace(
+            rolling_objects=lambda *_args, **_kw: 0,
+            request_capacity=lambda *_args, **_kw: dict(next_at=worker.at + timedelta(seconds=15), **controls),
+        )
+        worker.window_id = "disposable"
+        monkeypatch.setattr(refresh, "targets", lambda *_args, **_kw: [
+            dict(event_id="cold", starts_at=AT + timedelta(minutes=20), book_until=None, reference_until=None),
+            dict(event_id="near", starts_at=AT + timedelta(minutes=20), book_until=AT + timedelta(minutes=1),
+                 reference_until=None),
+        ])
+        requests = []
+        original_fetch = worker._fetch
+        original_params = worker.params
+        worker.params = lambda *, include_alternates=False, **kw: (
+            SportsGameOddsWorker.params(worker, include_alternates=True, **kw)
+            if include_alternates else original_params(**kw))
+
+        async def fetch(params):
+            if "eventIDs" not in params:
+                return await original_fetch(params)
+            requests.append(params)
+            return SimpleNamespace(received_at=worker.at.isoformat(), events=(), quotes=())
+
+        worker._fetch = fetch
+        owner = ActivityCollector(worker, store=store, refresh_references=refresh.NativeReferenceRefresh(
+            worker, connector=nullcontext))
+        worker.event_in_scope = lambda event, at: event["phase"] == "pregame"
+        await owner.tick()
+        assert not requests
+        assert len(worker.calls) == 1 and store.updates[-1][1]["state"] == "complete"
+        controls["available"] = 3
+        worker.at += timedelta(seconds=16)
+        worker.experiment_late_windows = [(worker.at, worker.at + timedelta(seconds=1))]
+        await owner.tick()
+        assert not requests
+        worker.at += timedelta(seconds=16)
+        await owner.tick()
+        request, = requests
+        assert request["eventIDs"] == "near" and request["includeAltLines"] is True
+        assert request["limit"] == 1 and request["bookmakerID"].split(",") == list(REQUEST_BOOKS)
+        assert len(store.runs) == 1 and worker.collection_run is None
+        worker.at += timedelta(seconds=1)
+        await owner.tick()
+        assert len(requests) == 1
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize("empty", [False, True])
 def test_live_intent_adds_no_saved_game_requests_or_empty_minute_runs(empty):
     async def scenario():

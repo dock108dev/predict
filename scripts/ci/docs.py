@@ -38,6 +38,7 @@ DOCUMENTS = (
     "docs/estimated-runtime.md",
     "docs/market-data-gaps.md",
     "docs/native-retained-coverage.md",
+    "docs/native-trading.md",
     "docs/native-review-records.md",
     "docs/offline-opportunities.md",
     "docs/offline-pricing.md",
