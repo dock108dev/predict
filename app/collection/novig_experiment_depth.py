@@ -86,6 +86,7 @@ class NovigExperimentDepth:
         self._start_lock = asyncio.Lock()
         self._next_start = 0
         self._retry_at = 0
+        self._checkpoint_slates = {}
 
     async def __aenter__(self):
         return self
@@ -94,6 +95,10 @@ class NovigExperimentDepth:
         await self.close()
 
     async def close(self):
+        tasks = [task for task in self._checkpoint_slates.values() if not task.done()]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         await self.client.aclose()
 
     async def _read(self, path, params, cutoff):
@@ -190,6 +195,22 @@ class NovigExperimentDepth:
                       startsBefore=int(stamp(before).timestamp() * 1000), eventStatus='OPEN_PREGAME',
                       marketType='MONEY,SPREAD,TOTAL', limit=PAGE_SIZE)
         return await self._read_catalog(params, stamp(cutoff))
+
+    async def read_checkpoint_slate(self, league, starts_at, cutoff):
+        """Coalesce same-league games in one checkpoint without sharing later evidence."""
+        start, limit = stamp(starts_at), stamp(cutoff)
+        at = self.clock()
+        self._checkpoint_slates = {key: task for key, task in self._checkpoint_slates.items()
+                                   if key[2] > at or not task.done()}
+        if at >= limit:
+            return PublicEventDepth({}, (), 'after_cutoff')
+        key = league, start, limit
+        if key not in self._checkpoint_slates:
+            millisecond = timedelta(milliseconds=1)
+            self._checkpoint_slates[key] = asyncio.create_task(self.read_slate(league,
+                after=start-millisecond, before=start+millisecond, cutoff=limit))
+        # Cancellation of one rescheduled game cannot cancel its peers' lookup.
+        return await asyncio.shield(self._checkpoint_slates[key])
 
     async def _read_catalog(self, params, cutoff):
         markets, receipts, seen_cursors = {}, [], set()
@@ -378,8 +399,10 @@ def catalog_depth(binding, snapshot, cutoff):
                                              Fraction(line) if line is not None else None, market.get('voids'))
             depth['contract'].update(league=binding['league'], period='full_game', phase='pregame',
                                      settlement=settlement)
-            depth.update(received_at=receipt['received_at'], valid_until=min(
-                _expiry(receipt, CATALOG_FRESH_SECONDS), stamp(binding['starts_at'])).isoformat())
+            expires = min(_expiry(receipt, CATALOG_FRESH_SECONDS), stamp(binding['starts_at']))
+            if cutoff < CUTOVER_DATE_UTC:
+                expires = min(expires, CUTOVER_DATE_UTC)
+            depth.update(received_at=receipt['received_at'], valid_until=expires.isoformat())
         depth['fee'] = _fee(market.get('fee'), cutoff)
         bid = opposite.get('bid')
         if bid is None:

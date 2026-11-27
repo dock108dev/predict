@@ -70,7 +70,9 @@ def test_dashboard_exact_groups_survive_legacy_projections_without_merging_other
     candidates = [dict(quote=item['display_offer'], outcome_key=None, game_id='canonical-cbb-game',
                       event_id='source-game', game=CBB_GAME, league='NCAAB', eligible_until=AT, display={},
                       start_at=AT, family=item['display_offer']['family'], period=item['display_offer']['period'],
-                      pull_id=pull) for item in compact['offers']]
+                      pull_id=pull, effective_ev=item['display_offer']['calculation']['net_ev_ratio'],
+                      liquidity=dict(status='unknown', reason='book_unobserved'), line_role='main')
+                  for item in compact['offers']]
     db = MagicMock()
     db.execute.return_value.fetchone.return_value = dict(entries=candidates[::-1], price_available=True,
         inputs_unavailable=False, pull_incomplete=False, expired_positive=False)

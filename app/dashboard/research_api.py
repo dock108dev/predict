@@ -141,8 +141,13 @@ class CatalogReads(RawReads):
             with self.connector() as db, db.transaction():
                 db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
                 db.execute("SET LOCAL statement_timeout='10s'")
-                return market_board.detail(db, market_id=query['market_id'], pull_id=query['pull_id'],
+                value = market_board.detail(db, market_id=query['market_id'], pull_id=query['pull_id'],
                     offer_id=query.get('offer_id'), revision=query.get('revision'))
+                if query.get('liquidity') == '1':
+                    at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
+                    value['liquidity'], value['liquidity_evidence'] = market_board.dashboard_liquidity(
+                        db, value, at=at, stake=query.get('amount', '100'))
+                return value
 
     def detail(self, query):
         with self.lock:
@@ -298,18 +303,42 @@ def mount(app, *, campaigns_only=False):
         return web.json_response(value, headers=HEADERS)
 
     async def market(request):
-        validate(request.query, market=True)
+        query = dict(request.query)
+        if query.get('liquidity') == '1' and request.path == '/api/research/market' and not query.get('token'):
+            validate({key: value for key, value in query.items() if key != 'liquidity'}, market=True)
+        else:
+            validate(query, market=True)
         if not all(request.query.get(key) for key in ('market_id', 'pull_id')):
             raise PublicRequestError('A captured market and acquisition identity are required.')
         if bool(request.query.get('offer_id')) != bool(request.query.get('revision')):
             raise PublicRequestError('Exact offer identity and revision are required together.')
         async with admission():
-            value = await joined(reads.market, dict(request.query))
+            value = await joined(reads.market, query)
         if request.path.endswith('market-export'):
             return web.Response(text=json.dumps(value, sort_keys=True, indent=2, allow_nan=False)+'\n',
                 content_type='application/json', headers={**HEADERS,
                     'Content-Disposition': 'attachment; filename="predict-market-evidence.json"'})
         return web.json_response(value, headers=HEADERS)
+
+    async def dashboard_liquidity(request):
+        from app.comparison.pregame_valuation import parse_amount
+        from .local_security import read_json
+
+        body = await read_json(request)
+        identities = {'market_id', 'pull_id', 'offer_id', 'revision'}
+        if request.query or not isinstance(body, dict) or set(body) != identities | {'amount'} or not all(
+                isinstance(body[key], str) and body[key].strip() for key in identities):
+            raise PublicRequestError('Provide an exact Dashboard offer and cash budget.')
+        query = {key: body[key] for key in identities}
+        validate(query, market=True)
+        try:
+            amount = parse_amount(body['amount'])
+        except (ValueError, TypeError, ArithmeticError) as error:
+            raise PublicRequestError(str(error)) from None
+        async with admission():
+            value = await joined(reads.market, dict(query, liquidity='1', amount=str(amount)))
+        result = {key: value[key] for key in ('liquidity', 'liquidity_evidence')}
+        return web.json_response(dict(result=result, provider_requests=0, scheduled_calculations=0), headers=HEADERS)
 
     async def game(request):
         if not request.query.get('game_id'):
@@ -447,6 +476,7 @@ def mount(app, *, campaigns_only=False):
 
     app.router.add_get('/api/research/markets', markets)
     app.router.add_get('/api/research/dashboard', dashboard)
+    app.router.add_post('/api/research/dashboard-liquidity', dashboard_liquidity)
     app.router.add_get('/api/research/market', market)
     app.router.add_get('/api/research/market-export', market)
     app.router.add_get('/api/research/games', games)

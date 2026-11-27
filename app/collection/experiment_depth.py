@@ -19,7 +19,9 @@ READ_AHEAD = timedelta(seconds=6)
 BOOK_AHEAD = timedelta(seconds=4)
 ASSEMBLY_RESERVE = timedelta(milliseconds=350)
 MANUAL_DELAY = timedelta(seconds=30)
-MAX_GAMES_IN_FLIGHT = 12
+# Allows a common kickoff cluster across leagues while network clients
+# independently bound concurrent requests and snapshots per venue.
+MAX_GAMES_IN_FLIGHT = 16
 MAX_PENDING_BUNDLES = 48
 
 
@@ -270,7 +272,7 @@ class ExperimentDepth:
                 result.pop(key)
         return result
 
-    async def _market_reads(self, client, plan, cutoff):
+    async def _market_reads(self, client, plan, cutoff, *, slate=None):
         from .novig_experiment_depth import book_depth, catalog_depth
         from app.comparison.experiment_depth_execution import needs_book
 
@@ -285,7 +287,8 @@ class ExperimentDepth:
         async def read_event(event_id, entries):
             if not self.venue_enabled('novig') or self.now() >= network_cutoff:
                 return
-            catalog = await client.read_event(event_id, network_cutoff)
+            catalog = (await client.read_checkpoint_slate(*slate, network_cutoff) if slate is not None
+                       else await client.read_event(event_id, network_cutoff))
             deeper = defaultdict(list)
             for key, binding, quote_price in entries:
                 observation = catalog_depth(binding, catalog, cutoff)
@@ -321,13 +324,25 @@ class ExperimentDepth:
         novig, native_client = client
         plan, witness, unresolved, event, prices, native, offers, products = await asyncio.to_thread(
             self._bindings, task, self.now())
-        native_preparation = None
-        if task.get('all_sports'):
-            native_preparation = asyncio.create_task(self._prospective_native(
-                native_client, task, offers, cutoff-READ_AHEAD, products))
+        slate = (task['event']['league'], task['event']['starts_at']) if task.get('all_sports') else None
+        preparation_cutoff = cutoff-READ_AHEAD
         preparation, source_gaps = (), {}
-        if witness and (event or unresolved) and self.venue_enabled('novig') and self.now() < cutoff - READ_AHEAD:
-            inventory = await novig.read_event(witness['event']['eventId'], cutoff - READ_AHEAD)
+
+        async def prepare_novig():
+            if not (witness and (event or unresolved) and self.venue_enabled('novig')
+                    and self.now() < preparation_cutoff):
+                return None
+            if slate:
+                return await novig.read_checkpoint_slate(*slate, preparation_cutoff)
+            return await novig.read_event(witness['event']['eventId'], preparation_cutoff)
+
+        if slate:
+            inventory, extra = await asyncio.gather(prepare_novig(), self._prospective_native(
+                native_client, task, offers, preparation_cutoff, products))
+            native.update(extra)
+        else:
+            inventory = await prepare_novig()
+        if inventory is not None:
             preparation = inventory.receipts
             if inventory.reason:
                 source_gaps['novig'] = inventory.reason
@@ -337,13 +352,12 @@ class ExperimentDepth:
             source_gaps['novig'] = 'source_paused'
         elif not plan:
             source_gaps['novig'] = 'unmatched_pregame_event'
-        if native_preparation is not None:
-            native.update(await native_preparation)
         await asyncio.sleep(max(0, (cutoff - READ_AHEAD - self.now()).total_seconds()))
         if (not self.enabled() or self.now() >= cutoff
                 or task.get('all_sports') and not await asyncio.to_thread(self._still_targeted, task)):
             return
-        decision, failures = await self._observe(novig, native_client, plan, native, cutoff)
+        observation_options = dict(slate=slate) if slate else {}
+        decision, failures = await self._observe(novig, native_client, plan, native, cutoff, **observation_options)
         source_gaps.update(failures)
         known = self.now()
         if known > cutoff or not self.enabled():
@@ -360,7 +374,7 @@ class ExperimentDepth:
         await asyncio.sleep(max(0, (later - READ_AHEAD - self.now()).total_seconds()))
         if not self.enabled() or self.now() >= later:
             return
-        followup, failures = await self._observe(novig, native_client, plan, native, later)
+        followup, failures = await self._observe(novig, native_client, plan, native, later, **observation_options)
         known = self.now()
         if known <= later and self.enabled():
             for offer, observation in followup.items():
@@ -369,12 +383,13 @@ class ExperimentDepth:
             self.pending[key]['followup'] = dict(known_at=known, observations=followup,
                 cutoff_at=later, source_gaps=failures)
 
-    async def _observe(self, novig, native_client, plan, native, cutoff):
+    async def _observe(self, novig, native_client, plan, native, cutoff, *, slate=None):
         from .native_experiment_depth import VENUES
 
         native_options = dict(batch=True) if any(binding.get('contract') for binding in native.values()) else {}
+        novig_options = dict(slate=slate) if slate else {}
         book_sides = await asyncio.gather(
-            self._market_reads(novig, plan, cutoff),
+            self._market_reads(novig, plan, cutoff, **novig_options),
             native_client.read_native(native, cutoff - ASSEMBLY_RESERVE, **native_options),
             return_exceptions=True,
         )

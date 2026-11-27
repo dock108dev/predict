@@ -10,6 +10,13 @@
 .dashboard-table :is(th,td) { padding: .38rem .6rem; }
 .dashboard-table td:nth-child(n+3) { white-space: nowrap; }
 .dashboard-table td:nth-child(6) { color: var(--research-positive); font-weight: 600; }
+.dashboard-table .dashboard-quoted-ev { display: block; }
+.dashboard-table .dashboard-quoted-ev[data-sign="negative"] { color: var(--ink); }
+.dashboard-table td:nth-child(6) { white-space: normal; }
+.dashboard-table .liquidity-badge, .dashboard-inspector .liquidity-badge { color: var(--muted); }
+.dashboard-table .liquidity-badge[data-depth-status="full_size"],
+.dashboard-inspector .liquidity-badge[data-depth-status="full_size"] { color: var(--research-positive); }
+.dashboard-table :is(.liquidity-badge,.liquidity-badge span) { white-space: normal; }
 .dashboard-table tr[data-bet] { cursor: pointer; }
 .dashboard-table tbody tr:is(:hover,:focus-within) td { background: var(--p-hover); }
 .dashboard-table button.dashboard-bet {
@@ -32,6 +39,10 @@
 .dashboard-pages[hidden] { display: none; }
 .dashboard-diagnostics { margin-block: 1rem; }
 .dashboard-diagnostics ul { margin: .35rem 0; padding-left: 1.25rem; }
+.dashboard-liquidity-coverage { margin-top: .8rem; }
+.dashboard-liquidity-coverage summary { cursor: pointer; }
+.dashboard-liquidity-coverage button { margin: .4rem 0; }
+#dashboard-liquidity-content { overflow-x: auto; }
 .dashboard-inspector {
   width: min(45rem, calc(100% - 1.5rem));
   max-height: calc(100dvh - 2rem);
@@ -64,6 +75,16 @@
 .dashboard-facts dt { font-weight: 600; }
 .dashboard-facts dd { margin: 0; overflow-wrap: anywhere; }
 .dashboard-evidence-actions { display: flex; flex-wrap: wrap; gap: .65rem 1rem; margin: .75rem 0; }
+.dashboard-inspector .liquidity-details dl {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: .25rem .7rem;
+}
+.dashboard-inspector .liquidity-details dd { margin: 0; }
+.dashboard-inspector .amount-research form { display: flex; flex-wrap: wrap; align-items: end; gap: .4rem; }
+.dashboard-inspector .amount-research label { display: grid; gap: .25rem; }
+.dashboard-inspector .amount-research input { box-sizing: border-box; max-width: 9rem; }
+.dashboard-inspector .amount-presets { display: flex; gap: .25rem; }
 
 @media (max-width: 620px) {
   .dashboard-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -89,4 +110,5 @@
     color: var(--muted);
   }
   .dashboard-facts { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .dashboard-inspector .liquidity-details dl { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }

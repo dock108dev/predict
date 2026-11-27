@@ -102,6 +102,57 @@ class CurrentPregameSQL(PregameFixture):
                 self.assertEqual(sizes.status, 200, await sizes.text())
                 self.assertTrue(any(row["full_size"] for row in (await sizes.json())["coverage"]))
 
+    async def test_home_dashboard_ranks_native_execution_against_its_exact_saved_reference(self):
+        from datetime import timedelta
+
+        from app.comparison import execution_contract, fee_mode
+        from app.storage import current_pregame_depth, market_board
+        from tests.test_market_snapshot_arbs_sql import SnapshotArbsSQL
+
+        at = stamp(AT)
+        expiry = at + timedelta(seconds=20)
+        source = page()
+        for odd in source['data'][0]['odds'].values():
+            odd['byBookmaker']['prophetx']['odds'] = '-200'
+        options = dict(at=at, until=at+timedelta(hours=24), freshness_seconds=1800, venue='prophetx')
+        with self.connect() as db:
+            self.ingest(db, source)
+            self.process(db)
+            pull, _ = SnapshotArbsSQL.capture(self, db, source)
+            fee_mode.set_enabled(db, False)
+            self.assertEqual(market_board.dashboard(db, **options)['total'], 0)
+            current = db.execute('''SELECT p.contract_id,p.record,k.revision FROM public.current_pregame_price p
+                JOIN public.current_contract_storage k ON k.id=p.contract_id
+                WHERE p.payload->>'venue'='prophetx' AND p.payload->>'main'='true'
+                ORDER BY p.contract_id LIMIT 1''').fetchone()
+            contract = execution_contract.expected(current['record'])
+            receipt = dict(venue='prophetx', contract=dict(contract, phase='pregame', settlement=dict(
+                available=True, rule_id='fixture-rule', overtime='included', equality='not_feasible')),
+                event_id='native-event', market_id='native-strike', outcome_id='native-outcome',
+                received_at=at.isoformat(), valid_until=expiry.isoformat(), complete=True,
+                payout_usd='1', quantity_increment='0.01', quantity_minimum='1', quantity_unit='usd_stake',
+                fee=dict(model='prophetx_market_commission', schedule_revision='test-v1', rate='0.05',
+                         rounding='nearest_cent_profit_then_commission'),
+                legal_prices=['2/5'], levels=[dict(price='2/5', quantity='200')])
+            item = dict(contract_id=current['contract_id'], contract_revision=current['revision'],
+                        receipt=receipt, known_at=at, valid_until=expiry)
+            self.assertEqual(current_pregame_depth.publish(db, [item], at=at), 1)
+            with db.transaction():
+                db.execute('SET TRANSACTION READ ONLY')
+                ranked, = market_board.dashboard(db, **options)['rows']
+                self.assertEqual(ranked['pull_id'], pull)
+                self.assertLess(Fraction(ranked['calculation']['net_ev_ratio']), 0)
+                self.assertGreater(Fraction(ranked['liquidity']['modeled_net_ev']), 0)
+                self.assertEqual(stamp(ranked['eligible_until']), expiry)
+                saved = market_board.detail(db, market_id=ranked['market_id'], pull_id=pull,
+                                            offer_id=ranked['id'], revision=ranked['revision'])
+                self.assertNotIn('liquidity', saved)
+                modeled, proof = market_board.dashboard_liquidity(db, saved, at=at, stake='25')
+                self.assertEqual(modeled['modeled_stake_usd'], '25')
+                self.assertEqual(proof['market_id'], 'native-strike')
+            self.assertEqual(market_board.dashboard(db, **dict(options, at=expiry))['total'], 0)
+            db.execute('TRUNCATE public.market_pull CASCADE')
+
     async def test_research_amounts_are_read_only_and_bind_price_fee_reference(self):
         from app.storage.pregame_research import research, ChangedInputs
         from app.storage.pregame_quote_evidence import enrich

@@ -195,7 +195,7 @@ def _dashboard_groups(db, values):
         # one occurrence has more than one authentic provider event link.
         group.setdefault(details['venue'], value)
     groups = [(key, list(venues.values())) for key, venues in grouped.items()]
-    return [(key, group) for key, group in groups if Fraction(group[0]['quote']['calculation']['net_ev_ratio']) > 0]
+    return [(key, group) for key, group in groups if Fraction(group[0]['effective_ev']) > 0]
 
 
 def _dashboard_quote(value):
@@ -206,15 +206,16 @@ def _dashboard_quote(value):
         league=value['league'], eligible_until=value['eligible_until'], kickoff=value['start_at'],
         family=value['family'], period=value['period'], venue=quote['venue'], selection_label=quote['outcome'],
         line=quote['line'], times=quote['times'], display=value['display'] or {},
-        posted=dict(value=quote['price'], units=quote['price_units']), calculation=quote['calculation'])
+        posted=dict(value=quote['price'], units=quote['price_units']), calculation=quote['calculation'],
+        liquidity=value['liquidity'], line_role=value['line_role'])
 
 
 def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=None, family=None, venue=None):
-    """Show current main offers from the latest complete covering pull per market."""
+    """Rank exact offers after applying the latest current native execution projection."""
     from app.comparison.fee_mode import read as read_fee_mode
     from .pregame_known_withdrawals import phase_closed, reference_known_unavailable
 
-    candidates, args = _offer_guards({'venue': venue})
+    candidates, args = _offer_guards({'venue': venue, 'include_alternates': '1'})
     filters = [(expression, value) for expression, value in ((SPORT, sport), ('s.family', family)) if value]
     scope_conditions = ''.join(f' AND {expression}=%s' for expression, _ in filters)
     # Mature compact projections retain the winning reference book and exact side
@@ -223,6 +224,7 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
     line = """(split_part(o.value#>>'{display_offer,line}','/',1)::numeric /
         COALESCE(NULLIF(split_part(o.value#>>'{display_offer,line}','/',2),''),'1')::numeric)"""
     sql = LATEST_SCOPES + """,
+        read_clock AS (SELECT %s::timestamptz AS at),
         upcoming AS MATERIALIZED (
           SELECT s.*, """ + KICKOFF + """ start_at, """ + SPORT + """ league,
             known.scheduled_start::timestamptz confirmed_start,
@@ -235,9 +237,23 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
         ), eligible AS MATERIALIZED (
           SELECT s.event_id,s.family,s.period,s.pull_id,s.game_id,s.details,s.snapshot->'event' event,
             s.start_at,s.state,s.league,
-            winner.best,winner.net_ev,winner.eligible_until,winner.current AND winner.eligible_until>%s current
+            winner.best,winner.net_ev,winner.effective_ev,winner.liquidity,winner.eligible_until,
+            winner.depth_until,winner.current AND winner.eligible_until>(SELECT at FROM read_clock) current
           FROM upcoming s LEFT JOIN LATERAL (
             SELECT o.value best, """ + NET_EV + """ net_ev,
+              CASE WHEN book.projection->>'effective_ev' IS NOT NULL
+                  THEN (book.projection->>'effective_ev')::numeric
+                WHEN book.projection#>>'{result,size_status}' IN ('partial_size','confirmed_empty','above_limit') THEN 0
+                ELSE """ + NET_EV + """ END effective_ev,
+              CASE WHEN book.projection IS NOT NULL
+                  THEN book.projection->'result' || jsonb_build_object('valid_until',d.valid_until,
+                     'published_at',d.published_at,'book_known_at',d.known_at)
+                ELSE jsonb_build_object('status','unknown','size_status','unknown',
+                  'reason',CASE WHEN d.receipt_id IS NULL THEN 'book_unobserved'
+                    WHEN NOT book.current THEN 'stale_book' ELSE 'reference_revision_changed' END,
+                  'intended_stake_usd','100') END liquidity,
+              CASE WHEN book.projection IS NOT NULL AND book.projection->'result'->>'status'<>'unknown'
+                   THEN d.valid_until END depth_until,
               LEAST(s.start_at,(o.value#>>'{calculation_payload,acquisition,received_from}')::timestamptz
                 + %s*interval '1 second') eligible_until,
               (NOT s.phase_closed AND (s.confirmed_start IS NULL OR s.confirmed_start=s.start_at)
@@ -257,15 +273,25 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
                       WHEN s.family='spread' AND r.facts->>'side'<>o.value#>>'{display_offer,side}' THEN -1 ELSE 1 END)
                     AND """ + reference_known_unavailable('r.id') + """)) current
             FROM jsonb_array_elements(COALESCE(s.snapshot->'offers','[]'::jsonb)) o(value)
+            LEFT JOIN public.current_contract_storage identity ON identity.id=o.value#>>'{calculation_payload,id}' AND identity.active
+            LEFT JOIN public.current_pregame_depth d ON d.contract_id=identity.id AND d.contract_revision=identity.revision
+            LEFT JOIN LATERAL (SELECT d.valid_until>(SELECT at FROM read_clock)
+                       AND d.known_at<=(SELECT at FROM read_clock) AND d.published_at<=(SELECT at FROM read_clock) current,
+                       CASE WHEN d.valid_until>(SELECT at FROM read_clock) AND d.known_at<=(SELECT at FROM read_clock)
+                             AND d.published_at<=(SELECT at FROM read_clock)
+                         THEN d.valuations->('dashboard:'||s.pull_id||':'||(o.value#>>'{display_offer,revision}')) END projection
+            ) book ON true
             WHERE s.state='complete' AND o.value#>>'{record,market_identity,family}'=s.family
               AND o.value#>>'{record,market_identity,period}'=s.period AND """ + candidates + """
+              AND (o.value#>>'{main,status}'='main' OR (book.projection->>'effective_ev')::numeric>0)
           ) winner ON true
           WHERE s.start_at>%s AND (s.confirmed_start IS NULL OR s.confirmed_start>%s)
         ), positive_scopes AS (
-          SELECT DISTINCT game_id,start_at,family,period FROM eligible WHERE current AND net_ev>0
+          SELECT DISTINCT game_id,start_at,family,period FROM eligible WHERE current AND effective_ev>0
         ), current_offers AS (
           SELECT event_id,family,period,pull_id,game_id,COALESCE(event->>'title',details#>>'{event,title}',event_id) game,
-            start_at,league,eligible_until,best->'display_offer' quote,
+            start_at,league,LEAST(eligible_until,depth_until) eligible_until,best->'display_offer' quote,
+            effective_ev::text,liquidity,best#>>'{main,status}' line_role,
             best->>'dashboard_outcome_key' outcome_key,best#>'{calculation_payload,display}' display
           FROM eligible JOIN positive_scopes USING(game_id,start_at,family,period)
           WHERE current
@@ -276,10 +302,10 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
           COALESCE(bool_or(net_ev>0 AND NOT current),false) expired_positive,
           (SELECT jsonb_agg(current_offers) FROM current_offers) entries
         FROM eligible"""
-    data = db.execute(sql, (at, until, *(value for _, value in filters), at, freshness_seconds, at, read_fee_mode(db)['enabled'],
+    data = db.execute(sql, (at, at, until, *(value for _, value in filters), freshness_seconds, at, read_fee_mode(db)['enabled'],
         *args, at, at)).fetchone()
     offers = sorted(data['entries'] or [], key=lambda value: (
-        -Fraction(value['quote']['calculation']['net_ev_ratio']), value['event_id'], value['family'],
+        -Fraction(value['effective_ev']), value['event_id'], value['family'],
         value['quote']['venue'], value['quote']['id'], value['quote']['revision']))
     groups = _dashboard_groups(db, offers)
     rows = [dict(_dashboard_quote(quotes[0]), bet_id=hashed(key),
@@ -287,6 +313,31 @@ def dashboard(db, *, at, until, freshness_seconds, offset=0, limit=30, sport=Non
             for key, quotes in groups[offset:offset + limit]]
     return dict(rows=rows, total=len(groups), offset=offset, availability={key:data[key]
         for key in ('price_available','inputs_unavailable','pull_incomplete','expired_positive')})
+
+
+def dashboard_liquidity(db, detail, *, at, stake='100'):
+    """Reprice the exact current Dashboard quote without changing saved evidence."""
+    from app.collection.activity_mode import DEFAULT_SETTINGS
+    from .current_pregame_depth import _dashboard_inputs, preview, unknown
+    from .store import stamp
+    from datetime import timedelta
+
+    offer = detail.get('selected_offer') or {}
+    payload, record = offer.get('calculation_payload'), offer.get('normalized_record')
+    if not payload or not record or offer['calculation']['status'] == 'unavailable':
+        return unknown('reference_unavailable', stake=stake), None
+    source = record['quote']['source']
+    contract = payload['id']
+    reference_key = 'dashboard:' + detail['acquisition']['pull_id'] + ':' + offer['revision']
+    current = _dashboard_inputs(db, [source['native_event_id']], [contract])
+    if not any(row['key'] == reference_key for row in current):
+        return unknown('reference_revision_changed', stake=stake), None
+    mode = db.execute('SELECT settings FROM public.activity_mode WHERE singleton').fetchone()
+    freshness = (mode['settings'] if mode else DEFAULT_SETTINGS)['monitor_interval_seconds']
+    if not at < min(stamp(record['event']['scheduled_start']),
+                    stamp(payload['acquisition']['received_from'])+timedelta(seconds=freshness)):
+        return unknown('reference_stale', stake=stake), None
+    return preview(db, payload, record, at=at, stake=stake, evidence=True)
 
 def _selection_label(snapshot, record, payload, side):
     if side in ('over', 'under'):

@@ -74,6 +74,7 @@ export function liquidityDetails(row){
   add('Book received',clock(depth.book_received_at||depth.book_known_at));
   add('Venue timestamp',clock(depth.book_source_at));
   add('Published',clock(depth.published_at));
+  add('Book valid through',clock(depth.valid_until));
   if(rows.childElementCount)section.append(rows);
   if(row.liquidity_evidence){
     const evidence=row.liquidity_evidence, details=node('details');

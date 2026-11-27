@@ -2,6 +2,8 @@ import {ageNode, updateRelativeAges} from './board-elements.js';
 import {payoutExample} from './pregame-evidence.js';
 import {explanation} from './pregame-explanation.js';
 import {bookName} from './pregame-labels.js';
+import {coverageRows, liquidityBadge, liquidityDetails} from './pregame-liquidity.js';
+import {amountResearch} from './research-tools.js';
 import {dateTime, percent, readable, selection} from './workspace-format.js';
 
 const byId = id => document.getElementById(id);
@@ -14,6 +16,8 @@ const filters = byId('dashboard-filters');
 const clear = byId('dashboard-clear');
 const inspector = byId('dashboard-inspector');
 const content = byId('dashboard-inspector-content');
+const coverage = byId('dashboard-liquidity-coverage');
+const coverageContent = byId('dashboard-liquidity-content');
 const filterNames = ['sport', 'family', 'venue'];
 const defaultPageSize = '50';
 const field = name => filters.elements.namedItem(name);
@@ -25,6 +29,7 @@ let refreshTimer;
 let closed = false;
 let selectedQuote;
 let evidenceRead;
+let coverageRead;
 
 function readLocation() {
   const query = new URLSearchParams(location.search);
@@ -77,6 +82,19 @@ const quoteKey = row => `${row.pull_id}:${row.id}`;
 const current = row => Date.parse(row.eligible_until) > Date.now();
 const ev = row => row.display.net_ev || percent(row.calculation.net_ev_percent);
 
+function availableLiquidity(row) {
+  const liquidity = row.liquidity;
+  if (liquidity?.valid_until && Date.parse(liquidity.valid_until) <= Date.now()) {
+    return {status: 'unknown', reason: 'stale_book', intended_stake_usd: liquidity.intended_stake_usd,
+      book_received_at: liquidity.book_received_at, published_at: liquidity.published_at};
+  }
+  return liquidity;
+}
+
+function dashboardBadge(row) {
+  return liquidityBadge({liquidity: availableLiquidity(row)});
+}
+
 function evidenceButton(row, label) {
   const button = node('button', label, 'dashboard-bet');
   button.type = 'button';
@@ -94,9 +112,11 @@ function otherVenues(row, expanded) {
   for (const quote of quotes) {
     const item = node('li');
     const price = quote.display.posted_odds || exactPrice(quote);
-    item.append(evidenceButton(quote, bookName(quote.venue)), node('span', `${price} · ${ev(quote)} EV`),
+    item.append(evidenceButton(quote, bookName(quote.venue)), node('span', `${price} · ${ev(quote)} quote EV`),
       node('small', `Fair ${quote.display.fair_odds || 'odds unavailable'} · `));
     item.lastChild.append(ageNode(quote.times?.source_at));
+    const badge = dashboardBadge(quote);
+    if (badge) item.append(badge);
     list.append(item);
   }
   const details = node('details', undefined, 'dashboard-other-venues');
@@ -114,11 +134,15 @@ function offerRow(row, expanded) {
   };
   cell(tr, 'Game', node('strong', row.game), node('small', `${row.league} · ${dateTime(row.kickoff)}`));
   const period = row.period && row.period !== 'full_game' ? ` · ${readable(row.period)}` : '';
-  cell(tr, 'Bet', evidenceButton(row, bet(row)), node('small', readable(row.family) + period));
+  const line = row.line_role === 'alternate' ? ' · Alternate' : '';
+  cell(tr, 'Bet', evidenceButton(row, bet(row)), node('small', readable(row.family) + period + line));
   cell(tr, 'Best venue', node('strong', bookName(row.venue)), otherVenues(row, expanded));
   cell(tr, 'Posted odds', row.display.posted_odds || exactPrice(row));
   cell(tr, 'Fair odds', row.display.fair_odds || 'Unavailable');
-  cell(tr, 'EV', ev(row));
+  const quoted = node('span', row.liquidity ? `Quote ${ev(row)}` : ev(row), 'dashboard-quoted-ev');
+  if (ev(row).startsWith('-')) quoted.dataset.sign = 'negative';
+  const badge = dashboardBadge(row);
+  cell(tr, 'EV', ...[quoted, badge].filter(Boolean));
   cell(tr, 'Quote age', ageNode(row.times?.source_at));
   return tr;
 }
@@ -142,7 +166,7 @@ function link(text, href) {
   return a;
 }
 
-function renderEvidence(row, evidence, query) {
+function renderEvidence(row, evidence, query, signal) {
   const offer = evidence.selected_offer;
   const stored = offer?.calculation_payload;
   if (!stored || !['positive', 'negative', 'zero'].includes(offer.calculation?.status)) {
@@ -181,8 +205,16 @@ function renderEvidence(row, evidence, query) {
   actions.append(link('Open original odds pull in Data', '/data?' + new URLSearchParams({evidence: 'pulls', pull: row.pull_id, sport: row.league, family: row.family})),
     link('Export this calculation', '/api/research/market-export?' + query));
 
-  content.replaceChildren(node('p', `${row.game} · ${dateTime(row.kickoff)}`), node('p', 'Snapshot from the Dashboard read. The original source time is shown below.', 'research-muted'),
-    quote, reference, payoutExample(stored), calculation, actions, exact);
+  const book = {liquidity: availableLiquidity({...row, liquidity: evidence.liquidity || row.liquidity}),
+    liquidity_evidence: evidence.liquidity_evidence};
+  const size = book.liquidity ? amountResearch('dashboard', {...row, ...book}, (output, modeled) => {
+    const currentBook = liquidityDetails(modeled);
+    output.replaceChildren(...[currentBook].filter(Boolean));
+  }, {signal}) : null;
+
+  content.replaceChildren(...[node('p', `${row.game} · ${dateTime(row.kickoff)}`),
+    node('p', 'Snapshot from the Dashboard read. The original source time is shown below.', 'research-muted'),
+    size, quote, reference, payoutExample(stored), calculation, actions, exact].filter(Boolean));
 }
 
 async function inspect(row) {
@@ -199,8 +231,10 @@ async function inspect(row) {
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
   const query = new URLSearchParams({market_id: row.market_id, pull_id: row.pull_id, offer_id: row.id, revision: row.revision});
   try {
-    const evidence = await get('/api/research/market', query, signal);
-    if (evidenceRead === controller && inspector.open) renderEvidence(row, evidence, query);
+    const params = new URLSearchParams(query);
+    params.set('liquidity', '1');
+    const evidence = await get('/api/research/market', params, signal);
+    if (evidenceRead === controller && inspector.open) renderEvidence(row, evidence, query, controller.signal);
   } catch {
     if (evidenceRead !== controller || !inspector.open) return;
     progress.textContent = 'The exact saved quote could not be loaded.';
@@ -265,7 +299,7 @@ function schedule() {
   if (closed || document.hidden) return;
   const now = Date.now();
   const deadline = Math.min(...(snapshot?.rows || []).flatMap(row => [row, ...(row.other_quotes || [])])
-    .filter(current).map(row => Date.parse(row.eligible_until)));
+    .flatMap(row => [row.eligible_until, row.liquidity?.valid_until]).map(Date.parse).filter(at => at > now));
   const delay = deadline > now ? Math.min(30000, deadline - now) : 30000;
   refreshTimer = setTimeout(() => {
     if (deadline <= Date.now()) {
@@ -279,6 +313,23 @@ async function get(path, params, signal) {
   const response = await fetch(path + '?' + new URLSearchParams(params), {cache: 'no-store', signal});
   if (!response.ok) throw Error('Stored prices unavailable');
   return response.json();
+}
+
+async function refreshCoverage() {
+  coverageRead?.abort();
+  const controller = new AbortController();
+  coverageRead = controller;
+  const query = {data_type: 'all', liquidity_coverage: '1'};
+  for (const name of filterNames) if (field(name).value) query[name === 'sport' ? 'league' : name] = field(name).value;
+  coverageContent.replaceChildren(node('p', 'Reading stored coverage…'));
+  try {
+    const packet = await get('/api/pregame', query, AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]));
+    if (coverageRead !== controller || !coverage.open) return;
+    coverageContent.replaceChildren(packet.coverage?.length ? coverageRows(packet.coverage, bookName)
+      : node('p', 'No stored pregame offers for these filters.'));
+  } catch {
+    if (coverageRead === controller && coverage.open) coverageContent.replaceChildren(node('p', 'Coverage could not be read. Refresh coverage to retry.'));
+  }
 }
 
 async function refresh() {
@@ -329,7 +380,13 @@ function refreshSelection() {
   byId('dashboard-table').hidden = byId('dashboard-pages').hidden = true;
   clear.hidden = !filterNames.some(name => field(name).value);
   refresh();
+  if (coverage.open) refreshCoverage();
 }
+coverage.addEventListener('toggle', () => {
+  if (coverage.open) refreshCoverage();
+  else { coverageRead?.abort(); coverageRead = undefined; }
+});
+byId('dashboard-liquidity-refresh').onclick = refreshCoverage;
 filters.addEventListener('submit', event => event.preventDefault());
 filters.addEventListener('change', () => {
   offset = 0;
@@ -357,6 +414,7 @@ window.addEventListener('pagehide', event => {
   closed = true;
   read?.abort();
   evidenceRead?.abort();
+  coverageRead?.abort();
   clearTimeout(refreshTimer);
   clearInterval(ageTimer);
 });

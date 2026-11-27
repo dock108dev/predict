@@ -52,6 +52,8 @@ def _projection(payload, record, receipt, *, at):
 
     result = _value(payload, record, receipt, at=at, stake=BOARD_STAKE)
     valuation = {"result": _present(result)}
+    if result.get('size_status') == 'full_size' and result.get('modeled_net_ev') is not None:
+        valuation['effective_ev'] = format(numeric(result['modeled_net_ev']), 'f')
     if not result.get("eligible"):
         return valuation
     states = result["modeled_cashflows"]
@@ -62,6 +64,25 @@ def _projection(payload, record, receipt, *, at):
     return valuation
 
 
+def _dashboard_inputs(db, event_ids, contract_ids):
+    """Match the home Dashboard's latest complete acquisition and exact quote."""
+    query = """WITH latest AS MATERIALIZED (
+        SELECT DISTINCT ON (s.event_id,s.family,s.period) s.pull_id,s.state,s.snapshot
+        FROM public.market_pull_scope s JOIN public.market_pull p USING(pull_id)
+        WHERE s.event_id=ANY(%s) AND s.coverage->>'covers_board'='true' AND s.period='full_game'
+        ORDER BY s.event_id,s.family,s.period,p.started_order DESC
+    ) SELECT v#>>'{calculation_payload,id}' AS contract_id,
+      'dashboard:'||s.pull_id||':'||(v#>>'{display_offer,revision}') AS key,
+      v->'calculation_payload' AS payload
+    FROM latest s CROSS JOIN LATERAL jsonb_array_elements(COALESCE(s.snapshot->'offers','[]'::jsonb)) v
+    WHERE s.state='complete' AND v#>>'{calculation_payload,id}'=ANY(%s)
+      AND v#>>'{calculation_payload,acquisition,pull_id}'=s.pull_id
+      AND v#>>'{calculation_payload,acquisition,eligible}'='true'
+      AND v#>>'{calculation_payload,reference,probability}' IS NOT NULL
+      AND v#>>'{display_offer,revision}' IS NOT NULL AND v->>'reason' IS NULL"""
+    return db.execute(query, (list(event_ids), list(contract_ids)))
+
+
 def publish(db, items, *, at):
     """Replace current observations only for the same active contract revision."""
     at = stamp(at)
@@ -69,8 +90,9 @@ def publish(db, items, *, at):
     if not items:
         return 0
     contracts = {item["contract_id"] for item in items}
-    rows = db.execute("""SELECT c.id,c.revision,p.record,p.payload AS price
+    rows = db.execute("""SELECT c.id,c.revision,e.native_event_id,p.record,p.payload AS price
         FROM public.current_contract_storage c
+        JOIN public.current_event e ON e.id=c.event_id
         JOIN public.current_pregame_price p ON p.contract_id=c.id
         WHERE c.active AND c.id=ANY(%s) AND p.start_at>%s""", (list(contracts), at)).fetchall()
     exact = {row["id"]:row for row in rows}
@@ -79,6 +101,8 @@ def publish(db, items, *, at):
     for schema in ("public", *COHORTS):
         for row in db.execute(selection.format(schema), (list(contracts), at)):
             valuation_inputs.setdefault(row["contract_id"], {})[row["input_revision"]] = row["payload"]
+    for row in _dashboard_inputs(db, {row['native_event_id'] for row in rows}, exact):
+        valuation_inputs.setdefault(row['contract_id'], {})[row['key']] = row['payload']
     output = []
     for item in items:
         cid = item["contract_id"]
@@ -128,14 +152,18 @@ def publish(db, items, *, at):
         return cursor.rowcount
 
 
-def preview(db, payload, record, *, at, stake):
+def preview(db, payload, record, *, at, stake, evidence=False):
     """Revalue a requested size from the retained current book, without acquisition."""
     found = db.execute("""SELECT d.receipt,d.published_at,d.valid_until
         FROM public.current_pregame_depth d JOIN current_contract c ON c.id=d.contract_id
-        WHERE d.contract_id=%s AND d.contract_revision=c.revision AND d.published_at<=%s""",
+        JOIN public.current_offer o ON o.contract_id=c.id
+        WHERE d.contract_id=%s AND d.contract_revision=c.revision AND d.published_at<=%s
+          AND o.facts->>'state'='available'""",
         (payload["id"], at)).fetchone()
     if not found or found["valid_until"] <= at:
-        return unknown("stale_book" if found else "book_unobserved", stake=stake)
+        result = unknown("stale_book" if found else "book_unobserved", stake=stake)
+        return (result, None) if evidence else result
     result = _value(payload, record, found["receipt"], at=at, stake=stake)
-    return dict(_present(result), modeled_fills=result.get("modeled_fills"),
-                published_at=found["published_at"].isoformat(), valid_until=found["valid_until"].isoformat())
+    summary = dict(_present(result), modeled_fills=result.get("modeled_fills"),
+                   published_at=found["published_at"].isoformat(), valid_until=found["valid_until"].isoformat())
+    return (summary, found['receipt']) if evidence else summary

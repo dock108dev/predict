@@ -238,6 +238,41 @@ def test_paginated_event_is_one_invocation_and_second_market_keeps_own_receipt(m
     assert len(result.markets[first['market_id']]['receipt']['sha256']) == 64
 
 
+def test_checkpoint_catalog_shares_kickoff_without_reusing_later_observation(monkeypatch):
+    monkeypatch.setattr(novig, 'REQUEST_SPACING_SECONDS', 0)
+    first = binding()
+    second = dict(binding(3, '-16.5'), event_id=uid(7))
+    start = datetime.fromisoformat(first['starts_at'])
+    calls = []
+    now = CUTOFF-timedelta(seconds=1)
+
+    def server(request):
+        calls.append(request.url)
+        rows = [market(first), market(second)]
+        return httpx.Response(200, json=dict(items=rows, next=None), headers={
+            'date':format_datetime(now, usegmt=True), 'cache-control':'public, max-age=10'})
+
+    async def read():
+        nonlocal now
+        async with novig.NovigExperimentDepth(transport=httpx.MockTransport(server), clock=lambda: now) as client:
+            original, peer = await asyncio.gather(*(client.read_checkpoint_slate('NCAAB', start, CUTOFF)
+                                                   for _ in range(2)))
+            assert peer is original
+            assert novig.catalog_depth(first,peer,CUTOFF)['complete']
+            assert novig.catalog_depth(second,peer,CUTOFF)['complete']
+            assert novig.catalog_depth(dict(second,event_id=first['event_id']),peer,CUTOFF)['reason']
+            now = CUTOFF+timedelta(seconds=29)
+            expired = await client.read_checkpoint_slate('NCAAB', start, CUTOFF)
+            assert expired.reason == 'after_cutoff'
+            followup = await client.read_checkpoint_slate('NCAAB', start, CUTOFF+timedelta(seconds=30))
+            assert followup.receipts != original.receipts
+
+    asyncio.run(read())
+    assert len(calls) == 2
+    assert all(q.params['league']=='NCAAB' and 'event' not in q.params for q in calls)
+    assert int(calls[0].params['startsBefore'])-int(calls[0].params['startsAfter']) == 2
+
+
 @pytest.mark.parametrize('retry_after', ['15', format_datetime(CUTOFF+timedelta(seconds=15), usegmt=True)])
 def test_retry_after_blocks_another_event_and_market_without_network(retry_after):
     calls = []

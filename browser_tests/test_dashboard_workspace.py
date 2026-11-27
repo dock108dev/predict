@@ -41,6 +41,12 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         line="-1.5",
     )
     row["id"] = key["offer_id"]
+    row["liquidity"] = dict(status="full_size", eligible=True, intended_stake_usd="100",
+        modeled_stake_usd="100", modeled_net_ev="0.105", available_purchase_usd="132",
+        modeled_average_price="0.4", modeled_fee_usd="1.85", book_received_at=row["times"]["received_at"],
+        valid_until=row["eligible_until"])
+    public_book = dict(market_id="exact-native-market", outcome_id="exact-native-outcome",
+                       levels=[dict(price="0.4", quantity="330")])
     listing = {"rows": [row], "total": 1, "offset": 0}
     cbb = "South Carolina Gamecocks at Arizona State Sun Devils"
     cbb_rows = []
@@ -54,6 +60,7 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
             game=cbb,
             league="NCAAB",
             family=family,
+            line_role="alternate" if family == "spread" else "main",
             selection_label=label,
             line=line,
             market_id=f"canonical:cbb|{family}|full_game",
@@ -76,6 +83,15 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
 
     def serve(route):
         url = urlparse(route.request.url)
+        if url.hostname == "predict.fixture" and url.path == "/api/research/dashboard-liquidity" and route.request.method == "POST":
+            requests.append(url.path)
+            assert route.request.post_data_json == dict(key, amount="25")
+            route.fulfill(json={"provider_requests": 0, "result": {
+                "liquidity": dict(row["liquidity"], intended_stake_usd="25", modeled_stake_usd="25",
+                                  modeled_net_ev="0.12", modeled_fee_usd="0.46"),
+                "liquidity_evidence": public_book,
+            }})
+            return
         if url.hostname != "predict.fixture" or route.request.method != "GET":
             errors.append("Unexpected external or mutating request")
             route.abort()
@@ -116,6 +132,13 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
                     "availability": states[mode["state"]],
                 }
             )
+        elif url.path == "/api/pregame":
+            assert parse_qs(url.query) == {"data_type": ["all"], "liquidity_coverage": ["1"]}
+            route.fulfill(json={"provider_requests": 0, "coverage": [
+                dict(venue="prophetx", league="NBA", family="spread", main=True, opportunities=4,
+                     assessable=2, full_size=1, ev_assessable=2, intended_stake_usd="400",
+                     observed_supported_stake_usd="120", reasons={"book_unobserved":2})
+            ]})
         elif url.path in ("/api/research/market", "/api/research/market-export"):
             expected = (
                 key
@@ -126,12 +149,15 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
                 }
                 | {"offer_id": alternative["id"]}
             )
-            assert parse_qs(url.query) == {k: [v] for k, v in expected.items()}
+            params = dict(expected, liquidity="1") if url.path == "/api/research/market" else expected
+            assert parse_qs(url.query) == {k: [v] for k, v in params.items()}
             route.fulfill(
                 json={
                     "selected_offer": dict(
                         detail, id=expected["offer_id"], revision=expected["revision"]
-                    )
+                    ),
+                    "liquidity": row["liquidity"],
+                    "liquidity_evidence": public_book,
                 },
                 headers={
                     "Content-Disposition": 'attachment; filename="predict-market-evidence.json"'
@@ -163,10 +189,12 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         expect(
             table.get_by_role("columnheader", name="EV", exact=True)
         ).to_have_attribute("aria-sort", "descending")
-        for value in ("+100", "+120", "+8.80%"):
+        for value in ("+100", "+120"):
             expect(
                 table.get_by_role("cell", name=re.compile(re.escape(value) + "$"))
             ).to_be_visible()
+        expect(table.get_by_text("Quote +8.80%", exact=True)).to_be_visible()
+        expect(table.get_by_text("Full size · +10.50% at $100.00", exact=False)).to_be_visible()
         assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
         trigger = table.get_by_role(
             "button",
@@ -178,6 +206,12 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         expect(
             inspector.get_by_role("heading", name="Reference prices")
         ).to_be_visible()
+        expect(inspector.get_by_role("heading", name="Liquidity at $100.00")).to_be_visible()
+        inspector.get_by_text("Public book evidence", exact=True).click()
+        expect(inspector.get_by_text("exact-native-market", exact=True)).to_be_visible()
+        inspector.get_by_role("button", name="$25", exact=True).click()
+        expect(inspector.get_by_role("heading", name="Liquidity at $25.00")).to_be_visible()
+        expect(inspector.get_by_text("Full size · +12.00% at $25.00", exact=False)).to_be_visible()
         expect(inspector.get_by_text("$0 modeled fees", exact=False)).to_be_visible()
         expect(
             inspector.get_by_text("home (this bet) · -110", exact=False)
@@ -200,6 +234,11 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         inspector.get_by_role("button", name="Close", exact=True).click()
         expect(trigger).to_be_focused()
         expect(table).to_be_visible()
+        coverage = page.locator("#dashboard-liquidity-coverage")
+        coverage.get_by_text("Liquidity coverage", exact=True).click()
+        expect(coverage.get_by_role("cell", name="30.0%", exact=True)).to_be_visible()
+        assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
+        coverage.get_by_text("Liquidity coverage", exact=True).click()
 
         expect(page.get_by_label("Rows per page")).to_have_value("50")
         page.get_by_label("Sport", exact=True).select_option("NBA")
@@ -244,6 +283,7 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         expect(page.locator("#dashboard-page")).to_have_text("1–3 of 3 bets")
         expect(game_rows.nth(1)).to_contain_text(cbb)
         expect(game_rows.nth(1)).to_contain_text("Novig")
+        expect(game_rows.nth(1)).to_contain_text("Alternate")
         other_quotes = game_rows.nth(1).get_by_text("1 other quote", exact=True)
         other_quotes.click()
         other_trigger = game_rows.nth(1).get_by_role(
@@ -286,4 +326,5 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
             expect(status).to_contain_text(text)
             expect(table).to_be_hidden()
         assert requests.count("/api/research/market") == 2
+        assert requests.count("/api/research/dashboard-liquidity") == 1
         assert not errors
