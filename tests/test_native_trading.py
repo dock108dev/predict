@@ -251,6 +251,49 @@ def test_kalshi_related_family_ticks_share_occurrence_and_keep_exact_native_iden
     assert offer["quote"]["source"]["native_event_id"] == "KXNBASPREAD-GAME"
 
 
+def test_current_d1_aliases_match_both_sgo_roles_and_reject_unreviewed_or_reversed_roles():
+    native_roles = dict(home="NCAAB:M:D1:NCAA340", away="NCAAB:M:D1:NCAA83")
+    source_roles = {
+        role: f"sportsgameodds:NCAAB:sgo-game:{role}" for role in native_roles
+    }
+    event = native_event(
+        "polymarket_us",
+        "263982",
+        "NCAAB",
+        KICKOFF,
+        native_roles,
+        dict(home="La Salle", away="Bucknell"),
+        proof={"fixture": "native-participant-ids"},
+    )
+    source = dict(
+        id="sgo-game",
+        competition="NCAAB",
+        scheduled_start=event["scheduled_start"],
+        **source_roles,
+        participants={
+            "La Salle": source_roles["home"],
+            "Bucknell Bison": source_roles["away"],
+        },
+    )
+    saved = dict(event=source, canonical_game_id="pre-existing-game")
+    result = link(event, [saved])
+    assert result["canonical_game_id"] == "pre-existing-game"
+    assert result["roles"] == native_roles
+    aliases = result["evidence"]["college_review"]["sportsgameodds"]
+    assert aliases["home"]["method"] == "exact_institutional_alias"
+    assert aliases["away"]["method"] == "reviewed_season_alias"
+    source["participants"] = {
+        "La Salle": source_roles["away"],
+        "Bucknell Bison": source_roles["home"],
+    }
+    assert link(event, [saved])["status"] == "unresolved"
+    source["participants"] = {
+        "La Salle": source_roles["home"],
+        "Bucknell Bisons": source_roles["away"],
+    }
+    assert link(event, [saved])["status"] == "unresolved"
+
+
 @pytest.mark.parametrize("sgo_id", sorted(college_reviews()["events"]))
 def test_reviewed_college_aliases_map_each_role_without_rewriting_event_ids(sgo_id):
     review = college_reviews()["events"][sgo_id]

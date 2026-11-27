@@ -1,8 +1,11 @@
 from copy import deepcopy
+from datetime import timedelta
 
 import pytest
 
 from app.comparison.native_observation import adopt, clock, revision
+from app.collection.native_trading import NativeTrading
+from app.storage.store import stamp
 from tests.test_liquidity_execution import admitted
 
 
@@ -71,6 +74,25 @@ def test_first_exact_book_replaces_unobserved_inventory():
         sequence=None,
     )
     assert adopt(placeholder, incoming) is incoming
+
+
+def test_one_venue_turn_keeps_both_sides_and_does_not_advance_another_venue():
+    at = stamp("2026-11-27T23:50:00Z")
+    trader = NativeTrading(None, now=lambda: at)
+    event = {"scheduled_start": (at + timedelta(hours=1)).isoformat()}
+    for venue in ("kalshi", "polymarket_us"):
+        for side in ("long", "short"):
+            trader.bindings[f"{venue}-{side}"] = dict(
+                venue=venue,
+                event_id="event",
+                market_id="market",
+                _record={"event": event},
+            )
+    trader.references["polymarket_us-long"] = at + timedelta(minutes=5)
+    assert set(trader._book_plan("kalshi")[0]) == {"kalshi-long", "kalshi-short"}
+    plan, streaming = trader._book_plan("polymarket_us")
+    assert set(plan) == set(streaming) == {"polymarket_us-long", "polymarket_us-short"}
+    assert trader._book_plan("kalshi")[0] == {}
 
 
 def test_cache_clock_is_independent_of_receive_time_and_age():

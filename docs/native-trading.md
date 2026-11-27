@@ -17,7 +17,8 @@ configured six-league 24-hour window separately from book refresh, alternating
 the nearest window with the remaining slate. Book requests group both sides of
 one native market. The two-hour window prioritizes exact sportsbook-reference
 candidates and leaves capacity for the rest of the slate. Kalshi REST reads
-are batched. A bounded Polymarket US subscription reuses a fresh two-sided
+are batched. Each venue refreshes and publishes independently. A bounded
+Polymarket US subscription reuses a fresh two-sided
 market image for priority slugs when the read-only stream is available.
 Overlapping native HTTP consumers share one in-flight receipt and enforce their
 own cutoffs. Source throttles defer work.

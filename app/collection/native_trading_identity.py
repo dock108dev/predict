@@ -140,6 +140,32 @@ def _college_aliases():
     return aliases
 
 
+def _sgo_d1_alias(label, day):
+    from app.normalization.mens_d1_membership import load_membership
+    from .admission_enrichment import college_entrant
+
+    membership = load_membership(day)
+    reviewed = membership.lookup(name=label)
+    institution = college_entrant(label, "NCAAB")
+    canonical = reviewed["canonical_id"] or institution
+    if not canonical or (
+        institution and reviewed["canonical_id"] not in (None, institution)
+    ):
+        return None
+    proof = membership.lookup(name=label, canonical_id=canonical)
+    if proof["division"] != "d1":
+        return None
+    return dict(
+        canonical=canonical,
+        sgo_name=label,
+        method="reviewed_season_alias"
+        if reviewed["canonical_id"]
+        else "exact_institutional_alias",
+        membership_version=proof["membership_version"],
+        sources=proof["sources"],
+    )
+
+
 def _roles(event, venue):
     """Resolve only reviewed source-local team IDs without rewriting evidence."""
     roles = {role: event.get(role) for role in ("home", "away")}
@@ -167,6 +193,8 @@ def _roles(event, venue):
             if subject and current == "novig:team:" + subject:
                 alias = subject
         proof = _college_aliases().get((league, venue, alias))
+        if not proof and alias and league == "NCAAB" and venue == "sportsgameodds":
+            proof = _sgo_d1_alias(alias, stamp(event["scheduled_start"]).date())
         if proof:
             roles[role] = proof["canonical"]
             evidence[role] = proof

@@ -237,11 +237,11 @@ class NativeTrading:
             )
             await asyncio.sleep(1)
 
-    def _book_plan(self):
+    def _book_plan(self, venue_filter):
         at = self.now()
         by_venue = defaultdict(dict)
         for cid, binding in self.bindings.items():
-            if not self.enabled(binding["venue"]):
+            if binding["venue"] != venue_filter:
                 continue
             venue = binding["venue"]
             key = venue, binding["event_id"], binding["market_id"]
@@ -249,7 +249,7 @@ class NativeTrading:
         self.attempted = {
             key: value
             for key, value in self.attempted.items()
-            if key in by_venue[key[0]]
+            if key[0] != venue_filter or key in by_venue[venue_filter]
         }
 
         def rank(item):
@@ -311,7 +311,8 @@ class NativeTrading:
             if bindings
             else {}
         )
-        results.update(await stream.read(hot_pmus, cutoff))
+        if stream is not None:
+            results.update(await stream.read(hot_pmus, cutoff))
         pending = {cid: b for cid, b in bindings.items() if cid not in results}
         results.update(await native.read_native(pending, cutoff, batch=True))
         return results
@@ -345,6 +346,9 @@ class NativeTrading:
                 grouped[b["event_id"]].add(b["market_id"])
         results = {}
         for eid, wanted in grouped.items():
+            if results:
+                await self.save(results)
+                results = {}
             if self.protected() or not self.enabled("novig") or self.now() >= cutoff:
                 break
             (event, proof, reason), inventory = await asyncio.gather(
@@ -413,29 +417,28 @@ class NativeTrading:
                         results[cid] = dict(book, _record=base["_record"])
         return results
 
-    async def books(self, novig, native, stream):
+    async def books(self, novig, native, venue, stream=None):
         while True:
-            if not self.enabled() or self.protected():
-                await stream.read({}, self.now())
+            if not self.enabled(venue) or self.protected():
+                if stream is not None:
+                    await stream.read({}, self.now())
                 await asyncio.sleep(1)
                 continue
-            plan, hot_pmus = self._book_plan()
+            plan, hot_pmus = self._book_plan(venue)
             cutoff = self.now() + timedelta(seconds=READ_SECONDS)
-            reads = await asyncio.gather(
-                self.read_exchanges(native, stream, plan, hot_pmus, cutoff),
-                self.read_prophetx(plan, cutoff),
-                self.read_novig(novig, plan, cutoff),
-                return_exceptions=True,
-            )
-            for venue_results in reads:
-                if isinstance(venue_results, Exception):
-                    from app.diagnostics import failure
-
-                    failure(__name__, "native_depth_read", venue_results)
-                elif venue_results:
-                    await self.save(venue_results)
-            if self.last_pruned is None or self.now() - self.last_pruned >= timedelta(
-                minutes=1
+            if venue == "novig":
+                results = await self.read_novig(novig, plan, cutoff)
+            elif venue == "prophetx":
+                results = await self.read_prophetx(plan, cutoff)
+            else:
+                results = await self.read_exchanges(
+                    native, stream, plan, hot_pmus, cutoff
+                )
+            if results:
+                await self.save(results)
+            elif venue == "novig" and (
+                self.last_pruned is None
+                or self.now() - self.last_pruned >= timedelta(minutes=1)
             ):
                 await self.save({})
             await asyncio.sleep(2)
@@ -516,7 +519,15 @@ class NativeTrading:
         try:
             async with asyncio.TaskGroup() as tasks:
                 tasks.create_task(supervise("native_discovery", self.discovery))
-                tasks.create_task(supervise("native_books", self.books, stream))
+                for venue in BOOKS_PER_TURN:
+                    tasks.create_task(
+                        supervise(
+                            "native_books_" + venue,
+                            self.books,
+                            venue,
+                            stream if venue == "polymarket_us" else None,
+                        )
+                    )
                 tasks.create_task(supervise("native_references", self.references_loop))
         finally:
             await stream.close()
