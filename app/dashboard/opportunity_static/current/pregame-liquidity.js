@@ -1,4 +1,5 @@
 import {ratio} from './pregame-prices.js';
+import {feeAssumption} from './pregame-evidence.js';
 
 const node=(tag,text,cls)=>{
   const element=document.createElement(tag);
@@ -23,7 +24,7 @@ const reasons={
   reference_withdrawn:'A sportsbook price or game schedule changed after this calculation.',
   reference_revision_changed:'A new fair-price reference is awaiting a depth calculation.',
   depth_reference_unavailable:'An exact sportsbook reference is unavailable.',
-  native_observation_superseded:'The current book has changed. Reload saved prices for the latest offer.',
+  native_observation_superseded:'The saved book has been superseded.',
   native_identity_changed:'This market changed. Open the latest offer from the Dashboard.',
   native_game_started:'This game is outside the pregame window.',
   native_schedule_changed:'The schedule changed. Wait for the venue to confirm the new kickoff.',
@@ -45,8 +46,12 @@ function statusText(depth){
   const status=labels[state]||(depth.available_purchase_usd!=null?'Displayed depth':labels.unknown);
   const ev=percent(depth.modeled_net_ev);
   const at=money(depth.modeled_stake_usd);
-  if(ev&&at)return `${status} · ${depth.status==='unknown'?'Observed size ':''}${ev} at ${at}`;
+  if(ev&&at)return `${status} · ${depth.status==='unknown'?'Observed size ':''}${ev} at ${at} · ${depthFeeAssumption(depth)}`;
   return status;
+}
+
+function depthFeeAssumption(depth){
+  return feeAssumption(depth.fee_mode,money(depth.modeled_fee_usd)!==null);
 }
 
 export function liquidityBadge(row){
@@ -82,10 +87,12 @@ export function liquidityDetails(row){
   add('Modeled average buy price',price(depth.modeled_average_price));
   add('Price limit used',price(depth.limit_price));
   const modeledFee=money(depth.modeled_fee_usd),feeLower=money(depth.fee_lower_bound_usd);
-  add('Modeled fee', modeledFee&&depth.fee_is_upper_bound?(feeLower&&feeLower!==modeledFee?
+  const assumption=depthFeeAssumption(depth);
+  add('Modeled fee', depth.fee_mode?.enabled===false?assumption:modeledFee&&depth.fee_is_upper_bound?(feeLower&&feeLower!==modeledFee?
     feeLower+' to '+modeledFee:'Up to '+modeledFee):modeledFee);
-  add('Modeled win profit',money(depth.modeled_win_profit_usd));
-  add('Modeled net EV',percent(depth.modeled_net_ev));
+  const win=money(depth.modeled_win_profit_usd),ev=percent(depth.modeled_net_ev);
+  if(win!==null)add('Modeled win profit',`${win} · ${assumption}`);
+  if(ev!==null)add('Modeled net EV',`${ev} · ${assumption}`);
   add('Calculated',clock(depth.as_of));
   add('Book received',clock(depth.book_received_at||depth.book_known_at));
   add('Venue timestamp',clock(depth.book_source_at));

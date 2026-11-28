@@ -21,6 +21,8 @@ from .sportsgameodds_reference import read_event
 from .store import encoded, hashed, stamp
 
 VERSION = "native-trading-offers-1"
+PUBLICATION_LOCK = 901128
+DASHBOARD_UPDATES_CHANNEL = "predict_novig_dashboard"
 HORIZON = timedelta(hours=24)
 REFERENCE_AGE = timedelta(seconds=900)
 MAX_SNAPSHOT_BYTES = 512 * 1024
@@ -401,10 +403,18 @@ def publish(db, observations, *, at, prune=False):
     at = stamp(at)
     from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage
     from app.collection.sgo_capabilities import CURRENT_BOOKS
+    from app.research.experiment import next_late_storage_reservation, sql_runway_bytes
+    from app.research.records import LOCK as STORAGE_ADMISSION_LOCK
     from .sportsgameodds_reference import HISTORY_RUNWAY
 
     with db.transaction():
-        db.execute("SELECT pg_advisory_xact_lock(901128)")
+        db.execute("SELECT pg_advisory_xact_lock(%s)", (PUBLICATION_LOCK,))
+        if not db.execute(
+            "SELECT pg_try_advisory_xact_lock(%s) acquired", (STORAGE_ADMISSION_LOCK,)
+        ).fetchone()["acquired"]:
+            return dict(
+                state="deferred", reason="native_storage_admission_busy", published=0
+            )
         if prune:
             db.execute(
                 "DELETE FROM public.native_trading_offer WHERE starts_at<=%s",
@@ -418,7 +428,11 @@ def publish(db, observations, *, at, prune=False):
             )
         if not observations:
             return dict(state="ready", published=0)
-        runway = max(0, (SQL_BYTE_CAP - HISTORY_RUNWAY - sql_usage(db)) // 2)
+        # A previously reserved checkpoint may enter its window after the
+        # collector's last priority check. Keep its physical allocation out
+        # of the bytes available to optional native snapshots.
+        protected = max(HISTORY_RUNWAY, sql_runway_bytes(next_late_storage_reservation(db, at=at)))
+        runway = max(0, (SQL_BYTE_CAP - protected - sql_usage(db)) // 2)
         if runway < MAX_SNAPSHOT_BYTES:
             return dict(state="deferred", reason="native_storage_capacity", published=0)
         retained = db.execute(
@@ -477,8 +491,16 @@ def publish(db, observations, *, at, prune=False):
             ):
                 receipt = dict(receipt, reason="native_identity_expired")
             if prior:
+                reported = receipt
                 receipt = adopt(prior["book"], receipt)
                 if receipt is prior["book"]:
+                    # Only the admitted receipt can be revalued against
+                    # changed reference odds. A stale retry is read-only.
+                    if revision(reported) != revision(receipt) or stamp(
+                        reported["received_at"]
+                    ) < stamp(receipt["received_at"]):
+                        refs[cid] = prior["reference_valid_until"]
+                        continue
                     record = prior["record"]
             game_link = link(
                 record["event"], games, prior=prior["game_link"] if prior else None
@@ -592,6 +614,12 @@ def publish(db, observations, *, at, prune=False):
             )
             count += 1
             refs[cid] = reference_until
+            if receipt["venue"] == "novig":
+                notice = dict(sport=event_league(record), family=value["family"], revision=snapshot)
+                db.execute(
+                    "SELECT pg_notify(%s,%s)",
+                    (DASHBOARD_UPDATES_CHANNEL, encoded(notice).decode()),
+                )
         return dict(state="ready", published=count, references=refs)
 
 
@@ -754,7 +782,7 @@ def detail(db, query, *, at, stake="100", frozen=False):
 
     snapshot = query["pull_id"].removeprefix("native:")
     columns = (
-        "SELECT s.payload, "
+        "SELECT s.payload, s.created_at published_at, "
         + REFERENCE_CURRENT
         + " reference_current, "
         + GAME_CLOSED
@@ -845,7 +873,7 @@ def detail(db, query, *, at, stake="100", frozen=False):
             posted=updated["posted"],
             display=updated["display"],
         )
-        preview = updated["liquidity"]
+        preview = dict(updated["liquidity"], published_at=row["published_at"].isoformat())
     else:
         preview = deepcopy(payload["row"]["liquidity"])
         if ref is None or payload.get("fee_mode") != mode:

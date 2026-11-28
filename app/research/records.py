@@ -41,8 +41,8 @@ def _clock(value):
 
 
 def _writer_lock(db):
-    # Serialize the whole-database capacity check with existing ingress writers.
-    # All research mutations take the current-owner lock first, then their own.
+    # Research takes the current-owner lock before its capacity gate. Optional
+    # native writes try only the research gate and never wait for current rows.
     db.execute("SELECT pg_advisory_xact_lock(%s)", (CURRENT_LOCK,))
     db.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK,))
 

@@ -397,6 +397,237 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 self.assertEqual(db.execute('SELECT count(*) AS n FROM market_pull_receipt WHERE pull_id=%s',
                                             (pull_id,)).fetchone()['n'], 1)
 
+    async def test_ordinary_ingress_first_shares_physical_capacity_with_native(self):
+        await self.race_ordinary_and_native(native_first=False)
+
+    async def test_native_first_protects_ordinary_ingress_and_the_opening_checkpoint(self):
+        await self.race_ordinary_and_native(native_first=True)
+
+    async def race_ordinary_and_native(self, *, native_first):
+        import asyncio
+        from threading import Event
+        from unittest.mock import AsyncMock
+
+        from app.collection import current_database, current_storage_policy, mens_d1_jobs
+        from app.collection.current_ingress import Ingress
+        from app.collection.current_policy import DEFAULT
+        from app.collection.native_trading import NativeTrading
+        from app.collection.runtime_status import RuntimeState
+        from app.collection.sportsgameodds_collector import GuardedPageCollector
+        from app.collection.sportsgameodds_worker import SportsGameOddsWorker
+        from app.research import records
+        from app.storage import acquisition_snapshot, native_trading, sportsgameodds_reference
+        from tests.test_native_trading_sql import native_book
+
+        now = experiment.utc
+        at = now()
+        self.at = at
+        target = at + timedelta(seconds=3)
+        ordinary = source_data(at + timedelta(hours=2))
+        ordinary_id = ordinary['data'][0]['eventID'] = 'ordinary-headroom-page'
+        late = source_data(target + timedelta(seconds=experiment.LATE_SECONDS))
+        late_id = late['data'][0]['eventID'] = 'protected-headroom-checkpoint'
+        context = page()
+        context['data'][0]['eventID'] = 'native-headroom-anchor'
+        context['data'][0]['status']['startsAt'] = (at + timedelta(hours=1)).isoformat()
+        with self.connect() as db:
+            self.ingest(db, context)
+        source = self.frame(late)
+        game = acquisition.event_metadata(source.events[0], source.receipt_sha256)
+        with self.connect() as db:
+            db.execute('TRUNCATE native_trading_offer,native_trading_snapshot,native_trading_sgo_game')
+            _, book = native_book(db, at)
+            observed = target - timedelta(minutes=2)
+            experiment.discover(db, [game], at=observed)
+            early, = experiment.due(db, at=observed)
+            snapshot = dict(event=dict(home=game['home'], away=game['away'], competition='NBA',
+                scheduled_start=game['starts_at']), times=dict(received_at=observed.isoformat(),
+                known_at=observed.isoformat()), offers=[], coverage={})
+            # Exercise the real adaptive early-to-late reservation, including a
+            # paired market publication estimate near native's static floor.
+            paired = 4 * (19 * current_storage_policy.MIB) // 5
+            saved = experiment.capture(db, early['game_id'], 'early', snapshot,
+                token=early['token'], requested_at=observed, received_at=observed, known_at=observed,
+                market_publication_bytes=paired)
+            self.assertEqual(saved['state'], 'captured')
+            protected = db.execute('SELECT late_reserved_bytes FROM ev_experiment_game').fetchone()['late_reserved_bytes']
+            deadline = db.execute("SELECT deadline_at FROM ev_experiment_task WHERE checkpoint='late'").fetchone()['deadline_at']
+
+        fetch_started = asyncio.Event()
+        finish_fetch = asyncio.Event()
+        late_storage = []
+        requests = []
+
+        async def fetch(params, _key):
+            requests.append(params)
+            if 'leagueID' in params:
+                fetch_started.set()
+                await finish_fetch.wait()
+                body = ordinary
+            else:
+                self.assertEqual(params['eventIDs'], late_id)
+                with self.connect() as db:
+                    late_storage.append(db.execute('''SELECT t.state,g.late_reserved_bytes
+                        FROM ev_experiment_task t JOIN ev_experiment_game g ON t.game_id=g.id
+                        WHERE t.checkpoint='late' ''').fetchone())
+                body = late
+            received = now()
+            return PageResponse(200, json.dumps(body).encode(), received.isoformat(), None)
+
+        service = SimpleNamespace(database_mode=True, runtime_id='fixture-headroom', dispatch=True,
+            globally_stopped=False, paused_sources=set(), states={}, status=lambda: {},
+            config=dict(DEFAULT, enabled=True, aggregate_enabled=True,
+                        aggregate_provider='sportsgameodds', sports=['NBA']))
+        RuntimeState(self.connect).write(service)
+        service.sink = current_database.DatabaseIngressSink(SimpleNamespace(provider=service), service.config)
+        service.sink.finish = lambda prepared, _states: dict(current_rows_changed=prepared[2])
+        service.ingress = Ingress(service)
+        worker = SportsGameOddsWorker(service, transport=SimpleNamespace(fetch=fetch),
+            now=now, ledger_path=self.directory / 'headroom.sqlite3')
+        worker.key = 'fixture-key'
+        worker.window_id = 'fixture-window'
+        worker.ledger = ObjectLedger(worker.ledger_path)
+        reset = at.replace(microsecond=0) + timedelta(days=1)
+        worker.ledger.create_window(worker.window_id, limit=1000, initial_used=0, reserve=100,
+            reset_at=reset, requests_per_minute=50)
+        worker.state = AsyncMock()
+        async def usage():
+            return dict(used=worker.ledger.status(worker.window_id)['charged'], limit=1000,
+                reset_at=reset, requests_per_minute=50, at=now())
+        worker.collector = GuardedPageCollector(worker.ledger, worker.window_id, worker.transport,
+            controls=worker.controls, account_usage=usage, eligible=worker.request_in_scope_async,
+            eligible_after_reservation=worker.dispatch_in_scope, receipt_retainer=worker.retain_original)
+        service.workers = {'sportsgameodds': worker}
+        job = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        owner = SimpleNamespace(service=service, _near_checkpoint=lambda: False)
+        # The real DB guard looks ahead 90 seconds. Use its injected native
+        # priority clock to place both checks before that edge, then let the
+        # normal scheduler and PostgreSQL finish using the actual deadline.
+        priority_clock = target - mens_d1_jobs.PRESSURE_FLOOR - timedelta(milliseconds=1)
+        trader = NativeTrading(owner, connector=self.connect, now=lambda: priority_clock)
+        ingress_entered, native_entered, release = Event(), Event(), Event()
+        original_upsert, original_publish = sportsgameodds_reference.upsert_rows, native_trading.publish
+        seen = {}
+
+        def block_ingress(db, rows):
+            seen['ingress_entered'] = now()
+            ingress_entered.set()
+            if not native_first:
+                self.assertTrue(release.wait(6), 'ordinary fixture release')
+            return original_upsert(db, rows)
+
+        def block_native(db, observations, **kwargs):
+            seen['native_final_priority_check_passed'] = now()
+            native_entered.set()
+            if native_first:
+                self.assertTrue(release.wait(6), 'native fixture release')
+            return original_publish(db, observations, **dict(kwargs, at=now()))
+
+        params = worker.params(league='NBA', starts_after=at.isoformat())
+        with (patch('app.storage.store.connect', side_effect=self.connect),
+              patch.object(acquisition, 'connect', side_effect=self.connect),
+              patch.object(current_database, 'connect', side_effect=self.connect),
+              patch.object(sportsgameodds_reference, 'upsert_rows', side_effect=block_ingress),
+              patch.object(native_trading, 'publish', side_effect=block_native)):
+            in_flight = asyncio.create_task(worker._fetch(params))
+            self.addCleanup(in_flight.cancel)
+            await asyncio.wait_for(fetch_started.wait(), 5)
+            with self.connect() as db:
+                physical_before = current_storage_policy.sql_usage(db)
+                ordinary_reserved = records.retention_usage(db)['market_page_reserved_bytes']
+            self.assertEqual(ordinary_reserved, acquisition_snapshot.ORDINARY_PAGE_BYTES)
+            native_minimum = sportsgameodds_reference.HISTORY_RUNWAY + 2 * native_trading.MAX_SNAPSHOT_BYTES
+            late_minimum = 3 * protected + 8 * current_storage_policy.MIB
+            # Fit the fixture's ordinary page but leave less runway than a
+            # native publication needs above the protected reservation.
+            cap = physical_before + max(native_minimum, late_minimum) + 640 * 1024
+            with (patch.object(current_storage_policy, 'SQL_BYTE_CAP', cap),
+                  patch.object(current_database, 'SQL_BYTE_CAP', cap)):
+                try:
+                    if native_first:
+                        native_job = asyncio.create_task(asyncio.to_thread(trader.write, {'fixture': book}))
+                        self.assertTrue(await asyncio.to_thread(native_entered.wait, 5))
+                        finish_fetch.set()
+                        await asyncio.sleep(max(0, (target - now()).total_seconds()))
+                        late_job = asyncio.create_task(job.tick())
+                        self.addCleanup(late_job.cancel)
+                        async with asyncio.timeout(2):
+                            while True:
+                                with self.connect() as db:
+                                    waiting = db.execute("""SELECT EXISTS (SELECT 1 FROM pg_locks
+                                        WHERE database=(SELECT oid FROM pg_database WHERE datname=current_database())
+                                          AND locktype='advisory' AND objid=%s AND NOT granted) AS waiting""",
+                                        (records.LOCK,)).fetchone()['waiting']
+                                if waiting:
+                                    seen['late_claim_awaiting_admission'] = now()
+                                    break
+                                await asyncio.sleep(0.01)
+                        self.assertFalse(in_flight.done())
+                        seen['ingress_before_native_release'] = ingress_entered.is_set()
+                        seen['native_release'] = now()
+                        release.set()
+                        native = await asyncio.wait_for(native_job, 6)
+                    else:
+                        finish_fetch.set()
+                        self.assertTrue(await asyncio.to_thread(ingress_entered.wait, 5))
+                        native = await asyncio.to_thread(trader.write, {'fixture': book})
+                        release.set()
+                    await asyncio.wait_for(in_flight, 6)
+                    if not native_first:
+                        await asyncio.sleep(max(0, (target - now()).total_seconds()))
+                        late_job = asyncio.create_task(job.tick())
+                    captured = await asyncio.wait_for(late_job, 12)
+                finally:
+                    release.set()
+
+        with self.connect() as db:
+            commit_function = db.execute("SELECT current_setting('track_commit_timestamp') enabled").fetchone()['enabled']
+            clock = 'pg_xact_commit_timestamp(r.xmin)' if commit_function == 'on' else 'clock_timestamp()'
+            result = db.execute(f'''SELECT t.state,t.result_id,t.last_reason,r.recorded_at,
+                {clock} AS commit_at,g.late_reserved_bytes FROM ev_experiment_task t
+                JOIN ev_experiment_game g ON t.game_id=g.id
+                LEFT JOIN ev_experiment_record r ON t.result_id=r.id WHERE t.checkpoint='late' ''').fetchone()
+            frame_clock = 'pg_xact_commit_timestamp(xmin)' if commit_function == 'on' else 'NULL'
+            frame = db.execute(f'''SELECT {frame_clock} AS commit_at,facts->>'receipt_sha256' AS receipt
+                FROM sgo_event_evidence WHERE kind='frame' AND event_id=%s''', (ordinary_id,)).fetchone()
+            accepted = db.execute('''SELECT receipt_sha256 FROM market_pull_receipt
+                WHERE membership->'event_ids'=%s::jsonb AND received_at >= %s''',
+                (json.dumps([ordinary_id]), at)).fetchall()
+            current_usage = records.retention_usage(db)
+            physical_after = current_storage_policy.sql_usage(db)
+        ledger = worker.ledger.status(worker.window_id)
+        print(json.dumps(dict(order='native-first' if native_first else 'ordinary-first',
+            cap=cap, physical_before=physical_before, physical_after=physical_after,
+            protected_before=protected, late_dispatch_minimum=late_minimum,
+            native_admission_minimum=native_minimum, ordinary_reserved=ordinary_reserved,
+            ordinary_reserved_after=current_usage['market_page_reserved_bytes'],
+            target=target, deadline=deadline, native=native, late_storage=late_storage, ordinary_frame=frame,
+            result=result, time_to_tminus9=(deadline-result['commit_at']).total_seconds() if result['commit_at'] else None,
+            commit_clock='pg_xact_commit_timestamp' if commit_function == 'on' else 'first_visible_sql_read',
+            native_priority_clock=priority_clock if native_first else None, seen=seen,
+            requests=len(requests), charged=ledger['charged'], held=ledger['held'],
+            ingress_transaction_retries=service.sink.metrics.get('transaction_retries', 0)),
+            default=str), flush=True)
+        self.assertTrue(captured)
+        self.assertEqual(result['state'], 'captured', result)
+        self.assertLessEqual(result['commit_at'], deadline)
+        self.assertEqual(result['late_reserved_bytes'], 0)
+        self.assertTrue(late_storage and 0 < late_storage[0]['late_reserved_bytes'] <= protected)
+        self.assertEqual(late_storage[0]['state'], 'claimed')
+        self.assertLess(physical_after, cap)
+        self.assertEqual(current_usage['market_page_reserved_bytes'], 0)
+        self.assertIsNotNone(frame)
+        self.assertEqual(accepted, [dict(receipt_sha256=frame['receipt'])])
+        self.assertEqual((len(requests),ledger['charged'],ledger['held'],ledger['interrupted']), (2,2,0,0))
+        if native_first:
+            self.assertLess(seen['native_final_priority_check_passed'], target)
+            self.assertGreaterEqual(seen['late_claim_awaiting_admission'], target)
+            self.assertFalse(seen['ingress_before_native_release'])
+            self.assertGreater(service.sink.metrics.get('transaction_retries', 0), 0)
+            self.assertEqual(native, dict(state='deferred', reason='native_storage_capacity', published=0))
+        else:
+            self.assertEqual(native.get('reason'), 'native_storage_admission_busy')
+
     async def test_postgame_followup_runs_without_browser_and_final_stops_future_requests(self):
         now=datetime.now(timezone.utc)
         start=now-timedelta(hours=4)+timedelta(seconds=1)

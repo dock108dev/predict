@@ -29,6 +29,17 @@ export function freshness(row){
 }
 setInterval(()=>{for(const e of document.querySelectorAll('[data-evidence]')){e.textContent=freshnessText(JSON.parse(e.dataset.evidence));}},30000);
 
+export function feeAssumption(mode,available){
+ if(mode?.enabled===false)return 'Fees excluded';
+ if(available===false)return 'Fees unavailable';
+ return mode?.enabled===true?'Fees included':'Fee assumption unavailable';
+}
+
+export function quoteFeeAssumption(row){
+ const fee=row.fee||{},mode=row.fee_mode??fee.fee_mode??fee.evidence?.fee_mode;
+ return feeAssumption(mode,fee.available!==false&&Number.isFinite(number(fee.entry_usd)));
+}
+
 export function feeRows(row){
  const fee=row.fee||{},cash=fee.cashflows||{},entry=number(fee.entry_usd),committed=number(fee.committed_usd),reserve=number(fee.reserve_usd??'0');
  const rows=[['Stake / purchase amount',money(fee.purchase_usd!=null?number(fee.purchase_usd):committed-entry-reserve)],['Total upfront cash committed',money(committed)],['Acquisition fee (included upfront)',money(entry)]];
@@ -43,13 +54,16 @@ export function feeRows(row){
 export function payoutExample(row){
  const section=node('section',undefined,'payout-example'),fee=row.fee||{},cash=fee.cashflows||{};
  const committed=number(fee.committed_usd),entry=number(fee.entry_usd),reserve=number(fee.reserve_usd??'0'),win=number(cash.win?.net_receipt_usd);
+ const assumption=quoteFeeAssumption(row);
  section.append(node('h3','What this price means'));
- if(!Number.isFinite(committed)||!Number.isFinite(win)){section.append(node('p','Price available; payout and fees are not fully available. Verify the venue terms.'));return section;}
- section.append(node('p',money(fee.purchase_usd!=null?number(fee.purchase_usd):committed-entry-reserve)+' stake / purchase → '+money(committed)+' committed upfront → '+money(win)+' total returned if this pick wins → '+money(win-committed)+' net profit.','payout-summary'));
+ if(!Number.isFinite(committed)||!Number.isFinite(win)){
+  section.append(node('p','Price available. Payout unavailable. '+assumption+'.'));return section;
+ }
+ section.append(node('p',money(fee.purchase_usd!=null?number(fee.purchase_usd):committed-entry-reserve)+' stake / purchase → '+money(committed)+' committed upfront → '+money(win)+' total returned if this pick wins → '+money(win-committed)+' net profit · '+assumption+'.','payout-summary'));
  const loss=node('p','If it loses: '+money(number(cash.loss?.net_receipt_usd))+' returned; '+money(number(cash.loss?.net_receipt_usd)-committed)+' net profit. Illustrative outcomes; available size is unverified.');
  const detail=node('details'),dl=node('dl');detail.append(node('summary','Upfront and outcome fees'));section.append(loss);
  for(const [label,value]of feeRows(row))dl.append(node('dt',label),node('dd',value));detail.append(dl);
- if(row.reference&&row.raw?.net_ev!==null&&row.raw?.net_ev!==undefined)section.append(node('p','Modeled EV '+(row.display.net_ev||'unavailable')+' means expected profit of '+money(row.raw.expected_profit_usd!=null?number(row.raw.expected_profit_usd):number(row.raw.net_ev)*committed)+' on '+money(committed)+' committed, conditional on the reference probability and these fee inputs. It is not a promised return.'));
+ if(row.reference&&row.raw?.net_ev!==null&&row.raw?.net_ev!==undefined)section.append(node('p','Modeled EV '+(row.display.net_ev||'unavailable')+' · '+assumption+'. That means expected profit of '+money(row.raw.expected_profit_usd!=null?number(row.raw.expected_profit_usd):number(row.raw.net_ev)*committed)+' on '+money(committed)+' committed, conditional on the recorded probability and fee inputs.'));
  else section.append(node('p','Price available; EV unavailable'+(row.ev_unavailable_reason?': '+row.ev_unavailable_reason.replaceAll('_',' '):'. Probability inputs are not available.')));
  section.append(detail);return section;
 }

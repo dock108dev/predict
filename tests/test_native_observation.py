@@ -1,5 +1,7 @@
+import asyncio
 from copy import deepcopy
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -74,6 +76,67 @@ def test_first_exact_book_replaces_unobserved_inventory():
         sequence=None,
     )
     assert adopt(placeholder, incoming) is incoming
+
+
+def test_novig_reads_next_event_while_previous_event_write_waits(monkeypatch):
+    at = stamp("2026-11-27T23:50:00Z")
+    plan = {
+        event: dict(venue="novig", event_id=event, market_id=event)
+        for event in ("first", "second")
+    }
+    monkeypatch.setattr(
+        "app.collection.native_trading.novig_bindings",
+        lambda event, *_args, **_kwargs: {event["eventId"]: plan[event["eventId"]]},
+    )
+    monkeypatch.setattr(
+        "app.collection.native_trading.book_depth",
+        lambda *_args, **_kwargs: {"reason": "timeout"},
+    )
+
+    async def run():
+        writer_started = asyncio.Event()
+        release_writer = asyncio.Event()
+        second_read = asyncio.Event()
+        writes = []
+        trader = NativeTrading(None, now=lambda: at)
+        trader.enabled = lambda _venue=None: True
+        trader.protected = lambda: False
+
+        async def save(batch):
+            writes.append(list(batch))
+            if "first" in batch:
+                writer_started.set()
+                await release_writer.wait()
+
+        class Novig:
+            async def read_event_metadata(self, event, cutoff, *, lifecycle):
+                if event == "second":
+                    await writer_started.wait()
+                    second_read.set()
+                return {"eventId": event, "status": "OPEN_PREGAME"}, {}, None
+
+            async def read_event(self, event, cutoff, *, moneyline):
+                return SimpleNamespace(markets={}, reason=None)
+
+            async def read_book(self, market, cutoff):
+                return None
+
+        trader.save = save
+        # Minimal normalized bindings for the catalog fallback.
+        for binding in plan.values():
+            binding["_binding"] = {}
+        turn = asyncio.create_task(
+            trader.read_novig(Novig(), plan, at + timedelta(seconds=6))
+        )
+        try:
+            await asyncio.wait_for(second_read.wait(), timeout=2)
+            assert writes == [["first"]]
+        finally:
+            release_writer.set()
+            assert await turn
+        assert writes == [["first"], ["second"]]
+
+    asyncio.run(run())
 
 
 def test_one_venue_turn_keeps_both_sides_and_does_not_advance_another_venue():

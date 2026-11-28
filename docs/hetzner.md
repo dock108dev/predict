@@ -143,6 +143,125 @@ identity cannot be resolved, and never forces image removal. A maintenance refus
 is reported separately from release health. No volume, database, archive or backup
 is removed by image maintenance.
 
+### Collector recovery after the Win $25 receipt expansion
+
+Migration 129 raises the Win $25 receipt limit from 512 KiB to 8 MiB. The
+previous collector can only drain the legacy SQLite table. It also requires the
+exact migration file to start against the upgraded PostgreSQL ledger. Recover
+the collector independently of web and archive. Keep the current PostgreSQL
+volume and schema so the campaign, saved runs, and receipts committed since the
+migration remain available.
+
+From `/srv/predict`, use the installed Compose file and the same optional
+`archive.env` and `postgres-roles.env` files as the normal release. In Bash,
+initialize these commands under the host release lock. For a successful
+rollout, use the collector digests from `current-images.env` and
+`previous-images.env`. If rollout failed after migration, use the attempted
+candidate digest from that release and the pre-rollout digest from the retained
+release record. Image manifests are recorded only after health checks pass.
+
+```bash
+exec 9>deploy.lock
+flock -x 9
+compose=(docker compose --env-file current-images.env)
+for file in archive.env postgres-roles.env; do
+    if [[ -f $file ]]; then compose+=(--env-file "$file"); fi
+done
+compose+=(-f compose.yml --profile collection --profile archive)
+candidate_collector=$(sed -n 's/^PREDICT_COLLECTOR_IMAGE=//p' current-images.env)
+previous_collector=$(sed -n 's/^PREDICT_COLLECTOR_IMAGE=//p' previous-images.env)
+[[ $candidate_collector =~ ^ghcr\.io/dock108dev/predict@sha256:[a-f0-9]{64}$ ]]
+[[ $previous_collector =~ ^ghcr\.io/dock108dev/predict@sha256:[a-f0-9]{64}$ ]]
+```
+
+1. Stop `collector`. Using the installed candidate image, take a consistent
+   copy of its exact spool and run the spool initialization below. It moves
+   already-accepted larger rows and their associated decision or follow-up out
+   of the previous collector's `staged` table in one SQLite transaction.
+   Proceed after the command succeeds. Preserve the backup alongside the
+   spool.
+
+   ```bash
+   "${compose[@]}" stop collector
+   PREDICT_COLLECTOR_IMAGE="$candidate_collector" "${compose[@]}" \
+       run --rm --no-deps -T collector python - <<'PY'
+   from contextlib import closing
+   from pathlib import Path
+   import sqlite3
+   from tempfile import NamedTemporaryFile
+
+   from app.collection.current_storage_policy import require_disk_space
+   from app.collection.experiment_depth_stage import DepthStage
+
+   path = Path('/predict/.local/predict-current/experiment-depth-stage.sqlite3')
+   if path.exists():
+       require_disk_space(path, 3 * path.stat().st_size + 128 * 1024)
+       with NamedTemporaryFile(prefix='experiment-depth-before-rollback-',
+                              suffix='.sqlite3', dir=path.parent, delete=False) as copy:
+           with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(copy.name)) as backup:
+               source.backup(backup)
+           print('Retained spool copy:', copy.name)
+   DepthStage(path).initialize()
+   with closing(sqlite3.connect(path)) as spool:
+       legacy = spool.execute('SELECT count(*) FROM staged').fetchone()[0]
+       parked = spool.execute('SELECT count(*) FROM staged_large').fetchone()[0]
+   print('Legacy receipts:', legacy, 'Parked receipts:', parked)
+   PY
+   ```
+
+2. Copy the byte-identical `129_experiment_depth_receipt_capacity.sql` from
+   the installed candidate image to a private host directory. Use a temporary
+   Compose override for the collector only. Set `image` to the verified
+   previous collector digest and bind the copied file read-only at
+   `/predict/app/storage/migrations/129_experiment_depth_receipt_capacity.sql`.
+   Keep the normal `./state` mount.
+
+   ```bash
+   recovery_dir=$(mktemp -d "$PWD/.collector-recovery.XXXXXXXX")
+   override="$recovery_dir/compose.yml"
+   receipt_migration="$recovery_dir/129_experiment_depth_receipt_capacity.sql"
+   container=$(docker create --network none --entrypoint /bin/true "$candidate_collector")
+   docker cp "$container:/predict/app/storage/migrations/129_experiment_depth_receipt_capacity.sql" \
+       "$receipt_migration"
+   docker rm "$container"
+   chmod 0644 "$receipt_migration"
+   cat > "$override" <<EOF
+   services:
+     collector:
+       image: $previous_collector
+       volumes:
+         - type: bind
+           source: $receipt_migration
+           target: /predict/app/storage/migrations/129_experiment_depth_receipt_capacity.sql
+           read_only: true
+           bind:
+             create_host_path: false
+   EOF
+   fallback=("${compose[@]}" -f "$override")
+   status=$("${fallback[@]}" run --rm --no-deps -T collector python -m app.storage migration-status)
+   [[ $status == 0 ]]
+   ```
+
+   Start the fallback with `"${fallback[@]}" up -d --no-deps --wait collector`
+   after `migration-status` prints `0`, if the collector was running before
+   recovery. The previous collector can drain its original-sized entries. The
+   parked receipts keep their hashes, clocks, and follow-up links. A write guard
+   preserves the parked occurrence if the previous collector tries to recapture it.
+
+3. To return to the candidate, run `"${fallback[@]}" stop collector`. If
+   collection should be running, use the main Compose file to recreate the
+   candidate with the same state mount.
+
+   ```bash
+   PREDICT_COLLECTOR_IMAGE="$candidate_collector" "${compose[@]}" \
+       up -d --no-deps --force-recreate --wait collector
+   ```
+
+   The candidate drains both tables and resolves already committed entries
+   against their original IDs. Review dispositions for the parked receipts.
+   Keep the backup as recovery evidence. Reusing it as the active spool would
+   discard any intervening staging and disposition changes.
+
 Create a private `postgres-bootstrap` file with a random password for a new
 cluster. The database uses a shared Unix socket and a persistent `predict_postgres`
 volume. Compose gives both services a 4 GiB SQL storage ceiling. PostgreSQL

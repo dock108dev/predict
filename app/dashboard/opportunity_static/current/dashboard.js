@@ -1,11 +1,11 @@
 import {ageNode, updateRelativeAges} from './board-elements.js';
-import {payoutExample} from './pregame-evidence.js';
+import {payoutExample, quoteFeeAssumption} from './pregame-evidence.js';
 import {explanation} from './pregame-explanation.js';
 import {bookName} from './pregame-labels.js';
 import {coverageRows, liquidityBadge, liquidityDetails} from './pregame-liquidity.js';
 import {priceDisplay} from './pregame-prices.js';
 import {amountResearch} from './research-tools.js';
-import {dateTime, percent, readable, selection} from './workspace-format.js';
+import {dateTime, number, percent, readable, selection} from './workspace-format.js';
 
 const byId = id => document.getElementById(id);
 const rows = byId('dashboard-rows');
@@ -21,12 +21,18 @@ const coverage = byId('dashboard-liquidity-coverage');
 const coverageContent = byId('dashboard-liquidity-content');
 const filterNames = ['sport', 'family', 'venue', 'view'];
 const defaultPageSize = '50';
+const initialUpdatesDelay = 2000;
+const maxUpdatesDelay = 15000;
 const field = name => filters.elements.namedItem(name);
 const pageSize = () => Number(field('rows').value);
 let offset = 0;
 let snapshot;
 let read;
 let refreshTimer;
+let updates;
+let updatesRetryTimer;
+let updatesDelay = initialUpdatesDelay;
+let refreshAfterRead = false;
 let closed = false;
 let selectedQuote;
 let evidenceRead;
@@ -97,6 +103,7 @@ function bet(row) {
 const quoteKey = row => `${row.pull_id}:${row.id}`;
 const current = row => Date.parse(row.eligible_until) > Date.now();
 const ev = row => row.display.net_ev || (row.calculation.net_ev_percent == null ? 'EV unavailable' : percent(row.calculation.net_ev_percent));
+const cash = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'});
 
 function visibleQuote(row) {
   if (!row.native_source) return current(row) ? row : null;
@@ -136,11 +143,31 @@ function availableLiquidity(row) {
 }
 
 function dashboardBadge(row) {
-  const liquidity = availableLiquidity(row);
+  let liquidity = availableLiquidity(row);
   if (row.native_source && liquidity && row.calculation.status === 'unavailable') {
-    return liquidityBadge({liquidity: {...liquidity, modeled_net_ev: null}});
+    liquidity = {...liquidity, modeled_net_ev: null};
   }
-  return liquidityBadge({liquidity});
+  const badge = liquidityBadge({liquidity});
+  if (!badge || !row.native_source || row.venue !== 'novig') return badge;
+  const expiresAt = row.liquidity?.valid_until || row.eligible_until;
+  const expired = row.book_status === 'stale' ||
+    (row.book_status !== 'unobserved' && liquidity.reason === 'stale_book');
+  if (expired) {
+    badge.dataset.depthStatus = 'unknown';
+    badge.replaceChildren('Book expired');
+    if (Number.isFinite(Date.parse(expiresAt))) badge.append(node('span', dateTime(expiresAt)));
+    return badge;
+  }
+  if (Date.parse(expiresAt) > Date.now() && row.book_status !== 'unobserved') {
+    const supported = number(liquidity.modeled_stake_usd);
+    if (supported > 0 && liquidity.reason !== 'fee_mode_changed' &&
+        ['full_size', 'partial_size'].includes(liquidity.size_status || liquidity.status)) {
+      badge.append(node('span', `Fresh book · ${cash.format(supported)} supported`));
+    } else if (['empty', 'confirmed_empty'].includes(liquidity.status)) {
+      badge.append(node('span', 'Fresh book'));
+    }
+  }
+  return badge;
 }
 
 function evidenceButton(row, label) {
@@ -224,7 +251,7 @@ function renderEvidence(row, evidence, query, signal) {
       const details = liquidityDetails(modeled);
       const price = modeled.preview_offer ? facts([['Venue price used for preview', venuePrice(modeled.preview_offer)]]) : null;
       output.replaceChildren(...[price, details].filter(Boolean));
-    }, {signal});
+    }, {signal, savedLiquidity: native.row?.liquidity});
     const sources = facts([
       ['Saved venue price', venuePrice(native.row || row)],
       ['Venue event', native.book.event_id],
@@ -266,7 +293,7 @@ function renderEvidence(row, evidence, query, signal) {
     ['Posted odds', row.display.posted_odds],
     ['Original source value', exactPrice(row)],
     ['Fair odds', row.display.fair_odds],
-    ['Net EV', row.display.net_ev],
+    ['Net EV', row.display.net_ev == null ? null : `${row.display.net_ev} · ${quoteFeeAssumption(stored)}`],
     ['Source', stored.source?.provider === 'sportsgameodds' ? 'SportsGameOdds' : bookName(stored.source?.provider)],
     ['Source timestamp', row.times?.source_at],
     ['Received', row.times?.received_at],
@@ -294,7 +321,7 @@ function renderEvidence(row, evidence, query, signal) {
   actions.append(link('Open original odds pull in Data', '/data?' + new URLSearchParams({evidence: 'pulls', pull: row.pull_id, sport: row.league, family: row.family})),
     link('Export this calculation', '/api/research/market-export?' + query));
 
-  const book = {liquidity: availableLiquidity({...row, liquidity: evidence.liquidity || row.liquidity}),
+  const book = {liquidity: evidence.liquidity || row.liquidity,
     liquidity_evidence: evidence.liquidity_evidence};
   const size = book.liquidity ? amountResearch('dashboard', {...row, ...book}, (output, modeled) => {
     const currentBook = liquidityDetails(modeled);
@@ -403,11 +430,51 @@ function schedule() {
     .map(Date.parse).filter(at => at > now));
   const delay = deadline > now ? Math.min(30000, deadline - now) : 30000;
   refreshTimer = setTimeout(() => {
-    if (deadline <= Date.now()) {
-      if (snapshot) render(snapshot);
-      if (!read) refresh();
-    } else refresh();
+    if (deadline <= Date.now() && snapshot) render(snapshot);
+    requestRefresh();
   }, delay);
+}
+
+function requestRefresh() {
+  if (closed || document.hidden) return;
+  if (read) refreshAfterRead = true;
+  else refresh();
+}
+
+function stopUpdates() {
+  clearTimeout(updatesRetryTimer);
+  updatesDelay = initialUpdatesDelay;
+  updates?.close();
+  updates = undefined;
+  refreshAfterRead = false;
+}
+
+function watchUpdates() {
+  stopUpdates();
+  connectUpdates();
+}
+
+function connectUpdates() {
+  if (closed || document.hidden || field('venue').value !== 'novig' || typeof EventSource === 'undefined') return;
+  const query = new URLSearchParams();
+  for (const name of ['sport', 'family']) if (field(name).value) query.set(name, field(name).value);
+  const stream = new EventSource('/api/research/dashboard-updates?' + query);
+  updates = stream;
+  stream.onmessage = () => {
+    if (updates !== stream) return;
+    updatesDelay = initialUpdatesDelay;
+    // The listener's ready event and revision notices both read from committed data.
+    requestRefresh();
+  };
+  stream.onerror = () => {
+    if (updates !== stream) return;
+    // HTTP errors can close EventSource permanently. Own one retry path also for network errors.
+    stream.close();
+    updates = undefined;
+    if (closed || document.hidden) return;
+    updatesRetryTimer = setTimeout(connectUpdates, updatesDelay);
+    updatesDelay = Math.min(updatesDelay * 2, maxUpdatesDelay);
+  };
 }
 
 async function get(path, params, signal) {
@@ -467,7 +534,10 @@ async function refresh() {
       reload.disabled = false;
       previous.disabled = !snapshot || offset === 0;
       next.disabled = !snapshot || offset + pageSize() >= snapshot.total;
-      schedule();
+      if (refreshAfterRead && !document.hidden) {
+        refreshAfterRead = false;
+        refresh();
+      } else schedule();
     }
   }
 }
@@ -481,6 +551,7 @@ function refreshSelection() {
   byId('dashboard-table').hidden = byId('dashboard-pages').hidden = true;
   updateHeading();
   clear.hidden = !filterNames.some(name => field(name).value);
+  watchUpdates();
   refresh();
   if (coverage.open) refreshCoverage();
 }
@@ -505,13 +576,18 @@ clear.onclick = () => {
 window.addEventListener('popstate', () => { readLocation(); refreshSelection(); });
 const ageTimer = setInterval(() => updateRelativeAges(rows), 1000);
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) clearTimeout(refreshTimer);
+  if (document.hidden) {
+    stopUpdates();
+    clearTimeout(refreshTimer);
+  }
   else if (!closed) {
-    if (snapshot?.rows.some(row => !current(row) || row.other_quotes?.some(quote => !current(quote)))) render(snapshot);
+    if (snapshot) render(snapshot);
+    watchUpdates();
     refresh();
   }
 });
 window.addEventListener('pagehide', event => {
+  stopUpdates();
   if (event.persisted) return;
   closed = true;
   read?.abort();
@@ -521,8 +597,12 @@ window.addEventListener('pagehide', event => {
   clearInterval(ageTimer);
 });
 window.addEventListener('pageshow', event => {
-  if (event.persisted) refresh();
+  if (event.persisted) {
+    watchUpdates();
+    refresh();
+  }
 });
 readLocation();
 if (location.hash === '#diagnostics') byId('diagnostics').open = true;
+watchUpdates();
 refresh();

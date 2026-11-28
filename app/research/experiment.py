@@ -110,10 +110,16 @@ def _admit(db, size, *, reserve=0):
     _storage_runway(db, size + reserve)
 
 
+def sql_runway_bytes(size):
+    from app.collection.current_storage_policy import MIB
+
+    return size * 3 + 8 * MIB
+
+
 def _storage_runway(db, size):
     from app.collection.current_storage_policy import SQL_BYTE_CAP, sql_usage, require_disk_space
     from app.storage.store import ROOT
-    if sql_usage(db) + size * 3 + 8 * 1024 * 1024 > SQL_BYTE_CAP:
+    if sql_usage(db) + sql_runway_bytes(size) > SQL_BYTE_CAP:
         raise ValueError("research_sql_runway")
     require_disk_space(ROOT / ".local/postgres", append_bytes=size * 3)
 
@@ -360,6 +366,19 @@ def late_schedule_pressure(db, *, at, through):
                           AND early.checkpoint='early' AND early.state IN ('pending','claimed'))
         GROUP BY target_at,deadline_at ORDER BY target_at,deadline_at""", (through, at))}
     return dict(windows=windows, objects=sum(windows.values()))
+
+
+def next_late_storage_reservation(db, *, at):
+    """Protect the durable reservation of the next exact claim window."""
+    row = db.execute("""SELECT COALESCE(sum(late_reserved_bytes),0) AS bytes FROM (
+        SELECT g.late_reserved_bytes FROM public.ev_experiment_task late
+        JOIN public.ev_experiment_game g ON g.id=late.game_id AND g.schedule_id=late.schedule_id
+        WHERE late.checkpoint='late' AND late.state IN ('pending','claimed') AND late.deadline_at >= %s
+          AND NOT EXISTS (SELECT 1 FROM public.ev_experiment_task early WHERE early.game_id=late.game_id
+                          AND early.checkpoint='early' AND early.state IN ('pending','claimed'))
+        ORDER BY late.target_at,late.deadline_at FETCH FIRST 1 ROW WITH TIES
+    ) next_window""", (at,)).fetchone()
+    return int(row['bytes'])
 
 
 def task_authorized(db, token, *, at=None):

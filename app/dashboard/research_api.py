@@ -13,6 +13,7 @@ from app.collection.runtime_status import read_runtime
 from app.comparison.reference_scope import PROVIDER, public_scope
 from app.storage import research_catalog as catalog
 from app.storage.store import connect, encoded
+from .dashboard_updates import DashboardUpdates
 from .local_security import HEADERS, PublicRequestError
 from .raw_price_api import RawReads
 
@@ -182,6 +183,7 @@ def mount(app, *, campaigns_only=False):
     mount_paper(app)
     mount_workspace(app, campaigns_only=campaigns_only)
     reads = CatalogReads(connect)
+    updates = DashboardUpdates(reads.connector)
     gate = asyncio.Semaphore(CATALOG_READ_CAPACITY)
 
     @asynccontextmanager
@@ -215,6 +217,7 @@ def mount(app, *, campaigns_only=False):
         finally:
             await joined(reads.close)
     app.cleanup_ctx.append(life)
+    app.on_shutdown.append(updates.close)
 
     def validate(query, *, detail=False, market=False):
         allowed = set((*catalog.READ_FILTERS, *catalog.SCOPED_SELECTIONS, 'token', 'release', 'offset', 'limit'))
@@ -482,6 +485,7 @@ def mount(app, *, campaigns_only=False):
 
     app.router.add_get('/api/research/markets', markets)
     app.router.add_get('/api/research/dashboard', dashboard)
+    app.router.add_get('/api/research/dashboard-updates', updates.stream)
     app.router.add_get('/api/research/dashboard-coverage', dashboard)
     app.router.add_post('/api/research/dashboard-liquidity', dashboard_liquidity)
     app.router.add_get('/api/research/market', market)

@@ -755,3 +755,64 @@ def test_historical_comparison_from_game_checks_current_alternatives():
         expect(page.locator("#game-content")).not_to_contain_text("Loading alternate")
         assert len(game_reads) == 2
         browser.close()
+
+
+def test_modeled_dashboard_ev_and_payout_use_each_calculations_fee_assumption():
+    from playwright.sync_api import expect, sync_playwright
+
+    row = offer()
+    saved = dict(status="full_size", intended_stake_usd="100", modeled_stake_usd="99.96",
+        modeled_win_profit_usd="1566.04", modeled_net_ev=".5421", modeled_fee_usd="0",
+        fee_is_upper_bound=True, fee_mode={"enabled": False}, valid_until=row["kickoff"])
+    row.update(venue="kalshi", market_id="fixture-market", pull_id="native:saved", revision="saved",
+        native_source={"provider": "kalshi"}, eligible_until=row["kickoff"],
+        calculation={"status": "positive", "net_ev_percent": "54.21"}, liquidity=saved)
+    row["posted"]["native_price_probability"] = "0.06"
+    book = dict(event_id="fixture-event", market_id="fixture-market", outcome_id="fixture-side",
+                valid_until=row["kickoff"])
+    detail = dict(liquidity=saved, native_offer=dict(row=row, book=book, game_link={},
+                                                   fee_mode={"enabled": False}))
+    zero_fee_preview = dict(saved, intended_stake_usd="25", modeled_stake_usd="25",
+        modeled_win_profit_usd="12.50", modeled_net_ev=".12", fee_is_upper_bound=False,
+        fee_mode={"enabled": True})
+    unavailable_preview = dict(status="unknown", intended_stake_usd="500",
+        reason="fee_schedule_unverified", fee_mode={"enabled": True})
+
+    def serve(route):
+        path = urlparse(route.request.url).path
+        if path == "/":
+            route.fulfill(path=ASSETS / "dashboard.html")
+        elif path == "/api/research/dashboard":
+            route.fulfill(json=dict(rows=[row], total=1, source_authority="official_venue_apis"))
+        elif path == "/api/research/market":
+            route.fulfill(json=detail)
+        elif path == "/api/research/dashboard-liquidity":
+            amount = route.request.post_data_json["amount"]
+            result = {"25": zero_fee_preview, "500": unavailable_preview}[amount]
+            route.fulfill(json=dict(result={"liquidity": result}, provider_requests=0))
+        elif (asset := ASSETS / Path(path).name).is_file():
+            route.fulfill(path=asset)
+        else:
+            route.fulfill(status=404)
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        page.route("**/*", serve)
+        page.goto("http://predict.fixture/")
+        expect(page.get_by_role("table").get_by_text("+54.21% at $99.96 · Fees excluded", exact=False)).to_be_visible()
+        page.get_by_role("button", name="View evidence", exact=False).click()
+        result = page.get_by_role("dialog").locator(".amount-result")
+        expect(result.get_by_text("$1,566.04 · Fees excluded", exact=True)).to_be_visible()
+        expect(result.get_by_text("+54.21% · Fees excluded", exact=True)).to_be_visible()
+        expect(result.get_by_text("Up to $0.00", exact=True)).to_have_count(0)
+        page.get_by_role("button", name="$25", exact=True).click()
+        expect(result.get_by_text("$12.50 · Fees included", exact=True)).to_be_visible()
+        expect(result.get_by_text("+12.00% · Fees included", exact=True)).to_be_visible()
+        expect(result.get_by_text("$0.00", exact=True)).to_be_visible()
+        expect(result.get_by_text("Fees excluded", exact=False)).to_have_count(0)
+        page.get_by_role("button", name="$500", exact=True).click()
+        expect(result.get_by_text("The applicable fee schedule is unverified.")).to_be_visible()
+        expect(result.get_by_text("Fees included", exact=False)).to_have_count(0)
+        assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
+        browser.close()

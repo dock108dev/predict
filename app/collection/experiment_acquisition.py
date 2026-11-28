@@ -186,7 +186,8 @@ async def acquire(worker, task, *, eligible=None, request_locked=False, batch=No
     but cannot become a valid checkpoint.
     """
     from .activity_collector import budget_admit
-    from .current_storage_policy import MIB, SQL_BYTE_CAP, sql_usage, require_disk_space
+    from app.research.experiment import sql_runway_bytes
+    from .current_storage_policy import SQL_BYTE_CAP, sql_usage, require_disk_space
     from .original_receipts import capture
     from .sportsgameodds_collector import GuardedPageCollector
     from .sportsgameodds_schedule import response_object_charge
@@ -194,7 +195,8 @@ async def acquire(worker, task, *, eligible=None, request_locked=False, batch=No
     if worker.collector is None or worker.ledger is None or worker.window_id is None:
         raise CheckpointUnavailable('experiment_source_not_initialized')
     params = batch_scope(batch) if batch else request_scope(task)
-    append_bytes = 3 * sum(item.get('storage_reservation_bytes', 0) for item in (batch or [task]))
+    reserved_bytes = sum(item.get('storage_reservation_bytes', 0) for item in (batch or [task]))
+    append_bytes = 3 * reserved_bytes
     pull_id = None
     receipt = {}
     timings = dict(claimed_at=task.get('requested_at'), lane_entered_at=worker.now().isoformat())
@@ -219,7 +221,7 @@ async def acquire(worker, task, *, eligible=None, request_locked=False, batch=No
 
     def storage():
         with connect() as db:
-            runway = append_bytes + 8 * MIB if append_bytes else 0
+            runway = sql_runway_bytes(reserved_bytes) if reserved_bytes else 0
             if sql_usage(db) + runway >= SQL_BYTE_CAP:
                 raise CheckpointUnavailable('research_sql_runway')
         require_disk_space(ROOT / '.local/postgres', append_bytes=append_bytes)

@@ -439,7 +439,7 @@ class DatabaseIngressSink:
             phase('sql_admission')
             with connect() as db:
                 require_disk_space(Path(__file__).resolve().parents[2]/'.local/postgres')
-                if sql_usage(db)>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
+                if sgo_links is None and sql_usage(db)>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
                 rows=CurrentRowStore(db)
                 cohort_key = None
                 from app.storage.scanner_publication import transaction as published_transaction
@@ -461,6 +461,16 @@ class DatabaseIngressSink:
                              or row['source'] in owner['paused_sources'] or row['type']=='novig_native_records'
                              and 'the_odds_api' in owner['paused_sources'])):
                             raise asyncio.CancelledError()
+                    if sgo_links is not None:
+                        from psycopg.errors import LockNotAvailable
+                        from app.research.records import LOCK as STORAGE_ADMISSION_LOCK
+
+                        # Retry the settled page without holding current rows
+                        # while a native writer owns physical admission.
+                        if not db.execute('SELECT pg_try_advisory_xact_lock(%s) acquired',
+                                          (STORAGE_ADMISSION_LOCK,)).fetchone()['acquired']:
+                            raise LockNotAvailable('current_storage_admission_busy')
+                        if sql_usage(db)>=SQL_BYTE_CAP:raise ValueError('current_database_storage_cap')
                     if row['type']=='oddslink_prophetx_records':
                         from app.comparison.public_sportsbook_estimate import allowed
                         from app.storage.current_row_state import source_status

@@ -56,50 +56,72 @@ class NativeTrading:
             return read_all(db)
 
     def write(self, observations):
-        from app.storage.native_trading import publish
+        from psycopg.errors import LockNotAvailable
+
+        from app.research.records import LOCK as STORAGE_ADMISSION_LOCK
+        from app.storage.native_trading import PUBLICATION_LOCK, publish
         from .mens_d1_jobs import _late_capture_due
+        from .runtime_status import AUTHORITY_LOCK
 
-        with self.connector() as db, db.transaction():
-            db.execute("SELECT pg_advisory_xact_lock(901095)")
-            from .runtime_status import AUTHORITY_LOCK
-
-            db.execute("SELECT pg_advisory_xact_lock_shared(%s)", (AUTHORITY_LOCK,))
-            runtime = db.execute(
-                "SELECT runtime_id,dispatch,global_stopped,paused_sources FROM public.data_runtime WHERE singleton"
-            ).fetchone()
-            if runtime and (
-                runtime["global_stopped"]
-                or not runtime["dispatch"]
-                or str(runtime["runtime_id"]) != self.owner.service.runtime_id
-            ):
-                return dict(state="deferred", reason="native_runtime_authority_changed")
-            if (
-                not self.enabled()
-                or self.protected()
-                or _late_capture_due(db, self.now())
-            ):
+        with self.connector() as db:
+            # Take the session locks before the snapshot so waiters see the
+            # preceding native commit and the latest runtime authority.
+            # The dedicated connection releases both locks when it closes.
+            try:
+                db.execute("SELECT pg_advisory_lock(%s)", (PUBLICATION_LOCK,))
+                db.execute("SELECT pg_advisory_lock_shared(%s)", (AUTHORITY_LOCK,))
+            except LockNotAvailable:
+                return dict(state="deferred", reason="native_publication_lock_timeout")
+            if self.protected() or _late_capture_due(db, self.now()):
                 return dict(state="deferred", reason="protected_checkpoint")
-            paused = set(runtime["paused_sources"]) if runtime else set()
-            accepted = {
-                key: value
-                for key, value in observations.items()
-                if self.enabled(value["venue"]) and value["venue"] not in paused
-            }
-            at = self.now()
-            prune = self.last_pruned is None or at - self.last_pruned >= timedelta(
-                minutes=1
-            )
-            result = publish(db, accepted, at=at, prune=prune)
+            # Protected claims and their storage writes use this same research
+            # lock. Optional native work yields if admission is already active.
+            if not db.execute(
+                "SELECT pg_try_advisory_lock(%s) acquired", (STORAGE_ADMISSION_LOCK,)
+            ).fetchone()["acquired"]:
+                return dict(state="deferred", reason="native_storage_admission_busy")
+            with db.transaction():
+                db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+                runtime = db.execute(
+                    "SELECT runtime_id,dispatch,global_stopped,paused_sources FROM public.data_runtime WHERE singleton"
+                ).fetchone()
+                if runtime and (
+                    runtime["global_stopped"]
+                    or not runtime["dispatch"]
+                    or str(runtime["runtime_id"]) != self.owner.service.runtime_id
+                ):
+                    return dict(state="deferred", reason="native_runtime_authority_changed")
+                if (
+                    not self.enabled()
+                    or self.protected()
+                    or _late_capture_due(db, self.now())
+                ):
+                    return dict(state="deferred", reason="protected_checkpoint")
+                paused = set(runtime["paused_sources"]) if runtime else set()
+                accepted = {
+                    key: value
+                    for key, value in observations.items()
+                    if self.enabled(value["venue"]) and value["venue"] not in paused
+                }
+                if observations and not accepted:
+                    return dict(state="deferred", reason="native_source_paused")
+                at = self.now()
+                prune = self.last_pruned is None or at - self.last_pruned >= timedelta(
+                    minutes=1
+                )
+                result = publish(db, accepted, at=at, prune=prune)
             if prune:
                 self.last_pruned = at
             return result
 
     async def save(self, observations):
+        from .bulk_checkpoint import owned_thread
+
         values = list(observations.items())
         for start in range(0, len(values) or 1, WRITE_BATCH):
             if not self.enabled() or self.protected():
                 return False
-            result = await asyncio.to_thread(
+            result = await owned_thread(
                 self.write, dict(values[start : start + WRITE_BATCH])
             )
             self.references.update(result.pop("references", {}))
@@ -417,6 +439,26 @@ class NativeTrading:
         return {cid: book for cid, book in found.items() if cid in self.bindings}
 
     async def read_novig(self, novig, plan, cutoff):
+        if not plan:
+            return False
+        batches = asyncio.Queue(maxsize=BOOKS_PER_TURN["novig"])
+
+        async def publish_batches():
+            while (batch := await batches.get()) is not None:
+                await self.save(batch)
+
+        queued = False
+        # A turn contains at most one batch per planned event. The writer
+        # stays serial while Novig's paced reads use their remaining cutoff.
+        async with asyncio.TaskGroup() as tasks:
+            tasks.create_task(publish_batches())
+            async for batch in self._novig_batches(novig, plan, cutoff):
+                await batches.put(batch)
+                queued = True
+            await batches.put(None)
+        return queued
+
+    async def _novig_batches(self, novig, plan, cutoff):
         def revoke(proof, reason, bindings):
             received = proof["received_at"]
             for cid, binding in bindings.items():
@@ -434,13 +476,10 @@ class NativeTrading:
         for b in plan.values():
             if b["venue"] == "novig":
                 grouped[b["event_id"]].add(b["market_id"])
-        results = {}
         for eid, wanted in grouped.items():
-            if results:
-                await self.save(results)
-                results = {}
             if self.protected() or not self.enabled("novig") or self.now() >= cutoff:
                 break
+            results = {}
             (event, proof, reason), inventory = await asyncio.gather(
                 novig.read_event_metadata(eid, cutoff, lifecycle=True),
                 novig.read_event(eid, cutoff, moneyline=True),
@@ -459,6 +498,8 @@ class NativeTrading:
                         if b["venue"] == "novig" and b["event_id"] == eid
                     },
                 )
+                if results:
+                    yield results
                 continue
             if reason:
                 continue
@@ -505,7 +546,8 @@ class NativeTrading:
                     )
                     if not book.get("reason"):
                         results[cid] = dict(book, _record=base["_record"])
-        return results
+            if results:
+                yield results
 
     async def books(self, novig, native, venue, stream=None):
         while True:
@@ -517,7 +559,13 @@ class NativeTrading:
             plan, hot_pmus = self._book_plan(venue)
             cutoff = self.now() + timedelta(seconds=READ_SECONDS)
             if venue == "novig":
-                results = await self.read_novig(novig, plan, cutoff)
+                results = {}
+                queued = await self.read_novig(novig, plan, cutoff)
+                if not queued and (
+                    self.last_pruned is None
+                    or self.now() - self.last_pruned >= timedelta(minutes=1)
+                ):
+                    await self.save({})
             elif venue == "prophetx":
                 results = await self.read_prophetx(plan, cutoff)
             else:
@@ -526,11 +574,6 @@ class NativeTrading:
                 )
             if results:
                 await self.save(results)
-            elif venue == "novig" and (
-                self.last_pruned is None
-                or self.now() - self.last_pruned >= timedelta(minutes=1)
-            ):
-                await self.save({})
             await asyncio.sleep(2)
 
     def reference_changes(self, previous):

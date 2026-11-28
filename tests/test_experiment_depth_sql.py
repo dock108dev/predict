@@ -1,7 +1,7 @@
 """Schedule identity, public-depth storage and collector recovery in disposable SQL."""
 import asyncio
 from contextlib import closing, nullcontext
-from datetime import timedelta
+from datetime import timedelta, timezone
 from functools import partial
 from multiprocessing import get_context
 from pathlib import Path
@@ -12,6 +12,7 @@ from threading import Event
 from types import SimpleNamespace
 from unittest import skipUnless
 from unittest.mock import patch
+from uuid import NAMESPACE_URL, uuid5
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -36,6 +37,79 @@ def captured_book(known):
         levels=[dict(price='2/5', size='100')], receipts=[evidence], identity_receipts=[identification])}
 
 
+def wide_novig_book(known, task):
+    """A broad spread inventory with several crowded, two-sided books."""
+    from email.utils import format_datetime
+
+    from app.collection.novig_experiment_depth import (
+        CUTOVER_DATE_UTC, PublicBookDepth, PublicEventDepth, book_depth, catalog_depth,
+    )
+
+    def identity(*parts):
+        return str(uuid5(NAMESPACE_URL, ':'.join(map(str, parts))))
+
+    received = known - timedelta(milliseconds=90)
+    evidence = dict(path='/v3/public/catalog/markets', status=200, sha256=hashed('fixture-catalog'),
+        date=format_datetime(received.astimezone(timezone.utc), usegmt=True), age='0',
+        **{'cache-control': 'public, max-age=10'},
+        requested_at=depth.clock(received - timedelta(milliseconds=30)), received_at=depth.clock(received))
+    event_id = identity('event')
+    start = task['target_at'] + timedelta(minutes=10)
+    terms = (dict(coefficient='0.06', makerCredit='0.25', charged='WHEN_LIVE') if known < CUTOVER_DATE_UTC
+             else dict(coefficient='0.03', makerCredit='0.25', charged='ALWAYS'))
+    selected = replay_offer(task)['record']
+    observations = {}
+    for number in range(66):
+        market_id = identity('market', number)
+        line = f'{number}.5'
+        subjects = [identity('subject', side) for side in ('away', 'home')]
+        outcome_ids = [identity('outcome', number, side) for side in ('away', 'home')]
+        labels = [f'Away -{line}', f'Home +{line}']
+        outcomes = [dict(outcomeId=outcome, name=label, subjectId=subject, status='TBD',
+                         bid=dict(price='0.75', qty=30 if number < 5 else 4000))
+                    for outcome, label, subject in zip(outcome_ids, labels, subjects, strict=True)]
+        market = dict(eventId=event_id, marketId=market_id, marketType='SPREAD', status='OPEN',
+                      startsTs=int(start.timestamp()*1000), strike=line, outcomes=outcomes, receipt=evidence,
+                      fee=terms, voids='FMV')
+        catalog = PublicEventDepth({market_id: market}, (evidence,))
+        book_receipt = dict(evidence, path=f'/v3/public/markets/{market_id}/book',
+                            sha256=hashed(['fixture-book', number]), **{'cache-control': 'public, max-age=5'})
+        for index, side in enumerate(('away', 'home')):
+            binding = dict(venue='novig', league='NCAAB', family='spread', selected_side=side,
+                signed_line=('-' if index == 0 else '') + line, starts_at=depth.clock(start),
+                event_id=event_id, market_id=market_id, outcome_id=outcome_ids[index],
+                opposite_outcome_id=outcome_ids[1-index], phase='scheduled', phase_verified=True,
+                available=True, revision=hashed(['identity', market_id]))
+            observation = catalog_depth(binding, catalog, known)
+            if number < 5:
+                orders = [dict(orderId=identity('order', number, side, order),
+                           price=f'0.{750 - (order // 30) * 5:03d}', qty=1)
+                          for order in range(480)]
+                book = dict(marketId=market_id, seq=number, orders={outcome_ids[1-index]: orders})
+                observation = book_depth(binding, PublicBookDepth(book, book_receipt), known, catalog=observation)
+            assert observation['reason'] is None
+            observation.update(identity_receipts=[dict(observed_at=depth.clock(received),
+                path=f'/v3/public/catalog/events/{event_id}', sha256=hashed('fixture-event')),
+                dict(observed_at=depth.clock(received), path=evidence['path'], sha256=hashed('fixture-market'))])
+            key = depth.offer_key(selected) if number == 10 and side == 'home' else hashed([market_id, side])
+            observations[key] = observation
+    return observations
+
+
+def replay_offer(task):
+    from tests.test_paper_experiments import frozen_priced
+
+    start = task['target_at'] + timedelta(minutes=10)
+    offer = frozen_priced('+300', venue='novig', line='10.5')
+    record = offer['record']
+    record['event'].update(scheduled_start=depth.clock(start), competition='NCAAB')
+    record['market_identity']['rules'] = 'sportsgameodds-unverified-1'
+    record['result_policy'] = 'sportsgameodds-unverified-1:spread'
+    record['quote']['source'].update(native_event_id='fixture-restart-game',
+        native_outcome_id='points-home-game-sp-home', native_line='10.5')
+    return offer
+
+
 def run_depth_collector(database, stage_path, task, mode, events):
     """Run the actual collector loop in a process that the test can kill."""
     connector = partial(LatestBoardFixture.connect, database)
@@ -44,13 +118,13 @@ def run_depth_collector(database, stage_path, task, mode, events):
 
     class DepthProbe(collector.ExperimentDepth):
         def _bindings(self, _task, _at):
-            return {}, None, [], None, {}, {'fixture-offer': {}}, (), {}
+            return {'fixture-offer': ({}, None)}, None, [], None, {}, {}, (), {}
 
         async def _observe(self, *_args, **_kwargs):
             if mode != 'stage':
                 events.send(('unexpected_venue_request', None))
                 raise AssertionError('Recovery dispatched a venue request')
-            return captured_book(known), {}
+            return wide_novig_book(known, task), {}
 
         def _persist(self, payload):
             admission = (patch.object(experiment, '_admit', side_effect=ValueError('research_retention_capacity'))
@@ -194,17 +268,31 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
                        'ev_experiment_accounting,paper_campaign CASCADE')
             db.execute('INSERT INTO ev_experiment_accounting(singleton) VALUES(true)')
 
-    def fixture_game(self, db, *, seconds_ago=2, event_id='fixture-restart-game'):
-        target = experiment.utc() - timedelta(seconds=seconds_ago)
+    def fixture_game(self, db, *, seconds_ago=2, event_id='fixture-restart-game', with_replay=False):
+        from app.research import paper, paper_campaigns, paper_depth
+        from tests.test_paper_campaigns import fixed_config
+
+        target = experiment.utc().replace(microsecond=0) - timedelta(seconds=seconds_ago)
         declared = target - timedelta(minutes=1)
         event = dict(provider='sportsgameodds', source_event_id=event_id,
                      event_id=hashed(event_id), league='NCAAB', home='home',
-                     away='away', starts_at=depth.clock(target + timedelta(minutes=10)), status={})
+                     away='away', title='Away at Home', starts_at=depth.clock(target + timedelta(minutes=10)), status={})
         experiment.discover(db, [event], at=declared)
         claim, = experiment.due(db, at=declared)
-        early = self.write_checkpoint(db, claim, declared)
+        offers = [replay_offer(dict(target_at=target))] if with_replay else []
+        early = self.write_checkpoint(db, claim, declared, offers=offers)
         self.assertEqual(early['state'], 'captured')
         config = dict(depth_policy=depth.POLICY)
+        if with_replay:
+            day = str(paper_campaigns._target_day(target))
+            body = fixed_config(name='Win $25 wide native book', start_date=day, end_date=day,
+                scope=paper_campaigns.ALL_SPORTS, market_scope=paper.MAIN_SPREADS_TOTALS,
+                alternate_odds_below='400', target_profit_usd='25', kelly_comparison=False,
+                portfolios=['best_venue'], portfolio_rule=paper.MAIN_FIRST_ONE_PER_GAME,
+                depth_policy=paper_depth.ALL_SPORTS_VERSION, prospective_start_at=depth.clock(target))
+            body.pop('kelly_multiplier')
+            body.pop('reference_bankroll_usd')
+            config = dict(paper_campaigns.configuration(body), discoverable=True)
         campaign = hashed(config)
         db.execute('INSERT INTO public.paper_campaign VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING',
                    (campaign, declared, Jsonb(config), len(encoded(config))))
@@ -215,11 +303,12 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
                           (claim['game_id'],)).fetchone()
         return task, event
 
-    def write_checkpoint(self, db, claim, known):
+    def write_checkpoint(self, db, claim, known, *, offers=()):
         event = claim['event']
         snapshot = dict(event=dict(home=event['home'], away=event['away'], competition=event['league'],
             scheduled_start=event['starts_at']), times=dict(received_at=depth.clock(known),
-            known_at=depth.clock(known)), offers=[], coverage={})
+            known_at=depth.clock(known)), offers=list(offers), coverage=dict(incomplete=False),
+            source_event=dict(event_id=event['source_event_id']))
         return experiment.capture(db, claim['game_id'], claim['checkpoint'], snapshot,
             token=claim['token'], requested_at=known, received_at=known, known_at=known,
             defer_comparison=True)
@@ -253,7 +342,7 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
             return []
         with closing(sqlite3.connect(self.stage_path.as_uri() + '?mode=ro', uri=True)) as db:
             db.row_factory = sqlite3.Row
-            return list(map(dict, db.execute('SELECT * FROM staged')))
+            return list(map(dict, db.execute('SELECT * FROM staged_receipts')))
 
     async def wait_until_drained(self, process, monitor):
         async with asyncio.timeout(15):
@@ -269,22 +358,25 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
         with closing(sqlite3.connect(self.stage_path.as_uri() + '?mode=ro', uri=True)) as db:
             return db.execute('SELECT reason,receipt_id FROM disposition ORDER BY sequence').fetchall()
 
-    def stage_decision(self, task):
+    def stage_decision(self, task, *, book=captured_book):
         stage = DepthStage(self.stage_path)
         stage.initialize()
         known = task['target_at'] - timedelta(seconds=1)
-        payload = depth.normalize(task, known_at=known, observations=captured_book(known))
+        payload = depth.normalize(task, known_at=known, observations=book(known))
         stage.put(payload, task['deadline_at'], experiment.utc())
         return stage, payload
 
     async def test_kill_after_capture_and_after_commit_recovers_once_through_pause_and_sgo_lock(self):
+        from app.research import paper_campaigns, paper_depth, workspace
+
         with self.connect() as db, self.connect() as writer:
-            task, _ = self.fixture_game(db)
+            task, _ = self.fixture_game(db, with_replay=True)
             with writer.transaction():
                 experiment._lock(writer)
                 capture, capture_events = self.start_collector(task, 'stage')
                 self.assertEqual(await self.message(capture, capture_events), ('captured', 1))
                 original_stage, = self.staged()
+                self.assertGreater(len(original_stage['body']), 512 * 1024)
                 self.assertEqual(self.receipt_rows(db), [])
                 self.stop_collector(capture)
                 self.assertEqual(capture.exitcode, -signal.SIGKILL)
@@ -297,9 +389,10 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
                 self.assertEqual(self.staged(), [original_stage])
                 self.assertEqual(self.receipt_rows(db), [])
                 late, = experiment.due(writer, at=experiment.utc(), late_only=True)
-                checkpoint = self.write_checkpoint(writer, late, experiment.utc())
+                checkpoint = self.write_checkpoint(writer, late, experiment.utc(), offers=[replay_offer(task)])
                 self.assertEqual(checkpoint['state'], 'captured')
                 self.assertLessEqual(experiment.stamp(checkpoint['recorded_at']), task['deadline_at'])
+            self.assertLessEqual(experiment._dbclock(db), task['deadline_at'])
 
             event, receipt_id = await self.message(publisher, publish_events)
             self.assertEqual(event, 'after_commit')
@@ -320,21 +413,38 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
             await self.wait_until_drained(resumed, resumed_events)
             self.assertEqual(self.receipt_rows(db), [committed])
             known = task['target_at'] - timedelta(seconds=1)
-            observation = captured_book(known)['fixture-offer']
             self.assertEqual(committed['known_at'], known)
             self.assertEqual(committed['cutoff_at'], task['target_at'])
             self.assertGreaterEqual(committed['recorded_at'], experiment.stamp(checkpoint['recorded_at']))
             body = committed['payload']
             self.assertEqual(hashed(body), receipt_id)
-            self.assertEqual(list(body['http_receipts'].values()), observation['receipts'])
-            self.assertEqual(list(body['identity_receipts'].values()), observation['identity_receipts'])
-            self.assertEqual(body['observations']['fixture-offer']['levels'], observation['levels'])
+            expected = depth.normalize(task, known_at=known, observations=wide_novig_book(known, task))
+            self.assertEqual(body, expected)
+            self.assertEqual(encoded(body), original_stage['body'])
+            self.assertEqual(db.execute('SELECT payload_bytes FROM ev_experiment_depth').fetchone()['payload_bytes'],
+                             len(original_stage['body']))
             self.assertEqual(self.dispositions(), [('published', receipt_id)])
+            with patch.object(paper_campaigns.mens_d1, 'daily_population', return_value=None):
+                run_id = paper_campaigns.tick(db)
+            self.assertIsNotNone(run_id)
+            run = workspace.run_detail(db, run_id, export=True)
+            self.assertEqual(run['depth_receipts'], {receipt_id: dict(expected, id=receipt_id)})
+            self.assertEqual(run['report']['policy']['depth_execution_version'], paper_depth.FIXED_PROFIT_VERSION)
+            game, = run['report']['games']
+            self.assertEqual(game['depth_receipt_id'], receipt_id)
+            self.assertEqual(game['checkpoint_id'], checkpoint['id'])
+            tickets = run['report']['portfolios']['best_venue']['tickets']
+            self.assertEqual(len(tickets), 1, game)
+            ticket, = tickets
+            self.assertEqual(ticket['depth']['status'], 'full_size')
+            selected = expected['observations'][depth.offer_key(replay_offer(task)['record'])]
+            self.assertEqual(ticket['depth']['market_id'], selected['market_id'])
 
     async def test_storage_deferral_keeps_decision_and_separate_followup(self):
         with self.connect() as db:
             task, _ = self.fixture_game(db, seconds_ago=70)
-            stage, decision = self.stage_decision(task)
+            stage, decision = self.stage_decision(task, book=lambda known: wide_novig_book(known, task))
+            self.assertGreater(len(encoded(decision)), 512 * 1024)
             later = task['target_at'] + timedelta(seconds=15)
             followup = depth.normalize(task, kind='followup', origin_id=hashed(decision),
                 cutoff_at=later, known_at=later, observations=captured_book(later))

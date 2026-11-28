@@ -366,6 +366,7 @@ class ExperimentDepth:
         source_gaps.update(failures)
         known = self.now()
         if known > cutoff:
+            await owned_thread(self.stage.reject, task, 'decision', cutoff, known, 'experiment_depth_cutoff')
             return
         origin_id = await owned_thread(self._stage, task, known_at=known, observations=decision,
             reason=None if plan or native else 'unmatched_no_pregame_offer_witness',
@@ -380,7 +381,9 @@ class ExperimentDepth:
             return
         followup, failures = await self._observe(novig, native_client, plan, native, later, **observation_options)
         known = self.now()
-        if cutoff < known <= later:
+        if known > later:
+            await owned_thread(self.stage.reject, task, 'followup', later, known, 'experiment_depth_cutoff')
+        elif cutoff < known:
             for offer, observation in followup.items():
                 if _reuse(decision.get(offer, {}), observation):
                     observation.update(reason='followup_cache_reuse', complete=False)
@@ -407,7 +410,13 @@ class ExperimentDepth:
         return observations, gaps
 
     def _stage(self, task, **evidence):
-        payload = storage.normalize(task, **evidence)
+        try:
+            payload = storage.normalize(task, **evidence)
+        except ValueError as exc:
+            kind = evidence.get('kind', 'decision')
+            cutoff = evidence.get('cutoff_at', task['target_at'])
+            self.stage.reject(task, kind, cutoff, self.now(), str(exc))
+            raise
         return self.stage.put(payload, task['deadline_at'], self.now())
 
     def _persist(self, payload):

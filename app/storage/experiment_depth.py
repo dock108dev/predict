@@ -11,7 +11,9 @@ from app.storage.store import encoded, exact_time, hashed, stamp
 VERSION = 'experiment-public-depth-1'
 POLICY = 'public-book-win25-1'
 ALL_SPORTS_POLICY = 'public-book-win25-2'
-MAX_BYTES = 512 * 1024
+# Canonical UTF-8 JSON bytes, shared with collector staging and charged to
+# research retention. Broad inventories carry identities for every side.
+MAX_BYTES = 8 * 1024 * 1024
 
 
 def clock(value):

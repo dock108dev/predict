@@ -1,5 +1,6 @@
 """Native offers never mutate acquired source quotes or frozen paper evidence."""
 
+import asyncio
 from copy import deepcopy
 from datetime import timedelta
 from types import SimpleNamespace
@@ -67,6 +68,101 @@ def native_book(db, at):
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class NativeTradingSQL(PregameFixture):
+    async def test_native_commit_is_independent_of_sgo_writer_and_orders_waiting_books(self):
+        at = stamp(AT)
+        original = page()
+        for odd in original["data"][0]["odds"].values():
+            odd["byBookmaker"].pop("draftkings", None)
+        with self.connect() as db:
+            self.ingest(db, original)
+            source, older = native_book(db, at)
+        newer_at = at + timedelta(seconds=1)
+        newer = dict(
+            older,
+            sequence=11,
+            source_at=(newer_at - timedelta(seconds=2)).isoformat(),
+            received_at=newer_at.isoformat(),
+        )
+        owner = SimpleNamespace(
+            service=SimpleNamespace(dispatch=True, globally_stopped=False, paused_sources=[]),
+            _near_checkpoint=lambda: False,
+        )
+        trader = NativeTrading(owner, connector=self.connect, now=lambda: newer_at)
+
+        async with asyncio.timeout(5):
+            with self.connect() as native:
+                native.execute(
+                    "SELECT pg_advisory_lock(%s)", (native_trading.PUBLICATION_LOCK,)
+                )
+                with self.connect() as sgo, sgo.transaction():
+                    sgo.execute("SELECT pg_advisory_xact_lock(901095)")
+                    waiting = asyncio.create_task(trader.save({"older": older}))
+                    while not native.execute(
+                        "SELECT EXISTS (SELECT FROM pg_locks WHERE locktype='advisory' "
+                        "AND database=(SELECT oid FROM pg_database WHERE datname=current_database()) "
+                        "AND objid=%s AND NOT granted) AS waiting",
+                        (native_trading.PUBLICATION_LOCK,),
+                    ).fetchone()["waiting"]:
+                        await asyncio.sleep(0.01)
+                    self.assertEqual(
+                        native_trading.publish(native, {"newer": newer}, at=newer_at)["published"], 1
+                    )
+                    # Publish an SGO reference change before the older writer
+                    # can enter. Only the current book may revalue against it.
+                    self.ingest(sgo, page())
+            self.assertTrue(await waiting)
+            with self.connect() as reader:
+                current = reader.execute(
+                    "SELECT book,game_link,book_valid_until,reference_valid_until "
+                    "FROM public.native_trading_offer"
+                ).fetchone()
+                self.assertEqual(current["book"]["sequence"], 11)
+                self.assertEqual(current["book_valid_until"], stamp(newer["valid_until"]))
+                self.assertEqual(current["game_link"]["sgo_event_id"], source["id"])
+                self.assertEqual(current["game_link"]["status"], "matched")
+                self.assertEqual(
+                    reader.execute("SELECT count(*) AS n FROM public.native_trading_snapshot").fetchone()["n"], 1
+                )
+                self.assertIsNone(current["reference_valid_until"])
+            self.assertTrue(await trader.save({"current": newer}))
+            self.assertTrue(await trader.save({"duplicate": newer}))
+            with self.connect() as reader:
+                self.assertEqual(
+                    reader.execute("SELECT count(*) AS n FROM public.native_trading_snapshot").fetchone()["n"], 2
+                )
+                self.assertIsNotNone(reader.execute(
+                    "SELECT reference_valid_until FROM public.native_trading_offer"
+                ).fetchone()["reference_valid_until"])
+
+    async def test_native_publication_defers_to_pending_late_checkpoint(self):
+        at = stamp(AT)
+        due = at + timedelta(seconds=30)
+        owner = SimpleNamespace(
+            service=SimpleNamespace(dispatch=True, globally_stopped=False, paused_sources=[]),
+            _near_checkpoint=lambda: False,
+        )
+        trader = NativeTrading(owner, connector=self.connect, now=lambda: at)
+        with self.connect() as db:
+            self.ingest(db, page())
+            _, book = native_book(db, at)
+            db.execute("""INSERT INTO public.ev_experiment_record(id,kind,refs,payload,payload_bytes)
+                VALUES('native-lock-policy','policy','{}','{}',2),
+                      ('native-lock-schedule','schedule','{}','{}',2)""")
+            db.execute("""INSERT INTO public.ev_experiment_game
+                (id,policy_id,provider,source_event_id,event,discovered_at,first_observed_at,schedule_id)
+                VALUES('native-lock-game','native-lock-policy','sportsgameodds','event','{}',%s,%s,'native-lock-schedule')""",
+                (at, at))
+            db.execute("""INSERT INTO public.ev_experiment_task(game_id,checkpoint,schedule_id,target_at,deadline_at)
+                VALUES('native-lock-game','late','native-lock-schedule',%s,%s)""",
+                (due, due + timedelta(minutes=1)))
+        self.assertFalse(await trader.save({"book": book}))
+        self.assertEqual(trader.progress["reason"], "protected_checkpoint")
+        with self.connect() as db:
+            task = db.execute("SELECT state,target_at,result_id FROM public.ev_experiment_task "
+                              "WHERE game_id='native-lock-game'").fetchone()
+            self.assertEqual(task, dict(state="pending", target_at=due, result_id=None))
+            self.assertEqual(db.execute("SELECT count(*) AS n FROM public.native_trading_offer").fetchone()["n"], 0)
+
     async def test_storage_pressure_rotates_only_aged_superseded_evidence(self):
         at = stamp(AT)
         with self.connect() as db:
@@ -333,11 +429,14 @@ class NativeTradingSQL(PregameFixture):
                 native_trading.publish(db, {"newer": refreshed}, at=later)["published"],
                 1,
             )
+            preview_at = later + timedelta(seconds=1)
             updated = native_trading.detail(
-                db, dict(query, amount="25"), at=later, stake="25"
+                db, dict(query, amount="25"), at=preview_at, stake="25"
             )
             self.assertEqual(updated["native_offer"]["book"]["sequence"], 10)
             self.assertEqual(updated["liquidity_evidence"]["sequence"], 11)
+            self.assertEqual(stamp(updated["liquidity"]["published_at"]), later)
+            self.assertEqual(stamp(updated["liquidity"]["as_of"]), preview_at)
             self.assertEqual(
                 updated["preview_offer"]["posted"]["native_price_probability"], "0.3"
             )
