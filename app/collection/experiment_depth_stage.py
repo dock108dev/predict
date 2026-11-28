@@ -138,7 +138,8 @@ class DepthStage:
 
     def entries(self):
         with self._open() as db:
-            return db.execute('''SELECT game_id,schedule_id,target_at,kind,deadline_at,staged_at,receipt_id
+            return db.execute('''SELECT game_id,schedule_id,target_at,kind,deadline_at,staged_at,receipt_id,
+                    length(body) AS payload_bytes
                 FROM staged_receipts ORDER BY kind,staged_at,game_id,schedule_id,target_at''').fetchall()
 
     def load(self, entry):

@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
+from app.dashboard.workspace_routes import PAGES
 from browser_tests.test_pregame_current import ASSETS, offer
 
 
@@ -93,11 +94,15 @@ def test_daily_research_keeps_current_and_saved_versions_independent():
         expect(versions.locator(f'a[href*="run={older}"]')).to_have_count(0)
         versions.locator(f'a[href*="run={latest}"]').click()
         saved = page.get_by_role("link", name="Saved Nov 24", exact=False)
-        expect(saved).to_have_attribute("href", f"/data?evidence=mens-d1&scope=mens-d1&date={day}&run={latest}")
+        expect(saved).to_have_attribute(
+            "href", f"/data?evidence=mens-d1&scope=mens-d1&date={day}&run={latest}"
+        )
         page.reload()
         expect(saved).to_have_attribute("aria-current", "true")
         page.goto(f"{base}/data?evidence=mens-d1&scope=mens-d1&date={day}&run={older}")
-        expect(saved).to_have_attribute("href", f"/data?evidence=mens-d1&scope=mens-d1&date={day}&run={older}")
+        expect(saved).to_have_attribute(
+            "href", f"/data?evidence=mens-d1&scope=mens-d1&date={day}&run={older}"
+        )
         current.click()
         expect(current).to_have_attribute("aria-current", "true")
         assert "run=" not in page.url
@@ -211,260 +216,169 @@ def record(status, *, mapped=True):
     [(1440, 1), (390, 1), (960, 1.5)],
     ids=["desktop", "mobile", "zoom150-equivalent"],
 )
-def test_received_data_inspection_export_and_missing_cases(width, scale, tmp_path):
-    records = [
-        record(value) for value in ("positive", "negative", "zero", "unavailable")
-    ]
-    unmatched = record("unavailable", mapped=False)
-    unmatched.update(id="sgo:unmatched", revision="captured-unmatched")
-    records.append(unmatched)
-    errors, requests = [], []
-    frozen_calculation = offer()
-    retention = dict(
-        retained_bytes=17000,
-        total_allocation_bytes=19048,
-        byte_cap=33554432,
-        observation_bytes=16000,
-        observation_byte_cap=25165824,
-        retention_dispositions=dict(
-            slots=4,
-            observation_refusals=3,
-            capture_refusals=1,
-            observation_affected_slots=2,
-            capture_affected_slots=1,
-            observation_open_gaps=2,
-            capture_open_gaps=0,
-        ),
-        retention_accounting=dict(
-            coverage_started_at="2026-11-22T21:00:00Z",
-            prior_first_observed_refusal_at="2026-11-22T20:45:00Z",
-            prior_uncounted_window_end="2026-11-22T21:00:00Z",
-            prior_refused_attempts=None,
-            prior_affected_cases=None,
-        ),
-    )
-    frozen_evidence = dict(
-        cohort_id="frozen-cohort",
-        records=[
-            dict(
-                id="immutable-capture",
-                kind="capture",
-                recorded_at="2026-11-22T20:00:01Z",
-                payload=dict(
-                    snapshot=dict(
-                        inputs=dict(
-                            calculation=frozen_calculation,
-                            source_record=dict(
-                                quote=dict(original=frozen_calculation["posted"])
-                            ),
-                            fee_input=dict(classification="frozen_fixture_fee"),
-                        )
-                    )
-                ),
-            )
+def test_data_retains_exact_received_evidence_and_unknown_provenance(
+    width, scale, tmp_path
+):
+    retained = {
+        "canonical:fixture": [
+            record(status) for status in ("positive", "negative", "zero", "unavailable")
         ],
-        manifest=dict(record_count=1),
-        research_retention=retention,
-        provider_requests=0,
+        "source:sportsgameodds:unmatched": [record("unavailable", mapped=False)],
+    }
+    unmatched = retained["source:sportsgameodds:unmatched"][0]
+    unmatched.update(
+        id="sgo:unmatched", revision="captured-unmatched", event_id="unmatched"
     )
+    games = {
+        identity: dict(
+            id=identity,
+            title=rows[0]["title"],
+            sport="NBA",
+            start_at="2026-11-23T01:00:00Z",
+            identity_status=rows[0]["identity"]["mapping_status"],
+            latest_received_at=rows[0]["times"]["received_at"],
+            records=len(rows),
+            books=[row["original_bookmaker_id"] for row in rows],
+            calculation_counts={row["calculation"]["status"]: 1 for row in rows},
+            source_events=[
+                dict(provider="sportsgameodds", event_id=rows[0]["event_id"])
+            ],
+        )
+        for identity, rows in retained.items()
+    }
+    games["canonical:fixture"]["identity_status"] = "canonical"
+    calculation = offer()
+    requests, errors = [], []
 
     def serve(route):
         url = urlparse(route.request.url)
-        q = {key: value[0] for key, value in parse_qs(url.query).items()}
+        query = {key: values[0] for key, values in parse_qs(url.query).items()}
         requests.append((route.request.method, url.path))
-        if url.path == "/api/research/catalog":
-            selected = [
-                row
-                for row in records
-                if not q.get("calculation_status")
-                or row["calculation"]["status"] == q["calculation_status"]
+        if url.path == "/data":
+            route.fulfill(path=ASSETS / PAGES[url.path])
+        elif url.path.startswith("/view/current/"):
+            route.fulfill(path=ASSETS / Path(url.path).name)
+        elif url.path == "/api/research/games":
+            status = query.get("calculation_status")
+            rows = [
+                game
+                for game in games.values()
+                if not status or status in game["calculation_counts"]
             ]
             route.fulfill(
                 json=dict(
-                    token="snapshot",
-                    rows=selected,
-                    total=len(selected),
-                    counts=dict(source_events=1),
+                    token="frozen-data",
+                    rows=rows,
+                    total=len(rows),
                     offset=0,
                     next_offset=None,
                     captured_at="2026-11-22T20:00:00Z",
-                    population="All received values independent of EV",
-                    provider_requests=0,
                 )
             )
+        elif url.path == "/api/research/game":
+            assert query["token"] == "frozen-data"
+            game = games[query["game_id"]]
+            rows = retained[game["id"]]
+            route.fulfill(
+                json=dict(game=game, rows=rows, total=len(rows), next_offset=None)
+            )
         elif url.path == "/api/research/input":
-            row = deepcopy(next(row for row in records if row["id"] == q["id"]))
-            assert q["revision"] == row["revision"] and q["token"] == "snapshot"
-            row.update(
+            assert query["token"] == "frozen-data"
+            selected = deepcopy(
+                next(
+                    row
+                    for row in retained[query["game_id"]]
+                    if row["id"] == query["id"]
+                )
+            )
+            assert query["revision"] == selected["revision"]
+            selected.update(
                 source_input=dict(
                     price_american="+120",
-                    provider_bookmaker=row["original_bookmaker_id"],
+                    provider_bookmaker=selected["original_bookmaker_id"],
                 ),
-                fee_input=None,
-                contract=None,
-                calculation_payload=offer()
-                if row["calculation"]["status"] != "unavailable"
-                else None,
                 original_response=dict(
                     state="not_recorded", reason="historical_original_bytes_absent"
                 ),
+                calculation_payload=calculation if selected["available"] else None,
+                fee_input=dict(classification="frozen_fixture_fee")
+                if selected["available"]
+                else None,
                 captured_at="2026-11-22T20:00:00Z",
                 reproduction="Exact frozen source and result revisions",
             )
-            route.fulfill(json=row)
-        elif url.path == "/api/research/coverage":
-            route.fulfill(
-                json=dict(
-                    coverage=dict(
-                        observed_at="2026-11-22T20:00:00Z",
-                        runtime=dict(healthy=True),
-                        sources=[
-                            dict(
-                                provider="novig",
-                                acquisition_state="last_receipt_observed",
-                                last_received_at="2026-11-22T19:45:00Z",
-                                archive_supported=False,
-                            )
-                        ],
-                    ),
-                    original_responses=dict(
-                        state="bounded_capture",
-                        captured_receipts=1,
-                        compressed_bytes=100,
-                    ),
-                )
-            )
-        elif url.path == "/api/research/cohorts":
-            if q.get("export") == "1":
-                assert q["id"] == "frozen-cohort"
-                route.fulfill(
-                    json=frozen_evidence,
-                    headers={
-                        "Content-Disposition": 'attachment; filename="predict-research-cohort.json"'
-                    },
-                )
-            else:
-                route.fulfill(
-                    json=dict(
-                        cohorts=[
-                            dict(
-                                id="frozen-cohort",
-                                name="Declared fixture population " + "a" * 64,
-                            )
-                        ],
-                        research_retention=retention,
-                    )
-                )
+            route.fulfill(json=selected)
         elif url.path == "/api/research/read":
             assert route.request.method == "DELETE"
             route.fulfill(json=dict(released=True))
-        elif url.path.startswith("/view/current/"):
-            route.fulfill(path=ASSETS / Path(url.path).name)
-        elif url.path == "/research":
-            route.fulfill(path=ASSETS / "research.html")
+        elif url.path == "/api/workspace/collection":
+            route.fulfill(json={})
         else:
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as pw:
         browser = pw.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
-        context = browser.new_context(
+        page = browser.new_page(
             viewport=dict(width=width, height=round(900 / scale)),
             device_scale_factor=scale,
             accept_downloads=True,
         )
-        page = context.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
-        page.goto(base + "/research")
-        expect(page.locator("#catalog-rows tr")).to_have_count(5)
-        for status in ("positive", "negative", "zero", "unavailable"):
-            expect(page.locator("#catalog-rows")).to_contain_text(status)
-        expect(page.locator("#catalog-rows")).to_contain_text("unestablished")
-        expect(page.locator("#catalog-rows")).to_contain_text("source_local")
-        expect(page.locator("#catalog-rows")).to_contain_text("Source: Unknown")
+        history = base + "/data?view=history"
+        page.goto(history)
+        expect(page.locator("#catalog-rows tr")).to_have_count(2)
+        expect(page.locator("#catalog-rows")).to_contain_text("Source-local game")
         page.get_by_label("Calculation", exact=True).select_option("negative")
         page.get_by_role("button", name="Apply filters", exact=True).click()
-        expect(page.locator("#catalog-rows tr")).to_have_count(1)
-        page.get_by_role("button", name="Inspect Orlando", exact=False).click()
+        expect(page.locator("#catalog-status")).to_contain_text(
+            "1 game · negative EV filter"
+        )
+        page.get_by_role("link", name="Open game", exact=True).click()
+        expect(page.locator("#game-content tr[data-record]")).to_have_count(4)
+        expect(page.locator("#game-content")).to_contain_text("Source: Not recorded")
+
+        page.locator('[data-record="sgo:negative"] button').click()
         dialog = page.get_by_role("dialog")
-        expect(dialog).to_contain_text("1. Received source input")
-        expect(dialog).to_contain_text("2. Identity & settlement")
-        expect(dialog).to_contain_text("3. Probability inputs & policy")
-        expect(dialog).to_contain_text("4. Fees, quantity & cashflows")
-        expect(dialog).to_contain_text("5. Calculation result")
-        expect(dialog).to_contain_text("6. Original-response retention & reproduction")
-        with page.expect_download() as exported:
+        page.get_by_text(
+            "Source identities, revisions, exact arithmetic and reproduction evidence"
+        ).click()
+        for heading in (
+            "1. Received source input",
+            "2. Identity & settlement",
+            "3. Probability inputs & policy",
+            "4. Fees, quantity & cashflows",
+            "5. Calculation result",
+            "6. Original-response retention & reproduction",
+        ):
+            expect(dialog.get_by_role("heading", name=heading)).to_be_visible()
+        with page.expect_download() as download:
             dialog.get_by_role("link", name="Export this exact input & result").click()
-        downloaded = json.loads(Path(exported.value.path()).read_text())
-        assert downloaded["revision"] == "captured-negative"
-        assert downloaded["source_input"]["price_american"] == "+120"
-        dialog.get_by_role("button", name="Close", exact=True).click()
-        page.get_by_role("button", name="Clear", exact=True).click()
-        expect(page.locator("#catalog-rows tr")).to_have_count(5)
+        exported = json.loads(Path(download.value.path()).read_text())
+        assert exported["revision"] == "captured-negative"
+        assert exported["source_input"]["price_american"] == "+120"
+        assert (
+            exported["calculation_payload"]["fee"]["cashflows"]
+            == calculation["fee"]["cashflows"]
+        )
+        assert exported["fee_input"]["classification"] == "frozen_fixture_fee"
+
+        page.goto(history)
+        page.locator('[data-game="source:sportsgameodds:unmatched"]').get_by_role(
+            "link", name="Open game", exact=True
+        ).click()
         page.locator('[data-record="sgo:unmatched"] button').click()
+        page.get_by_text(
+            "Source identities, revisions, exact arithmetic and reproduction evidence"
+        ).click()
         expect(dialog).to_contain_text("fee_unknown")
         expect(dialog).to_contain_text("historical_original_bytes_absent")
         expect(dialog.locator('dt:has-text("Canonical event") + dd')).to_have_text(
-            "Unknown"
+            "Not recorded"
         )
-        dialog.get_by_role("button", name="Close", exact=True).click()
-        page.get_by_text("Collection, archive & retention", exact=True).click()
-        expect(page.locator("#coverage-content")).to_contain_text(
-            "Unsupported archive route"
-        )
-        page.get_by_text(
-            "Declared research populations & evaluation", exact=True
-        ).click()
-        expect(page.locator("#cohort-content")).to_contain_text(
-            "Declared fixture population"
-        )
-        bounds = page.locator("#cohort-content .research-panel-row").evaluate("""row=>{
-          const outer=row.getBoundingClientRect(), link=row.querySelector('a'), button=row.querySelector('button');
-          const a=link.getBoundingClientRect(), b=button.getBoundingClientRect(), id=row.querySelector('small').getBoundingClientRect();
-          return {fragments:link.getClientRects().length,left:a.left,right:a.right,outerLeft:outer.left,outerRight:outer.right,buttonRight:b.right,idBottom:id.bottom,linkTop:a.top};
-        }""")
-        assert bounds["fragments"] == 1
-        assert bounds["left"] >= bounds["outerLeft"] - 1
-        assert bounds["right"] <= bounds["outerRight"] + 1
-        assert bounds["buttonRight"] <= bounds["outerRight"] + 1
-        assert bounds["idBottom"] <= bounds["linkTop"]
-        expect(
-            page.locator(
-                '#research-retention-status dt:has-text("Earlier refusal attempts") + dd'
-            )
-        ).to_have_text("Unknown")
-        expect(
-            page.locator(
-                '#research-retention-status dt:has-text("Observation refusal attempts") + dd'
-            )
-        ).to_have_text("3")
-        with page.expect_download() as cohort_exported:
-            page.get_by_role("link", name="Export frozen evidence", exact=True).click()
-        frozen = json.loads(Path(cohort_exported.value.path()).read_text())
-        assert frozen["cohort_id"] == "frozen-cohort"
-        assert (
-            frozen["research_retention"]["retention_accounting"][
-                "prior_refused_attempts"
-            ]
-            is None
-        )
-        assert (
-            frozen["research_retention"]["retention_dispositions"][
-                "observation_refusals"
-            ]
-            == 3
-        )
-        snapshot = frozen["records"][0]["payload"]["snapshot"]["inputs"]
-        assert (
-            snapshot["source_record"]["quote"]["original"]
-            == frozen_calculation["posted"]
-        )
-        assert (
-            snapshot["calculation"]["fee"]["cashflows"]
-            == frozen_calculation["fee"]["cashflows"]
-        )
-        assert snapshot["fee_input"]["classification"] == "frozen_fixture_fee"
         assert page.evaluate("document.documentElement.scrollWidth<=innerWidth")
-        page.screenshot(path=str(tmp_path / f"research-{width}.png"), full_page=True)
+        page.screenshot(
+            path=str(tmp_path / f"data-evidence-{width}.png"), full_page=True
+        )
         assert not errors
         assert all(method in ("GET", "DELETE") for method, _ in requests)
         assert not any(path.startswith("/api/pregame/research") for _, path in requests)

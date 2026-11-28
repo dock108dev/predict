@@ -255,6 +255,18 @@ class WorkerControls(unittest.IsolatedAsyncioTestCase):
         deep['outcomes'][0]['asks']['levels'][0]['price']['value']='0.41'
         self.assertNotEqual(top_price_identity(book),top_price_identity(deep))
 
+    def test_publication_order_keeps_fifo_and_fresh_slots_within_one_turn(self):
+        from app.collection.current_native_publication import book_publication_order
+
+        markets = ('quiet-old', 'expired-change', 'first-fresh', 'quiet-tail')
+        ordered = book_publication_order(
+            markets, dict(zip(markets, (90, 91, 92, 93), strict=True)), {},
+            {'expired-change': 169, 'first-fresh': 199},
+            {'expired-change': 'new', 'first-fresh': 'first'},
+            {'expired-change': 'prior'}, set(), limit=3, now=100, wall=200,
+        )
+        self.assertEqual(ordered, ['quiet-old', 'first-fresh', 'expired-change'])
+
     async def test_material_changes_share_service_with_oldest_confirmation_waiters(self):
         service=SimpleNamespace(config=deepcopy(DEFAULT),dispatch=True,database_mode=True,books=lambda *args:None)
         worker=NativeWorker(service,'kalshi')

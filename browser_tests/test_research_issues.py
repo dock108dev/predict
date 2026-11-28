@@ -17,10 +17,15 @@ def test_data_exposes_saved_issue_decisions_and_evidence_read_only(width):
     date, clock = "2026-11-23", "2026-11-24T22:00:00Z"
     endpoint = "/api/workspace/mens-d1"
     errors = []
-    decision = dict(id="decision-1", actor="signed-in user", decided_at=clock,
-                    status="accepted_source_limitation", reason="Reviewed the original provider response.",
-                    evidence_revision="evidence-revision-a",
-                    evidence=[dict(label="Reviewed original receipt", url="/original-receipt")])
+    decision = dict(
+        id="decision-1",
+        actor="signed-in user",
+        decided_at=clock,
+        status="accepted_source_limitation",
+        reason="Reviewed the original provider response.",
+        evidence_revision="evidence-revision-a",
+        evidence=[dict(label="Reviewed original receipt", url="/original-receipt")],
+    )
     deep_link = f"/data?evidence=mens-d1&scope=mens-d1&date={date}#mens-d1-issues"
 
     def issue():
@@ -33,7 +38,9 @@ def test_data_exposes_saved_issue_decisions_and_evidence_read_only(width):
             reason="The source cannot verify full venue inventory.",
             evidence_revision="evidence-revision-a",
             evidence=[],
-            status=decision["status"], latest_decision_id=decision["id"], history=[decision],
+            status=decision["status"],
+            latest_decision_id=decision["id"],
+            history=[decision],
         )
 
     def serve(route):
@@ -116,9 +123,9 @@ def test_data_exposes_saved_issue_decisions_and_evidence_read_only(width):
             has_text="Road at Home · Limited venue inventory"
         ).click()
         ledger.get_by_text("Decision history · 1", exact=True).click()
-        expect(ledger.get_by_role("link", name="Reviewed original receipt")).to_have_attribute(
-            "href", base + "/original-receipt"
-        )
+        expect(
+            ledger.get_by_role("link", name="Reviewed original receipt")
+        ).to_have_attribute("href", base + "/original-receipt")
         expect(ledger.get_by_text("Record a decision", exact=True)).to_have_count(0)
         expect(
             page.get_by_role("link", name="Next Eastern date", exact=False)

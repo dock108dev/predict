@@ -35,6 +35,10 @@ def test_runtime_role_writes_and_denials(db, monkeypatch):
     roles.enable(db)  # Repair/reconciliation can repeat with prior operations retained.
     with (connection(db, roles.WEB) as web, connection(db, roles.COLLECTOR) as collector,
           connection(db, roles.ARCHIVE) as archive, connection(db, roles.MIGRATOR) as migrator):
+        for actor, role in zip((web, collector, archive, migrator), (*roles.RUNTIME, roles.MIGRATOR), strict=True):
+            identity = actor.execute('''SELECT session_user AS login, current_user AS actor, rolsuper
+                FROM pg_roles WHERE rolname=current_user''').fetchone()
+            assert identity == {'login': role, 'actor': role, 'rolsuper': False}
         for runtime in (web, collector):
             store.Store(runtime).require_current_schema()
         with monkeypatch.context() as unsafe_socket:
@@ -75,7 +79,10 @@ def test_runtime_role_writes_and_denials(db, monkeypatch):
 
         for runtime, queries in (
             (web, ("DELETE FROM data_runtime", "UPDATE odds_archive_stage SET batch_id=NULL",
-                   "UPDATE current_pregame_price SET game_key='invalid'", "DELETE FROM paper_campaign")),
+                   "UPDATE current_pregame_price SET game_key='invalid'", "DELETE FROM paper_campaign",
+                   "DELETE FROM ev_experiment_accounting", "DELETE FROM ev_experiment_task",
+                   "INSERT INTO ev_experiment_depth DEFAULT VALUES", "DELETE FROM sgo_event_evidence",
+                   "DELETE FROM native_trading_snapshot")),
             (collector, ("UPDATE paper_campaign SET payload='{}'", "DELETE FROM odds_archive_batch",
                          "DELETE FROM odds_archive_stage", "DELETE FROM ev_experiment_accounting",
                          "INSERT INTO odds_archive_stage(batch_id) VALUES (NULL)",
@@ -98,11 +105,16 @@ def test_runtime_role_writes_and_denials(db, monkeypatch):
         assert [row['id'] for row in collector_runtime.pending(collector)] == [command]
         collector_runtime.acknowledge(command, {'stopped': True})
         assert web_runtime.result(command)['acknowledgment'] == {'stopped': True}
+        odds_archive.record(collector, FEED, [quote('0.52', minute=1)])
+        pending_archive = staged(collector)
+        assert len(pending_archive) == 1
 
     manifest = db.execute("SELECT * FROM public.schema_migration ORDER BY version").fetchall()
     roles.rollback(db)
     assert db.execute('SELECT id FROM public.paper_campaign').fetchone()['id'] == campaign['id']
     assert db.execute('SELECT * FROM public.schema_migration ORDER BY version').fetchall() == manifest
+    assert '129_experiment_depth_receipt_capacity.sql' in {row['version'] for row in manifest}
+    assert staged(db) == pending_archive
     assert db.execute("SELECT pg_get_userbyid(relowner) owner FROM pg_class WHERE oid='paper_campaign'::regclass"
                       ).fetchone()['owner'] == roles.BOOTSTRAP
     with connection(db, roles.WEB) as retired:

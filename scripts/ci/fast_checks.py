@@ -3,6 +3,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ import re
 import subprocess
 import sys
 import time
+from zipfile import BadZipFile, ZipFile
 
 ROOT = Path(__file__).resolve().parents[2]
 CORE = {
@@ -43,6 +45,25 @@ SQL_SGO = {
 SQL_DATABASE_ROLES = "tests/test_database_roles_sql.py"
 SQL_MONITOR = "tests/test_pregame_cohorts_sql.py"
 OFFER_EXPORT = "tests/test_research_offer_export_api.py"
+ASSET_ALLOWLIST = "tests/test_ev09_asset_delivery.py::Assets::test_workspace_asset_route_serves_only_registered_files"
+DEPTH_SPOOL = "tests/test_experiment_depth_stage.py"
+NOVIG_BINDING = {
+    "tests/test_native_trading.py::test_novig_native_discovery_binds_both_roles_and_enumerates_unrepresented_lines",
+    "tests/test_native_trading.py::test_five_minute_difference_needs_both_roles_and_exact_event_link_and_keeps_paper_clock",
+}
+HYBRID_REPLAY = "tests/test_paper_campaigns_sql.py::CampaignSQL::test_all_sports_replays_original_books_then_collects_at_the_future_cutoff"
+MIXED_SQL = {
+    "tests/test_market_census.py": ("MarketCensusSQL",),
+    "tests/test_mens_d1_coverage_api.py": ("MensD1CoverageSQL",),
+    "tests/test_native_experiment_depth.py": ("NativeReplacementSQL",),
+    "tests/test_t10_recovery.py": ("DatedD1RecoverySQL", "RecoverySQL"),
+}
+BASELINE_BROWSER = {
+    "browser_tests/test_dashboard_workspace.py",
+    "browser_tests/test_experiment_workspace.py",
+    "browser_tests/test_personal_data_workspace.py",
+    "browser_tests/test_paper_campaign_integration.py",
+}
 DOMAINS = {
     "collection": {
         "tests/test_sportsgameodds_adapter.py",
@@ -93,9 +114,26 @@ DOMAINS = {
 }
 
 
-def plan(root, paths):
+def plan(root, paths, *, broad=False):
     pure, sql, scopes, notes = set(CORE), set(), set(), []
-    for path in paths:
+    browser = set(BASELINE_BROWSER) if broad else set()
+    policy = json.loads((root / "scripts/ci/python-policy.json").read_text())
+    contracted_portable = {
+        test
+        for suite in json.loads((root / "scripts/ci/suites.json").read_text())
+        for test in suite["tests"]
+    } | set(policy["quality"])
+    archived = policy["deferred"]
+    # A missing base runs each focused application selector. The historical Full
+    # suite remains separately registered with its own execution contract.
+    inputs = set(paths)
+    if broad:
+        inputs.update(
+            git_paths(
+                root, "ls-files", "-z", "--", "app", "deploy", ".github", "scripts/ci"
+            )
+        )
+    for path in sorted(inputs):
         candidate = Path(path)
         if candidate.is_absolute() or ".." in candidate.parts:
             raise ValueError("Changed paths must remain inside the checkout")
@@ -103,6 +141,26 @@ def plan(root, paths):
             len(candidate.parts) == 1 and candidate.suffix == ".md"
         ):
             continue
+        if (
+            path.startswith(("tests/test_", "browser_tests/test_"))
+            and candidate.suffix == ".py"
+            and (root / path).is_file()
+        ):
+            if path.startswith("browser_tests/"):
+                browser.add(path)
+            elif path in MIXED_SQL:
+                pure.add(path)
+                sql.update(path + "::" + node for node in MIXED_SQL[path])
+            elif archived.get(path, "").startswith("Required") or (
+                path.endswith("_sql.py") and path not in archived
+            ):
+                sql.add(path)
+            elif path in contracted_portable or path not in archived:
+                pure.add(path)
+            else:
+                notes.append(
+                    "Changed test remains optional under the suite manifest: " + path
+                )
         if path.startswith(("deploy/", ".github/", "scripts/ci/")) or path in (
             "Dockerfile",
             ".dockerignore",
@@ -118,6 +176,56 @@ def plan(root, paths):
         if path.startswith("app/collection/"):
             scopes.add("collection")
             sql.add("tests/test_experiment_acquisition_sql.py")
+        if path in (
+            "app/collection/current_native.py",
+            "app/collection/current_native_publication.py",
+        ):
+            pure.add("tests/test_current_native.py")
+        if path in (
+            "app/dashboard/workspace_routes.py",
+            "app/dashboard/workspace_app.py",
+            "app/dashboard/multi_game_server.py",
+        ):
+            pure.add(ASSET_ALLOWLIST)
+        if path in (
+            "app/collection/experiment_depth_stage.py",
+            "app/collection/experiment_depth.py",
+            "app/storage/migrations/129_experiment_depth_receipt_capacity.sql",
+        ):
+            pure.add(DEPTH_SPOOL)
+        if path in (
+            "app/collection/native_trading.py",
+            "app/collection/novig_experiment_depth.py",
+            "app/storage/native_trading.py",
+        ):
+            pure.update(NOVIG_BINDING)
+        if path in (
+            "app/collection/native_trading_identity.py",
+            "app/comparison/sgo_native_binding.py",
+            "app/storage/sgo_native_catalog.py",
+        ):
+            pure.add("tests/test_sgo_native_binding.py")
+            sql.update(
+                {
+                    "tests/test_sgo_native_catalog_sql.py",
+                    "tests/test_native_trading_sql.py",
+                }
+            )
+        if path in (
+            "app/dashboard/opportunity_static/current/dashboard.js",
+            "app/dashboard/opportunity_static/current/research-tools.js",
+        ):
+            browser.add("browser_tests/test_dashboard_workspace.py")
+        if path in (
+            "app/research/paper_campaigns.py",
+            "app/research/paper_depth.py",
+            "app/research/paper.py",
+            "app/collection/experiment_depth.py",
+            "app/collection/experiment_depth_stage.py",
+            "app/storage/experiment_depth.py",
+            "app/storage/migrations/129_experiment_depth_receipt_capacity.sql",
+        ):
+            sql.add(HYBRID_REPLAY)
         if path in (
             "app/collection/original_receipts.py",
             "tests/test_original_receipts.py",
@@ -143,16 +251,36 @@ def plan(root, paths):
         if path.startswith(("app/research/", "app/storage/")):
             scopes.add("research")
             sql.update(SQL_CORE)
-        if path.startswith(('app/collection/native_trading','app/collection/native_reference_refresh',
-                            'app/storage/native_trading',
-                            'app/comparison/native_observation','tests/test_native_trading',
-                            'tests/test_native_observation')) or path.endswith('128_native_trading_offers.sql'):
-            pure.update({'tests/test_native_trading.py','tests/test_native_trading_prophetx.py','tests/test_native_observation.py'})
-            sql.add('tests/test_native_trading_sql.py')
+        if path.startswith(
+            (
+                "app/collection/native_trading",
+                "app/collection/native_reference_refresh",
+                "app/storage/native_trading",
+                "app/comparison/native_observation",
+                "tests/test_native_trading",
+                "tests/test_native_observation",
+            )
+        ) or path.endswith("128_native_trading_offers.sql"):
+            pure.update(
+                {
+                    "tests/test_native_trading.py",
+                    "tests/test_native_trading_prophetx.py",
+                    "tests/test_native_observation.py",
+                }
+            )
+            sql.add("tests/test_native_trading_sql.py")
         if path.startswith(("app/", "tests/")) and any(
             topic in candidate.name
-            for topic in ("experiment_depth", "paper_depth", "experiment_public_depth", "execution_contract",
-                          "liquidity_execution", "dashboard_depth", "dashboard_kalshi", "dashboard_pmus")
+            for topic in (
+                "experiment_depth",
+                "paper_depth",
+                "experiment_public_depth",
+                "execution_contract",
+                "liquidity_execution",
+                "dashboard_depth",
+                "dashboard_kalshi",
+                "dashboard_pmus",
+            )
         ):
             pure.update(
                 {
@@ -378,6 +506,9 @@ def plan(root, paths):
             )
     for scope in scopes:
         pure.update(DOMAINS[scope])
+    pure = {
+        node for node in pure if "::" not in node or node.split("::", 1)[0] not in pure
+    }
     sql = {
         node for node in sql if "::" not in node or node.split("::", 1)[0] not in sql
     }
@@ -386,6 +517,17 @@ def plan(root, paths):
         raise ValueError(
             "Missing fast-check contract files: " + ", ".join(sorted(missing))
         )
+    portable_modules = {path.split("::", 1)[0] for path in pure}
+    deselected = {
+        path + "::" + node
+        for path in portable_modules & MIXED_SQL.keys()
+        for node in MIXED_SQL[path]
+    }
+    deselected.update(
+        node
+        for node in policy["archival_nodes"]
+        if node.split("::", 1)[0] in portable_modules
+    )
     commands = [
         (
             "lint",
@@ -409,6 +551,7 @@ def plan(root, paths):
                 "pytest",
                 "-q",
                 "--maxfail=1",
+                *("--deselect=" + node for node in sorted(deselected)),
                 *sorted(pure),
             ],
         ),
@@ -430,6 +573,7 @@ def plan(root, paths):
         )
     return dict(
         paths=paths,
+        browser=sorted(browser),
         scopes=sorted(scopes),
         commands=commands,
         notes=notes,
@@ -437,39 +581,102 @@ def plan(root, paths):
     )
 
 
+def git_paths(root, *args):
+    raw = subprocess.check_output(["git", *args], cwd=root)
+    return {os.fsdecode(path) for path in raw.split(b"\0") if path}
+
+
 def changed_paths(root):
-    event_path = os.environ.get("GITHUB_EVENT_PATH")
-    event = json.loads(Path(event_path).read_text()) if event_path else {}
-    base = (
-        event.get("before")
-        or (event.get("pull_request") or {}).get("base", {}).get("sha")
-        or (event.get("merge_group") or {}).get("base_sha")
+    return sorted(
+        git_paths(root, "diff", "--name-only", "--no-renames", "-z", "HEAD", "--")
+        | git_paths(root, "ls-files", "--others", "--exclude-standard", "-z")
     )
-    if base and re.fullmatch(r"[a-f0-9]{40}", base) and set(base) != {"0"}:
-        if subprocess.run(
-            ["git", "cat-file", "-e", base + "^{commit}"], cwd=root, capture_output=True
-        ).returncode:
-            subprocess.run(
-                ["git", "fetch", "--no-tags", "--depth=1", "origin", base],
-                cwd=root,
-                check=True,
-                timeout=20,
+
+
+def github(path):
+    return subprocess.check_output(
+        ["gh", "api", path], stderr=subprocess.PIPE, timeout=10
+    )
+
+
+def installed_release(repository, run_id):
+    # Environment success alone includes publish-only runs and skipped releases.
+    # Only the host receipt in the matching CI attempt proves deployment.
+    prefix = f"repos/{repository}/actions"
+    history = json.loads(
+        github(
+            f"{prefix}/workflows/ci.yml/runs?branch=main&status=completed&per_page=10"
+        )
+    )
+    for run in history["workflow_runs"]:
+        if str(run["id"]) == run_id:
+            continue
+        name = f"personal-beta-{run['id']}-{run['run_attempt']}"
+        artifacts = json.loads(
+            github(f"{prefix}/runs/{run['id']}/artifacts?name={name}")
+        )["artifacts"]
+        matches = [
+            item for item in artifacts if item["name"] == name and not item["expired"]
+        ]
+        if len(matches) != 1:
+            # The newest evidence is ambiguous. An older completion might omit
+            # files reverted after this release, so select the broad baseline.
+            raise ValueError(f"CI run {run['id']} has no usable deployment receipt")
+        data = github(f"{prefix}/artifacts/{matches[0]['id']}/zip")
+        with ZipFile(BytesIO(data)) as archive:
+            receipt = json.loads(archive.read("release/metrics.json"))
+        sha = run["head_sha"]
+        if not re.fullmatch(r"[a-f0-9]{40}", sha) or receipt["sha"] != sha:
+            raise ValueError("Deployment receipt revision does not match its CI run")
+        if (
+            receipt["status"] == "PASS"
+            and receipt["deployed"] is True
+            and receipt["publish_only"] is False
+        ):
+            return sha, run["id"]
+        if receipt["deployed"] is not False or "deploy" in receipt["phases"]:
+            raise ValueError(
+                f"CI run {run['id']} attempted a deployment without a confirmed result"
             )
-    else:
-        base = "HEAD^" if event_path else "HEAD"
-    raw = subprocess.check_output(
-        ["git", "diff", "--name-only", "--no-renames", "-z", base, "HEAD", "--"],
-        cwd=root,
-    )
-    if not event_path:
-        raw += subprocess.check_output(
-            ["git", "diff", "--name-only", "--no-renames", "-z", "HEAD", "--"],
-            cwd=root,
+    raise ValueError("No recent CI run confirmed a hosted deployment")
+
+
+def release_input(repository, head, run_id, *, force_broad=False):
+    selection = dict(head=head, paths=[], base=None, base_run=None, broad=True)
+    if force_broad:
+        return selection | {
+            "reason": "Manual dispatch requested the broad release plan"
+        }
+    try:
+        base, base_run = installed_release(repository, run_id)
+        paths = set()
+        if base != head:
+            comparison = json.loads(
+                github(f"repos/{repository}/compare/{base}...{head}?page=1&per_page=1")
+            )
+            if (
+                comparison["status"] != "ahead"
+                or comparison["merge_base_commit"]["sha"] != base
+            ):
+                raise ValueError("Installed revision is outside the candidate history")
+            if len(comparison["files"]) >= 300:
+                raise ValueError(
+                    "Candidate comparison reached GitHub's 300-file response limit"
+                )
+            if not comparison["files"]:
+                raise ValueError("Candidate comparison has no file evidence")
+            for item in comparison["files"]:
+                paths.add(item["filename"])
+                if item["status"] == "renamed":
+                    paths.add(item["previous_filename"])
+        selection.update(paths=sorted(paths), base=base, base_run=base_run, broad=False)
+    except (KeyError, TypeError, BadZipFile, OSError, subprocess.SubprocessError):
+        selection["reason"] = (
+            "Hosted deployment receipt or candidate comparison is unavailable"
         )
-        raw += subprocess.check_output(
-            ["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=root
-        )
-    return sorted({os.fsdecode(path) for path in raw.split(b"\0") if path})
+    except ValueError as error:
+        selection["reason"] = str(error)
+    return selection
 
 
 def run_checks(commands, *, root=ROOT):
@@ -520,12 +727,73 @@ def run_checks(commands, *, root=ROOT):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", action="store_true")
+    parser.add_argument("--ci-input", action="store_true")
+    parser.add_argument("--browser", action="store_true")
     parser.add_argument("--paths", nargs="*")
     args = parser.parse_args(argv)
-    selected = plan(ROOT, changed_paths(ROOT) if args.paths is None else args.paths)
+    decision = None
+    if args.ci_input:
+        head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip()
+        if head != os.environ["GITHUB_SHA"]:
+            raise ValueError("Release planning must use the exact candidate revision")
+        decision = release_input(
+            os.environ["GITHUB_REPOSITORY"],
+            head,
+            os.environ["GITHUB_RUN_ID"],
+            force_broad=os.environ.get("RELEASE_BROADEN_VALIDATION") == "true",
+        )
+    elif raw := os.environ.get("RELEASE_SELECTION"):
+        decision = json.loads(raw)
+        if decision["head"] != os.environ["GITHUB_SHA"]:
+            raise ValueError(
+                "Release validation must match the planned candidate revision"
+            )
+    elif os.environ.get("GITHUB_EVENT_PATH") and args.paths is None:
+        raise ValueError(
+            "GitHub release validation requires its prepared candidate selection"
+        )
+    paths = (
+        decision["paths"]
+        if decision
+        else changed_paths(ROOT)
+        if args.paths is None
+        else args.paths
+    )
+    selected = plan(ROOT, paths, broad=bool(decision and decision["broad"]))
+    if decision:
+        selected["base"] = decision["base"]
+        selected["base_run"] = decision["base_run"]
+        selected["broad"] = decision["broad"]
+        if decision["broad"]:
+            selected["notes"].append("Broadened focused checks: " + decision["reason"])
+        else:
+            selected["notes"].append(
+                f"Installed release comparison: {decision['base']} (CI run {decision['base_run']}) through {decision['head']}"
+            )
+    if args.ci_input:
+        print(json.dumps(decision | {"browser": bool(selected["browser"])}))
+        return 0
     if args.plan:
         print(json.dumps(selected, indent=2))
         return 0
+    if args.browser:
+        if not selected["browser"]:
+            return 0
+        output = ROOT / "test-results/fast-browser" / str(time.time_ns())
+        return subprocess.run(
+            [
+                sys.executable,
+                "scripts/ci/postgres.py",
+                "--report-dir",
+                str(output),
+                "--fail-fast",
+                "--tests",
+                *selected["browser"],
+            ],
+            cwd=ROOT,
+        ).returncode
     output = ROOT / "test-results/fast"
     reports = output / (
         str(time.time_ns()) + "-" + str(os.environ.get("GITHUB_RUN_ATTEMPT", "local"))

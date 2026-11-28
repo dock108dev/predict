@@ -30,26 +30,39 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
         stream_scopes = []
         board_scopes = []
         failed_reads = []
-        row = dict(offer(), venue='novig', pull_id='committed-pull', id='committed-offer', line='-1.5',
-                   eligible_until=(now + timedelta(hours=2)).isoformat(), calculation={'status': 'positive'})
+        row = dict(
+            offer(),
+            venue="novig",
+            pull_id="committed-pull",
+            id="committed-offer",
+            line="-1.5",
+            eligible_until=(now + timedelta(seconds=60)).isoformat(),
+            calculation={"status": "positive"},
+        )
 
         async def page_response(_request):
-            return web.FileResponse(ASSETS / 'dashboard.html')
+            return web.FileResponse(ASSETS / "dashboard.html")
 
         async def board(request):
             board_scopes.append(dict(request.query))
             if len(board_scopes) == 2:
                 held.set()
                 await release.wait()
-            rows = [row] if opening.is_set() and request.query.get('sport') == 'NCAAB' else []
-            return web.json_response(dict(rows=rows, total=len(rows), offset=0))
+            rows = (
+                [row]
+                if opening.is_set() and request.query.get("sport") == "NCAAB"
+                else []
+            )
+            return web.json_response(
+                dict(rows=rows, total=len(rows), offset=0, read_at=now.isoformat())
+            )
 
         async def stream(request):
             stream_scopes.append(dict(request.query))
             if len(stream_scopes) == 1:
-                raise web.HTTPServiceUnavailable(headers={'Retry-After': '2'})
+                raise web.HTTPServiceUnavailable(headers={"Retry-After": "2"})
             await opening.wait()
-            response = web.StreamResponse(headers={'Content-Type': 'text/event-stream'})
+            response = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
             await response.prepare(request)
             # A book committed while the stream was down, so no revision notice follows.
             await response.write(b'data: {"ready":true}\n\n')
@@ -57,14 +70,14 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
             return response
 
         app = web.Application()
-        app.router.add_get('/', page_response)
-        app.router.add_get('/api/research/dashboard', board)
-        app.router.add_get('/api/research/dashboard-updates', stream)
-        app.router.add_static('/view/current', ASSETS)
+        app.router.add_get("/", page_response)
+        app.router.add_get("/api/research/dashboard", board)
+        app.router.add_get("/api/research/dashboard-updates", stream)
+        app.router.add_static("/view/current", ASSETS)
         async with TestServer(app) as server, async_playwright() as playwright:
             browser = await playwright.chromium.launch()
             page = await browser.new_page()
-            await page.clock.install(time=now)
+            await page.clock.install(time=now - timedelta(hours=4))
             await page.add_init_script("""(() => {
               window.streams = [];
               window.EventSource = class extends EventSource {
@@ -75,14 +88,26 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
                 document.dispatchEvent(new Event('visibilitychange'));
               };
             })()""")
-            page.on('requestfailed', lambda request: failed_reads.append(request.failure)
-                    if urlparse(request.url).path == '/api/research/dashboard' else None)
+            page.on(
+                "requestfailed",
+                lambda request: (
+                    failed_reads.append(request.failure)
+                    if urlparse(request.url).path == "/api/research/dashboard"
+                    else None
+                ),
+            )
             try:
-                url = server.make_url('/?board_view=all&board_venue=novig&board_sport=NCAAB&board_family=total')
+                url = server.make_url(
+                    "/?board_view=all&board_venue=novig&board_sport=NCAAB&board_family=total"
+                )
                 await page.goto(str(url))
-                await page.wait_for_function('() => streams[0]?.readyState === EventSource.CLOSED')
-                await expect(page.get_by_role('button', name='Reload saved prices')).to_be_enabled()
-                await expect(page.locator('#dashboard-rows > tr')).to_have_count(0)
+                await page.wait_for_function(
+                    "() => streams[0]?.readyState === EventSource.CLOSED"
+                )
+                await expect(
+                    page.get_by_role("button", name="Reload saved prices")
+                ).to_be_enabled()
+                await expect(page.locator("#dashboard-rows > tr")).to_have_count(0)
                 assert len(stream_scopes) == len(board_scopes) == 1
                 # Let the retry reach the server near the scheduled poll without
                 # advancing the in-flight read past its own request timeout.
@@ -92,24 +117,49 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
                 await page.clock.fast_forward(7000)
                 assert len(board_scopes) == 2
                 release.set()
-                await expect(page.locator('[data-quote="committed-pull:committed-offer"]')).to_be_visible()
-                await expect(page.get_by_role('button', name='Reload saved prices')).to_be_enabled()
+                await expect(
+                    page.locator('[data-quote="committed-pull:committed-offer"]')
+                ).to_be_visible()
+                await expect(
+                    page.get_by_role("button", name="Reload saved prices")
+                ).to_be_enabled()
                 assert len(board_scopes) == 3 and not failed_reads
-                assert stream_scopes == [dict(sport='NCAAB', family='total')] * 2
-                assert all(scope['sport'] == 'NCAAB' and scope['venue'] == 'novig' for scope in board_scopes)
+                assert stream_scopes == [dict(sport="NCAAB", family="total")] * 2
+                assert all(
+                    scope["sport"] == "NCAAB" and scope["venue"] == "novig"
+                    for scope in board_scopes
+                )
 
-                await page.evaluate('setDashboardHidden(true)')
-                assert await page.evaluate('streams[1].readyState === EventSource.CLOSED')
+                await page.evaluate("setDashboardHidden(true)")
+                assert await page.evaluate(
+                    "streams[1].readyState === EventSource.CLOSED"
+                )
                 await page.clock.fast_forward(30000)
                 assert len(stream_scopes) == 2
-                await page.evaluate('setDashboardHidden(false)')
-                await page.wait_for_function('() => streams[2]?.readyState === EventSource.OPEN')
-                await page.get_by_role('combobox', name='Sport').select_option('NBA')
-                await page.wait_for_function('() => streams[3]?.readyState === EventSource.OPEN')
-                assert await page.evaluate('streams[2].readyState === EventSource.CLOSED')
-                assert stream_scopes[-1] == dict(sport='NBA', family='total')
-                await page.get_by_role('combobox', name='Venue').select_option('')
-                assert await page.evaluate('streams[3].readyState === EventSource.CLOSED')
+                await page.evaluate("setDashboardHidden(false)")
+                await page.wait_for_function(
+                    "() => streams[2]?.readyState === EventSource.OPEN"
+                )
+                # The reconnect delivers the same saved frame after the server-time
+                # expiry. The slow browser and older frame cannot requalify it.
+                await expect(
+                    page.get_by_role("button", name="Reload saved prices")
+                ).to_be_enabled()
+                await expect(
+                    page.locator('[data-quote="committed-pull:committed-offer"]')
+                ).to_have_count(0)
+                await page.get_by_role("combobox", name="Sport").select_option("NBA")
+                await page.wait_for_function(
+                    "() => streams[3]?.readyState === EventSource.OPEN"
+                )
+                assert await page.evaluate(
+                    "streams[2].readyState === EventSource.CLOSED"
+                )
+                assert stream_scopes[-1] == dict(sport="NBA", family="total")
+                await page.get_by_role("combobox", name="Venue").select_option("")
+                assert await page.evaluate(
+                    "streams[3].readyState === EventSource.CLOSED"
+                )
                 await page.clock.fast_forward(30000)
                 assert len(stream_scopes) == 4
             finally:
@@ -147,12 +197,23 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         line="-1.5",
     )
     row["id"] = key["offer_id"]
-    row["liquidity"] = dict(status="full_size", eligible=True, intended_stake_usd="100",
-        modeled_stake_usd="100", modeled_net_ev="0.105", available_purchase_usd="132",
-        modeled_average_price="0.4", modeled_fee_usd="1.85", book_received_at=row["times"]["received_at"],
-        valid_until=row["eligible_until"])
-    public_book = dict(market_id="exact-native-market", outcome_id="exact-native-outcome",
-                       levels=[dict(price="0.4", quantity="330")])
+    row["liquidity"] = dict(
+        status="full_size",
+        eligible=True,
+        intended_stake_usd="100",
+        modeled_stake_usd="100",
+        modeled_net_ev="0.105",
+        available_purchase_usd="132",
+        modeled_average_price="0.4",
+        modeled_fee_usd="1.85",
+        book_received_at=row["times"]["received_at"],
+        valid_until=row["eligible_until"],
+    )
+    public_book = dict(
+        market_id="exact-native-market",
+        outcome_id="exact-native-outcome",
+        levels=[dict(price="0.4", quantity="330")],
+    )
     listing = {"rows": [row], "total": 1, "offset": 0}
     cbb = "South Carolina Gamecocks at Arizona State Sun Devils"
     cbb_rows = []
@@ -189,14 +250,28 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
 
     def serve(route):
         url = urlparse(route.request.url)
-        if url.hostname == "predict.fixture" and url.path == "/api/research/dashboard-liquidity" and route.request.method == "POST":
+        if (
+            url.hostname == "predict.fixture"
+            and url.path == "/api/research/dashboard-liquidity"
+            and route.request.method == "POST"
+        ):
             requests.append(url.path)
             assert route.request.post_data_json == dict(key, amount="25")
-            route.fulfill(json={"provider_requests": 0, "result": {
-                "liquidity": dict(row["liquidity"], intended_stake_usd="25", modeled_stake_usd="25",
-                                  modeled_net_ev="0.12", modeled_fee_usd="0.46"),
-                "liquidity_evidence": public_book,
-            }})
+            route.fulfill(
+                json={
+                    "provider_requests": 0,
+                    "result": {
+                        "liquidity": dict(
+                            row["liquidity"],
+                            intended_stake_usd="25",
+                            modeled_stake_usd="25",
+                            modeled_net_ev="0.12",
+                            modeled_fee_usd="0.46",
+                        ),
+                        "liquidity_evidence": public_book,
+                    },
+                }
+            )
             return
         if url.hostname != "predict.fixture" or route.request.method != "GET":
             errors.append("Unexpected external or mutating request")
@@ -240,11 +315,26 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
             )
         elif url.path == "/api/research/dashboard-coverage":
             assert parse_qs(url.query) == {}
-            route.fulfill(json={"provider_requests": 0, "coverage": [
-                dict(venue="prophetx", league="NBA", family="spread", main=True, opportunities=4,
-                     assessable=2, full_size=1, ev_assessable=2, intended_stake_usd="400",
-                     observed_supported_stake_usd="120", reasons={"book_unobserved":2})
-            ]})
+            route.fulfill(
+                json={
+                    "provider_requests": 0,
+                    "coverage": [
+                        dict(
+                            venue="prophetx",
+                            league="NBA",
+                            family="spread",
+                            main=True,
+                            opportunities=4,
+                            assessable=2,
+                            full_size=1,
+                            ev_assessable=2,
+                            intended_stake_usd="400",
+                            observed_supported_stake_usd="120",
+                            reasons={"book_unobserved": 2},
+                        )
+                    ],
+                }
+            )
         elif url.path in ("/api/research/market", "/api/research/market-export"):
             expected = (
                 key
@@ -255,7 +345,11 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
                 }
                 | {"offer_id": alternative["id"]}
             )
-            params = dict(expected, liquidity="1") if url.path == "/api/research/market" else expected
+            params = (
+                dict(expected, liquidity="1")
+                if url.path == "/api/research/market"
+                else expected
+            )
             assert parse_qs(url.query) == {k: [v] for k, v in params.items()}
             route.fulfill(
                 json={
@@ -300,7 +394,9 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
                 table.get_by_role("cell", name=re.compile(re.escape(value) + "$"))
             ).to_be_visible()
         expect(table.get_by_text("Quote +8.80%", exact=True)).to_be_visible()
-        expect(table.get_by_text("Full size · +10.50% at $100.00", exact=False)).to_be_visible()
+        expect(
+            table.get_by_text("Full size · +10.50% at $100.00", exact=False)
+        ).to_be_visible()
         assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
         trigger = table.get_by_role(
             "button",
@@ -312,12 +408,18 @@ def test_dashboard_keeps_board_and_reads_the_exact_offer(width):
         expect(
             inspector.get_by_role("heading", name="Reference prices")
         ).to_be_visible()
-        expect(inspector.get_by_role("heading", name="Liquidity at $100.00")).to_be_visible()
+        expect(
+            inspector.get_by_role("heading", name="Liquidity at $100.00")
+        ).to_be_visible()
         inspector.get_by_text("Public book evidence", exact=True).click()
         expect(inspector.get_by_text("exact-native-market", exact=True)).to_be_visible()
         inspector.get_by_role("button", name="$25", exact=True).click()
-        expect(inspector.get_by_role("heading", name="Liquidity at $25.00")).to_be_visible()
-        expect(inspector.get_by_text("Full size · +12.00% at $25.00", exact=False)).to_be_visible()
+        expect(
+            inspector.get_by_role("heading", name="Liquidity at $25.00")
+        ).to_be_visible()
+        expect(
+            inspector.get_by_text("Full size · +12.00% at $25.00", exact=False)
+        ).to_be_visible()
         expect(inspector.get_by_text("$0 modeled fees", exact=False)).to_be_visible()
         expect(
             inspector.get_by_text("home (this bet) · -110", exact=False)
@@ -517,7 +619,8 @@ def test_native_alternate_retains_price_and_depth_without_reference(width):
         liquidity=dict(status="unknown", reason="book_unobserved"),
     )
     refreshed = dict(
-        book, levels=[dict(price=".30", quantity="2000", orders=["2000"]), book["levels"][1]]
+        book,
+        levels=[dict(price=".30", quantity="2000", orders=["2000"]), book["levels"][1]],
     )
     preview_offer = dict(
         row,
@@ -648,10 +751,16 @@ def test_native_alternate_retains_price_and_depth_without_reference(width):
         ]:
             dialog.get_by_role("button", name=f"${amount}", exact=True).click()
             details = dialog.locator(".liquidity-details")
-            expect(details.get_by_role("heading", name=f"Liquidity at ${amount}.00")).to_be_visible()
+            expect(
+                details.get_by_role("heading", name=f"Liquidity at ${amount}.00")
+            ).to_be_visible()
             expect(details.get_by_text(modeled_cash, exact=True)).to_be_visible()
             expect(details.get_by_text(average_price, exact=True)).to_be_visible()
-            expect(details.get_by_text("Full size" if amount == 25 else "Partial size", exact=False)).to_be_visible()
+            expect(
+                details.get_by_text(
+                    "Full size" if amount == 25 else "Partial size", exact=False
+                )
+            ).to_be_visible()
         expect(dialog.get_by_text("Modeled fee", exact=True)).to_be_visible()
         expect(dialog.get_by_text("Modeled net EV", exact=True)).to_have_count(0)
         expect(dialog.get_by_text("25% (+300)", exact=True)).to_be_visible()
@@ -663,7 +772,9 @@ def test_native_alternate_retains_price_and_depth_without_reference(width):
         coverage = page.locator("#dashboard-liquidity-coverage")
         coverage.get_by_text("Liquidity coverage", exact=True).click()
         expect(coverage.get_by_text("24-hour slate and next 2 hours")).to_be_visible()
-        expect(coverage.get_by_role("cell", name=re.compile("stale book 1"))).to_be_visible()
+        expect(
+            coverage.get_by_role("cell", name=re.compile("stale book 1"))
+        ).to_be_visible()
         assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
         assert [request["amount"] for request in previews] == ["25", "100", "500"]
         assert not errors
@@ -744,14 +855,20 @@ def test_open_dashboard_amount_expires_then_rechecks_same_selection(native):
         if path == "/":
             route.fulfill(path=ASSETS / "dashboard.html", content_type="text/html")
         elif path == "/api/research/dashboard":
-            route.fulfill(json=dict(rows=[row], total=1, offset=0))
+            route.fulfill(
+                json=dict(rows=[row], total=1, offset=0, read_at=now.isoformat())
+            )
         elif path == "/api/research/market":
-            route.fulfill(json=detail)
+            route.fulfill(json=dict(detail, read_at=now.isoformat()))
         elif path == "/api/research/dashboard-liquidity":
             request = route.request.post_data_json
             previews.append(request)
             if request["amount"] == "500":
-                reason = "stale_book" if len(previews) == 1 else "native_observation_superseded"
+                reason = (
+                    "stale_book"
+                    if len(previews) == 1
+                    else "native_observation_superseded"
+                )
                 result = dict(
                     liquidity=dict(
                         status="unknown",
@@ -777,7 +894,12 @@ def test_open_dashboard_amount_expires_then_rechecks_same_selection(native):
                     ),
                 )
             route.fulfill(
-                json=dict(result=result, provider_requests=0, orders_submitted=0)
+                json=dict(
+                    result=result,
+                    provider_requests=0,
+                    orders_submitted=0,
+                    read_at=now.isoformat(),
+                )
             )
         elif (asset := ASSETS / Path(path).name).is_file():
             route.fulfill(path=asset)
@@ -787,7 +909,7 @@ def test_open_dashboard_amount_expires_then_rechecks_same_selection(native):
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
         page = browser.new_page()
-        page.clock.install(time=now)
+        page.clock.install(time=now - timedelta(hours=4))
         page.route("**/*", serve)
         page.goto("http://predict.fixture/?board_view=all")
         page.get_by_role("button", name=re.compile("View evidence")).click()
@@ -812,9 +934,7 @@ def test_open_dashboard_amount_expires_then_rechecks_same_selection(native):
         )
         expect(budget).to_have_value("500")
         output.get_by_text("Earlier size estimate (expired)", exact=True).click()
-        expect(
-            output.get_by_text("Modeled cash", exact=True)
-        ).to_be_visible()
+        expect(output.get_by_text("Modeled cash", exact=True)).to_be_visible()
 
         amount.get_by_role("button", name="Evaluate amount").click()
         expect(

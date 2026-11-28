@@ -201,6 +201,30 @@ def _roles(event, venue):
     return roles, evidence
 
 
+def _novig_role_proof(event, anchor, source_roles, native_roles):
+    proof = anchor.get("novig_subject_roles")
+    source = anchor["event"]
+    subjects = (event.get("native_role_evidence") or {}).get("subjects")
+    if (
+        event["provider"] != "novig"
+        or not proof
+        or proof["event_id"] != event["id"]
+        or (source.get("shared_provider_ids") or {}).get("novig_event") != event["id"]
+        or proof["sgo_event_id"] != source["id"]
+        or proof["subjects"] != subjects
+        or stamp(source["scheduled_start"]) != stamp(event["scheduled_start"])
+    ):
+        return None
+    # Exact subject IDs may establish unresolved aliases. A known canonical
+    # team disagreement remains a contradiction even with typed event links.
+    if any(
+        native_roles[role] not in (source_roles[role], "novig:team:" + subjects[role])
+        for role in subjects
+    ):
+        return None
+    return proof
+
+
 def link(event, anchors, *, prior=None):
     """Both roles and one occurrence must agree; nearby kickoffs alone never join.
 
@@ -257,21 +281,24 @@ def link(event, anchors, *, prior=None):
             ):
                 continue
         source_roles, source_aliases = _roles(source, "sportsgameodds")
-        if (
-            source_roles != native_roles
-            or len(set(source_roles.values())) != 2
-            or not all(source_roles.values())
-        ):
+        if len(set(source_roles.values())) != 2 or not all(source_roles.values()):
             continue
+        novig_roles = None
+        if source_roles != native_roles:
+            novig_roles = _novig_role_proof(event, anchor, source_roles, native_roles)
+            if not novig_roles:
+                continue
         method = (
-            "typed_source_event_and_both_roles"
+            "typed_source_event_and_retained_subject_roles"
+            if novig_roles
+            else "typed_source_event_and_both_roles"
             if typed
             else "retained_source_event_and_both_roles"
             if retained and not same_time
             else "unique_exact_schedule_and_both_roles"
         )
         (strong_candidates if typed or retained else exact_candidates).append(
-            (anchor, source_aliases, method)
+            (anchor, source_aliases, method, novig_roles)
         )
     if previous_sgo and not previous_present and not strong_candidates:
         # A current source row can close or age out before a later venue clock.
@@ -295,7 +322,7 @@ def link(event, anchors, *, prior=None):
             reason="ambiguous_occurrence" if candidates else "occurrence_unmatched",
             native_start=event["scheduled_start"],
         )
-    anchor, source_aliases, method = candidates[0]
+    anchor, source_aliases, method, novig_roles = candidates[0]
     source = anchor["event"]
     schedule = source.get("schedule_metadata") or {}
     original = (schedule.get("reviewed_correction") or {}).get("original", {})
@@ -316,6 +343,7 @@ def link(event, anchors, *, prior=None):
             native=event.get("native_role_evidence"),
             sgo=source.get("schedule_metadata"),
             shared_provider_ids=source.get("shared_provider_ids"),
+            **({"novig_subject_roles": novig_roles} if novig_roles else {}),
             **(
                 {
                     "college_review": dict(

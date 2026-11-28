@@ -37,7 +37,8 @@ Follow the [README quickstart](../README.md#requirements-and-quickstart) to
 start the web app without starting a collector. Use `--role app` or
 `--role data` with the launcher to manage each process independently.
 Stopping the web app leaves collection and shared calculations running.
-Open Research at `/research`, with Data and Settings at `/data` and `/settings`.
+Open Dashboard at `/`, Experiments at `/experiments`, Data at `/data` and
+Settings at `/settings`.
 Settings controls acquisition. A successful Stop confirms collector cleanup.
 Restarting either role preserves explicit pauses and accounting holds.
 [Operation](configuration.md#start-and-stop) ·
@@ -51,7 +52,7 @@ clusters.
 ## Frozen replay
 
 Open saved capture and quote bookmarks in Data. For a dated paper run, use
-Research → Experiments to save a definition, replay retained inputs, inspect
+Experiments to save a definition, replay retained inputs, inspect
 published results or export frozen evidence. Saved offers preserve recorded
 prices, fee terms and before-fee payouts. Missing archives remain unavailable.
 Synthetic replay fixtures belong to development tests.

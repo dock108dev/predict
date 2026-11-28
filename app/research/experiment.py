@@ -369,16 +369,24 @@ def late_schedule_pressure(db, *, at, through):
 
 
 def next_late_storage_reservation(db, *, at):
-    """Protect the durable reservation of the next exact claim window."""
-    row = db.execute("""SELECT COALESCE(sum(late_reserved_bytes),0) AS bytes FROM (
-        SELECT g.late_reserved_bytes FROM public.ev_experiment_task late
+    """Protect the next exact claim window, including pending reservation top-ups."""
+    rows = db.execute("""SELECT late.state,g.late_reserved_bytes,g.event->>'league' AS league
+        FROM public.ev_experiment_task late
         JOIN public.ev_experiment_game g ON g.id=late.game_id AND g.schedule_id=late.schedule_id
         WHERE late.checkpoint='late' AND late.state IN ('pending','claimed') AND late.deadline_at >= %s
+          AND g.event#>'{status,cancelled}' IS DISTINCT FROM 'true'::jsonb
           AND NOT EXISTS (SELECT 1 FROM public.ev_experiment_task early WHERE early.game_id=late.game_id
                           AND early.checkpoint='early' AND early.state IN ('pending','claimed'))
-        ORDER BY late.target_at,late.deadline_at FETCH FIRST 1 ROW WITH TIES
-    ) next_window""", (at,)).fetchone()
-    return int(row['bytes'])
+        ORDER BY late.target_at,late.deadline_at FETCH FIRST 1 ROW WITH TIES""", (at,))
+    total = 0
+    for row in rows:
+        reserved = row['late_reserved_bytes']
+        # Claimed rows have already acquired their floor, and may have spent
+        # part of it on a manifest. Only a pending claim can need a top-up.
+        if row['state'] == 'pending':
+            reserved = max(reserved, late_checkpoint_bytes(row['league']))
+        total += reserved
+    return total
 
 
 def task_authorized(db, token, *, at=None):

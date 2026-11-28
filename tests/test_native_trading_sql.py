@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest import skipUnless
+from unittest.mock import patch
 
 from psycopg.types.json import Jsonb
 
@@ -68,6 +69,95 @@ def native_book(db, at):
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class NativeTradingSQL(PregameFixture):
+    async def test_novig_links_retained_spread_roles_with_matching_kickoff(self):
+        from app.collection.native_trading_identity import link
+        from app.comparison.sgo_native_binding import capture_catalog
+        from app.storage import sgo_native_catalog
+        from tests.test_sgo_native_binding import AWAY, EVENT, EVENT_PATH, HOME, MARKETS_PATH, fixture, receipt
+
+        observed = stamp(AT)
+        at = observed + timedelta(minutes=50)
+        source_id = 'fixture-college-typed-roles'
+        data = page()
+        game = data['data'][0]
+        game.update(eventID=source_id, leagueID='NCAAB', links={'bookmakers': {
+            'novig': f'https://novig.com/event-markets/{EVENT}/sportsgameodds',
+        }})
+        game['teams']['home']['names']['long'] = 'San Diego State'
+        game['teams']['away']['names']['long'] = 'Texas Tech Red Raiders'
+        for odd in game['odds'].values():
+            outcome = HOME if odd['sideID'] == 'home' else AWAY
+            odd['byBookmaker']['novig'] = dict(odd['byBookmaker']['fanduel'],
+                deeplink=f'https://novig.com/events/{outcome}/sportsgameodds')
+        _, official, spread = fixture()
+        official.update(league='NCAAB', startsTs=int(stamp(game['status']['startsAt']).timestamp() * 1000))
+        spread.update(startsTs=official['startsTs'], strike='-1.5')
+        spread['outcomes'][0]['name'] = 'TTU +1.5'
+        spread['outcomes'][1]['name'] = 'SDSU -1.5'
+
+        with self.connect() as db:
+            self.ingest(db, data)
+            (sgo_id, native_id, linked_outcomes, frame), = sgo_native_catalog.targets(db, at=observed)
+            witness = capture_catalog(sgo_id, native_id, official, receipt(EVENT_PATH, AT),
+                [(dict(items=[spread]), receipt(MARKETS_PATH, AT))], linked_outcomes, sgo_frame=frame)
+            self.assertLess(stamp(witness['expires_at']), at)
+            sgo_native_catalog.write(db, source_id, witness)
+            source, book = native_book(db, at)
+            subjects = witness['subject_roles']
+            self.assertEqual(set(subjects), {'home', 'away'})
+            event = native_event('novig', EVENT, 'NCAAB', source['scheduled_start'],
+                {role: 'novig:team:' + subject for role, subject in subjects.items()},
+                dict(home='SDSU', away='TTU'),
+                proof=dict(method='documented_home_handicap_and_both_native_subject_ids', subjects=subjects))
+            row = record('novig', event, spread['marketId'], HOME, 'buy', 'spread', 'home', '-1.5', settlement={})
+            book.update(event_id=EVENT, market_id=spread['marketId'], outcome_id=HOME,
+                        opposite_outcome_id=AWAY, _record=row)
+            book['contract'] = dict(book['contract'], **expected(row))
+            self.assertEqual(native_trading.publish(db, {'retained': book}, at=at)['published'], 1)
+
+            def saved():
+                return db.execute('''SELECT game_link,book,net_ev,reference_valid_until
+                    FROM native_trading_offer WHERE native_event_id=%s''', (EVENT,)).fetchone()
+
+            without_prices = saved()
+            self.assertEqual(without_prices['game_link']['sgo_event_id'], source_id)
+            self.assertIsNone(without_prices['net_ev'])
+            self.assertIsNone(without_prices['reference_valid_until'])
+            fresh = deepcopy(data)
+            for odd in fresh['data'][0]['odds'].values():
+                for price in odd['byBookmaker'].values():
+                    price['lastUpdatedAt'] = (at - timedelta(seconds=2)).isoformat()
+            with patch('tests.pregame_fixture.AT', at.isoformat()):
+                self.ingest(db, fresh)
+            self.assertEqual(native_trading.publish(db, {'retained': book}, at=at)['published'], 1)
+            valued = saved()
+            self.assertGreater(valued['net_ev'], 0)
+            self.assertGreater(valued['reference_valid_until'], at)
+            self.assertEqual(valued['book'], without_prices['book'])
+            self.assertEqual(valued['game_link']['sgo_start'], source['scheduled_start'])
+            self.assertEqual(valued['game_link']['method'], 'typed_source_event_and_retained_subject_roles')
+            self.assertEqual(valued['game_link']['evidence']['novig_subject_roles']['sgo_frame'], frame)
+            (shown,) = native_trading.dashboard(db, at=at, until=at + timedelta(hours=1),
+                                                venue='novig', sport='NCAAB')['rows']
+            self.assertEqual(shown['calculation']['status'], 'positive')
+
+            (anchor,) = native_trading.anchors(db, at, novig_events={EVENT})
+            swapped = deepcopy(event)
+            swapped.update(home=event['away'], away=event['home'])
+            swapped['native_role_evidence']['subjects'] = dict(home=subjects['away'], away=subjects['home'])
+            wrong_team = dict(event, home='NCAAB:M:D1:NCAA306')
+            wrong_date = dict(event, scheduled_start=(stamp(source['scheduled_start']) + timedelta(minutes=1)).isoformat())
+            for contradictory in (swapped, wrong_team, wrong_date):
+                self.assertEqual(link(contradictory, [anchor])['reason'], 'occurrence_unmatched')
+            missing_link = deepcopy(anchor)
+            missing_link['event'].pop('shared_provider_ids')
+            self.assertEqual(link(event, [missing_link])['reason'], 'occurrence_unmatched')
+            duplicate = deepcopy(anchor)
+            duplicate['event']['id'] = 'other-sgo-event'
+            duplicate['novig_subject_roles']['sgo_event_id'] = 'other-sgo-event'
+            duplicate['canonical_game_id'] = 'source:sportsgameodds:other-sgo-event'
+            self.assertEqual(link(event, [anchor, duplicate])['reason'], 'ambiguous_occurrence')
+
     async def test_native_commit_is_independent_of_sgo_writer_and_orders_waiting_books(self):
         at = stamp(AT)
         original = page()

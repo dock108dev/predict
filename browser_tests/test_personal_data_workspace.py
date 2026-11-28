@@ -355,41 +355,77 @@ def test_data_game_exact_export_checkpoint_and_back():
         browser.close()
 
 
-def test_arbitrage_selection_revision_and_supported_filters():
-    pair = dict(
-        id="pair-one",
-        game_key="game",
-        game="Away at Home",
-        league="NCAAB",
-        kickoff="2026-11-23T01:00:00Z",
-        family="moneyline",
-        category="market_market",
-        display_return="2.00%",
-        minimum_profit_usd="2",
-        committed_usd="100",
-        legs=[
-            dict(
-                venue="kalshi",
-                side="home",
-                times=dict(source_at="2026-11-22T20:00:00Z"),
-            ),
-            dict(
-                venue="novig", side="away", times=dict(source_at="2026-11-22T20:00:00Z")
-            ),
-        ],
+def test_market_bookmark_refuses_a_replaced_exact_offer():
+    captured_at = "2026-11-22T20:00:00Z"
+    selected = dict(
+        id="offer-one",
+        revision="saved-revision",
+        main_role="main",
+        family="spread",
+        side="home",
+        outcome="Home",
+        line="-2.5",
+        venue="novig",
+        price="+120",
+        price_units="american_odds",
+        calculation=dict(status="positive", net_ev_percent="2"),
     )
-    errors = []
+    market = dict(
+        id="canonical:game|spread|full_game",
+        pull_id="saved-pull",
+        title="Away at Home",
+        event_id="source-event",
+        family="spread",
+        sport="NCAAB",
+        state="complete",
+        start_at="2026-11-23T01:00:00Z",
+        received_at=captured_at,
+        headline=selected,
+    )
+    exact_reads, errors = [], []
+    available_revision = selected["revision"]
 
     def serve(route):
         url = urlparse(route.request.url)
+        query = {key: values[0] for key, values in parse_qs(url.query).items()}
         if url.path == "/data":
             route.fulfill(path=ASSETS / "data.html")
         elif url.path.startswith("/view/current/"):
             route.fulfill(path=ASSETS / Path(url.path).name)
-        elif url.path == "/api/pregame/arbs":
-            route.fulfill(
-                json=dict(rows=[pair], total=1, offset=0, cursor="stored-state")
+        elif url.path == "/api/research/markets":
+            assert (
+                query["sport"] == "NCAAB" and query["calculation_status"] == "positive"
             )
+            latest = dict(selected, revision=available_revision)
+            route.fulfill(
+                json=dict(
+                    rows=[dict(market, headline=latest)],
+                    total=1,
+                    offset=0,
+                    token="stored-state",
+                    captured_at=captured_at,
+                )
+            )
+        elif url.path == "/api/research/market":
+            exact_reads.append(
+                {
+                    key: query[key]
+                    for key in ("market_id", "pull_id", "offer_id", "revision")
+                }
+            )
+            if query["revision"] != available_revision:
+                route.fulfill(
+                    status=422,
+                    json=dict(
+                        error="Exact offer revision differs from captured evidence."
+                    ),
+                )
+            else:
+                route.fulfill(
+                    json=dict(row=market, selected_offer=selected, offers=[selected])
+                )
+        elif url.path == "/api/research/read":
+            route.fulfill(json=dict(released=True))
         else:
             route.fulfill(status=404)
 
@@ -397,32 +433,34 @@ def test_arbitrage_selection_revision_and_supported_filters():
         browser = runtime.chromium.launch()
         page = browser.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
-        page.goto(
-            base
-            + "/data?view=arbitrage&date=2026-11-22&provider=sportsgameodds&calculation_status=negative"
-        )
+        page.goto(base + "/data?sport=NCAAB&calculation_status=positive")
         expect(page.locator("#catalog-status")).to_contain_text(
-            "1 stored paired comparisons"
+            "1 market · positive EV filter"
         )
-        for field in ("date", "calculation"):
-            expect(page.locator("#" + field)).to_be_disabled()
-        expect(page.locator("select#provider")).to_have_count(0)
+        page.get_by_role("link", name="+2.00%", exact=True).click()
+        inspector = page.get_by_role("dialog")
+        expect(inspector).to_contain_text("Stored screening EV +2.00%")
+        bookmarked = page.url
+        page.reload()
+        expect(inspector).to_contain_text("Stored screening EV +2.00%")
+        available_revision = "newer-revision"
+        page.reload()
+        expect(inspector).to_contain_text(
+            "The exact selection has not been substituted."
+        )
+        assert page.url == bookmarked
         assert (
-            "date=" not in page.url
-            and "calculation_status=" not in page.url
-            and "provider=sportsgameodds" in page.url
+            exact_reads
+            == [
+                dict(
+                    market_id=market["id"],
+                    pull_id=market["pull_id"],
+                    offer_id=selected["id"],
+                    revision=selected["revision"],
+                )
+            ]
+            * 3
         )
-        page.get_by_role("button", name="Inspect calculation", exact=True).click()
-        expect(page.locator("#arb-detail")).to_be_visible()
-        assert "pair=pair-one" in page.url and "pair_revision=" in page.url
-        page.reload()
-        expect(page.locator("#arb-detail")).to_be_visible()
-        pair["minimum_profit_usd"] = "3"
-        page.reload()
-        expect(page.locator("#catalog-status")).to_contain_text(
-            "selected paired calculation changed"
-        )
-        expect(page.locator("#arb-detail")).not_to_be_visible()
         assert not errors, errors
         browser.close()
 

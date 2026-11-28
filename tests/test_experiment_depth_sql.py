@@ -424,7 +424,11 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
             self.assertEqual(db.execute('SELECT payload_bytes FROM ev_experiment_depth').fetchone()['payload_bytes'],
                              len(original_stage['body']))
             self.assertEqual(self.dispositions(), [('published', receipt_id)])
-            with patch.object(paper_campaigns.mens_d1, 'daily_population', return_value=None):
+            # Replay the fixture game date even when capture starts just before
+            # midnight Eastern and the fixture's kickoff is after midnight.
+            replay_at = task['target_at'] + timedelta(minutes=10)
+            with (patch.object(paper_campaigns.queue, 'utc', return_value=replay_at),
+                  patch.object(paper_campaigns.mens_d1, 'daily_population', return_value=None)):
                 run_id = paper_campaigns.tick(db)
             self.assertIsNotNone(run_id)
             run = workspace.run_detail(db, run_id, export=True)
@@ -465,6 +469,73 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
             self.assertEqual(depth.followups(db, [hashed(decision)]),
                              {hashed(decision): dict(followup, id=hashed(followup))})
             self.assertEqual(self.dispositions(), [('published', hashed(decision)), ('published', hashed(followup))])
+
+    async def test_smaller_receipts_pass_capacity_limited_decision_then_campaign_replays_original(self):
+        from app.collection import current_storage_policy, mens_d1_jobs
+        from app.research import paper_campaigns, workspace
+
+        with self.connect() as db, self.connect() as writer:
+            task, _ = self.fixture_game(db, with_replay=True)
+            late, = experiment.due(db, at=experiment.utc(), late_only=True)
+            checkpoint = self.write_checkpoint(db, late, experiment.utc(), offers=[replay_offer(task)])
+            self.assertEqual(checkpoint['state'], 'captured')
+            stage, wide = self.stage_decision(task, book=lambda known: wide_novig_book(known, task))
+            self.assertGreater(len(encoded(wide)), 512 * 1024)
+            later = task['target_at'] + timedelta(seconds=15)
+            observed = task['target_at'] + timedelta(seconds=1)
+            followup = depth.normalize(task, kind='followup', origin_id=hashed(wide),
+                cutoff_at=later, known_at=observed, observations=captured_book(observed))
+            stage.put(followup, task['deadline_at'], experiment.utc())
+            small = []
+            for label in ('first', 'second'):
+                other, _ = self.fixture_game(db, seconds_ago=90, event_id=f'fixture-{label}-small-receipt')
+                _, payload = self.stage_decision(other)
+                small.append(payload)
+            original = {row['receipt_id']: row for row in self.staged()}
+            cap = current_storage_policy.sql_usage(db) + experiment.sql_runway_bytes(64 * 1024)
+            now = task['deadline_at'] + timedelta(seconds=1)
+            owner = collector.ExperimentDepth(SimpleNamespace(), connector=self.connect,
+                                              now=lambda: now, stage_path=self.stage_path)
+            with (patch.object(owner, 'enabled', return_value=True),
+                  patch.object(owner, '_near_checkpoint', return_value=False),
+                  patch.object(owner, '_targets', return_value=[])):
+                with patch.object(current_storage_policy, 'SQL_BYTE_CAP', cap):
+                    await owner.tick(None)
+                    self.assertEqual([row['id'] for row in self.receipt_rows(db)], [hashed(small[0])])
+                    with writer.transaction():
+                        experiment._lock(writer)
+                        await owner.tick(None)
+                    self.assertEqual(owner.progress['reason'], 'experiment_depth_writer_busy')
+                    with patch.object(mens_d1_jobs, '_late_capture_due', return_value=True):
+                        await owner.tick(None)
+                    self.assertEqual(owner.progress['reason'], 'protected_tminus10_capture_due')
+                    self.assertEqual(self.dispositions(), [('published', hashed(small[0]))])
+                    await owner.tick(None)
+                    await owner.tick(None)
+                    self.assertEqual(owner.progress['reason'], 'research_sql_runway')
+                    self.assertEqual(self.dispositions(), [('published', hashed(payload)) for payload in small])
+                    self.assertEqual({row['receipt_id']: row for row in self.staged()},
+                        {hashed(payload): original[hashed(payload)] for payload in (wide, followup)})
+                await owner.tick(None)
+                await owner.tick(None)
+                await owner.tick(None)
+
+            self.assertEqual(self.staged(), [])
+            self.assertEqual(self.dispositions(), [('published', hashed(payload)) for payload in (*small, wide, followup)])
+            rows = {row['id']: row for row in self.receipt_rows(db)}
+            self.assertEqual(len(rows), 4)
+            self.assertEqual(rows[hashed(wide)]['payload'], wide)
+            self.assertEqual(rows[hashed(wide)]['known_at'], experiment.stamp(wide['known_at']))
+            self.assertEqual(rows[hashed(wide)]['cutoff_at'], task['target_at'])
+            replay_at = task['target_at'] + timedelta(minutes=10)
+            with (patch.object(paper_campaigns.queue, 'utc', return_value=replay_at),
+                  patch.object(paper_campaigns.mens_d1, 'daily_population', return_value=None)):
+                run_id = paper_campaigns.tick(db)
+            self.assertIsNotNone(run_id)
+            run = workspace.run_detail(db, run_id, export=True)
+            self.assertEqual(run['depth_receipts'], {hashed(wide): dict(wide, id=hashed(wide))})
+            game = next(game for game in run['report']['games'] if game['checkpoint_id'] == checkpoint['id'])
+            self.assertEqual(game['depth_receipt_id'], hashed(wide))
 
     async def test_superseded_and_cancelled_schedules_are_disposed(self):
         with self.connect() as db:

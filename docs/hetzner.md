@@ -143,6 +143,149 @@ identity cannot be resolved, and never forces image removal. A maintenance refus
 is reported separately from release health. No volume, database, archive or backup
 is removed by image maintenance.
 
+### Guarded PostgreSQL role cutover
+
+Schedule this maintenance only after the owner explicitly authorizes the hosted
+cutover and a disposable PostgreSQL 16 copy at the installed migration level
+passes the [role qualification](postgresql-roles.md). Use the validated installed
+revision and keep its image digests fixed throughout the role-only change. At
+migration 129, keep the Win $25 campaign, original receipts, saved runs, grades,
+accounting and spool on their existing mounts. Keep the existing activation
+files, Stop and source pauses, and select a window outside protected captures.
+
+Run from `/srv/predict` as root in Bash. Keep the parent maintenance shell open
+with file descriptor 9 locked while running the command blocks. Save the exact
+running image digests and OCI revisions, the active service list, migration
+ledger, Stop/pause choices and account/quota/hold evidence privately. Stage the
+two tracked socket-auth files from the qualified checkout in a private operator
+directory. Hold `deploy.lock`
+through the maintenance, including smoke checks or recovery. The GitHub release
+script acquires the same lock, so run the commands below against the installed
+images and dispatch any later release after closing this maintenance session.
+
+```bash
+umask 077
+cd /srv/predict
+exec 9>deploy.lock
+flock -x 9
+[[ ! -e postgres-roles.env && ! -L postgres-roles.env ]]
+
+base=(docker compose --env-file current-images.env)
+if [[ -f archive.env ]]; then base+=(--env-file archive.env); fi
+profiles=(-f compose.yml --profile collection --profile archive)
+legacy=("${base[@]}" "${profiles[@]}")
+psql_in_db=("${legacy[@]}" exec -T db psql -X -v ON_ERROR_STOP=1
+            -h /run/predict-postgres -p 55432 -U prediction_arb -d prediction_arb)
+bootstrap=("${legacy[@]}" run --rm --no-deps -T --user 0:0
+           -e PREDICT_DB_ROLE=prediction_arb web python -m app.storage)
+recovery=$(mktemp -d "$PWD/.role-recovery.XXXXXXXX")
+cp current-images.env "$recovery/"
+running=$("${legacy[@]}" ps --status running --services web collector archive)
+[[ -n $running ]]
+mapfile -t active <<< "$running"
+printf '%s\n' "${active[@]}" > "$recovery/active-services"
+```
+
+Proceed after every setup command succeeds. Keep the lock in the parent shell
+if a maintenance block ends early.
+
+```bash
+(
+set -euo pipefail
+"${legacy[@]}" cp web:/predict/deploy/managed/managed-config.py "$recovery/managed-config.py"
+[[ $("${bootstrap[@]}" migration-status) == 0 ]]
+
+"${legacy[@]}" stop "${active[@]}"
+"${psql_in_db[@]}" -Atqc 'SELECT version, sha256 FROM public.schema_migration ORDER BY version' \
+    > "$recovery/migration-ledger"
+"${legacy[@]}" exec -T db pg_dump -h /run/predict-postgres -p 55432 \
+    -U prediction_arb -d prediction_arb -Fc -Z1 > "$recovery/database.dump"
+"${legacy[@]}" exec -T db pg_restore --list < "$recovery/database.dump" > "$recovery/database.contents"
+"${legacy[@]}" exec -T db stat -c '%a:%u:%g %n' /var/lib/postgresql/data/pg_{hba,ident}.conf \
+    > "$recovery/socket-auth-modes"
+"${legacy[@]}" cp db:/var/lib/postgresql/data/pg_hba.conf "$recovery/pg_hba.conf"
+"${legacy[@]}" cp db:/var/lib/postgresql/data/pg_ident.conf "$recovery/pg_ident.conf"
+python3 - "$recovery" <<'PY'
+from contextlib import closing
+from pathlib import Path
+import sqlite3
+import sys
+
+spool = Path('state/predict-current/experiment-depth-stage.sqlite3')
+if spool.exists():
+    target = Path(sys.argv[1]) / spool.name
+    with closing(sqlite3.connect(f'{spool.resolve().as_uri()}?mode=ro', uri=True)) as source:
+        with closing(sqlite3.connect(target)) as copy:
+            source.backup(copy)
+            assert copy.execute('PRAGMA quick_check').fetchall() == [('ok',)]
+PY
+"${bootstrap[@]}" roles-enable
+)
+```
+
+Use the [provisioning instructions](postgresql-roles.md#authorized-transition)
+for the four distinct SCRAM passwords, private files and exact `postgres-roles.env`
+contents. While the legacy authentication files are still active, set the role
+passwords using `psql`'s interactive `\password` prompt. Keep a trusted database
+container console available. Install the qualified HBA and identity map in the
+existing data directory, owned by the database container's `postgres` user.
+Before reloading, check that both `pg_hba_file_rules` and
+`pg_ident_file_mappings` report zero errors. After reloading, verify a fresh
+bootstrap connection through `psql_in_db`. Use the following commands once the
+private `postgres-roles.env` is in place.
+
+```bash
+split=("${base[@]}" --env-file postgres-roles.env "${profiles[@]}")
+(
+set -euo pipefail
+"${split[@]}" config --format json > "$recovery/split-compose.json"
+[[ $(python3 -I "$recovery/managed-config.py" database-profile "$recovery/split-compose.json" "$PWD") == split ]]
+for service in web collector archive; do
+    [[ $service != archive || -f archive.env ]] || continue
+    "${split[@]}" run --rm --no-deps -T "$service" python -m app.storage verify-role
+done
+[[ $("${split[@]}" run --rm --no-deps -T \
+    -e PREDICT_DB_ROLE=predict_migrator \
+    -e PREDICT_DB_PASSWORD_FILE=/run/predict-migrator \
+    --volume "$PWD/postgres-migrator:/run/predict-migrator:ro" \
+    web python -m app.storage migration-status) == 0 ]]
+"${split[@]}" up -d --no-deps --force-recreate --wait --wait-timeout 180 "${active[@]}"
+)
+```
+
+Query `session_user`, `current_user` and `rolsuper` using the application's
+actual connection in each running service and in the one-off migration
+container. Verify the designated `predict_*` login, absence of superuser,
+migrator ownership of the application objects and no write privilege for web on
+the protected accounting, source evidence or receipt tables. Compare the saved
+migration ledger and control settings. Use authenticated Dashboard reads and a
+Novig stream reconnect, Data export, and paper campaign read and replay. Verify
+an authorized collection command and collector acknowledgment while preserving
+Stop and source pauses. If no command is authorized, carry that check forward to
+the next permitted command. Check the next normally scheduled collector receipt,
+archive acknowledgment and Win $25 replay through their original IDs and clocks.
+
+**Recovery in the same maintenance window.** If the split startup or smoke
+checks fail, stop the members of `active` with the split Compose inputs. If
+`roles-enable` committed, run `"${bootstrap[@]}" roles-rollback` while the
+trusted UID 0 socket login and role-capable image are available. Restore the
+saved `pg_hba.conf` and `pg_ident.conf` into the current volume with their original
+ownership and modes, reload PostgreSQL, and verify a fresh legacy bootstrap
+connection. If the new socket rules broke bootstrap, first restore the auth files
+and use `pg_ctl reload` as the database container's OS `postgres` user. Move the
+private `postgres-roles.env` into the private recovery directory. Recreate only
+the previously active app services and repeat the migration, controls,
+protected-data and signed-in health checks.
+
+```bash
+"${legacy[@]}" up -d --no-deps --force-recreate --wait --wait-timeout 180 "${active[@]}"
+```
+
+Keep the original volumes, current spool and captured backups. Role rollback
+changes ownership and grants. Restoring an earlier data snapshot would discard evidence
+committed during the window. The release script's image rollback alone leaves
+host-managed socket authentication and credentials in place.
+
 ### Collector recovery after the Win $25 receipt expansion
 
 Migration 129 raises the Win $25 receipt limit from 512 KiB to 8 MiB. The

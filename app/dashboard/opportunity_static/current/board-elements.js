@@ -111,8 +111,8 @@ function prefixedAge(timestamp, prefix, now = Date.now()) {
   const age = relativeAge(timestamp, now);
   return prefix === "Source " && age === "Source clock is ahead" ? age : prefix + age;
 }
-export function ageNode(timestamp, prefix = "") {
-  const node = el("span", prefixedAge(timestamp, prefix), "relative-age");
+export function ageNode(timestamp, prefix = "", now = Date.now()) {
+  const node = el("span", prefixedAge(timestamp, prefix, now), "relative-age");
   node.dataset.ageAt = timestamp || "";
   node.dataset.agePrefix = prefix;
   node.title = timestamp ? time(timestamp) + " · " + timestamp : "Original source time unknown";

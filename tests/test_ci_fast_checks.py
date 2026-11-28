@@ -1,7 +1,10 @@
 """Personal beta checks select working data and deployment behavior."""
 
+from io import BytesIO
+import json
 from pathlib import Path
 import subprocess
+from zipfile import ZipFile
 
 import pytest
 
@@ -80,12 +83,16 @@ def test_research_changes_check_immutable_inputs_and_reproducible_export():
     assert "tests/test_experiment_api.py" in pure
 
 
-@pytest.mark.parametrize("path", ["app/collection/sgo_nhl_scoring.py", "app/research/paper_results.py"])
+@pytest.mark.parametrize(
+    "path", ["app/collection/sgo_nhl_scoring.py", "app/research/paper_results.py"]
+)
 def test_nhl_scoring_changes_check_exact_scores_and_later_period_proof(path):
     result = selected(path)
     assert "tests/test_sgo_nhl_scoring.py" in command(result, "portable")
-    assert any("test_same_score_nhl_outcomes_retain_new_period_proof" in target
-               for target in command(result, "postgres"))
+    assert any(
+        "test_same_score_nhl_outcomes_retain_new_period_proof" in target
+        for target in command(result, "postgres")
+    )
 
 
 @pytest.mark.parametrize(
@@ -143,6 +150,247 @@ def test_prose_filenames_do_not_select_runtime_sql():
 def test_projection_migration_keeps_monitor_recovery_in_the_sql_plan():
     result = selected("app/storage/migrations/124_pregame_projection_recovery.sql")
     assert "tests/test_pregame_cohorts_sql.py" in command(result, "postgres")
+
+
+def test_guarded_dispatch_includes_failed_application_commit_and_test_followup(
+    monkeypatch,
+):
+    module = load("fast_checks")
+    base = "77a0db899c7fbe19e63f3c3dcfae1cd18fe485df"
+    failed = "c92208480a48709e7be5cf495811d8630ad4b2e7"
+    followup = "c8793a5a76384f60be8c92188c4f8f68e8dcbda3"
+    original = {
+        "app/collection/experiment_acquisition.py",
+        "app/collection/experiment_depth_stage.py",
+        "app/collection/native_trading.py",
+        "app/dashboard/opportunity_static/current/dashboard.js",
+        "app/storage/migrations/129_experiment_depth_receipt_capacity.sql",
+        "browser_tests/test_dashboard_workspace.py",
+        "tests/test_experiment_depth_sql.py",
+    }
+    followup_path = "tests/test_catalog_admission.py"
+    # Run 46107061746 failed focused checks on c9220848. The last completed
+    # installation was 46092622283. Guarded dispatch 46107349422 previously
+    # validated only c8793a5a's catalog fixture before deploying both commits.
+    runs = [
+        {"id": 46107061746, "head_sha": failed, "run_attempt": 1},
+        {"id": 46092622283, "head_sha": base, "run_attempt": 1},
+    ]
+    receipts = {
+        15247819391: dict(
+            sha=failed,
+            status="FAIL",
+            deployed=False,
+            publish_only=False,
+            phases={"checks": 1},
+        ),
+        15241348428: dict(
+            sha=base,
+            status="PASS",
+            deployed=True,
+            publish_only=False,
+            phases={"deploy": 1},
+        ),
+    }
+
+    def github(path):
+        if "workflows/ci.yml/runs" in path:
+            assert "branch=main&status=completed" in path
+            return json.dumps({"workflow_runs": runs}).encode()
+        if "/runs/46107061746/artifacts" in path:
+            return json.dumps(
+                {
+                    "artifacts": [
+                        {
+                            "id": 15247819391,
+                            "name": "personal-beta-46107061746-1",
+                            "expired": False,
+                        }
+                    ]
+                }
+            ).encode()
+        if "/runs/46092622283/artifacts" in path:
+            return json.dumps(
+                {
+                    "artifacts": [
+                        {
+                            "id": 15241348428,
+                            "name": "personal-beta-46092622283-1",
+                            "expired": False,
+                        }
+                    ]
+                }
+            ).encode()
+        if path.endswith("/zip"):
+            artifact = int(path.split("/")[-2])
+            raw = BytesIO()
+            with ZipFile(raw, "w") as archive:
+                archive.writestr("release/metrics.json", json.dumps(receipts[artifact]))
+            return raw.getvalue()
+        head = path.split("...", 1)[1].split("?", 1)[0]
+        assert f"/compare/{base}..." in path
+        paths = original if head == failed else original | {followup_path}
+        return json.dumps(
+            {
+                "status": "ahead",
+                "merge_base_commit": {"sha": base},
+                "files": [{"filename": p, "status": "modified"} for p in sorted(paths)],
+            }
+        ).encode()
+
+    monkeypatch.setattr(module, "github", github)
+    first = module.release_input("dock108dev/predict", failed, "46107061746")
+    second = module.release_input("dock108dev/predict", followup, "46107349422")
+    assert first["base"] == second["base"] == base
+    assert second["base_run"] == 46092622283 and not second["broad"]
+    assert set(first["paths"]) == original
+    assert set(second["paths"]) == original | {followup_path}
+    plan = module.plan(ROOT, second["paths"])
+    assert plan["browser"] == ["browser_tests/test_dashboard_workspace.py"]
+    assert followup_path in command(plan, "portable")
+    assert "tests/test_experiment_depth_stage.py" in command(plan, "portable")
+    assert "tests/test_experiment_acquisition_sql.py" in command(plan, "postgres")
+    assert "tests/test_experiment_depth_sql.py" in command(plan, "postgres")
+    assert module.HYBRID_REPLAY in command(plan, "postgres")
+
+    # The fast push of c8793a5a also tried SSH and returned a failure. Its
+    # metrics alone cannot establish pre-mutation refusal. The guarded
+    # dispatch still selects the application and migration contracts.
+    runs.insert(0, {"id": 46107344514, "head_sha": followup, "run_attempt": 1})
+    receipts[15247968836] = dict(
+        sha=followup,
+        status="FAIL",
+        deployed=False,
+        publish_only=False,
+        phases={"deploy": 1},
+    )
+
+    def attempted_prior_deploy(path):
+        if "/runs/46107344514/artifacts" in path:
+            return json.dumps(
+                {
+                    "artifacts": [
+                        {
+                            "id": 15247968836,
+                            "name": "personal-beta-46107344514-1",
+                            "expired": False,
+                        }
+                    ]
+                }
+            ).encode()
+        return github(path)
+
+    monkeypatch.setattr(module, "github", attempted_prior_deploy)
+    ambiguous = module.release_input("dock108dev/predict", followup, "46107349422")
+    assert ambiguous["broad"] and "46107344514" in ambiguous["reason"]
+    plan = module.plan(ROOT, ambiguous["paths"], broad=True)
+    assert "tests/test_experiment_acquisition_sql.py" in command(plan, "postgres")
+    assert "tests/test_experiment_depth_sql.py" in command(plan, "postgres")
+    assert "tests/test_paper_campaigns_sql.py" in command(plan, "postgres")
+
+
+def test_manual_recovery_can_select_broad_checks_without_using_a_stale_receipt(
+    monkeypatch,
+):
+    module = load("fast_checks")
+    monkeypatch.setattr(module, "github", lambda path: pytest.fail(path))
+    result = module.release_input(
+        "dock108dev/predict", "b" * 40, "42", force_broad=True
+    )
+    assert result["broad"] and "Manual dispatch" in result["reason"]
+
+
+@pytest.mark.parametrize(
+    "comparison,expected",
+    [
+        (None, "unavailable"),
+        ({"status": "diverged", "merge_base_commit": {"sha": "0" * 40}}, "outside"),
+        (
+            {
+                "status": "ahead",
+                "merge_base_commit": {"sha": "b" * 40},
+                "files": [{}] * 300,
+            },
+            "limit",
+        ),
+    ],
+)
+def test_release_broadens_if_the_installed_diff_is_unavailable(
+    monkeypatch, comparison, expected
+):
+    module = load("fast_checks")
+    monkeypatch.setattr(module, "installed_release", lambda *_: ("b" * 40, 42))
+
+    def github(path):
+        assert "/compare/" in path
+        if comparison is None:
+            raise subprocess.TimeoutExpired("gh", 10)
+        return json.dumps(comparison).encode()
+
+    monkeypatch.setattr(module, "github", github)
+    result = module.release_input("dock108dev/predict", "c" * 40, "43")
+    assert result["broad"] and result["base"] is None and expected in result["reason"]
+    plan = module.plan(ROOT, result["paths"], broad=True)
+    assert "tests/test_experiment_depth_stage.py" in command(plan, "portable")
+    assert "tests/test_experiment_depth_sql.py" in command(plan, "postgres")
+    assert "browser_tests/test_dashboard_workspace.py" in plan["browser"]
+
+
+def test_no_host_acknowledgment_uses_broad_focused_checks(monkeypatch):
+    module = load("fast_checks")
+    monkeypatch.setattr(
+        module,
+        "github",
+        lambda path: (
+            b'{"workflow_runs":[]}'
+            if "workflows/ci.yml/runs" in path
+            else pytest.fail(path)
+        ),
+    )
+    result = module.release_input("dock108dev/predict", "b" * 40, "42")
+    assert result["broad"] and result["paths"] == []
+    assert "No recent CI run confirmed a hosted deployment" in result["reason"]
+
+
+def test_exact_audit_path_mappings_run_in_the_owning_lane():
+    module = load("fast_checks")
+    assert module.ASSET_ALLOWLIST in command(
+        selected("app/dashboard/workspace_app.py"), "portable"
+    )
+    assert "tests/test_experiment_depth_stage.py" in command(
+        selected("app/collection/experiment_depth_stage.py"), "portable"
+    )
+    assert module.NOVIG_BINDING <= set(
+        command(selected("app/collection/novig_experiment_depth.py"), "portable")
+    )
+    assert module.HYBRID_REPLAY in command(
+        selected("app/research/paper_depth.py"), "postgres"
+    )
+    identity = selected("app/comparison/sgo_native_binding.py")
+    assert "tests/test_sgo_native_binding.py" in command(identity, "portable")
+    assert {
+        "tests/test_sgo_native_catalog_sql.py",
+        "tests/test_native_trading_sql.py",
+    } <= set(command(identity, "postgres"))
+    assert selected("app/dashboard/opportunity_static/current/dashboard.js")[
+        "browser"
+    ] == ["browser_tests/test_dashboard_workspace.py"]
+
+
+def test_changed_test_files_use_correct_lanes():
+    module = load("fast_checks")
+    portable = "tests/test_catalog_admission.py"
+    postgres = "tests/test_native_trading_sql.py"
+    browser = "browser_tests/test_paper_campaign_integration.py"
+    mixed = "tests/test_native_experiment_depth.py"
+    plan = module.plan(ROOT, [portable, postgres, browser, mixed])
+    assert portable in command(plan, "portable")
+    assert mixed in command(plan, "portable")
+    assert "--deselect=" + mixed + "::NativeReplacementSQL" in command(plan, "portable")
+    assert postgres in command(plan, "postgres")
+    assert mixed + "::NativeReplacementSQL" in command(plan, "postgres")
+    assert postgres not in command(plan, "portable")
+    assert plan["browser"] == [browser]
 
 
 def test_local_focused_scope_includes_new_nonignored_files(tmp_path, monkeypatch):
@@ -206,7 +454,9 @@ def test_personal_check_selection_rejects_paths_outside_checkout():
         selected("../credentials")
 
 
-def test_secret_and_fixture_checks_run_concurrently_after_lint_and_workflow(monkeypatch):
+def test_secret_and_fixture_checks_run_concurrently_after_lint_and_workflow(
+    monkeypatch,
+):
     from threading import Barrier, Lock
     from types import SimpleNamespace
 

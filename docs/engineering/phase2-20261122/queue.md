@@ -1,5 +1,32 @@
 # Phase 2 completion and deferred backlog
 
+## Predict cleanup audit and live follow-through
+
+The November 28 read-only host check found `906845aa4eae31323a20a1cfae0c124abb7739e9`
+running for web, collector and archive. Migration 129 matched the packaged
+ledger. The app processes still connected as the `prediction_arb` superuser.
+The [guarded split-role procedure](../../hetzner.md#guarded-postgresql-role-cutover)
+requires explicit owner authorization on the host. After authorized cutover,
+verify each container's connection identity, a signed-in Dashboard read and
+Novig reconnect, Data export, saved experiment access, and acknowledgment of a
+permitted collection command. Use the existing Stop and source-pause choices.
+
+**Win $25 · Native Liquidity · Nov 27–29** remains active. The November 28 check
+found saved day runs for November 27 and 28 and November 29 scheduled. The next
+known pending late capture at that inspection was November 28 at 11:50 a.m.
+Eastern, with a one-minute window ending at 11:51 a.m. Source discovery can
+revise the pending slate. Use the first eligible scheduled capture after the
+remediation is installed to verify original receipts by T−9, settled attempts
+and reservations, and one-time publication through the normal campaign replay
+and saved export. Compare exact receipt IDs and clocks. Follow
+[migration 129 recovery](../../hetzner.md#collector-recovery-after-the-win-25-receipt-expansion)
+if a collector fallback is needed.
+
+The guarded release selector now keeps current application and migration checks
+in the plan after a fixture-only follow-up. Use [release evidence](../../CI.md)
+to distinguish the actually installed revision, required selected checks and
+optional Full validation. Keep the original audit evidence and sealed archives.
+
 ## Delivered: Win $10 and Kelly in the Workbench beta
 
 Signed-in create, review, save, replay, revise and results verification passed

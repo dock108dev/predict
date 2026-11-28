@@ -7,9 +7,11 @@ multiple users, onboarding, marketing or an enterprise release process.
 ## Required checks
 
 [CI](../.github/workflows/ci.yml) runs on pushes to `main` and manual dispatch.
-One runner performs focused checks, cached image verification and deployment.
-The normal runner budget is two minutes; GitHub queue time is recorded separately.
-A budget timeout is a failure, never evidence of a completed deployment.
+A planning job selects tests and runs any selected Playwright journeys. The
+personal release job performs focused portable and PostgreSQL checks, cached
+image verification and deployment within its existing two-minute runner budget.
+GitHub queue time and browser validation are recorded separately. A budget
+timeout blocks deployment.
 
 After locked tool installation, focused validation runs alongside private-proxy
 checks and image preparation/publication. Every selected check, the proxy check
@@ -31,11 +33,23 @@ distinct storage epoch. A clone-isolation regression checks data and DDL separat
 credential stripping. Current-main identity is checked before build and before
 SSH handoff. The full disposable Compose rehearsal remains in manual validation.
 
-The [selector](../scripts/ci/fast_checks.py) records changed paths, selected checks,
-actual durations and limits in `test-results/fast` and the run summary. Source
-lint, workflow syntax and secret checks remain inexpensive baseline checks.
-Missing or failed selected checks stop the release. Unavailable data and
-unsupported calculations remain explicit rather than being treated as zero.
+The [selector](../scripts/ci/fast_checks.py) compares the exact candidate against
+the newest same-workflow receipt whose successful SSH result confirms hosted
+deployment. It verifies the receipt's revision against the `main` workflow run
+and requires an ancestor comparison. A fixture-only follow-up therefore keeps
+the earlier failed application's changes and migration in the release plan.
+Publish-only runs and failures before SSH leave the prior base eligible. Later
+ambiguous deployments, missing receipts, divergent history and capped comparisons
+broaden the focused checks and record why. After an out-of-band host image
+rollback, manually dispatch CI with `broaden_validation=true` to qualify the
+candidate without relying on an older deployment receipt.
+
+The candidate job records the comparison and passes the same selection to
+both jobs. Changed Python tests run in their owning portable, disposable
+PostgreSQL or Playwright lane. Browser fixtures that need PostgreSQL use a
+disposable cluster in the browser job. Selected checks must pass before release.
+The run summary and `test-results/fast` retain the paths, commands and durations.
+Source lint, workflow syntax and secret checks remain baseline checks.
 
 The fast path does not run public-user journeys, broad browser matrices,
 legacy-removal assertions, the historical test-catalog gate or every SQL shard.
@@ -86,11 +100,13 @@ Use the existing [development environment](development.md#install-tools).
 .venv/bin/python scripts/ci/fast_checks.py --plan
 .venv/bin/python scripts/ci/fast_checks.py
 .venv/bin/python scripts/ci/fast_checks.py --paths app/research/experiment.py
+.venv/bin/python scripts/ci/fast_checks.py --browser --paths browser_tests/test_dashboard_workspace.py
 ```
 
-The plan prints the precise selected commands. Local execution uses disposable
-fixtures; it does not acquire provider data or place trades. Set `PG_CONFIG` to
-PostgreSQL 16's `pg_config` for selected SQL checks.
+The plan prints the precise selected commands and browser targets. Local
+execution uses disposable fixtures. Set `PG_CONFIG` to PostgreSQL 16's
+`pg_config` for selected SQL and browser checks. The browser checks use the
+locked Playwright environment and Chromium from the Full validation setup.
 
 For a specific changed owner, running its narrow regression directly remains
 appropriate. Full local subsystem routing and explicit extended assurance remain

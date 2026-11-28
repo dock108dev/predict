@@ -1,10 +1,9 @@
 """Disposable price, fee, settlement and route fixtures for the ordinary desk."""
 from fractions import Fraction as F
-from pathlib import Path
 import unittest
 
 import pytest
-from aiohttp.test_utils import make_mocked_request
+from aiohttp.test_utils import TestClient, TestServer
 
 from app.comparison.snapshot_fee_outcome import EXPIRED, outcome
 from app.comparison.snapshot_math import before_fee_pair
@@ -257,14 +256,19 @@ def test_ordinary_ready_and_pending_publish_only_exact_native_pairs(verified, mo
 
 
 class FeeViewAssets(unittest.IsolatedAsyncioTestCase):
-    async def test_ordinary_owner_view_routes_serve_shared_census_modules(self):
+    async def test_ordinary_owner_view_bookmarks_reach_installed_routes(self):
         provider = InjectedTestProvider()
         provider.database_mode = True
         app = create_app(owner=owner(), sessions={}, current_provider=provider)
-        for path in ('/current/coverage', '/admin?section=fees', '/current/assets/fee-census-view.js',
-                     '/current/assets/desk-reasons.js', '/view/current/desk-evidence.js'):
-            request = make_mocked_request('GET', path, app=app)
-            request._match_info = await app.router.resolve(request)
-            assert request.match_info.http_exception is None, path
-            response = await request.match_info.handler(request)
-            assert Path(response._path).is_file(), path
+        async with TestClient(TestServer(app)) as client:
+            for path, destination, module in (
+                ('/current/coverage', '/data?evidence=mens-d1', 'data-workbench.js'),
+                ('/admin?section=fees', '/settings#collection', 'settings.js'),
+            ):
+                response = await client.get(path, allow_redirects=False)
+                assert response.status == 302 and response.headers['Location'] == destination
+                page = await client.get(destination)
+                asset = '/view/current/' + module
+                assert page.status == 200 and asset in await page.text()
+                script = await client.get(asset)
+                assert script.status == 200 and await script.read()

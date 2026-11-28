@@ -23,12 +23,11 @@ The database and its protected data remain in the existing Compose volume.
 
 ## Authorized transition
 
-1. Use the guard and backup path in [server operations](hetzner.md#releases).
-   First install the role-capable revision and apply pending schema migrations
-   through the maintenance release in the legacy profile. Confirm current
-   migration hashes. Capture a fresh database backup, original socket-auth
-   files and service state. Quiesce affected services and preserve Stop and
-   source pauses.
+1. Follow the [guarded server procedure](hetzner.md#guarded-postgresql-role-cutover).
+   First install the role-capable revision and apply any pending schema
+   migrations through maintenance in the legacy profile. Qualify role behavior
+   against a disposable copy at that migration level before changing hosted
+   authentication. Record migration hashes, backup and active service state.
 2. As trusted cluster bootstrap on the existing network-isolated socket, run
    `python -m app.storage roles-enable` from the new image before enabling
    peer/SCRAM. This command requires a current schema and changes ownership
@@ -61,11 +60,13 @@ The database and its protected data remain in the existing Compose volume.
    PREDICT_ARCHIVE_DB_SECRET=/srv/predict/postgres-archive
    ```
 
-6. Use the approved release procedure to activate all three roles. Verify
-   signed-in Workbench save, replay, grade and export, Admin control and
-   acknowledgment, current Monitor projection, and archive status. Check that
-   the migration, quota, hold, Stop and pause records match the protected snapshot.
-   Installed health alone proves process availability.
+6. Apply the split profile to the existing images in the authorized maintenance
+   window. Exercise signed-in Dashboard reads and Novig stream reconnect, Data
+   exports, Experiments save and replay, applicable grading, collection control
+   and acknowledgment, and archive status. Use disposable tests for direct denied
+   writes and for any owner state changes outside the authorized hosted smoke.
+   Compare migration, quota, hold, Stop and pause records to the protected
+   snapshot. The same checks distinguish service health from functional access.
 
 The release checks active socket authentication from each enabled service
 before rolling the changed role configuration. An absent `archive.env`
@@ -107,9 +108,10 @@ quiesce the affected services and use the trusted bootstrap identity to run
 `python -m app.storage roles-rollback` while the revised tool is still available.
 The maintenance operator can start the revised one-off container as UID 0
 with `PREDICT_DB_ROLE=prediction_arb` to use the trusted bootstrap peer mapping.
-The normal application containers run as UID 10001. Then restore the original HBA, identity map and host
-role environment and restart the prior compatible images using the normal
-release path. Confirm the retained data and migration ledger before restarting
-acquisition. The role rollback changes ownership and ACLs in a transaction and
-keeps all committed rows. Applied schema migrations still follow the existing
-schema recovery policy and backup.
+The normal application containers run as UID 10001. The
+[server recovery procedure](hetzner.md#guarded-postgresql-role-cutover) restores
+the original HBA, identity map and host role environment, then recreates the
+previously active app containers on the same mounted state. The role rollback
+changes ownership and ACLs in a transaction and keeps all committed rows.
+Applied schema migrations still follow the existing schema recovery policy and
+backup.

@@ -1,20 +1,24 @@
 # Architecture and data
 
 The data process owns source collection, admission and affected-game calculations.
-The web process serves Research, Data and Settings from committed PostgreSQL
+The web process serves Dashboard, Data, Experiments and Settings from committed PostgreSQL
 records and local owner settings. Archive export, paper grading and the retained
 Scanner APIs consume admitted observations through their own workflows.
 [Current pregame](current-pregame.md) · [Runtime](data-app-runtime-contract.md)
 
 ## Personal workspace
 
-- **Research** (`/research`) opens the Workbench. Experiments save versioned
+- **Dashboard** (`/`) shows committed native venue offers. Exact game and role
+  matching tie eligible offers to current sportsbook references. The board and
+  open quote expire their book and reference values using server read time and
+  elapsed browser time. Novig publication notices refresh the committed board.
+- **Experiments** (`/experiments`) saves versioned
   definitions and scheduled campaigns, replay retained Eastern game dates, and
   display versioned paper results. Fixed-profit and Kelly runs can share frozen
   capture inputs while retaining their own tickets and outcomes. Exact evidence
   and report exports use the selected run and result revision.
-- **Data** (`/data`) groups current markets by game, market family and period before
-  pagination. Positive EV and price arbitrage are views of stored acquisitions.
+- **Data** (`/data`) groups saved markets by game, market family and period before
+  pagination.
   The offer inspector opens exact revisions, source receipts, historical pulls
   and saved evidence. A newer covering attempt can withhold a numeric headline
   while the previous complete capture remains in History.
@@ -24,7 +28,7 @@ Scanner APIs consume admitted observations through their own workflows.
 
 The browser reads stored data during ordinary navigation, refresh and inspection.
 Saved comparisons preserve their original capture, fee assumptions and revision.
-The former Opportunities, Browse, game and replay bookmarks resolve into Data.
+Opportunities bookmarks open Dashboard. Browse, game and replay bookmarks open Data.
 Admin and coverage bookmarks resolve to Settings or the relevant Data view.
 [Workspace guide](personal-data-workspace.md) · [Paper experiments](paper-experiments.md)
 
@@ -70,18 +74,19 @@ transient sizing.
 
 | Surface | Responsibility |
 | --- | --- |
-| `/`, `/research` | Root opens Research by default. Research serves the Workbench, including Experiments and paper results. |
-| `/data` | Current markets, positive EV, market-to-market arbitrage, offers and retained evidence |
+| `/`, `/experiments` | Dashboard and versioned paper campaigns, replays and results |
+| `/data` | Saved markets, exact offers, original receipts and retained evidence |
 | `/settings` | Source controls, credits, holds, storage and fee assumptions |
+| `/api/research/dashboard`, `/api/research/dashboard-updates`, `/api/research/dashboard-liquidity` | Committed Dashboard reads, Novig publication notices and scoped amount evaluation |
 | `/api/research/workspace` and its campaign/run routes | Save definitions, replay retained inputs, read results, inspect exact offers and export evidence |
 | `/api/research/games`, `/api/research/game`, `/api/research/markets`, `/api/research/market` | Grouped Data reads and selected acquisition evidence |
 | `/api/pregame`, `/api/pregame/updates`, `/api/pregame/arbs` | Current pregame rows, update metadata and modeled arbitrage from stored prices |
 | `/api/odds-replay`, `/api/workspace/session` | Authentic saved captures and separately retained sessions with revision-bound details |
 | `/api/workspace/status`, `/api/workspace/fees`, `/api/admin/status`, `/api/admin/current`, `/api/admin/activity-mode` | Operating status, fee settings, capture readiness, Stop/Resume, source pauses and mode settings |
 | `/api/workspace/mens-d1` and its evidence routes | Dated schedule, capture and result coverage, issues and original receipts |
-| `/ev`, `/browse-odds`, `/game`, `/odds`, `/raw-odds`, `/replay`, `/arbs` | Local compatibility redirects to the relevant Data context |
+| `/ev`, `/browse-odds`, `/game`, `/odds`, `/raw-odds`, `/replay`, `/research` | Compatibility redirects to Dashboard, Data or Experiments based on the bookmark |
 | `/admin`, `/coverage`, `/current/coverage` | Local compatibility redirects to Settings or Data |
-| `/scanner`, `/my-bets`, `/about`, `/trading-fees` | HTTP 410 retirement pages with links to the Workbench. Retained APIs and records have independent owners. |
+| `/arbs`, `/scanner`, `/my-bets`, `/about`, `/trading-fees` | HTTP 410 retirement pages with links to current workspace pages. Retained APIs and records have independent owners. |
 | `/api/comparison-snapshot` | GET a ranked or grouped page. POST captures local inputs or recalculates the selected assumptions. |
 | `/api/comparison-snapshot/details` | Exact captured inputs for one result revision and selection |
 | `/api/boards/readiness`, `/api/boards/coverage`, `/api/boards/games` | Current board readiness, coverage and bounded game reads |
@@ -258,7 +263,7 @@ See [acquisition](acquisition.md) for ownership, capacity and completeness limit
 | SportsGameOdds discovery scope | `app/collection/sportsgameodds_worker.py`, `app/collection/sportsgameodds_adapter.py` | The worker builds the exact request used across a cursor walk. The adapter owns the supported leagues and page bounds. | Worker, transport, checkpoint restore, accounting and SQL admission. |
 | The Odds API featured market keys | `app/collection/current_aggregate_policy.py` | Maps the product market families to their provider request keys. | Configuration, scheduler, quota declarations, quote admission and coverage reporting. |
 | Persisted current event and contract identity | `app/storage/current_rows.py` | Builds the identifiers used to persist and find exact event and contract rows. | Admission, desk overlays, ordinary publication, Scanner and Coverage. |
-| Ordinary page and API routing | `app/dashboard/workspace_routes.py` and `app/dashboard/multi_game_server.py` | Mounts Research, Data and Settings and keeps canonical compatibility redirects in one place. The pregame API and retained readers have independent handlers. | `opportunity_board`, workspace navigation and saved bookmarks. |
+| Ordinary page and API routing | `app/dashboard/workspace_routes.py` and `app/dashboard/multi_game_server.py` | Mounts Dashboard, Data, Experiments and Settings and keeps compatibility redirects in one place. The pregame API and retained readers have independent handlers. | `opportunity_board`, workspace navigation and saved bookmarks. |
 | Desk and replay phase selection | `app/dashboard/snapshot_display.py` | Applies the pregame boundary consistently to selected rows and related games and pairs. | Current and captured snapshot reads, replay lists and replay details. |
 | Best sportsbook payout and two-sided de-vig | `app/comparison/sgo_reference.py` | Owns the book order, tie-break, exact American-price parsing and normalization of a qualified pair. | Settlement-reviewed SGO reference, direct public book estimates, Browse odds and same-frame SGO baseline. |
 | Desk sportsbook line selection and enrichment | `app/dashboard/desk_sportsbooks.py` | Matches sportsbook prices to the exact displayed live line and applies live freshness. | Live snapshot list and Quote Quality. |

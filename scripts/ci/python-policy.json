@@ -160,7 +160,8 @@
     "tests/test_research_records_sql.py": "Required disposable PostgreSQL lane: frozen prospective population, causal horizon capture, immutable outcome corrections and independent evaluation; no owner SQL or paid requests.",
     "tests/test_ev_experiment_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL 16: immutable early/late captures, exact clocks, reschedules, unavailable outcomes, shared-budget refusals and complete offline HTTP exports.",
     "tests/test_experiment_acquisition_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL 16: browser-independent guarded early capture, bounded postgame follow-up and retirement of legacy polling writes.",
-    "tests/test_experiment_depth_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL 16: immutable public depth receipts, exact schedule and cutoff, and protected SGO isolation."
+    "tests/test_experiment_depth_sql.py": "Required in scripts/ci/postgres.py against disposable PostgreSQL 16: immutable public depth receipts, exact schedule and cutoff, and protected SGO isolation.",
+    "tests/test_native_trading_sql.py": "Required in disposable PostgreSQL 16: committed native offers, source-local occurrence identity, exact saved book evidence, passive reads and reference refresh."
   },
   "archival_nodes": {
     "tests/test_moneyline.py::CapturedMoneylineTests": "Historical production listing/rule hashes require removed capture corpus; synthetic matcher and settlement classes remain required.",

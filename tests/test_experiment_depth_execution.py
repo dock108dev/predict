@@ -97,7 +97,13 @@ def test_fee_ceils_per_maker_and_can_change_ev_qualification():
 
 
 def test_nearest_size_allows_the_lower_native_increment_and_ties_take_lower_cost():
-    disposition, calculation = price(receipt(("0.25", 3)), target=F(".02625"))
+    book = receipt(("0.25", 4))
+    higher, _ = price(book, target=F(".030"))
+    assert higher["status"] == "full_size"
+    assert higher["modeled_native_quantity"] == "4"
+    assert higher["modeled_win_profit_usd"] == "0.03"
+
+    disposition, calculation = price(book, target=F(".02625"))
     assert disposition["status"] == "full_size" and calculation is not None
     assert disposition["modeled_native_quantity"] == "3"
     assert disposition["modeled_win_profit_usd"] == "0.0225"

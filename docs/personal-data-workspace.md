@@ -18,6 +18,12 @@ eligibility. Verification time and quote age are separate. A price can remain
 unchanged between accepted responses. A pull older than the configured discovery
 interval stays visible as historical evidence in Data.
 
+With Venue set to **Novig**, the open Dashboard receives update notices for
+the selected sport and bet type. A notice causes a read of committed prices.
+If the stream drops, the board keeps polling and reconnects. The saved pull and
+native book clocks remain available in the quote inspector during reconnect.
+The stream follows committed storage and incurs no provider calls from the page.
+
 ## Data
 
 - **Market history** shows saved game and market rows. Filter by date, sport,
@@ -56,6 +62,13 @@ games without a usable final. The fixed capture, reference and fee policies are
 displayed with the editable choices. Results stay paper only. Exact legacy run
 links still open saved evidence.
 [Paper experiment rules](paper-experiments.md)
+
+**Win $25 · Native Liquidity · Nov 27–29** uses the all-sports native-book
+policy for spreads and totals, at least 4% EV, and one trade per game. Its
+original-book replay starts November 27 at 1:50 p.m. Eastern. Its prospective
+capture segment starts the same day at 8:50 p.m. Eastern. Compare coverage and
+the displayed clocks for the two segments in **Games and coverage**. See
+**History & evidence** for the retained receipt chain and saved exports.
 
 ## Collection controls
 

@@ -1,6 +1,34 @@
 # Paper portfolios and backtests
 
-Open **Research → Experiments**. The first saved policy defaults to
+Open **Experiments** from the Predict workspace. Use **All trades** and **By
+day** for saved selections and results, **Games and coverage** for incomplete
+inputs, and **History & evidence** for immutable versions and exports.
+[Workspace navigation](personal-data-workspace.md#experiments)
+
+## Win $25 native liquidity
+
+The saved **Win $25 · Native Liquidity · Nov 27–29** campaign covers all six
+supported leagues with the `public-book-win25-2` policy. It requires at least
+4% unrounded EV for full-game spreads and totals. It chooses one executable
+trade per game, preferring main lines. Verified alternates are eligible below
++400 American odds. The model sizes from admitted book depth and the captured
+fee terms toward $25 modeled net win profit.
+
+The November 27 replay uses original evidence from the 1:50 p.m. Eastern cutoff.
+From 8:50 p.m. Eastern, the campaign uses normally scheduled T−10 native
+receipts. The T−9 deadline controls whether an observation qualifies. Receipt
+IDs, source clocks and cutoff evidence support each decision. Later SQL staging
+or retry can publish an admitted receipt with its original decision clocks.
+An absent receipt remains visible as a coverage gap. Saved runs and grades
+retain their original inputs and revisions.
+
+Migration 129 supports receipts up to 8 MiB. The collector stages admitted
+receipts durably until SQL publication. Preserve the live staging spool and existing
+database throughout an image fallback. [Collector recovery on Hetzner](hetzner.md#collector-recovery-after-the-win-25-receipt-expansion)
+
+## Legacy NCAAB backtest
+
+The first saved policy defaults to
 college basketball games scheduled for November 23, 2026 in America/New_York.
 It is available on the deployed server without activating a trading account or
 leaving a browser open. Existing collector-owned first-observation/T−10 captures

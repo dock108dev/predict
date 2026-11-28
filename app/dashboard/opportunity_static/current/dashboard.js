@@ -37,6 +37,20 @@ let closed = false;
 let selectedQuote;
 let evidenceRead;
 let coverageRead;
+let serverOffset;
+const dashboardClock = Object.assign(new EventTarget(), {
+  now() {
+    return serverOffset === undefined ? Date.now() : serverOffset + performance.now();
+  },
+  observe(readAt) {
+    // Older or delayed reads must not give an expired quote more time.
+    const offset = Date.parse(readAt) - performance.now();
+    if (!Number.isFinite(offset) || (serverOffset !== undefined && offset <= serverOffset)) return false;
+    serverOffset = offset;
+    this.dispatchEvent(new Event('change'));
+    return true;
+  },
+});
 
 function readLocation() {
   const query = new URLSearchParams(location.search);
@@ -101,7 +115,7 @@ function bet(row) {
 }
 
 const quoteKey = row => `${row.pull_id}:${row.id}`;
-const current = row => Date.parse(row.eligible_until) > Date.now();
+const current = row => Date.parse(row.eligible_until) > dashboardClock.now();
 const ev = row => row.display.net_ev || (row.calculation.net_ev_percent == null ? 'EV unavailable' : percent(row.calculation.net_ev_percent));
 const cash = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'});
 
@@ -110,7 +124,7 @@ function visibleQuote(row) {
   const view = field('view').value;
   const fresh = current(row);
   if (!fresh && view !== 'all') return null;
-  const refExpired = Date.parse(row.liquidity?.reference_valid_until) <= Date.now();
+  const refExpired = Date.parse(row.liquidity?.reference_valid_until) <= dashboardClock.now();
   if (fresh && !refExpired) return row;
   if (!view) return null;
   const liquidity = fresh ? {...row.liquidity, modeled_net_ev: null, reason: 'reference_stale'}
@@ -124,9 +138,9 @@ function visibleQuote(row) {
 
 function quoteAge(row) {
   if (row.native_source && !row.times?.source_at && row.times?.received_at) {
-    return ageNode(row.times.received_at, 'Received ');
+    return ageNode(row.times.received_at, 'Received ', dashboardClock.now());
   }
-  return ageNode(row.times?.source_at);
+  return ageNode(row.times?.source_at, '', dashboardClock.now());
 }
 
 function unknownLiquidity(liquidity, reason) {
@@ -136,7 +150,7 @@ function unknownLiquidity(liquidity, reason) {
 
 function availableLiquidity(row) {
   const liquidity = row.liquidity;
-  if (liquidity?.valid_until && Date.parse(liquidity.valid_until) <= Date.now()) {
+  if (liquidity?.valid_until && Date.parse(liquidity.valid_until) <= dashboardClock.now()) {
     return unknownLiquidity(liquidity, 'stale_book');
   }
   return liquidity;
@@ -158,7 +172,7 @@ function dashboardBadge(row) {
     if (Number.isFinite(Date.parse(expiresAt))) badge.append(node('span', dateTime(expiresAt)));
     return badge;
   }
-  if (Date.parse(expiresAt) > Date.now() && row.book_status !== 'unobserved') {
+  if (Date.parse(expiresAt) > dashboardClock.now() && row.book_status !== 'unobserved') {
     const supported = number(liquidity.modeled_stake_usd);
     if (supported > 0 && liquidity.reason !== 'fee_mode_changed' &&
         ['full_size', 'partial_size'].includes(liquidity.size_status || liquidity.status)) {
@@ -251,7 +265,7 @@ function renderEvidence(row, evidence, query, signal) {
       const details = liquidityDetails(modeled);
       const price = modeled.preview_offer ? facts([['Venue price used for preview', venuePrice(modeled.preview_offer)]]) : null;
       output.replaceChildren(...[price, details].filter(Boolean));
-    }, {signal, savedLiquidity: native.row?.liquidity});
+    }, {signal, savedLiquidity: native.row?.liquidity, clock: dashboardClock});
     const sources = facts([
       ['Saved venue price', venuePrice(native.row || row)],
       ['Venue event', native.book.event_id],
@@ -326,7 +340,7 @@ function renderEvidence(row, evidence, query, signal) {
   const size = book.liquidity ? amountResearch('dashboard', {...row, ...book}, (output, modeled) => {
     const currentBook = liquidityDetails(modeled);
     output.replaceChildren(...[currentBook].filter(Boolean));
-  }, {signal}) : null;
+  }, {signal, clock: dashboardClock}) : null;
 
   content.replaceChildren(...[node('p', `${row.game} · ${dateTime(row.kickoff)}`),
     node('p', 'Snapshot from the Dashboard read. The original source time is shown below.', 'research-muted'),
@@ -350,7 +364,10 @@ async function inspect(row) {
     const params = new URLSearchParams(query);
     params.set('liquidity', '1');
     const evidence = await get('/api/research/market', params, signal);
-    if (evidenceRead === controller && inspector.open) renderEvidence(row, evidence, query, controller.signal);
+    if (evidenceRead === controller && inspector.open) {
+      dashboardClock.observe(evidence.read_at);
+      renderEvidence(row, evidence, query, controller.signal);
+    }
   } catch {
     if (evidenceRead !== controller || !inspector.open) return;
     progress.textContent = 'The exact saved quote could not be loaded.';
@@ -424,13 +441,13 @@ function render(packet) {
 function schedule() {
   clearTimeout(refreshTimer);
   if (closed || document.hidden) return;
-  const now = Date.now();
+  const now = dashboardClock.now();
   const deadline = Math.min(...(snapshot?.rows || []).flatMap(row => [row, ...(row.other_quotes || [])])
     .flatMap(row => [row.eligible_until, row.liquidity?.valid_until, row.liquidity?.reference_valid_until])
     .map(Date.parse).filter(at => at > now));
   const delay = deadline > now ? Math.min(30000, deadline - now) : 30000;
   refreshTimer = setTimeout(() => {
-    if (deadline <= Date.now() && snapshot) render(snapshot);
+    if (deadline <= dashboardClock.now() && snapshot) render(snapshot);
     requestRefresh();
   }, delay);
 }
@@ -520,7 +537,7 @@ async function refresh() {
     }
     if (read !== controller || closed) return;
     snapshot = packet;
-    render(packet);
+    if (!dashboardClock.observe(packet.read_at)) render(packet);
   } catch {
     if (read !== controller || closed) return;
     snapshot = undefined;
@@ -574,7 +591,11 @@ clear.onclick = () => {
   refreshSelection();
 };
 window.addEventListener('popstate', () => { readLocation(); refreshSelection(); });
-const ageTimer = setInterval(() => updateRelativeAges(rows), 1000);
+const ageTimer = setInterval(() => updateRelativeAges(rows, dashboardClock.now()), 1000);
+dashboardClock.addEventListener('change', () => {
+  if (snapshot) render(snapshot);
+  schedule();
+});
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stopUpdates();
@@ -598,6 +619,7 @@ window.addEventListener('pagehide', event => {
 });
 window.addEventListener('pageshow', event => {
   if (event.persisted) {
+    if (snapshot) render(snapshot);
     watchUpdates();
     refresh();
   }

@@ -309,6 +309,7 @@ def main(argv=None):
                     "tests/test_experiment_acquisition_sql.py",
                     "tests/test_experiment_depth_sql.py",
                     "tests/test_native_experiment_depth.py::NativeReplacementSQL",
+                    "tests/test_native_trading_sql.py",
                 ]
             )
             if args.tests:

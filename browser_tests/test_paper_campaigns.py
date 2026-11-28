@@ -47,7 +47,9 @@ def test_create_all_sports_with_an_exclusive_alternate_price_cutoff():
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
-        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        browser = runtime.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
         page = browser.new_page(viewport={"width": 390, "height": 850})
         page.goto(f"{base}/experiments?view=create")
         page.get_by_label("Experiment name").fill("Win $25 · All sports")
@@ -225,7 +227,10 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
     day = "2026-11-24"
     other, fixed_run, kelly_run, grade = (character * 64 for character in "abcd")
     config = configuration(fixed_config(name="Win $10 campaign"))
-    campaigns = [dict(config, id=WIN_10_CAMPAIGN), dict(config, id=other, name="Paired experiment")]
+    campaigns = [
+        dict(config, id=WIN_10_CAMPAIGN),
+        dict(config, id=other, name="Paired experiment"),
+    ]
     result = analysis([ticket("trade", ".08")], config["bucket_edges"], "best_venue")
     endpoint = "/api/research/workspace/campaigns"
     run_path = f"/api/research/workspace/runs/{fixed_run}"
@@ -243,16 +248,36 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         elif path == endpoint:
             route.fulfill(json=dict(campaigns=campaigns))
         elif path == run_path:
-            route.fulfill(json=dict(run=dict(id=fixed_run, date=day),
-                definition=dict(campaign_id=WIN_10_CAMPAIGN, sizing_mode="fixed_profit"),
-                report=dict(policy=dict(execution="paper_only"), portfolios=saved_report["portfolios"])))
+            route.fulfill(
+                json=dict(
+                    run=dict(id=fixed_run, date=day),
+                    definition=dict(
+                        campaign_id=WIN_10_CAMPAIGN, sizing_mode="fixed_profit"
+                    ),
+                    report=dict(
+                        policy=dict(execution="paper_only"),
+                        portfolios=saved_report["portfolios"],
+                    ),
+                )
+            )
         elif path == f"{run_path}/results":
-            route.fulfill(json=dict(report=saved_report, version=dict(id=grade), status=dict(state="graded"),
-                                    links=dict(report=export)))
+            route.fulfill(
+                json=dict(
+                    report=saved_report,
+                    version=dict(id=grade),
+                    status=dict(state="graded"),
+                    links=dict(report=export),
+                )
+            )
         elif path.startswith(endpoint + "/") and "/days/" in path:
             records = {
-                mode: dict(run_id=run, result_state="graded", result_id=grade,
-                           analysis=result, snapshots=[dict(id=run, recorded_at=f"{day}T23:00:00Z")])
+                mode: dict(
+                    run_id=run,
+                    result_state="graded",
+                    result_id=grade,
+                    analysis=result,
+                    snapshots=[dict(id=run, recorded_at=f"{day}T23:00:00Z")],
+                )
                 for mode, run in (("fixed_profit", fixed_run), ("kelly", kelly_run))
             }
             route.fulfill(json=dict(config=config, modes=records))
@@ -262,22 +287,60 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
             query = parse_qs(urlsplit(route.request.url).query)
             assert query["comparison"] == ["0"]
             mode, variant = query["mode"][0], query["variant"][0]
-            published = dict(date=day, run_id=fixed_run, result_state="graded", analysis=result,
-                             selection=dict(tickets=1, stake_usd="10.00", expected_profit_usd="0.80", expected_roi_percent="8.00"))
-            waiting = dict(date="2026-11-25", run_id="e" * 64, result_pending=True,
-                           selection=dict(tickets=1, stake_usd="20.00", expected_profit_usd="2.20", expected_roi_percent="11.00"))
-            route.fulfill(json=dict(mode=mode, as_of="2026-11-25T20:00:00Z",
-                days=[published, waiting, dict(date="2026-11-26", replay_state="scheduled")],
-                selection=dict(tickets=2, stake_usd="30.00", expected_profit_usd="3.00", expected_roi_percent="10.00"),
-                weekly=result, variant=variant))
+            published = dict(
+                date=day,
+                run_id=fixed_run,
+                result_state="graded",
+                analysis=result,
+                selection=dict(
+                    tickets=1,
+                    stake_usd="10.00",
+                    expected_profit_usd="0.80",
+                    expected_roi_percent="8.00",
+                ),
+            )
+            waiting = dict(
+                date="2026-11-25",
+                run_id="e" * 64,
+                result_pending=True,
+                selection=dict(
+                    tickets=1,
+                    stake_usd="20.00",
+                    expected_profit_usd="2.20",
+                    expected_roi_percent="11.00",
+                ),
+            )
+            route.fulfill(
+                json=dict(
+                    mode=mode,
+                    as_of="2026-11-25T20:00:00Z",
+                    days=[
+                        published,
+                        waiting,
+                        dict(date="2026-11-26", replay_state="scheduled"),
+                    ],
+                    selection=dict(
+                        tickets=2,
+                        stake_usd="30.00",
+                        expected_profit_usd="3.00",
+                        expected_roi_percent="10.00",
+                    ),
+                    weekly=result,
+                    variant=variant,
+                )
+            )
         else:
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
-        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        browser = runtime.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
         page = browser.new_page(viewport={"width": 390, "height": 850})
         page.goto(f"{base}/experiments")
-        expect(page.get_by_role("link", name="All trades", exact=True)).to_have_attribute("aria-current", "page")
+        expect(
+            page.get_by_role("link", name="All trades", exact=True)
+        ).to_have_attribute("aria-current", "page")
         page.get_by_role("link", name="Results by day", exact=True).click()
         dates = page.get_by_role("region", name="Results by date")
         expect(dates.locator("tbody tr")).to_have_count(2)
@@ -291,14 +354,30 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         table = totals.get_by_role("table").first
         headers = table.get_by_role("columnheader")
         expect(headers).to_have_text(["Paper results", "Win $10"])
-        expect(page.get_by_role("link", name="Results by day", exact=True)).to_have_attribute("aria-current", "page")
-        expect(table.get_by_role("row", name=re.compile("^Selected trades"))).to_contain_text("2")
-        expect(table.get_by_role("row", name=re.compile("^Ungraded trades"))).to_contain_text("1")
-        expect(table.get_by_role("row", name=re.compile("^Stake"))).to_contain_text("$30.00")
-        expect(table.get_by_role("row", name=re.compile("^ROI"))).to_contain_text("on $10.00 graded stake")
-        expect(table.get_by_role("row", name=re.compile("^Expected paper profit"))).to_contain_text("$3.00")
-        expect(table.get_by_role("row", name=re.compile("^Expected ROI"))).to_contain_text("10.00%")
-        expect(table.get_by_role("row", name="P/L vs expected (graded)")).to_contain_text("-$10.80")
+        expect(
+            page.get_by_role("link", name="Results by day", exact=True)
+        ).to_have_attribute("aria-current", "page")
+        expect(
+            table.get_by_role("row", name=re.compile("^Selected trades"))
+        ).to_contain_text("2")
+        expect(
+            table.get_by_role("row", name=re.compile("^Ungraded trades"))
+        ).to_contain_text("1")
+        expect(table.get_by_role("row", name=re.compile("^Stake"))).to_contain_text(
+            "$30.00"
+        )
+        expect(table.get_by_role("row", name=re.compile("^ROI"))).to_contain_text(
+            "on $10.00 graded stake"
+        )
+        expect(
+            table.get_by_role("row", name=re.compile("^Expected paper profit"))
+        ).to_contain_text("$3.00")
+        expect(
+            table.get_by_role("row", name=re.compile("^Expected ROI"))
+        ).to_contain_text("10.00%")
+        expect(
+            table.get_by_role("row", name="P/L vs expected (graded)")
+        ).to_contain_text("-$10.80")
         expect(page.get_by_role("link", name="Nov 26, 2026")).to_have_count(0)
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         dates.get_by_role("link", name="Nov 24, 2026").click()
@@ -307,13 +386,17 @@ def test_win10_campaign_to_date_and_day_results_show_only_fixed_profit():
         page.get_by_text("Daily totals", exact=True).click()
         expect(headers).to_have_text(["Paper results", "Win $10"])
         expect(page.get_by_label("Game date (Eastern)")).to_have_value(day)
-        expect(table.get_by_role("row", name=re.compile("^Expected ROI"))).to_contain_text("8.00%")
+        expect(
+            table.get_by_role("row", name=re.compile("^Expected ROI"))
+        ).to_contain_text("8.00%")
         page.get_by_text("History & evidence", exact=True).click()
         page.get_by_text("Experiment rules", exact=True).click()
         expect(page.get_by_text("Kelly comparison", exact=True)).to_have_count(0)
         page.get_by_text("Saved snapshots", exact=True).click()
         expect(page.locator(f'a[href*="run={kelly_run}"]')).to_have_count(0)
-        expect(page.get_by_role("link", name="Export graded report")).to_have_attribute("href", export)
+        expect(page.get_by_role("link", name="Export graded report")).to_have_attribute(
+            "href", export
+        )
 
         page.get_by_label("Experiment", exact=True).select_option(other)
         page.get_by_text("Campaign totals", exact=True).click()

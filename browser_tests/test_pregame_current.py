@@ -198,18 +198,33 @@ def test_current_pregame_journey(width, tmp_path):
         expect(page.locator("#comparison")).to_contain_text("$0.00")
         page.get_by_text("Fee and calculation details", exact=True).focus()
         selected["display"]["net_ev"] = "+9.00%"
-        selected["liquidity"] = dict(status="full_size", eligible=True, intended_stake_usd="100",
-            modeled_stake_usd="100", modeled_net_ev="0.105", available_purchase_usd="132",
-            modeled_average_price="0.4", modeled_fee_usd="1.85", book_received_at=selected["times"]["received_at"])
-        selected["liquidity_evidence"] = dict(market_id="exact-native-market", outcome_id="exact-native-outcome",
-            levels=[dict(price="0.4", quantity="330")])
+        selected["liquidity"] = dict(
+            status="full_size",
+            eligible=True,
+            intended_stake_usd="100",
+            modeled_stake_usd="100",
+            modeled_net_ev="0.105",
+            available_purchase_usd="132",
+            modeled_average_price="0.4",
+            modeled_fee_usd="1.85",
+            book_received_at=selected["times"]["received_at"],
+        )
+        selected["liquidity_evidence"] = dict(
+            market_id="exact-native-market",
+            outcome_id="exact-native-outcome",
+            levels=[dict(price="0.4", quantity="330")],
+        )
         state["revision"] = "two"
         expect(page.locator("#results")).to_contain_text("+9.00%")
         expect(page.locator("#results")).to_contain_text("+10.50% at $100.00")
         expect(page.locator("#comparison")).to_contain_text("+9.00%")
-        expect(page.locator("#comparison .liquidity-details")).to_contain_text("$132.00 available")
+        expect(page.locator("#comparison .liquidity-details")).to_contain_text(
+            "$132.00 available"
+        )
         page.get_by_text("Public book evidence", exact=True).click()
-        expect(page.locator(".liquidity-details")).to_contain_text("exact-native-market")
+        expect(page.locator(".liquidity-details")).to_contain_text(
+            "exact-native-market"
+        )
         assert page.evaluate("document.documentElement.scrollWidth===innerWidth")
         page.get_by_text("Fee and calculation details", exact=True).focus()
         expect(

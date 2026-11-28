@@ -146,13 +146,15 @@ class CatalogReads(RawReads):
                     from app.storage.native_trading import detail
 
                     at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
-                    return detail(db, query, at=at, stake=query.get('amount', '100'), frozen=frozen)
+                    value = detail(db, query, at=at, stake=query.get('amount', '100'), frozen=frozen)
+                    return value if frozen else dict(value, read_at=at.isoformat())
                 value = market_board.detail(db, market_id=query['market_id'], pull_id=query['pull_id'],
                     offer_id=query.get('offer_id'), revision=query.get('revision'))
                 if query.get('liquidity') == '1':
                     at = db.execute('SELECT transaction_timestamp() at').fetchone()['at']
                     value['liquidity'], value['liquidity_evidence'] = market_board.dashboard_liquidity(
                         db, value, at=at, stake=query.get('amount', '100'))
+                    value['read_at'] = at.isoformat()
                 return value
 
     def detail(self, query):
@@ -347,7 +349,8 @@ def mount(app, *, campaigns_only=False):
         result = {key: value[key] for key in ('liquidity', 'liquidity_evidence')}
         if 'preview_offer' in value:
             result['preview_offer'] = value['preview_offer']
-        return web.json_response(dict(result=result, provider_requests=0, scheduled_calculations=0), headers=HEADERS)
+        return web.json_response(dict(result=result, read_at=value['read_at'], provider_requests=0,
+                                      scheduled_calculations=0), headers=HEADERS)
 
     async def game(request):
         if not request.query.get('game_id'):

@@ -113,7 +113,7 @@ function archivedCalculation(depth, originalMode) {
 }
 
 // This component has no journal dependency. Recording always uses the inspected quote.
-export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal,savedLiquidity}={}){
+export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal,savedLiquidity,clock}={}){
   const frozen = structuredClone(snapshot);
   const dashboard = kind === 'dashboard';
   const section = node('section', undefined, 'amount-research');
@@ -165,7 +165,8 @@ export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal
   function refreshDashboard({force = false} = {}) {
     clearTimeout(expiryTimer);
     if (signal?.aborted) return;
-    const {deadline, inactive, model} = dashboardResult(result, Date.now());
+    const now = clock?.now() ?? Date.now();
+    const {deadline, inactive, model} = dashboardResult(result, now);
     const state = model === result ? 'unchanged' : inactive ? 'expired' : 'reference-expired';
     if (force || state !== displayed) {
       draw(model, inactive ? archivedCalculation(lastModeled, frozen.fee_mode) : null);
@@ -173,7 +174,7 @@ export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal
       if (!controller) status.textContent = dashboardFeedback(model.liquidity, section.dataset.evaluatedAmount);
     }
     if (Number.isFinite(deadline) && !document.hidden) {
-      expiryTimer = setTimeout(refreshDashboard, Math.min(2147483647, Math.max(0, deadline - Date.now())));
+      expiryTimer = setTimeout(refreshDashboard, Math.min(2147483647, Math.max(0, deadline - now)));
     }
   }
 
@@ -182,6 +183,7 @@ export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal
     else refreshDashboard();
   };
   if (dashboard && !signal?.aborted) {
+    clock?.addEventListener('change', refreshDashboard, {signal});
     document.addEventListener('visibilitychange',checkVisibility,{signal});
     window.addEventListener('pageshow',checkVisibility,{signal});
     signal?.addEventListener('abort',() => clearTimeout(expiryTimer),{once: true});
@@ -211,6 +213,7 @@ export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal
         result = {...data.result, liquidity_evidence: data.result.liquidity_evidence || result.liquidity_evidence};
         if (result.liquidity?.modeled_stake_usd != null) lastModeled = result.liquidity;
         controller = null;
+        clock?.observe(data.read_at);
         refreshDashboard({force: true});
       } else {
         draw(data.result);

@@ -294,6 +294,55 @@ class ExperimentAcquisitionSQL(PregameFixture):
             states = list(db.execute("SELECT state,attempts,last_reason FROM ev_experiment_task WHERE checkpoint='late'"))
         self.assertEqual(states, [dict(state='missed', attempts=1, last_reason='provider request outcome uncertain')] * 2)
 
+    async def test_paid_batch_storage_refusal_preserves_the_original_attempt(self):
+        from app.collection import current_storage_policy
+        from app.collection.original_receipts import read
+
+        at, bodies = self.late_pair()
+        response = dict(success=True, data=[body['data'][0] for body in bodies.values()])
+        service, worker, requests = self.worker(response)
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+        original_fetch = worker.transport.fetch
+
+        async def fetch_with_later_storage_pressure(params, key):
+            page = await original_fetch(params, key)
+            with self.connect() as db:
+                current_storage_policy.SQL_BYTE_CAP = current_storage_policy.sql_usage(db)
+            return page
+
+        worker.transport.fetch = fetch_with_later_storage_pressure
+        with (patch.object(acquisition, 'connect', self.connect),
+              patch.object(current_storage_policy, 'SQL_BYTE_CAP', current_storage_policy.SQL_BYTE_CAP)):
+            self.assertTrue(await scheduler.tick())
+            resumed = acquisition.ExperimentAcquisition(service, connector=self.connect)
+            self.assertFalse(await resumed.tick())
+        request, = requests
+        self.assertCountEqual(request['eventIDs'].split(','), bodies)
+        ledger = worker.ledger.status(worker.window_id)
+        self.assertEqual((ledger['charged'], ledger['held'], ledger['interrupted']), (2, 0, 0))
+        with self.connect() as db:
+            pulls = list(db.execute("""SELECT details FROM market_pull WHERE state='failed'
+                AND requested_at >= %s AND request_scope->>'eventIDs'=ANY(%s)""", (at, list(bodies))))
+            tasks = list(db.execute('''SELECT t.state,t.attempts,t.last_reason,g.late_reserved_bytes
+                FROM ev_experiment_task t JOIN ev_experiment_game g ON t.game_id=g.id
+                WHERE t.checkpoint='late' '''))
+        self.assertEqual(tasks, [dict(state='refused', attempts=1, last_reason='research_sql_runway',
+                                      late_reserved_bytes=0)] * 2)
+        self.assertEqual(len(pulls), 2)
+        detail = pulls[0]['details']
+        self.assertEqual({row['details']['attempt_id'] for row in pulls}, {detail['attempt_id']})
+        self.assertEqual({row['details']['dispatch_at'] for row in pulls}, {detail['dispatch_at']})
+        self.assertEqual(detail['batch']['charged_objects'], 2)
+        self.assertEqual(detail['batch']['paid_event_requests'], 1)
+        with worker.ledger._connect() as db:
+            charge = db.execute('''SELECT status,charged,response_sha256 FROM sgo_object_reservation
+                JOIN sgo_request_trace ON id=reservation_id WHERE id=?''', (detail['attempt_id'],)).fetchone()
+        self.assertEqual(charge, ('resolved', 2, detail['receipt_sha256']))
+        witness, raw = read(detail['original_response']['id'], root=worker.original_response_root)
+        self.assertEqual(witness['receipt_sha256'], detail['receipt_sha256'])
+        self.assertLessEqual(datetime.fromisoformat(detail['dispatch_at']), datetime.fromisoformat(witness['received_at']))
+        self.assertEqual(json.loads(raw), response)
+
     async def test_rescheduled_member_cannot_publish_against_the_previous_deadline(self):
         _, bodies = self.late_pair()
         stable, revised = bodies
@@ -427,19 +476,27 @@ class ExperimentAcquisitionSQL(PregameFixture):
         ordinary_id = ordinary['data'][0]['eventID'] = 'ordinary-headroom-page'
         late = source_data(target + timedelta(seconds=experiment.LATE_SECONDS))
         late_id = late['data'][0]['eventID'] = 'protected-headroom-checkpoint'
+        late_topup = deepcopy(late)
+        topup_id = late_topup['data'][0]['eventID'] = 'protected-headroom-topup'
+        checkpoints = {late_id: late, topup_id: late_topup}
         context = page()
         context['data'][0]['eventID'] = 'native-headroom-anchor'
         context['data'][0]['status']['startsAt'] = (at + timedelta(hours=1)).isoformat()
         with self.connect() as db:
             self.ingest(db, context)
-        source = self.frame(late)
-        game = acquisition.event_metadata(source.events[0], source.receipt_sha256)
+        sources = [self.frame(body) for body in checkpoints.values()]
+        games = [acquisition.event_metadata(source.events[0], source.receipt_sha256) for source in sources]
+        game = games[0]
         with self.connect() as db:
             db.execute('TRUNCATE native_trading_offer,native_trading_snapshot,native_trading_sgo_game')
             _, book = native_book(db, at)
             observed = target - timedelta(minutes=2)
-            experiment.discover(db, [game], at=observed)
-            early, = experiment.due(db, at=observed)
+            experiment.discover(db, games, at=observed)
+            claims = {row['event']['source_event_id']: row for row in experiment.due(db, at=observed, limit=2)}
+            early = claims[late_id]
+            missed_early = claims[topup_id]
+            experiment.fail_checkpoint(db, missed_early['game_id'], 'early', 'fixture_early_unavailable',
+                                       token=missed_early['token'], at=observed)
             snapshot = dict(event=dict(home=game['home'], away=game['away'], competition='NBA',
                 scheduled_start=game['starts_at']), times=dict(received_at=observed.isoformat(),
                 known_at=observed.isoformat()), offers=[], coverage={})
@@ -450,12 +507,16 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 token=early['token'], requested_at=observed, received_at=observed, known_at=observed,
                 market_publication_bytes=paired)
             self.assertEqual(saved['state'], 'captured')
-            protected = db.execute('SELECT late_reserved_bytes FROM ev_experiment_game').fetchone()['late_reserved_bytes']
-            deadline = db.execute("SELECT deadline_at FROM ev_experiment_task WHERE checkpoint='late'").fetchone()['deadline_at']
+            reserved = {row['source_event_id']: row['late_reserved_bytes'] for row in db.execute(
+                'SELECT source_event_id,late_reserved_bytes FROM ev_experiment_game')}
+            protected = reserved[late_id]
+            self.assertEqual(reserved[topup_id], 0)
+            deadline, = {row['deadline_at'] for row in db.execute(
+                "SELECT deadline_at FROM ev_experiment_task WHERE checkpoint='late'")}
 
         fetch_started = asyncio.Event()
         finish_fetch = asyncio.Event()
-        late_storage = []
+        late_storage = {}
         requests = []
 
         async def fetch(params, _key):
@@ -465,12 +526,13 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 await finish_fetch.wait()
                 body = ordinary
             else:
-                self.assertEqual(params['eventIDs'], late_id)
+                event_id = params['eventIDs']
+                self.assertIn(event_id, checkpoints)
                 with self.connect() as db:
-                    late_storage.append(db.execute('''SELECT t.state,g.late_reserved_bytes
+                    late_storage[event_id] = db.execute('''SELECT t.state,g.late_reserved_bytes
                         FROM ev_experiment_task t JOIN ev_experiment_game g ON t.game_id=g.id
-                        WHERE t.checkpoint='late' ''').fetchone())
-                body = late
+                        WHERE t.checkpoint='late' AND g.source_event_id=%s''', (event_id,)).fetchone()
+                body = checkpoints[event_id]
             received = now()
             return PageResponse(200, json.dumps(body).encode(), received.isoformat(), None)
 
@@ -537,10 +599,14 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 ordinary_reserved = records.retention_usage(db)['market_page_reserved_bytes']
             self.assertEqual(ordinary_reserved, acquisition_snapshot.ORDINARY_PAGE_BYTES)
             native_minimum = sportsgameodds_reference.HISTORY_RUNWAY + 2 * native_trading.MAX_SNAPSHOT_BYTES
-            late_minimum = 3 * protected + 8 * current_storage_policy.MIB
-            # Fit the fixture's ordinary page but leave less runway than a
-            # native publication needs above the protected reservation.
-            cap = physical_before + max(native_minimum, late_minimum) + 640 * 1024
+            topup = experiment.late_checkpoint_bytes('NBA')
+            late_minimum = experiment.sql_runway_bytes(protected)
+            full_group = experiment.sql_runway_bytes(protected + topup)
+            # One member fits with room for actual ingress growth. The combined
+            # batch does not fit, and ignoring the top-up would admit native.
+            cap = physical_before + max(native_minimum, late_minimum) + 2 * current_storage_policy.MIB
+            self.assertLess(cap - physical_before, full_group)
+            self.assertGreater(cap - physical_before, late_minimum + 2 * native_trading.MAX_SNAPSHOT_BYTES)
             with (patch.object(current_storage_policy, 'SQL_BYTE_CAP', cap),
                   patch.object(current_database, 'SQL_BYTE_CAP', cap)):
                 try:
@@ -583,10 +649,11 @@ class ExperimentAcquisitionSQL(PregameFixture):
         with self.connect() as db:
             commit_function = db.execute("SELECT current_setting('track_commit_timestamp') enabled").fetchone()['enabled']
             clock = 'pg_xact_commit_timestamp(r.xmin)' if commit_function == 'on' else 'clock_timestamp()'
-            result = db.execute(f'''SELECT t.state,t.result_id,t.last_reason,r.recorded_at,
+            results = {row['source_event_id']: row for row in db.execute(f'''
+                SELECT g.source_event_id,t.state,t.result_id,t.last_reason,t.attempts,r.recorded_at,
                 {clock} AS commit_at,g.late_reserved_bytes FROM ev_experiment_task t
                 JOIN ev_experiment_game g ON t.game_id=g.id
-                LEFT JOIN ev_experiment_record r ON t.result_id=r.id WHERE t.checkpoint='late' ''').fetchone()
+                LEFT JOIN ev_experiment_record r ON t.result_id=r.id WHERE t.checkpoint='late' ''')}
             frame_clock = 'pg_xact_commit_timestamp(xmin)' if commit_function == 'on' else 'NULL'
             frame = db.execute(f'''SELECT {frame_clock} AS commit_at,facts->>'receipt_sha256' AS receipt
                 FROM sgo_event_evidence WHERE kind='frame' AND event_id=%s''', (ordinary_id,)).fetchone()
@@ -598,35 +665,43 @@ class ExperimentAcquisitionSQL(PregameFixture):
         ledger = worker.ledger.status(worker.window_id)
         print(json.dumps(dict(order='native-first' if native_first else 'ordinary-first',
             cap=cap, physical_before=physical_before, physical_after=physical_after,
-            protected_before=protected, late_dispatch_minimum=late_minimum,
+            protected_before=protected, pending_topup=topup, late_dispatch_minimum=late_minimum,
+            full_group_minimum=full_group,
             native_admission_minimum=native_minimum, ordinary_reserved=ordinary_reserved,
             ordinary_reserved_after=current_usage['market_page_reserved_bytes'],
             target=target, deadline=deadline, native=native, late_storage=late_storage, ordinary_frame=frame,
-            result=result, time_to_tminus9=(deadline-result['commit_at']).total_seconds() if result['commit_at'] else None,
+            results=results, time_to_tminus9={key: (deadline-row['commit_at']).total_seconds()
+                if row['commit_at'] else None for key, row in results.items()},
             commit_clock='pg_xact_commit_timestamp' if commit_function == 'on' else 'first_visible_sql_read',
             native_priority_clock=priority_clock if native_first else None, seen=seen,
             requests=len(requests), charged=ledger['charged'], held=ledger['held'],
             ingress_transaction_retries=service.sink.metrics.get('transaction_retries', 0)),
             default=str), flush=True)
         self.assertTrue(captured)
-        self.assertEqual(result['state'], 'captured', result)
-        self.assertLessEqual(result['commit_at'], deadline)
-        self.assertEqual(result['late_reserved_bytes'], 0)
-        self.assertTrue(late_storage and 0 < late_storage[0]['late_reserved_bytes'] <= protected)
-        self.assertEqual(late_storage[0]['state'], 'claimed')
+        if native_first:
+            self.assertEqual(native, dict(state='deferred', reason='native_storage_capacity', published=0))
+        else:
+            self.assertEqual(native.get('reason'), 'native_storage_admission_busy')
+        self.assertEqual(set(results), set(checkpoints))
+        self.assertEqual(set(late_storage), set(checkpoints))
+        for event_id, result in results.items():
+            self.assertEqual(result['state'], 'captured', result)
+            self.assertLessEqual(result['commit_at'], deadline)
+            self.assertEqual((result['late_reserved_bytes'], result['attempts']), (0, 1))
+            self.assertGreater(late_storage[event_id]['late_reserved_bytes'], 0)
+            self.assertLessEqual(late_storage[event_id]['late_reserved_bytes'], protected if event_id == late_id else topup)
+            self.assertEqual(late_storage[event_id]['state'], 'claimed')
         self.assertLess(physical_after, cap)
         self.assertEqual(current_usage['market_page_reserved_bytes'], 0)
         self.assertIsNotNone(frame)
         self.assertEqual(accepted, [dict(receipt_sha256=frame['receipt'])])
-        self.assertEqual((len(requests),ledger['charged'],ledger['held'],ledger['interrupted']), (2,2,0,0))
+        self.assertCountEqual([request['eventIDs'] for request in requests if 'eventIDs' in request], checkpoints)
+        self.assertEqual((len(requests),ledger['charged'],ledger['held'],ledger['interrupted']), (3,3,0,0))
         if native_first:
             self.assertLess(seen['native_final_priority_check_passed'], target)
             self.assertGreaterEqual(seen['late_claim_awaiting_admission'], target)
             self.assertFalse(seen['ingress_before_native_release'])
             self.assertGreater(service.sink.metrics.get('transaction_retries', 0), 0)
-            self.assertEqual(native, dict(state='deferred', reason='native_storage_capacity', published=0))
-        else:
-            self.assertEqual(native.get('reason'), 'native_storage_admission_busy')
 
     async def test_postgame_followup_runs_without_browser_and_final_stops_future_requests(self):
         now=datetime.now(timezone.utc)

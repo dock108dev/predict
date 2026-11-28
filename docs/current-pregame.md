@@ -1,5 +1,11 @@
 # Current pregame dashboard
 
+The installed Dashboard uses the [personal workspace](personal-data-workspace.md#dashboard)
+routes for the ranked board and quote details. Novig updates are revision
+notices from `/api/research/dashboard-updates`; the browser reads committed data
+on notices and polls during reconnect. The SQL calculation and `/api/pregame`
+read contract below apply to the underlying pregame projections.
+
 ## Data flow
 
 ```text

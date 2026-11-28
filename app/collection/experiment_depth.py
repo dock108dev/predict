@@ -14,7 +14,8 @@ from app.storage import experiment_depth as storage, sgo_native_catalog
 from app.storage.store import ROOT, connect, hashed, stamp
 
 from .bulk_checkpoint import owned_thread
-from .experiment_depth_stage import DepthStage, InvalidStagedReceipt, MAX_PENDING_BUNDLES
+from .experiment_depth_stage import DepthStage, InvalidStagedReceipt, KEY, MAX_PENDING_BUNDLES
+from .odds_http import BudgetStop
 
 # Prepare catalog identity early, then leave a bounded budget for the cached
 # markets request and selective second-tier reads before the decision itself.
@@ -23,6 +24,7 @@ READ_AHEAD = timedelta(seconds=6)
 BOOK_AHEAD = timedelta(seconds=4)
 ASSEMBLY_RESERVE = timedelta(milliseconds=350)
 MANUAL_DELAY = timedelta(seconds=30)
+DASHBOARD_RETRY_SECONDS = 5
 # Allows a common kickoff cluster across leagues while network clients
 # independently bound concurrent requests and snapshots per venue.
 MAX_GAMES_IN_FLIGHT = 16
@@ -443,6 +445,57 @@ class ExperimentDepth:
         self.stage.finish(entry, reason, saved_id)
         return reason, saved_id
 
+    async def _drain_staged(self, staged, at):
+        from app.research.records import _retention_failure
+
+        decisions = {tuple(entry[key] for key in KEY[:3]) for entry in staged if entry['kind'] == 'decision'}
+        ready = []
+        for entry in staged:
+            if entry['kind'] == 'followup' and tuple(entry[key] for key in KEY[:3]) in decisions:
+                continue
+            try:
+                deadline = stamp(entry['target_at']) + timedelta(seconds=experiment.LATE_TOLERANCE_SECONDS)
+                valid_deadline = stamp(entry['deadline_at']) == deadline
+            except (ValueError, OverflowError):
+                valid_deadline = False
+            if not valid_deadline or deadline <= at:
+                ready.append((entry, valid_deadline))
+        if not ready:
+            return
+
+        primary = ready[0]
+        # Keep oldest-first service ordinarily. After a sized refusal, try
+        # only the smallest independent candidate, which needs the least room.
+        smaller = min((item for item in ready[1:] if item[0]['payload_bytes'] < primary[0]['payload_bytes']),
+                      key=lambda item: item[0]['payload_bytes'], default=None)
+        attempts = [primary] if smaller is None else [primary, smaller]
+        for entry, valid_deadline in attempts:
+            if not self.enabled() or self._near_checkpoint():
+                return
+            try:
+                if valid_deadline:
+                    reason, saved_id = await owned_thread(self._publish_staged, entry)
+                else:
+                    reason, saved_id = 'experiment_depth_stage_deadline', None
+                    await owned_thread(self.stage.finish, entry, reason)
+            except BlockingIOError as exc:
+                self.progress = dict(self.progress, state='deferred', reason=str(exc))
+            except Exception as exc:
+                reason = str(exc)
+                deferred = _retention_failure(exc)
+                if not deferred:
+                    failure(__name__, 'experiment_depth_persist', exc)
+                self.progress = dict(self.progress, state='deferred' if deferred else 'degraded',
+                                     reason=reason if deferred and not isinstance(exc, OSError) else type(exc).__name__)
+                if isinstance(exc, (ValueError, BudgetStop)) and reason in (
+                        'research_retention_capacity', 'research_sql_runway', 'current_observation_disk_free_floor'):
+                    continue
+            else:
+                self.progress = dict(self.progress, state='ready', reason=None,
+                                     last_disposition=reason, last_saved_id=saved_id)
+                staged.remove(entry)
+            return  # At most one disposition per turn, or stop on shared contention.
+
     async def tick(self, client):
         for key in list(self.running):
             job = self.running[key]
@@ -462,37 +515,7 @@ class ExperimentDepth:
                 job.cancel()
             self.progress = dict(self.progress, state='paused', active=len(self.running), pending=len(staged))
             return
-        if not self._near_checkpoint():
-            from app.research.records import _retention_failure
-
-            for entry in staged:
-                try:
-                    deadline = stamp(entry['target_at']) + timedelta(seconds=experiment.LATE_TOLERANCE_SECONDS)
-                    valid_deadline = stamp(entry['deadline_at']) == deadline
-                except (ValueError, OverflowError):
-                    valid_deadline = False
-                if valid_deadline and deadline > at:
-                    continue
-                try:
-                    if valid_deadline:
-                        reason, saved_id = await owned_thread(self._publish_staged, entry)
-                    else:
-                        reason, saved_id = 'experiment_depth_stage_deadline', None
-                        await owned_thread(self.stage.finish, entry, reason)
-                except BlockingIOError:
-                    break
-                except Exception as exc:
-                    deferred = _retention_failure(exc)
-                    if not deferred:
-                        failure(__name__, 'experiment_depth_persist', exc)
-                    self.progress = dict(self.progress, state='deferred' if deferred else 'degraded',
-                                         reason=str(exc) if deferred and not isinstance(exc, OSError)
-                                         else type(exc).__name__)
-                else:
-                    self.progress = dict(self.progress, state='ready',
-                        last_disposition=reason, last_saved_id=saved_id)
-                    staged.remove(entry)
-                break  # Yield before pulling another persistence turn.
+        await self._drain_staged(staged, at)
         # Every in-flight game can stage one decision and one separate follow-up.
         capacity = min(MAX_GAMES_IN_FLIGHT, (MAX_PENDING_BUNDLES - len(staged)) // 2) - len(self.running)
         if capacity > 0:
@@ -515,7 +538,24 @@ class ExperimentDepth:
                             and venue not in self.service.paused_sources) as native):
                 dashboard = NativeTrading(self, connector=self.connector, now=self.now)
                 self.dashboard_progress = dashboard.progress
-                task = asyncio.create_task(native.dashboard_call(dashboard.run(novig, native), self.service.config),
+                # Keep the same optional HTTP budget across worker restarts.
+                async def supervise_dashboard():
+                    while True:
+                        try:
+                            await dashboard.run(novig, native)
+                        except asyncio.CancelledError:
+                            if asyncio.current_task().cancelling():
+                                raise
+                            reason = 'native_dashboard_worker_cancelled'
+                        except Exception as exc:
+                            failure(__name__, 'native_dashboard_worker', exc)
+                            reason = type(exc).__name__
+                        else:
+                            reason = 'native_dashboard_worker_exited'
+                        dashboard.progress.update(state='degraded', reason=reason)
+                        await asyncio.sleep(DASHBOARD_RETRY_SECONDS)
+
+                task = asyncio.create_task(native.dashboard_call(supervise_dashboard(), self.service.config),
                                            name='predict-dashboard-public-depth')
                 try:
                     while True:

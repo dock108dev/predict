@@ -1,7 +1,7 @@
 """Frozen pull scope replacement, exact headline selection and passive exports."""
 
 from copy import deepcopy
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
@@ -342,7 +342,9 @@ class MarketBoardSQL(LatestBoardFixture):
     async def test_http_headline_click_and_export_bind_same_offer_and_leave_acquisition_unchanged(self):
         with self.connect() as db:
             pull = self.start(db)
-            self.publish(db,pull,captured_offer(ev='1/10',line='-3'),
+            headline = captured_offer(ev='1/10', line='-3')
+            headline['calculation_payload']['id'] = 'fixture-board-contract'
+            self.publish(db,pull,headline,
                 captured_offer(ev='-1/20',line='-3.5',venue='novig'))
             before = db.execute('SELECT count(*) n FROM public.market_pull').fetchone()['n']
         reads = CatalogReads(self.connect)
@@ -365,6 +367,17 @@ class MarketBoardSQL(LatestBoardFixture):
             self.assertEqual(downloaded['selected_offer']['line'],'-3')
             self.assertEqual(len(downloaded['offers']),2)
             self.assertEqual(downloaded['provider_requests'],0)
+            self.assertNotIn('read_at', downloaded)
+
+            dashboard_query = {key: value for key, value in exact_query.items() if key != 'token'}
+            now = datetime.now(timezone.utc)
+            inspected = await client.get('/api/research/market', params=dict(dashboard_query, liquidity='1'))
+            self.assertEqual(inspected.status, 200, await inspected.text())
+            self.assertGreaterEqual(stamp((await inspected.json())['read_at']), now)
+            amount = await client.post('/api/research/dashboard-liquidity', json=dict(dashboard_query, amount='25'),
+                                       headers={'Origin': str(client.make_url('/')).rstrip('/')})
+            self.assertEqual(amount.status, 200, await amount.text())
+            self.assertGreaterEqual(stamp((await amount.json())['read_at']), now)
             invalid = await client.get('/api/research/market-export',params=dict(exact_query,revision='changed'))
             self.assertEqual(invalid.status,422)
             self.assertEqual((await client.get('/api/research/markets?sort=arbitrary')).status,422)

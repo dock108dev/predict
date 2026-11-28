@@ -125,12 +125,14 @@ class NativeTrading:
                 self.write, dict(values[start : start + WRITE_BATCH])
             )
             self.references.update(result.pop("references", {}))
+            # The writer has exited its transaction. A partial admission can
+            # commit rows before reporting that the remaining work deferred.
+            if result.get("published", 0):
+                self.progress["last_publication"] = self.now().isoformat()
             if result.get("state") == "deferred":
                 self.progress.update(result)
                 return False
-        self.progress.update(
-            state="ready", reason=None, last_publication=self.now().isoformat()
-        )
+        self.progress.update(state="ready", reason=None)
         return True
 
     async def discovery(self, novig, native):
@@ -633,23 +635,6 @@ class NativeTrading:
             allowed=lambda: self.enabled("polymarket_us") and not self.protected(),
         )
 
-        try:
-            config = await asyncio.to_thread(credentials)
-            self.prophetx = MarketData(
-                config,
-                now=self.now,
-                allowed=lambda: self.enabled("prophetx"),
-                requests=self.owner.service.config["requests_per_source"],
-                bytes_limit=self.owner.service.config["source_bytes"],
-            )
-            _, _, reason = await self.prophetx.get(
-                "/affiliate/get_tournaments", {}, self.now() + timedelta(seconds=3)
-            )
-            if reason:
-                self.progress["access_gaps"]["prophetx"] = reason
-        except ValueError as error:
-            self.progress["access_gaps"]["prophetx"] = str(error)
-
         async def supervise(name, work, *args):
             while True:
                 try:
@@ -659,9 +644,28 @@ class NativeTrading:
 
                     failure(__name__, name, error)
                     self.progress.update(state="degraded", reason=type(error).__name__)
-                    await asyncio.sleep(5)
+                else:
+                    self.progress.update(state="degraded", reason=name + "_exited")
+                await asyncio.sleep(5)
 
         try:
+            try:
+                config = await asyncio.to_thread(credentials)
+                self.prophetx = MarketData(
+                    config,
+                    now=self.now,
+                    allowed=lambda: self.enabled("prophetx"),
+                    requests=self.owner.service.config["requests_per_source"],
+                    bytes_limit=self.owner.service.config["source_bytes"],
+                )
+                _, _, reason = await self.prophetx.get(
+                    "/affiliate/get_tournaments", {}, self.now() + timedelta(seconds=3)
+                )
+                if reason:
+                    self.progress["access_gaps"]["prophetx"] = reason
+            except ValueError as error:
+                self.progress["access_gaps"]["prophetx"] = str(error)
+
             async with asyncio.TaskGroup() as tasks:
                 tasks.create_task(supervise("native_discovery", self.discovery))
                 for venue in BOOKS_PER_TURN:
@@ -681,6 +685,9 @@ class NativeTrading:
                     )
                 tasks.create_task(supervise("native_references", self.references_loop))
         finally:
-            await stream.close()
-            if self.prophetx is not None:
-                await self.prophetx.close()
+            try:
+                await stream.close()
+            finally:
+                if self.prophetx is not None:
+                    client, self.prophetx = self.prophetx, None
+                    await client.close()

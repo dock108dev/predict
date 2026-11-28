@@ -14,6 +14,8 @@ from app.comparison.cashflows import exact_wire as wire
 from app.comparison.experiment_depth_execution import evaluate_at_stake
 from app.comparison.native_observation import WITHDRAWALS, adopt, clock, revision
 from app.comparison.pregame_valuation import american, decimal_display
+from app.comparison.sgo_native_binding import pregame_subject_roles
+from . import sgo_native_catalog
 from .current_pregame_depth import _present, unknown
 from .current_rows import contract_id
 from .pregame_known_withdrawals import phase_closed, reference_known_unavailable
@@ -77,7 +79,7 @@ def _current_reference(row, at):
     return None
 
 
-def anchors(db, at):
+def anchors(db, at, *, novig_events=()):
     rows = db.execute(
         f"""WITH upcoming AS MATERIALIZED (
             SELECT e.native_event_id, e.facts, e.scheduled_start FROM public.current_event e
@@ -110,6 +112,17 @@ def anchors(db, at):
     # Apply only the existing authoritative, role-scoped schedule review.
     from .sgo_schedule_review import canonical_roles
 
+    witnesses = sgo_native_catalog.read(
+        db,
+        [
+            row["event"]["id"]
+            for row in rows
+            if (row["event"].get("shared_provider_ids") or {}).get("novig_event")
+            in novig_events
+        ],
+        include_markets=False,
+    )
+
     for row in rows:
         event = dict(row["event"])
         _, _, event["home"], event["away"] = canonical_roles(
@@ -123,6 +136,9 @@ def anchors(db, at):
             at=at,
         )
         row["event"] = event
+        proof = pregame_subject_roles(event, witnesses.get(event["id"]), at=at)
+        if proof:
+            row["novig_subject_roles"] = proof
     return rows
 
 
@@ -428,9 +444,9 @@ def publish(db, observations, *, at, prune=False):
             )
         if not observations:
             return dict(state="ready", published=0)
-        # A previously reserved checkpoint may enter its window after the
-        # collector's last priority check. Keep its physical allocation out
-        # of the bytes available to optional native snapshots.
+        # A checkpoint can enter its window after the collector's last
+        # priority check. Leave room for its full reservation, including
+        # any late-claim top-up, when optional native snapshots are admitted.
         protected = max(HISTORY_RUNWAY, sql_runway_bytes(next_late_storage_reservation(db, at=at)))
         runway = max(0, (SQL_BYTE_CAP - protected - sql_usage(db)) // 2)
         if runway < MAX_SNAPSHOT_BYTES:
@@ -454,7 +470,12 @@ def publish(db, observations, *, at, prune=False):
             return dict(
                 state="deferred", reason="native_snapshot_capacity", published=0
             )
-        games = anchors(db, at)
+        novig_events = {
+            item["event_id"]
+            for item in observations.values()
+            if item.get("venue") == "novig" and item.get("event_id")
+        }
+        games = anchors(db, at, novig_events=novig_events)
         from app.comparison.fee_mode import read as read_fee_mode
 
         mode = read_fee_mode(db)

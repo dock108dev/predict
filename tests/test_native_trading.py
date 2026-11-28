@@ -2,6 +2,7 @@ import asyncio
 from copy import deepcopy
 from datetime import timedelta
 from fractions import Fraction as F
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -32,6 +33,80 @@ from tests.test_novig_experiment_depth import (
     receipt as novig_receipt,
     uid,
 )
+
+
+@pytest.mark.parametrize("error", [None, RuntimeError("synthetic child failure")])
+def test_depth_owner_reports_and_restarts_an_exited_dashboard_worker(monkeypatch, tmp_path, error):
+    from contextlib import nullcontext
+
+    from app.collection import experiment_depth
+    from app.collection.native_trading import NativeTrading
+
+    async def exercise():
+        restarted = asyncio.get_running_loop().create_future()
+        launches = 0
+        ticks = asyncio.Event()
+
+        async def worker(self, *_):
+            nonlocal launches
+            launches += 1
+            if launches == 1:
+                if error:
+                    raise error
+                return
+            restarted.set_result(dict(self.progress))
+            await asyncio.Future()
+
+        async def tick(_):
+            ticks.set()
+
+        monkeypatch.setattr(experiment_depth, "DASHBOARD_RETRY_SECONDS", 0, raising=False)
+        monkeypatch.setattr(NativeTrading, "run", worker)
+        service = SimpleNamespace(config=dict(requests_per_source=0, source_bytes=0))
+        owner = experiment_depth.ExperimentDepth(service, client_factory=nullcontext,
+                                                stage_path=tmp_path / "depth.sqlite3")
+        monkeypatch.setattr(owner, "tick", tick)
+        await owner.start()
+        try:
+            progress = await asyncio.wait_for(restarted, timeout=1)
+            assert progress["state"] == "degraded"
+            assert progress["reason"] == ("RuntimeError" if error else "native_dashboard_worker_exited")
+            assert ticks.is_set()
+        finally:
+            await owner.close()
+        assert launches == 2
+
+    asyncio.run(exercise())
+
+
+def test_native_dashboard_advances_publication_time_only_for_committed_rows(monkeypatch):
+    from app.collection.native_trading import NativeTrading
+
+    async def exercise():
+        service = SimpleNamespace(dispatch=True, globally_stopped=False, paused_sources=set())
+        owner = SimpleNamespace(service=service, _near_checkpoint=lambda: False)
+        now = [AT]
+        worker = NativeTrading(owner, now=lambda: now[0])
+        result = dict(state="ready", published=0)
+        monkeypatch.setattr(worker, "write", lambda _: dict(result))
+        assert await worker.save({})
+        assert "last_publication" not in worker.progress
+
+        result.update(state="deferred", reason="native_snapshot_capacity", published=1)
+        assert not await worker.save({"one": {}, "two": {}})
+        assert worker.progress["last_publication"] == AT.isoformat()
+        assert worker.progress["reason"] == "native_snapshot_capacity"
+
+        now[0] += timedelta(seconds=1)
+        result.update(state="ready", published=0)
+        assert await worker.save({"one": {}})
+        assert worker.progress["last_publication"] == AT.isoformat()
+
+        result.update(published=1)
+        assert await worker.save({"one": {}})
+        assert worker.progress["last_publication"] == now[0].isoformat()
+
+    asyncio.run(exercise())
 
 
 def test_native_alternate_without_any_sgo_trading_quote_has_its_own_price_and_size():

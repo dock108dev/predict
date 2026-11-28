@@ -6,6 +6,7 @@ reconstruction. CurrentService retains catalogs and admitted book images.
 import asyncio
 from .current_ingress import call
 from .bulk_checkpoint import owned_thread
+from .current_native_publication import book_publication_order
 from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime, timezone, timedelta
@@ -304,11 +305,6 @@ class NativeWorker:
         if self.invalidation_boundary:
             self.publication_handle=asyncio.get_running_loop().call_later(.01,self.flush_books)
             return
-        # Overdue work owns a FIFO turn after the two-second processing target.
-        # Otherwise preserve tail priority across reconnect initial-image order.
-        # Pure last-service ordering could indefinitely put new quiet instruments
-        # ahead of an already waiting hot one. Coalescing preserves arrival age.
-        # Chunking limits each SQL transaction, never subscription membership.
         books=[];size=0;claimed={};recalculating=set()
         self.pending_recalculations.intersection_update(self.pending_books)
         # Catch-up must also yield the ingress lock. Live 512-market turns held
@@ -316,47 +312,17 @@ class NativeWorker:
         # calculations. Bound each transaction, never the subscribed inventory;
         # the FIFO queue and durable images carry every remaining book forward.
         batch_limit=128
-        now=time.monotonic()
-        def priority(mid):
-            arrived=self.pending_since.get(mid,0)
-            return (0,arrived,0) if now-arrived>=2 else (1,self.derived_served.get(mid,-1),arrived)
-        # Only these prefixes can fit this turn. A stale material change must
-        # not consume a scarce fresh-price slot ahead of a still-current change.
-        # The independent FIFO half guarantees quiet/old instruments progress.
-        from heapq import nsmallest
         limit=batch_limit if getattr(self.service,'database_mode',False) else self.config['markets_per_source']
-        oldest=nsmallest(limit,self.pending_books,key=priority);wall=time.time()
-        def fresh(mid):
-            clock=self.pending_clocks.get(mid)
-            return clock is not None and 0<=wall-clock<=30
-        def hot_rank(mid):
-            material=self.pending_price_versions[mid]!=self.derived_versions.get(mid)
-            established=mid in self.derived_versions or mid in self.pending_price_changes
-            current=fresh(mid)
-            # The FIFO half already protects waiting instruments. Within the
-            # live half leave time for SQL admission and component publication.
-            # A receipt near expiry can otherwise finish SQL after it expires.
-            clock=self.pending_clocks[mid] if current else 0
-            return (not current,not (material and established),-clock,priority(mid))
-        # Give an eligible first image or authentic fresh confirmation a turn
-        # ahead of expired material. The other half retains oldest-ticket order.
-        hot=iter(nsmallest(limit,(mid for mid in self.pending_price_versions if fresh(mid) or
-            (self.pending_price_versions[mid]!=self.derived_versions.get(mid) and
-             (mid in self.derived_versions or mid in self.pending_price_changes))),key=hot_rank))
-        scheduled=set();ordered=[]
-        for mid in oldest:
-            if mid in scheduled:continue
-            ordered.append(mid);scheduled.add(mid)
-            for recent in hot:
-                if recent not in scheduled:
-                    ordered.append(recent);scheduled.add(recent);break
-            if len(ordered)>=limit:break
+        ordered = book_publication_order(
+            self.pending_books, self.pending_since, self.derived_served,
+            self.pending_clocks, self.pending_price_versions, self.derived_versions,
+            self.pending_price_changes, limit=limit, now=time.monotonic(), wall=time.time(),
+        )
         queued_at={};versions={};clock_traces={}
         from .current_book_images import CurrentBookImages
         compact=isinstance(self.pending_books,CurrentBookImages)
         images=CurrentBookImages() if compact else None
         for mid in ordered:
-            if len(books)>=limit:break
             cost=self.pending_sizes.get(mid) if compact else None
             if cost is None:cost=len(json.dumps(self.pending_books[mid],default=str).encode())
             if books and size+cost>self.config['ingress_bytes']//2:break

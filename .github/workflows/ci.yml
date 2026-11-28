@@ -13,6 +13,10 @@ on:
         description: Deploy current main through the guarded backup and migration release
         type: boolean
         default: false
+      broaden_validation:
+        description: Run the broad focused release checks when recovering the installed revision outside CI
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,8 +30,53 @@ env:
   CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 jobs:
+  candidate:
+    name: Select release checks and run affected browser tests
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      selection: ${{ steps.plan.outputs.selection }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare the candidate with the installed release
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BROADEN_VALIDATION: ${{ inputs.broaden_validation || false }}
+        run: |
+          selection=$(python3 scripts/ci/fast_checks.py --ci-input)
+          printf 'selection=%s\n' "$selection" >> "$GITHUB_OUTPUT"
+          printf 'Release test selection\n\n```json\n%s\n```\n' "$selection" >> "$GITHUB_STEP_SUMMARY"
+      - uses: ./.github/actions/setup
+        if: fromJSON(steps.plan.outputs.selection).browser
+        with:
+          python: '3.14'
+          browser: 'true'
+      - name: Install the focused browser engine
+        if: fromJSON(steps.plan.outputs.selection).browser
+        run: python -m playwright install --with-deps chromium
+      - name: Run selected browser tests with disposable PostgreSQL
+        if: fromJSON(steps.plan.outputs.selection).browser
+        env:
+          PG_CONFIG: /usr/lib/postgresql/16/bin/pg_config
+          RELEASE_SELECTION: ${{ steps.plan.outputs.selection }}
+        run: python scripts/ci/fast_checks.py --browser
+      - name: Keep focused browser evidence
+        if: always() && steps.plan.outcome == 'success' && fromJSON(steps.plan.outputs.selection).browser
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: personal-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/fast-browser/
+          if-no-files-found: warn
+          retention-days: 7
   personal:
     name: Personal beta checks and deploy
+    needs: candidate
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.schema_maintenance && 360 || 2 }}
@@ -49,6 +98,7 @@ jobs:
           schema-maintenance: ${{ inputs.schema_maintenance || false }}
         env:
           RELEASE_SHA: ${{ github.sha }}
+          RELEASE_SELECTION: ${{ needs.candidate.outputs.selection }}
           GH_TOKEN: ${{ github.token }}
           SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ vars.HETZNER_KNOWN_HOSTS }}

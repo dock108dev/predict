@@ -266,6 +266,39 @@ def _reviewed_subject_roles(event, native_event, *, at):
     return {'home': lines[strike], 'away': lines[-strike]}, [evidence]
 
 
+def pregame_subject_roles(event, witness, *, at):
+    """Prove that retained Novig subjects identify both SGO roles at kickoff."""
+    if not witness or witness.get('source') != CATALOG_SOURCE or witness.get('subject_role_conflict'):
+        return None
+    try:
+        event_id = event['shared_provider_ids']['novig_event']
+        kickoff = stamp(event['scheduled_start'])
+        catalog = witness['event']
+        observed, expiry = stamp(witness['observed_at']), stamp(witness['expires_at'])
+        # The pregame catalog's exact identity is usable through the same
+        # kickoff. Price and book freshness have their own clocks.
+        if (not _uuid(event_id) or witness['sgo_event_id'] != event['id']
+                or catalog['eventId'] != event_id or catalog['league'] != event['competition']
+                or catalog['status'] != 'OPEN_PREGAME' or _start(catalog['startsTs']) != kickoff
+                or not observed <= at < kickoff or not observed < expiry <= observed + CATALOG_AGE
+                or not _receipt(witness['event_receipt'], '/v3/public/catalog/events/' + event_id)):
+            return None
+        subjects = witness['subject_roles']
+        if (set(subjects) != {'home', 'away'} or subjects['home'] == subjects['away']
+                or not all(_uuid(subject) for subject in subjects.values())):
+            return None
+        for anchor in witness['subject_role_anchors']:
+            frame = anchor.get('sgo_frame')
+            if (anchor['home_subject'] == subjects['home'] and anchor['away_subject'] == subjects['away']
+                    and isinstance(frame, str) and re.fullmatch('[0-9a-f]{64}', frame)
+                    and _uuid(anchor['market_id'])):
+                return dict(sgo_event_id=event['id'], event_id=event_id, subjects=subjects, sgo_frame=frame,
+                            market_id=anchor['market_id'], revision=witness['revision'], observed_at=observed.isoformat())
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return None
+    return None
+
+
 def settlement_profile(league, family, line, voids):
     """Describe the filed full-game rule while leaving exceptional payoffs open."""
     rule = RULES.get((league,family))

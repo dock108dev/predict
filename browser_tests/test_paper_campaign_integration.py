@@ -225,6 +225,10 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 with connect(self.name) as db:
                     run_id = paper_campaigns.tick(db)
                     assert run_id and queue.process_one(db)
+                frozen_path = str(server.make_url(f"{BASE}/runs/{run_id}?export=1"))
+                saved = await page.request.get(frozen_path)
+                assert saved.ok, await saved.text()
+                before_grade = await saved.json()
                 await page.reload(wait_until="domcontentloaded")
                 await page.locator(".result-ledger-selection").click()
                 history = page.get_by_role(
@@ -275,8 +279,8 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 ).to_be_visible()
                 await expect(page.get_by_text("Retired ·", exact=False)).to_be_visible()
                 assert parse_qs(urlsplit(page.url).query)["run"] == [run_id]
-                frozen_path = str(server.make_url(f"{BASE}/runs/{run_id}?export=1"))
                 frozen = await (await page.request.get(frozen_path)).json()
+                assert frozen == before_grade
                 assert list(frozen["depth_receipts"]) == [decision["id"]]
                 assert frozen["report"]["games"][0]["status"] in ("captured", "missed")
                 assert sorted(row["status"] for row in frozen["report"]["games"]) == [
@@ -295,6 +299,16 @@ class ControlledWorkbench(ResearchWorkspaceFixture):
                 assert ticket["run_id"] == run_id and ticket["grade"]["state"] == "win"
                 assert F(ticket["pnl_exact_usd"]) == F("24.9975")
                 assert list(exported["depth_receipts"]) == [decision["id"]]
+                assert exported["depth_receipts"] == frozen["depth_receipts"]
+                cashflows = frozen["witnesses"][ticket["id"]]["sized_calculation"][
+                    "fee"
+                ]["cashflows"]
+                assert F(cashflows["win"]["net_profit_usd"]) == F(
+                    ticket["pnl_exact_usd"]
+                )
+                assert (
+                    exported["provider_requests"] == exported["orders_submitted"] == 0
+                )
                 after = (await (await page.request.get(config_path)).json())["config"]
                 retirement = after.pop("retirement")
                 assert after == before

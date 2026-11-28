@@ -275,7 +275,9 @@ def test_paper_results_journey_refresh_and_exact_history():
         expect(page.get_by_role("link", name=TITLE)).to_have_count(0)
         page.get_by_label("Show games").select_option("missing")
         expect(page.get_by_role("link", name="Missing at Capture")).to_be_visible()
-        unresolved = page.get_by_role("link", name="Ecclesia Royals at Grambling St Tigers")
+        unresolved = page.get_by_role(
+            "link", name="Ecclesia Royals at Grambling St Tigers"
+        )
         expect(unresolved).to_have_count(0)
         page.get_by_label("Show games").select_option("missing_results")
         expect(page.get_by_role("link", name="Missing at Capture")).to_be_visible()
@@ -410,16 +412,27 @@ def test_experiment_trade_filters_compose_and_more_rows_survive_reload():
     from tests.test_paper_campaigns import fixed_config
 
     campaign = "f" * 64
-    form = fixed_config(name="All-sports paper", scope="all-sports",
-                        kelly_comparison=False, start_date=DAY, end_date=DAY, portfolios=["all_venues"])
+    form = fixed_config(
+        name="All-sports paper",
+        scope="all-sports",
+        kelly_comparison=False,
+        start_date=DAY,
+        end_date=DAY,
+        portfolios=["all_venues"],
+    )
     del form["kelly_multiplier"], form["reference_bankroll_usd"]
     cfg = dict(configuration(form), id=campaign)
     result = ledger_report(58)
     path = f"{BASE}/campaigns/{campaign}"
     saved = result["portfolios"]["all_venues"]["tickets"]
-    selected = dict(run=dict(id=RUN, date=DAY, title=cfg["name"]), definition=dict(campaign_id=campaign,
-        sizing_mode="fixed_profit"), report=dict(policy={"execution": "paper_only"},
-        portfolios={"all_venues": {"tickets": saved}}))
+    selected = dict(
+        run=dict(id=RUN, date=DAY, title=cfg["name"]),
+        definition=dict(campaign_id=campaign, sizing_mode="fixed_profit"),
+        report=dict(
+            policy={"execution": "paper_only"},
+            portfolios={"all_venues": {"tickets": saved}},
+        ),
+    )
 
     def serve(route):
         target = urlsplit(route.request.url).path
@@ -432,19 +445,40 @@ def test_experiment_trade_filters_compose_and_more_rows_survive_reload():
         elif target == f"{BASE}/campaigns":
             route.fulfill(json=dict(campaigns=[cfg]))
         elif target == f"{path}/days/{DAY}":
-            route.fulfill(json=dict(config=cfg, modes={"fixed_profit": dict(run_id=RUN, result_id=FIRST,
-                result_state="partially_graded", snapshots=[])}))
+            route.fulfill(
+                json=dict(
+                    config=cfg,
+                    modes={
+                        "fixed_profit": dict(
+                            run_id=RUN,
+                            result_id=FIRST,
+                            result_state="partially_graded",
+                            snapshots=[],
+                        )
+                    },
+                )
+            )
         elif target == f"{BASE}/runs/{RUN}":
             route.fulfill(json=selected)
         elif target == RESULTS:
-            route.fulfill(json=dict(report=result, version=dict(id=FIRST), status=dict(state="partially_graded")))
+            route.fulfill(
+                json=dict(
+                    report=result,
+                    version=dict(id=FIRST),
+                    status=dict(state="partially_graded"),
+                )
+            )
         else:
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
-        browser = runtime.chromium.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM"))
+        browser = runtime.chromium.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+        )
         page = browser.new_page(viewport={"width": 390, "height": 820})
-        page.goto(f"{base}/experiments?campaign={campaign}&date={DAY}&variant=all_venues")
+        page.goto(
+            f"{base}/experiments?campaign={campaign}&date={DAY}&variant=all_venues"
+        )
         ledger = page.locator(".result-ledger-table")
         rows = ledger.locator("tbody tr")
         expect(rows).to_have_count(50)
@@ -466,7 +500,9 @@ def test_experiment_trade_filters_compose_and_more_rows_survive_reload():
         expect(page.get_by_label("Venue", exact=True)).to_have_value("novig")
         expect(rows).to_have_count(8)
         page.get_by_label("Grade", exact=True).select_option("loss")
-        expect(page.get_by_text("No trades match the current filters.", exact=True)).to_be_visible()
+        expect(
+            page.get_by_text("No trades match the current filters.", exact=True)
+        ).to_be_visible()
         page.get_by_role("link", name="Games and coverage", exact=True).click()
         page.get_by_label("Sport", exact=True).select_option("NHL")
         expect(page.locator(".paper-result-games tbody tr")).to_have_count(29)
@@ -474,47 +510,93 @@ def test_experiment_trade_filters_compose_and_more_rows_survive_reload():
         browser.close()
 
 
-@pytest.mark.parametrize("engine,device,viewport", [
-    pytest.param("chromium", None, {"width": 390, "height": 820}, id="chromium-phone"),
-    pytest.param("chromium", None, {"width": 1440, "height": 820}, id="chromium-desktop"),
-    pytest.param("webkit", "iPhone 13 Mini", None, id="webkit-iphone-13-mini"),
-    pytest.param("webkit", "iPhone 15", None, id="webkit-iphone-15"),
-])
-def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(engine, device, viewport):
+@pytest.mark.parametrize(
+    "engine,device,viewport",
+    [
+        pytest.param(
+            "chromium", None, {"width": 390, "height": 820}, id="chromium-phone"
+        ),
+        pytest.param(
+            "chromium", None, {"width": 1440, "height": 820}, id="chromium-desktop"
+        ),
+        pytest.param("webkit", "iPhone 13 Mini", None, id="webkit-iphone-13-mini"),
+        pytest.param("webkit", "iPhone 15", None, id="webkit-iphone-15"),
+    ],
+)
+def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(
+    engine, device, viewport
+):
     from app.research.paper_campaigns import configuration
     from tests.test_paper_campaigns import fixed_config
 
     campaign = "f" * 64
     later_date, later_run, later_result = "2026-11-24", "e" * 64, CORRECTED
     pending_date, pending_run, pending_ticket = "2026-11-25", "d" * 64, "0" * 64
-    form = fixed_config(name="Win $25 · All sports", scope="all-sports", target_profit_usd="25",
-                        start_date=DAY, end_date=pending_date, portfolios=["best_venue"],
-                        portfolio_rule="main_first_one_per_game", kelly_comparison=False)
+    form = fixed_config(
+        name="Win $25 · All sports",
+        scope="all-sports",
+        target_profit_usd="25",
+        start_date=DAY,
+        end_date=pending_date,
+        portfolios=["best_venue"],
+        portfolio_rule="main_first_one_per_game",
+        kelly_comparison=False,
+    )
     del form["kelly_multiplier"], form["reference_bankroll_usd"]
     cfg = dict(configuration(form), id=campaign)
     results = ledger_report(58)
     tickets = results["portfolios"]["all_venues"]["tickets"]
     games = {game["game_id"]: game for game in results["games"]}
     pending = tickets[33]
-    games[pending["game_id"]]["title"] = "University of North Carolina Greensboro at Louisiana State University at Alexandria"
+    games[pending["game_id"]]["title"] = (
+        "University of North Carolina Greensboro at Louisiana State University at Alexandria"
+    )
     later_trades = tickets[29:33] + tickets[34:]
-    pending.update(id=pending_ticket, grade=dict(state="pending"), return_usd=None, pnl_usd=None,
-                   return_exact_usd=None, pnl_exact_usd=None)
-    later_report = dict(results, games=[games[trade["game_id"]] for trade in later_trades],
-                        portfolios={"best_venue": dict(tickets=later_trades, summary=_summary(later_trades))})
+    pending.update(
+        id=pending_ticket,
+        grade=dict(state="pending"),
+        return_usd=None,
+        pnl_usd=None,
+        return_exact_usd=None,
+        pnl_exact_usd=None,
+    )
+    later_report = dict(
+        results,
+        games=[games[trade["game_id"]] for trade in later_trades],
+        portfolios={
+            "best_venue": dict(tickets=later_trades, summary=_summary(later_trades))
+        },
+    )
     overview = []
-    for day, run, result_id, selected in [(DAY, RUN, FIRST, tickets[:29]),
-                                         (later_date, later_run, later_result, later_trades),
-                                         (pending_date, pending_run, None, [pending])]:
-        overview.extend(dict(trade, game_date=day, run_id=run, result_id=result_id,
-                             league=games[trade["game_id"]]["league"],
-                             game_title=games[trade["game_id"]]["title"], screen_ev="1/25")
-                        for trade in selected)
+    for day, run, result_id, selected in [
+        (DAY, RUN, FIRST, tickets[:29]),
+        (later_date, later_run, later_result, later_trades),
+        (pending_date, pending_run, None, [pending]),
+    ]:
+        overview.extend(
+            dict(
+                trade,
+                game_date=day,
+                run_id=run,
+                result_id=result_id,
+                league=games[trade["game_id"]]["league"],
+                game_title=games[trade["game_id"]]["title"],
+                screen_ev="1/25",
+            )
+            for trade in selected
+        )
     summary = _summary(overview)
     daily_results = [
-        dict(date=day, run_id=run, result_state="partially_graded",
-             analysis=dict(summary=_summary(selected)))
-        for day, run, selected in [(DAY, RUN, tickets[:29]), (later_date, later_run, later_trades)]
+        dict(
+            date=day,
+            run_id=run,
+            result_state="partially_graded",
+            analysis=dict(summary=_summary(selected)),
+        )
+        for day, run, selected in [
+            (DAY, RUN, tickets[:29]),
+            (later_date, later_run, later_trades),
+        ]
     ]
     path = f"{BASE}/campaigns/{campaign}"
     run_path = f"{BASE}/runs/{later_run}"
@@ -536,76 +618,162 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(engine,
             route.fulfill(json={})
         elif endpoint == f"{BASE}/campaigns":
             if successor:
-                route.fulfill(json=dict(campaigns=[dict(cfg, id=successor)],
-                                        successors={campaign: successor}))
+                route.fulfill(
+                    json=dict(
+                        campaigns=[dict(cfg, id=successor)],
+                        successors={campaign: successor},
+                    )
+                )
             else:
                 route.fulfill(json=dict(campaigns=[cfg]))
         elif endpoint == path:
-            route.fulfill(json=dict(config=cfg, days=daily_results, mode="fixed_profit", as_of=CLOCK,
-                                    weekly=dict(summary=summary, buckets=[], thresholds=[])))
+            route.fulfill(
+                json=dict(
+                    config=cfg,
+                    days=daily_results,
+                    mode="fixed_profit",
+                    as_of=CLOCK,
+                    weekly=dict(summary=summary, buckets=[], thresholds=[]),
+                )
+            )
         elif endpoint == f"{path}/trades":
-            route.fulfill(json=dict(id=campaign, mode="fixed_profit", variant="best_venue", trades=overview,
-                                    summary=summary))
+            route.fulfill(
+                json=dict(
+                    id=campaign,
+                    mode="fixed_profit",
+                    variant="best_venue",
+                    trades=overview,
+                    summary=summary,
+                )
+            )
         elif endpoint in {f"{path}/days/{later_date}", f"{path}/days/{pending_date}"}:
             awaiting = endpoint.endswith(pending_date)
-            route.fulfill(json=dict(config=cfg, modes={"fixed_profit": dict(
-                run_id=pending_run if awaiting else later_run, result_id=None if awaiting else later_result,
-                result_state="awaiting_results" if awaiting else "partially_graded", snapshots=[])}))
+            route.fulfill(
+                json=dict(
+                    config=cfg,
+                    modes={
+                        "fixed_profit": dict(
+                            run_id=pending_run if awaiting else later_run,
+                            result_id=None if awaiting else later_result,
+                            result_state="awaiting_results"
+                            if awaiting
+                            else "partially_graded",
+                            snapshots=[],
+                        )
+                    },
+                )
+            )
         elif endpoint in {run_path, pending_path}:
             awaiting = endpoint == pending_path
-            route.fulfill(json=dict(run=dict(id=pending_run if awaiting else later_run,
-                date=pending_date if awaiting else later_date, title=cfg["name"]),
-                definition=dict(campaign_id=campaign, sizing_mode="fixed_profit"),
-                report=dict(policy=dict(execution="paper_only"), portfolios={"best_venue": dict(tickets=[pending])}
-                            if awaiting else later_report["portfolios"])))
+            route.fulfill(
+                json=dict(
+                    run=dict(
+                        id=pending_run if awaiting else later_run,
+                        date=pending_date if awaiting else later_date,
+                        title=cfg["name"],
+                    ),
+                    definition=dict(campaign_id=campaign, sizing_mode="fixed_profit"),
+                    report=dict(
+                        policy=dict(execution="paper_only"),
+                        portfolios={"best_venue": dict(tickets=[pending])}
+                        if awaiting
+                        else later_report["portfolios"],
+                    ),
+                )
+            )
         elif endpoint == f"{run_path}/results":
-            route.fulfill(json=dict(report=later_report, version=dict(id=later_result),
-                                    status=dict(state="partially_graded", latest_version=FIRST)))
+            route.fulfill(
+                json=dict(
+                    report=later_report,
+                    version=dict(id=later_result),
+                    status=dict(state="partially_graded", latest_version=FIRST),
+                )
+            )
         elif endpoint == f"{pending_path}/results":
             route.fulfill(json=dict(report=None, status=dict(state="awaiting_results")))
         elif endpoint in {evidence_path, pending_evidence}:
-            item = dict(pending, title="Awaiting result") if endpoint == pending_evidence else tickets[39]
-            route.fulfill(json=dict(ticket=item,
-                                    evidence={"trade": {"clocks": {"source_at": CLOCK}}}))
+            item = (
+                dict(pending, title="Awaiting result")
+                if endpoint == pending_evidence
+                else tickets[39]
+            )
+            route.fulfill(
+                json=dict(
+                    ticket=item, evidence={"trade": {"clocks": {"source_at": CLOCK}}}
+                )
+            )
         else:
             route.fulfill(status=404)
 
     with research_http_fixture(serve) as base, sync_playwright() as runtime:
         browser_type = getattr(runtime, engine)
         if engine == "webkit" and not Path(browser_type.executable_path).exists():
-            pytest.skip("Install the optional WebKit browser to exercise iPhone layouts locally")
-        browser = browser_type.launch(executable_path=os.getenv("PREDICT_CI_CHROMIUM") if engine == "chromium" else None)
-        page = browser.new_page(**runtime.devices[device]) if device else browser.new_page(viewport=viewport)
+            pytest.skip(
+                "Install the optional WebKit browser to exercise iPhone layouts locally"
+            )
+        browser = browser_type.launch(
+            executable_path=os.getenv("PREDICT_CI_CHROMIUM")
+            if engine == "chromium"
+            else None
+        )
+        page = (
+            browser.new_page(**runtime.devices[device])
+            if device
+            else browser.new_page(viewport=viewport)
+        )
         viewport = page.viewport_size
         page.goto(f"{base}/experiments?campaign={campaign}&variant=best_venue")
-        expect(page.get_by_role("link", name="All trades", exact=True)).to_have_attribute("aria-current", "page")
+        expect(
+            page.get_by_role("link", name="All trades", exact=True)
+        ).to_have_attribute("aria-current", "page")
         pnl = page.locator(".experiment-campaign-pnl")
         expect(pnl).to_be_visible()
         expect(pnl).to_contain_text("Campaign paper P/L")
         expect(pnl.locator(".experiment-campaign-pnl-value")).to_have_text("$40.00")
-        expect(pnl.locator(".experiment-campaign-roi")).to_have_text("Realized ROI 21.62%")
-        expect(pnl.locator(".experiment-campaign-graded")).to_have_text("37 / 58 graded")
-        rows = page.locator(".result-ledger-table tbody tr:not(.result-campaign-inspection)")
+        expect(pnl.locator(".experiment-campaign-roi")).to_have_text(
+            "Realized ROI 21.62%"
+        )
+        expect(pnl.locator(".experiment-campaign-graded")).to_have_text(
+            "37 / 58 graded"
+        )
+        rows = page.locator(
+            ".result-ledger-table tbody tr:not(.result-campaign-inspection)"
+        )
         expect(rows).to_have_count(50)
         first_trade = rows.first.bounding_box()
         campaign_result = pnl.bounding_box()
-        assert 0 <= campaign_result["y"] and campaign_result["y"] + campaign_result["height"] <= first_trade["y"]
-        assert first_trade["y"] >= 0 and first_trade["y"] + first_trade["height"] <= viewport["height"]
+        assert (
+            0 <= campaign_result["y"]
+            and campaign_result["y"] + campaign_result["height"] <= first_trade["y"]
+        )
+        assert (
+            first_trade["y"] >= 0
+            and first_trade["y"] + first_trade["height"] <= viewport["height"]
+        )
         if viewport["width"] < 500:
-            expect(page.get_by_label("Bet type", exact=True).locator("option:checked")).to_have_text("All")
+            expect(
+                page.get_by_label("Bet type", exact=True).locator("option:checked")
+            ).to_have_text("All")
             terms = rows.first.locator(".result-ledger-mobile-terms")
             expect(terms).to_be_visible()
             expect(terms).to_contain_text("$5.00")
-            expect(rows.first).to_contain_text("University of North Carolina Greensboro")
+            expect(rows.first).to_contain_text(
+                "University of North Carolina Greensboro"
+            )
             selection = rows.first.locator(".result-ledger-selection").bounding_box()
             for label in ("Grade", "Modeled P/L"):
                 cell = rows.first.locator(f'td[data-label="{label}"]')
                 expect(cell).to_be_visible()
                 value = cell.bounding_box()
-                assert selection["x"] < value["x"] and value["x"] + value["width"] <= viewport["width"]
+                assert (
+                    selection["x"] < value["x"]
+                    and value["x"] + value["width"] <= viewport["width"]
+                )
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         expect(page.get_by_label("Screening EV", exact=True)).to_be_hidden()
-        expect(page.locator(".experiment-active-rules")).to_contain_text("One trade per game, main lines first")
+        expect(page.locator(".experiment-active-rules")).to_contain_text(
+            "One trade per game, main lines first"
+        )
         pager = page.get_by_role("navigation", name="Trade pagination")
         pager.get_by_role("link", name="Next", exact=True).click()
         expect(rows).to_have_count(8)
@@ -613,15 +781,23 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(engine,
         expect(rows).to_have_count(50)
         page.get_by_label("Rows per page").select_option("100")
         expect(rows).to_have_count(58)
-        assert (f"{path}/trades", {"variant": ["best_venue"], "mode": ["fixed_profit"]}) in requests
-        assert not any(endpoint == path or "/days/" in endpoint or "/runs/" in endpoint for endpoint, _ in requests)
+        assert (
+            f"{path}/trades",
+            {"variant": ["best_venue"], "mode": ["fixed_profit"]},
+        ) in requests
+        assert not any(
+            endpoint == path or "/days/" in endpoint or "/runs/" in endpoint
+            for endpoint, _ in requests
+        )
         page.get_by_label("Sport", exact=True).select_option("NBA")
         page.get_by_label("Bet type", exact=True).select_option("total")
         page.get_by_text("More filters", exact=True).click()
         page.get_by_label("Venue", exact=True).select_option("novig")
         expect(rows).to_have_count(8)
         expect(pnl.locator(".experiment-campaign-pnl-value")).to_have_text("$40.00")
-        expect(pnl.locator(".experiment-campaign-graded")).to_have_text("37 / 58 graded")
+        expect(pnl.locator(".experiment-campaign-graded")).to_have_text(
+            "37 / 58 graded"
+        )
         for tab in ("All trades", "Results by day"):
             href = page.get_by_role("link", name=tab, exact=True).get_attribute("href")
             filters = parse_qs(urlsplit(href).query)
@@ -634,19 +810,25 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(engine,
         expect(rows).to_have_count(1)
         expect(rows.first).to_contain_text("Pending result")
         expect(rows.first).to_contain_text("Nov 25")
-        with page.expect_response(lambda response: urlsplit(response.url).path == pending_evidence):
+        with page.expect_response(
+            lambda response: urlsplit(response.url).path == pending_evidence
+        ):
             rows.first.locator(".result-ledger-selection").click()
         pending_detail = page.locator(".result-inline-trade")
         expect(pending_detail).to_contain_text("Pending result")
         expect(page.get_by_role("dialog", name="Saved paper trade")).not_to_be_visible()
-        pending_exact = pending_detail.get_by_role("link", name="Open exact dated trade and evidence")
+        pending_exact = pending_detail.get_by_role(
+            "link", name="Open exact dated trade and evidence"
+        )
         query = parse_qs(urlsplit(pending_exact.get_attribute("href")).query)
         assert query["run"] == [pending_run] and query["ticket"] == [pending_ticket]
         assert query["snapshot"] == ["1"]
         assert "result" not in query
         successor = "6" * 64
         pending_exact.click()
-        expect(page.get_by_role("dialog", name="Saved paper trade")).to_contain_text("Awaiting result")
+        expect(page.get_by_role("dialog", name="Saved paper trade")).to_contain_text(
+            "Awaiting result"
+        )
         assert parse_qs(urlsplit(page.url).query)["campaign"] == [campaign]
         successor = None
         page.go_back()
@@ -658,24 +840,36 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(engine,
         page.reload()
         expect(rows).to_have_count(8)
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
-        pick = rows.filter(has_text="Away 39 at Home 39").locator(".result-ledger-selection")
+        pick = rows.filter(has_text="Away 39 at Home 39").locator(
+            ".result-ledger-selection"
+        )
         pick.scroll_into_view_if_needed()
         prior_scroll = page.evaluate("window.scrollY")
-        with page.expect_response(lambda response: urlsplit(response.url).path == evidence_path):
+        with page.expect_response(
+            lambda response: urlsplit(response.url).path == evidence_path
+        ):
             pick.click()
         expect(pick).to_have_attribute("aria-expanded", "true")
-        expect(page.locator("#trade-inspector")).to_contain_text("Witness for ticket 39")
+        expect(page.locator("#trade-inspector")).to_contain_text(
+            "Witness for ticket 39"
+        )
         assert page.evaluate("window.scrollY") == prior_scroll
-        exact_trade = pending_detail.get_by_role("link", name="Open exact dated trade and evidence")
+        exact_trade = pending_detail.get_by_role(
+            "link", name="Open exact dated trade and evidence"
+        )
         query = parse_qs(urlsplit(exact_trade.get_attribute("href")).query)
         assert query["date"] == [later_date]
         assert query["run"] == [later_run]
         assert query["result"] == [later_result]
         exact_trade.click()
-        expect(page.locator('.result-inspector')).to_contain_text('Witness for ticket 39')
-        expect(page.get_by_text('Historical result', exact=False)).to_be_visible()
+        expect(page.locator(".result-inspector")).to_contain_text(
+            "Witness for ticket 39"
+        )
+        expect(page.get_by_text("Historical result", exact=False)).to_be_visible()
         history_panel = page.locator(".experiment-history")
-        raw = history_panel.get_by_text("Exact grading inputs and ticket identity", exact=True)
+        raw = history_panel.get_by_text(
+            "Exact grading inputs and ticket identity", exact=True
+        )
         expect(raw).to_be_hidden()
         page.get_by_role("button", name="Review trade evidence", exact=True).click()
         expect(raw).to_be_visible()
@@ -695,7 +889,9 @@ def test_campaign_trade_filters_span_dates_and_open_exact_daily_evidence(engine,
         assert dates.evaluate("element => element.scrollWidth <= element.clientWidth")
         dates.get_by_role("link", name="Nov 24, 2026").click()
         page.get_by_text("Daily totals", exact=True).click()
-        expect(page.locator(".experiment-totals").get_by_text("Paper P/L", exact=True)).to_be_visible()
+        expect(
+            page.locator(".experiment-totals").get_by_text("Paper P/L", exact=True)
+        ).to_be_visible()
         browser.close()
 
 

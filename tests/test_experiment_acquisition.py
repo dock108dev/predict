@@ -153,6 +153,42 @@ def test_delayed_receipt_is_paid_but_never_backdated_into_checkpoint(tmp_path):
     asyncio.run(scenario())
 
 
+def test_failed_pull_cleanup_preserves_paid_checkpoint_failure(tmp_path):
+    async def scenario():
+        worker, task, _, dispatched = setup(tmp_path, latency=61)
+        with (storage_patches(), patch.object(acquisition, '_end_pull', side_effect=OSError('cleanup failed')),
+              pytest.raises(acquisition.CheckpointUnavailable, match='experiment_response_after_deadline') as error):
+            await acquisition.acquire(worker, task)
+        assert error.value.dispatched and len(dispatched) == 1
+        details = error.value.details
+        assert details['dispatch_at'] and details['attempt_id']
+        assert details['original_response']['state'] == 'retained'
+        assert details['receipt_sha256'] == details['original_response']['receipt_sha256']
+        assert worker.ledger.status(worker.window_id)['charged'] == 1
+
+    asyncio.run(scenario())
+
+
+def test_failed_pull_cleanup_preserves_cancellation_and_dispatch_clock(tmp_path):
+    async def scenario():
+        worker, task, _, _ = setup(tmp_path)
+        original = asyncio.CancelledError('original cancellation')
+        worker.transport.fetch = AsyncMock(side_effect=original)
+        with (storage_patches(), patch.object(acquisition, '_end_pull', side_effect=OSError('cleanup failed')) as close,
+              pytest.raises(asyncio.CancelledError) as cancelled):
+            await acquisition.acquire(worker, task)
+        assert cancelled.value is original
+        pull, state, details = close.call_args.args
+        assert (pull, state) == ('fixture-pull', 'cancelled')
+        assert details['dispatch_at'] and details['request_scope']['eventIDs'] == 'event'
+        assert cancelled.value.checkpoint_details['dispatch_at'] == details['dispatch_at']
+        attempt, = worker.ledger.interruptions(worker.window_id)
+        assert attempt['reserved'] == 1 and attempt['charged'] is None
+        assert not worker.experiment_late_waiting
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize('revoke_at', [3,4])
 def test_authority_revoked_after_usage_or_reservation_never_dispatches(tmp_path, revoke_at):
     async def scenario():

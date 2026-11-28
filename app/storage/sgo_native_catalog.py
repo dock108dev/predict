@@ -63,11 +63,12 @@ def _exists(db):
     return bool(db.execute("SELECT to_regclass('public.current_sgo_native_catalog') name").fetchone()['name'])
 
 
-def read(db, event_ids):
+def read(db, event_ids, *, include_markets=True):
     if not event_ids or not _exists(db):
         return {}
-    return {row['event_id']: dict(row['facts'], revision=row['revision']) for row in db.execute('''
-        SELECT event_id,revision,facts FROM current_sgo_native_catalog WHERE event_id=ANY(%s)''', (list(event_ids),))}
+    facts = 'facts' if include_markets else "facts - 'markets' AS facts"
+    return {row['event_id']: dict(row['facts'], revision=row['revision']) for row in db.execute(f'''
+        SELECT event_id,revision,{facts} FROM current_sgo_native_catalog WHERE event_id=ANY(%s)''', (list(event_ids),))}
 
 
 def dependency_id(event_id):

@@ -18,6 +18,7 @@ DOCUMENTS = (
     "docs/odds-archive-operations.md",
     "docs/CI.md",
     "docs/hetzner.md",
+    "docs/postgresql-roles.md",
     "docs/architecture.md",
     "docs/benchmark-ev.md",
     "docs/sportsgameodds-operations.md",

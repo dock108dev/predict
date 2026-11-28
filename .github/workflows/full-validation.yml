@@ -194,8 +194,10 @@ jobs:
           PREDICT_CI_REPORT_ROOT: test-results/browser
         run: |
           mkdir -p test-results/browser
-          python -m pytest -q browser_tests --junitxml=test-results/browser/junit.xml
-          python scripts/ci/postgres.py --report-dir test-results/browser/experiments-sql +            --tests browser_tests/test_paper_campaign_integration.py::ControlledWorkbench::test_prepare_and_retire_all_sports_win25_through_installed_routes
+          python -m pytest -q browser_tests --ignore=browser_tests/test_paper_campaign_integration.py \
+            --junitxml=test-results/browser/junit.xml
+          python scripts/ci/postgres.py --report-dir test-results/browser/experiments-sql \
+            --tests browser_tests/test_paper_campaign_integration.py
       - name: Browser summary
         if: always()
         env:

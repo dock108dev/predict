@@ -15,6 +15,7 @@ import inspect
 
 from app.storage.store import ROOT, connect, hashed, stamp
 from app.comparison.reference_scope import REQUEST_BOOKS
+from app.diagnostics import failure as report_failure
 from app.research.experiment import LATE_BATCH_SIZE
 from .bulk_checkpoint import owned_thread
 from .current_policy import aggregate_provider, aggregate_scope
@@ -54,6 +55,10 @@ class BatchAuthorityChanged(CheckpointUnavailable):
         self.excluded = excluded
 
 
+class CheckpointStorageUnavailable(CheckpointUnavailable):
+    """The pre-dispatch storage check could not fit this request scope."""
+
+
 def _start_pull(task, params, at):
     from app.storage.acquisition_snapshot import start
     with connect() as db:
@@ -65,6 +70,17 @@ def _end_pull(pull_id, state, details):
     from app.storage.acquisition_snapshot import finish
     with connect() as db:
         finish(db, pull_id, state, details=details)
+
+
+async def _close_failed_pull(pull_id, state, details):
+    try:
+        await owned_thread(_end_pull, pull_id, state, details)
+    except Exception as cleanup:
+        report_failure(__name__, 'checkpoint_pull_cleanup', cleanup)
+
+
+def _cancelled_evidence(exc):
+    return dict(reason='capture_cancelled') | getattr(exc, 'checkpoint_details', {})
 
 
 def request_scope(task):
@@ -188,6 +204,7 @@ async def acquire(worker, task, *, eligible=None, request_locked=False, batch=No
     from .activity_collector import budget_admit
     from app.research.experiment import sql_runway_bytes
     from .current_storage_policy import SQL_BYTE_CAP, sql_usage, require_disk_space
+    from .odds_http import BudgetStop
     from .original_receipts import capture
     from .sportsgameodds_collector import GuardedPageCollector
     from .sportsgameodds_schedule import response_object_charge
@@ -223,8 +240,11 @@ async def acquire(worker, task, *, eligible=None, request_locked=False, batch=No
         with connect() as db:
             runway = sql_runway_bytes(reserved_bytes) if reserved_bytes else 0
             if sql_usage(db) + runway >= SQL_BYTE_CAP:
-                raise CheckpointUnavailable('research_sql_runway')
-        require_disk_space(ROOT / '.local/postgres', append_bytes=append_bytes)
+                raise CheckpointStorageUnavailable('research_sql_runway')
+        try:
+            require_disk_space(ROOT / '.local/postgres', append_bytes=append_bytes)
+        except BudgetStop as exc:
+            raise CheckpointStorageUnavailable(str(exc)) from exc
 
     async def check(_params, *, own_reserved=False):
         moment = worker.now()
@@ -303,38 +323,37 @@ async def acquire(worker, task, *, eligible=None, request_locked=False, batch=No
                     timings['last_rate_wait_until'] = retry.isoformat()
                     await asyncio.sleep(max(0, (retry - at).total_seconds()))
     except BaseException as exc:
+        dispatched = dispatched_at is not None
+        details = dict(request_scope=params, original_response=receipt,
+            dispatch_at=dispatched_at.isoformat() if dispatched else None,
+            failed_at=worker.now().isoformat(), timings=timings)
+        details.update(getattr(exc, 'details', {}) or {})
+        cancelled = isinstance(exc, asyncio.CancelledError)
+        if cancelled:
+            exc.checkpoint_details = details
+        reason = str(exc)[:160] or type(exc).__name__
         if pull_id:
-            await owned_thread(_end_pull, pull_id,
-                'cancelled' if isinstance(exc, asyncio.CancelledError) else
-                'failed' if dispatched_at is not None else 'refused',
-                dict(reason=str(exc)[:160] or type(exc).__name__, original_response=receipt,
-                     timings=timings))
+            await _close_failed_pull(pull_id, 'cancelled' if cancelled else 'failed' if dispatched else 'refused',
+                                     details | dict(reason=reason))
         if isinstance(exc, (asyncio.CancelledError, KeyboardInterrupt, SystemExit)):
             raise
         if isinstance(exc, CheckpointUnavailable):
-            exc.dispatched = dispatched_at is not None
-            if not exc.details:
-                exc.details = dict(request_scope=params, original_response=receipt,
-                    dispatch_at=dispatched_at.isoformat() if dispatched_at else None,
-                    failed_at=worker.now().isoformat(), timings=timings)
+            exc.dispatched = dispatched
+            exc.details = details
             raise
-        raise CheckpointUnavailable(str(exc)[:160] or type(exc).__name__,
-            dispatched=dispatched_at is not None, details=dict(request_scope=params,
-                dispatch_at=dispatched_at.isoformat() if dispatched_at else None,
-                original_response=receipt, failed_at=worker.now().isoformat(), timings=timings)) from exc
+        raise CheckpointUnavailable(reason, dispatched=dispatched, details=details) from exc
     finally:
         if late and not request_locked:
             worker.experiment_late_waiting = False
+    details = dict(version=VERSION, request_scope=params, pull_id=page.pull_id, attempt_id=page.attempt_id,
+                   dispatch_at=dispatched_at.isoformat() if dispatched_at else None,
+                   receipt_sha256=page.receipt_sha256, original_response=receipt, timings=timings)
     try:
         known_at = worker.now()
         worker.metrics['last_valid_received_at'] = page.received_at
-        details = dict(version=VERSION, request_scope=params, pull_id=page.pull_id, attempt_id=page.attempt_id,
-                       dispatch_at=dispatched_at.isoformat() if dispatched_at else None,
-                       known_at=known_at.isoformat(), receipt_sha256=page.receipt_sha256,
-                       original_response=receipt, paid_event_requests=1,
-                       charged_objects=response_object_charge(len(page.events)),
-                       response_event_count=len(page.events), next_cursor_present=page.next_cursor is not None,
-                       timings=dict(timings, parse_finished_at=known_at.isoformat()))
+        details.update(known_at=known_at.isoformat(), paid_event_requests=1,
+                       charged_objects=response_object_charge(len(page.events)), response_event_count=len(page.events),
+                       next_cursor_present=page.next_cursor is not None, timings=dict(timings, parse_finished_at=known_at.isoformat()))
         if batch:
             details['batch'] = dict(request_scope=params, size=len(batch),
                 response_event_ids=[event['event_id'] for event in page.events],
@@ -361,10 +380,9 @@ async def acquire(worker, task, *, eligible=None, request_locked=False, batch=No
                     received_at=received_at, known_at=known_at, acquisition=details)
     except BaseException as exc:
         if pull_id:
-            await owned_thread(_end_pull, pull_id,
+            await _close_failed_pull(pull_id,
                 'cancelled' if isinstance(exc, asyncio.CancelledError) else 'failed',
-                dict(getattr(exc, 'details', {}), reason=str(exc)[:160] or type(exc).__name__,
-                     original_response=receipt))
+                dict(getattr(exc, 'details', None) or details, reason=str(exc)[:160] or type(exc).__name__))
         raise
 
 
@@ -554,11 +572,15 @@ class ExperimentAcquisition:
         reason = str(exc)[:160] or type(exc).__name__
         details = getattr(exc, 'details', None) or (acquired or {}).get('acquisition')
         dispatched = getattr(exc, 'dispatched', acquired is not None)
-        failure = await owned_thread(self._fail, task, reason, at=worker.now(),
-                                     dispatched=dispatched, details=details)
+        try:
+            failure = await owned_thread(self._fail, task, reason, at=worker.now(),
+                                         dispatched=dispatched, details=details)
+        except Exception as cleanup:
+            report_failure(__name__, 'checkpoint_failure_record', cleanup)
+            failure = dict(state='unrecorded', reason=reason, dispatched=dispatched, details=details)
         if task.get('_pull_id'):
-            await owned_thread(_end_pull, task['_pull_id'], 'failed' if dispatched else 'refused',
-                               dict(details or {}, reason=reason))
+            await _close_failed_pull(task['_pull_id'], 'failed' if dispatched else 'refused',
+                                     dict(details or {}, reason=reason))
         self.progress = dict(self.progress, state='degraded', last_failure=failure,
                              last_completed_at=worker.now().isoformat())
 
@@ -582,7 +604,7 @@ class ExperimentAcquisition:
             try:
                 if not authorized(worker, task, at=worker.now()):
                     raise CheckpointUnavailable('experiment_authority_or_window_closed')
-                task['_batch_work_started_at'] = started_at
+                task.setdefault('_batch_work_started_at', started_at)
                 if '_pull_id' not in task:
                     task['_pull_id'] = await owned_thread(_start_pull, task, request_scope(task), worker.now())
                     task['_manifest_ready_at'] = worker.now().isoformat()
@@ -603,11 +625,11 @@ class ExperimentAcquisition:
                         await self._failed_turn(worker, task, exc)
                 members = [task for task in members if task['token'] not in exc.excluded]
             except Exception as exc:
-                # A pre-dispatch allowance shortfall for the whole group
-                # does not imply zero capacity. Let smaller groups re-admit.
+                # Smaller groups can fit the same storage or object allowance.
+                # Reuse the original claims and manifests and recheck their deadlines.
                 cause = exc.__cause__
-                if (len(members) > 1 and not getattr(exc, 'dispatched', False) and
-                        (isinstance(cause, DailyObjectPacing) or
+                if (len(members) > 1 and isinstance(exc, CheckpointUnavailable) and not exc.dispatched and
+                        (isinstance(exc, CheckpointStorageUnavailable) or isinstance(cause, DailyObjectPacing) or
                          str(cause) in ('insufficient object allowance', 'operational_object_budget'))):
                     half = len(members) // 2
                     await self._capture_batch(worker, members[:half])
@@ -653,10 +675,10 @@ class ExperimentAcquisition:
                         await self._capture_batch(worker, members)
                     finally:
                         worker.page_in_progress = False
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as exc:
             for task in tasks:
                 if task.get('_pull_id'):
-                    await owned_thread(_end_pull, task['_pull_id'], 'cancelled', dict(reason='capture_cancelled'))
+                    await _close_failed_pull(task['_pull_id'], 'cancelled', _cancelled_evidence(exc))
             raise
         finally:
             worker.experiment_late_waiting = False
@@ -731,11 +753,11 @@ class ExperimentAcquisition:
                     await self._complete_turn(worker, task, acquired)
                 finally:
                     worker.page_in_progress = False
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as exc:
             # The durable claim survives termination; an uncertain request is
             # never redispatched merely because this coroutine was cancelled.
             if task.get('_pull_id'):
-                await owned_thread(_end_pull, task['_pull_id'], 'cancelled', dict(reason='capture_cancelled'))
+                await _close_failed_pull(task['_pull_id'], 'cancelled', _cancelled_evidence(exc))
             raise
         except Exception as exc:
             await self._failed_turn(worker, task, exc, acquired)
@@ -745,7 +767,6 @@ class ExperimentAcquisition:
         return True
 
     async def run(self):
-        from app.diagnostics import failure
         while not self.closed:
             try:
                 if await self.tick():
@@ -753,7 +774,7 @@ class ExperimentAcquisition:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                failure(__name__, 'early_tminus10_experiment', exc)
+                report_failure(__name__, 'early_tminus10_experiment', exc)
                 self.progress = dict(state='unavailable', version=VERSION, reason=str(exc)[:160])
             await asyncio.sleep(1)
 
