@@ -3,7 +3,7 @@
 import asyncio
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
@@ -18,7 +18,8 @@ class CatalogAdmission(IsolatedAsyncioTestCase):
         self.saturated = asyncio.Event()
         self.active = self.entered = self.peak = 0
         self.reads = SimpleNamespace(games=lambda query: dict(rows=[], provider_requests=0),
-            cleanup=lambda: None, close=lambda *args: None)
+            cleanup=lambda: None, close=lambda *args: None,
+            connector=Mock(side_effect=AssertionError('Catalog admission must not open a stream connection.')))
 
         async def joined(_logger, _operation, fn, *args):
             if fn is not self.reads.games:
