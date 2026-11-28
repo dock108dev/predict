@@ -125,6 +125,16 @@ class Assets(unittest.IsolatedAsyncioTestCase):
                                 <= {Path(path.split('?')[0]).name for path in seen}, page)
             self.assertEqual((await client.get('/current/assets/unknown.js')).status,404)
 
+    async def test_workspace_asset_route_serves_only_registered_files(self):
+        async with TestClient(TestServer(self.app())) as client:
+            response = await client.head('/view/current/dashboard.js')
+            self.assertEqual(response.status, 200)
+            self.assertIn('javascript', response.headers['Content-Type'])
+            for name in ('scanner.js', 'unknown.js'):
+                with self.subTest(name=name):
+                    response = await client.get(f'/view/current/{name}')
+                    self.assertEqual(response.status, 404)
+
 
 class Composition(unittest.TestCase):
     def test_stable_loaded_asset_api_and_generated_drift_failure(self):

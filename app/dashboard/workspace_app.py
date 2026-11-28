@@ -37,6 +37,7 @@ WORKSPACE_ASSETS = frozenset("""
     settings-accounting.js settings.css settings.js workbench-shell.css
     workspace-format.js workspace-nav.js workspace-scope.js workspace-ui.js
 """.split())
+_WORKSPACE_ASSET_PATHS = {name: ASSETS / name for name in WORKSPACE_ASSETS}
 
 
 def create_app(provider, owner):
@@ -57,10 +58,10 @@ def create_app(provider, owner):
     raw_price_api.mount(app)
     mount_collection(app, provider)
     async def asset(request):
-        name = request.match_info['name']
-        if name not in WORKSPACE_ASSETS:
+        path = _WORKSPACE_ASSET_PATHS.get(request.match_info['name'])
+        if path is None:
             raise web.HTTPNotFound()
-        return web.FileResponse(ASSETS / name)
+        return web.FileResponse(path)
 
     async def close(_app):
         await owner.close()
