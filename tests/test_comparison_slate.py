@@ -1,6 +1,5 @@
-"""Portable authored slate/loopback cases; no owner SQL, inputs or provider traffic."""
+"""Authored slate units and installed Dashboard HTTP boundary checks."""
 
-from copy import deepcopy
 from datetime import datetime, timezone
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import MagicMock, patch
@@ -17,27 +16,6 @@ from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
 
 AT = datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc)
-
-
-def body():
-    return dict(
-        version=slate.VERSION,
-        view="odds",
-        filter="all",
-        policy=DEFAULT_POLICY.to_dict(),
-        games=[],
-        boards=[],
-        errors=[],
-        stopped=False,
-        as_of=AT.isoformat(),
-        provider_requests=0,
-        bounds=dict(maximum_games=500, maximum_page_games=50, maximum_bytes=slate.MAX_BYTES),
-    )
-
-
-class Database:
-    def __init__(self):self.info=dict(state='available',error=None)
-    def status(self):return deepcopy(self.info)
 
 
 class SlateRead(TestCase):
@@ -76,118 +54,106 @@ class SlateRead(TestCase):
             self.read()
 
 
-class SlateLoopback(IsolatedAsyncioTestCase):
+class DashboardLoopback(IsolatedAsyncioTestCase):
+    path = "/api/research/dashboard"
+
     async def asyncSetUp(self):
         self.provider = InjectedTestProvider()
         self.provider.database_mode = True
-        self.provider.closed = False
-        self.provider.closing = False
         self.provider.dispatch = True
-        self.provider.database = Database()
         self.provider.acquire = MagicMock(
             side_effect=AssertionError("Provider acquisition is forbidden")
         )
         self.db = MagicMock()
+        self.db.execute.return_value.fetchone.return_value = {"at": AT}
         connection = MagicMock()
         connection.__enter__.return_value = self.db
-        self.connect_patch = patch(
-            "app.dashboard.comparison_board_api.connect", return_value=connection
+        self.connect = self.enterContext(
+            patch("app.dashboard.research_api.connect", return_value=connection)
         )
-        self.slate_patch = patch.object(slate, "read", return_value=(body(), []))
-        self.connect = self.connect_patch.start()
-        self.read = self.slate_patch.start()
-        self.addCleanup(self.connect_patch.stop)
-        self.addCleanup(self.slate_patch.stop)
+        self.read = self.enterContext(patch(
+            "app.storage.native_trading.dashboard",
+            return_value=dict(rows=[], offset=2, total=2),
+        ))
         original = ClientSession._request
 
         async def loopback_only(session, method, url, **kwargs):
             if urlparse(str(url)).hostname not in ("127.0.0.1", "localhost", "::1"):
-                raise AssertionError(
-                    "External provider traffic is forbidden in this test"
-                )
+                raise AssertionError("External provider traffic is forbidden")
             return await original(session, method, url, **kwargs)
 
-        self.network_patch = patch.object(ClientSession, "_request", new=loopback_only)
-        self.network_patch.start()
-        self.addCleanup(self.network_patch.stop)
+        self.enterContext(patch.object(ClientSession, "_request", new=loopback_only))
         app = create_app(owner=owner(), sessions={}, current_provider=self.provider)
         self.client = TestClient(TestServer(app))
         await self.client.start_server()
         self.addAsyncCleanup(self.client.close)
+        self.addCleanup(self.provider.acquire.assert_not_called)
 
-    async def test_loopback_shape_settings_storage_without_scheduling(self):
-        self.provider.database.info = dict(
-            state="unavailable", error="current_database_storage_cap", backlog_bytes=12
-        )
-        self.read.return_value = (body(), ["first", "second", "third"])
-        response = await self.client.get(
-            "/api/boards/slate?view=odds&filter=all&amount=500&buffer=0.01&benchmark_venue=novig"
-        )
+    async def test_read_forwards_scope_and_uses_bounded_sql_snapshot(self):
+        from app.storage.native_trading import HORIZON
+
+        response = await self.client.get(self.path, params={
+            "sport": "NCAAB", "family": "spread", "venue": "novig",
+            "view": "all", "offset": 2, "limit": 5,
+        })
         self.assertEqual(response.status, 200)
-        value = await response.json()
-        self.assertEqual(value["storage"], self.provider.database.info)
-        self.assertEqual(value["provider_requests"], 0)
-        policy = self.read.call_args.args[1]
-        self.assertEqual(str(policy.requested_amount_usd), "500")
-        self.assertEqual(policy.benchmark_venue, "novig")
-        self.assertFalse(hasattr(self.provider.database,'request'))
-        self.provider.acquire.assert_not_called()
-        # The API configures only bounded SQL deadlines; the slate reader owns
-        # all data queries and its transaction.
-        self.assertEqual(self.db.execute.call_count,2)
-        self.assertTrue(all(call.args[0].startswith("SELECT set_config('") for call in self.db.execute.call_args_list))
+        self.assertEqual(await response.json(), {
+            "schema": "predict-dashboard-1", "rows": [], "offset": 2, "total": 2,
+            "read_at": AT.isoformat(), "provider_requests": 0,
+            "scheduled_calculations": 0,
+        })
+        self.read.assert_called_once_with(
+            self.db, at=AT, until=AT + HORIZON, sport="NCAAB", family="spread",
+            venue="novig", view="all", offset=2, limit=5,
+        )
+        self.db.transaction.assert_called_once_with()
+        self.assertEqual(
+            [call.args[0] for call in self.db.execute.call_args_list],
+            [
+                "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
+                "SET LOCAL statement_timeout='10s'",
+                "SET LOCAL jit='off'",
+                "SELECT transaction_timestamp() at",
+            ],
+        )
 
-    async def test_invalid_crossed_or_duplicate_queries_refuse_before_sql(self):
+    async def test_invalid_or_duplicate_queries_refuse_before_sql(self):
         for query in (
             "view=invalid",
-            "filter=invalid",
-            "game=mandatory-selection",
-            "view=odds&view=ev",
-            "amount=NaN",
-            "benchmark_venue=unknown",
+            "sport=unknown",
+            "family=first-period",
+            "venue=novig&venue=kalshi",
+            "offset=-1",
+            "limit=0",
+            "limit=101",
             "provider_refresh=true",
-            "amount=" + ("1" * 257),
         ):
-            response = await self.client.get("/api/boards/slate?" + query)
-            self.assertEqual(response.status, 422, query)
+            with self.subTest(query=query):
+                response = await self.client.get(self.path + "?" + query)
+                self.assertEqual(response.status, 422, query)
         self.connect.assert_not_called()
         self.read.assert_not_called()
-        self.provider.acquire.assert_not_called()
 
     async def test_cross_origin_read_refuses_before_sql(self):
         response = await self.client.get(
-            "/api/boards/slate", headers={"Origin": "https://provider.invalid"}
+            self.path, headers={"Origin": "https://provider.invalid"}
         )
         self.assertEqual(response.status, 403)
         self.connect.assert_not_called()
+        self.read.assert_not_called()
 
-    async def test_stopped_read_does_not_schedule(self):
+    async def test_stopped_owner_can_read_saved_dashboard_without_scheduling(self):
         self.provider.dispatch = False
-        self.read.return_value = (body(), ["first"])
-        response = await self.client.get("/api/boards/slate?view=arbs&filter=all")
+        response = await self.client.get(self.path)
         self.assertEqual(response.status, 200)
-        self.assertTrue(self.read.call_args.kwargs["stopped"])
-        self.assertFalse(hasattr(self.provider.database,'request'))
-        self.provider.acquire.assert_not_called()
+        value = await response.json()
+        self.assertEqual((value["provider_requests"], value["scheduled_calculations"]), (0, 0))
+        self.read.assert_called_once()
 
-    async def test_failure_is_bounded_and_public_without_provider_fallback(self):
-        self.read.side_effect = ValueError("slate_response_byte_capacity")
-        response = await self.client.get("/api/boards/slate")
-        self.assertEqual(response.status, 409)
-        self.assertEqual(
-            (await response.json())["reason"], "slate_response_byte_capacity"
-        )
-        self.assertFalse(hasattr(self.provider.database,'request'))
-        self.provider.acquire.assert_not_called()
-
-    async def test_final_cap_includes_appended_storage_metadata(self):
-        self.provider.database.info = dict(state="available", error="large-status" * 40)
-        limit = len(slate.encoded(body())) + 10
-        self.assertLessEqual(len(slate.encoded(body())), limit)
-        with patch("app.dashboard.comparison_board_api.MAX_BYTES", limit):
-            response = await self.client.get("/api/boards/slate")
-        self.assertEqual(response.status, 409)
-        self.assertEqual(
-            (await response.json())["reason"], "board_response_byte_capacity"
-        )
-        self.assertFalse(hasattr(self.provider.database,'request'))
+    async def test_storage_error_returns_public_failure_without_provider_fallback(self):
+        self.read.side_effect = RuntimeError("fixture-private-database-detail")
+        response = await self.client.get(self.path)
+        self.assertEqual(response.status, 503)
+        self.assertEqual(await response.json(), {"error": "Local data unavailable"})
+        self.connect.assert_called_once_with()
+        self.read.assert_called_once()

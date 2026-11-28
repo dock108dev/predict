@@ -1,6 +1,11 @@
 """Ordinary SQL mode cannot accidentally serve its empty injected-state fallback."""
+from contextlib import nullcontext
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
+
 from aiohttp.test_utils import TestClient, TestServer
+
 from app.dashboard.multi_game_server import create_app
 from tests.current_fixture import InjectedTestProvider
 from tests.test_current_state import owner
@@ -8,9 +13,10 @@ from tests.test_current_state import owner
 
 class CurrentRouteRetirement(unittest.IsolatedAsyncioTestCase):
     async def test_sql_installation_explicitly_retires_old_state_reads(self):
-        provider = InjectedTestProvider()
-        provider.database_mode = True
-        app = create_app(owner=owner(), sessions={}, current_provider=provider)
+        committed = dict(dispatch_enabled=False, runtime_id='fixture-runtime',
+                         data_runtime=dict(healthy=True, global_stopped=True))
+        provider = SimpleNamespace(database_mode=True, status=Mock(return_value=committed))
+        app = create_app(owner=owner(), current_provider=provider)
         async with TestClient(TestServer(app)) as client:
             for path in ('/api/current', '/api/current/details', '/api/current/prices',
                          '/api/current/updates', '/api/current/changes', '/api/comparison',
@@ -20,35 +26,49 @@ class CurrentRouteRetirement(unittest.IsolatedAsyncioTestCase):
                 value = await response.json()
                 self.assertEqual(value['error'], 'current_state_transport_retired')
                 self.assertEqual(value['provider_requests'], 0)
-            self.assertEqual((await client.get('/api/admin/status')).status, 200)
-            self.assertEqual((await client.get('/')).status, 200)
+                self.assertEqual(value['current_api'], '/api/research/dashboard')
+                self.assertEqual(value['current_url'], '/')
+            provider.status.assert_not_called()
+            status = await client.get('/api/admin/status')
+            self.assertEqual(status.status, 200)
+            self.assertEqual(await status.json(), committed)
+            dashboard = await client.get('/')
+            self.assertEqual(dashboard.status, 200)
+            self.assertIn('/view/current/dashboard.js', await dashboard.text())
             redirect = await client.get('/current/coverage', allow_redirects=False)
             self.assertEqual(redirect.status, 302)
-            self.assertEqual(redirect.headers['Location'], '/settings#storage')
+            self.assertEqual(redirect.headers['Location'], '/data?evidence=mens-d1')
+            data = await client.get(redirect.headers['Location'])
+            self.assertEqual(data.status, 200)
+            self.assertIn('id="data-mens-d1"', await data.text())
             page = await client.get('/settings')
             self.assertEqual(page.status, 200)
             self.assertIn('id="storage"', await page.text())
+            for module in ('dashboard.js', 'data-workbench.js', 'mens-d1-coverage.js', 'settings.js'):
+                self.assertEqual((await client.get('/view/current/' + module)).status, 200, module)
             for asset in ('coverage.js','coverage.css','coverage-model.js','coverage-view.js'):
-                self.assertEqual((await client.get('/current/assets/'+asset)).status, 200, asset)
+                self.assertEqual((await client.get('/current/assets/' + asset)).status, 404, asset)
 
-    async def test_sql_coverage_routes_reach_the_new_retained_reader(self):
-        import logging
-        from types import SimpleNamespace
-        from aiohttp import web
-        from app.dashboard.request_guard import dashboard_guard
-        app=web.Application(middlewares=[dashboard_guard(SimpleNamespace(database_mode=True),logger=logging.getLogger(__name__))])
-        reached=[]
-        async def retained(req):
-            reached.append(req.path)
-            return web.json_response(dict(schema='predict-broad-coverage-1',provider_requests=0))
-        app.router.add_get('/api/coverage',retained)
-        app.router.add_get('/current/coverage',retained)
+    async def test_installed_coverage_route_reaches_the_retained_reader_and_export(self):
+        from app.dashboard import mens_d1_coverage_api as coverage
+
+        app = create_app(owner=owner(), current_provider=SimpleNamespace(database_mode=True))
+        database = Mock()
+        database.transaction.return_value = nullcontext()
+        day = '2026-11-23'
+        value = dict(date=day, provider_requests=0, orders_submitted=0)
         async with TestClient(TestServer(app)) as client:
-            for path in ('/api/coverage','/current/coverage'):
-                reply=await client.get(path)
-                self.assertEqual(reply.status,200)
-                self.assertEqual((await reply.json())['provider_requests'],0)
-        self.assertEqual(reached,['/api/coverage','/current/coverage'])
+            with (patch.object(coverage, 'connect', return_value=nullcontext(database)),
+                  patch.object(coverage, 'coverage_view', return_value=value) as retained):
+                path = '/api/workspace/mens-d1'
+                for query in (dict(date=day), dict(date=day, export='1')):
+                    response = await client.get(path, params=query)
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(await response.json(), value)
+                self.assertIn(f'predict-mens-d1-{day}.json', response.headers['Content-Disposition'])
+        self.assertEqual(retained.call_count, 2)
+        retained.assert_called_with(database, day, None, None)
+        database.execute.assert_any_call('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
 
     async def test_explicit_injected_mode_keeps_its_own_transport(self):
         app = create_app(owner=owner(), sessions={}, current_provider=InjectedTestProvider())

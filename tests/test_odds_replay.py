@@ -241,9 +241,11 @@ def test_production_no_longer_recognizes_authored_probability_or_fictional_fee_r
 
 
 @pytest.mark.parametrize('allow_synthetic', [False, True])
-def test_production_session_catalog_excludes_mock_history_without_deleting_it(allow_synthetic, tmp_path):
+def test_production_saved_session_bookmark_excludes_mock_history_without_deleting_it(allow_synthetic, tmp_path):
     import asyncio
-    from aiohttp.test_utils import make_mocked_request
+    import json
+    from aiohttp.test_utils import TestClient, TestServer
+    from app.collection.transport_session import ObservationJournal
     from app.dashboard.multi_game_server import create_app
     from app.dashboard.current_state import CurrentStateProvider
     from tests.test_current_state import owner
@@ -253,29 +255,32 @@ def test_production_session_catalog_excludes_mock_history_without_deleting_it(al
         provider.database_mode = True
         provider.allow_synthetic = allow_synthetic
         selected_owner = owner()
-        selected_owner.output = tmp_path
-        for name in ('real', 'mock'):
-            (tmp_path/name).mkdir()
-            (tmp_path/name/'observations.jsonl').write_text('retained fixture')
-        selected_owner.saved.return_value = ['real', 'mock']
-        selected_owner.history_paths.return_value = {}
-        def saved(folder):
-            mode = folder.name
-            return {'rows':[{'type':'start','observed_at':'2026-11-18T20:00:00Z',
-                'spec':{'mode':mode}}, {'type':'multi_game_selection',
-                'games':[{'id':mode+'-game','title':mode+' capture'}], 'coverage':{}}]}
-        timeline = [{'id':'snapshot','at':'2026-11-18T20:00:00Z','label':'Saved'}]
-        with patch('app.dashboard.multi_game_server.saved_rows', side_effect=saved), \
-             patch('app.dashboard.multi_game_server.project_game', return_value=(timeline,[])), \
-             patch('app.dashboard.multi_game_server.default_point', return_value=timeline[0]):
-            app = create_app(owner=selected_owner, sessions={}, current_provider=provider)
-            request = make_mocked_request('GET','/api/sessions',app=app)
-            match = await app.router.resolve(request)
-            response = await match.handler(request)
-            import json
-            modes = {entry['data_mode'] for entry in json.loads(response.text)}
-            assert modes == ({'real','mock'} if allow_synthetic else {'real'})
-        # Filtering has no filesystem mutation; the historical captures remain.
-        assert all((tmp_path/name/'observations.jsonl').read_text()=='retained fixture' for name in ('real','mock'))
-        selected_owner.close.assert_not_called()
+        paths = {mode: tmp_path / mode for mode in ('real', 'mock')}
+        for mode, folder in paths.items():
+            (folder / 'session').mkdir(parents=True)
+            spec = dict(mode=mode, stale_seconds=30)
+            (folder / 'run-spec.json').write_text(json.dumps(spec))
+            with closing(ObservationJournal(folder / 'session' / f'{mode}.jsonl')) as journal:
+                journal.save(dict(type='session_started', session_id=mode, spec=spec,
+                                  observed_at='2026-11-18T20:00:00Z'))
+                journal.save(dict(type='session_finished', session_id=mode,
+                                  observed_at='2026-11-18T20:00:01Z'))
+        selected_owner.history_paths.return_value = paths
+        before = {path: path.read_bytes() for path in tmp_path.rglob('*') if path.is_file()}
+
+        app = create_app(owner=selected_owner, sessions={}, current_provider=provider)
+        async with TestClient(TestServer(app)) as client:
+            legacy = await client.get('/replay?session=real', allow_redirects=False)
+            assert legacy.status == 302 and legacy.headers['Location'] == '/data?session=real'
+            accepted = await client.get('/api/workspace/session?session=real')
+            assert accepted.status == 200, await accepted.text()
+            value = await accepted.json()
+            assert (value['session_id'], value['data_mode'], value['state']) == ('real', 'real', 'saved')
+            assert value['provider_requests'] == value['scheduled_calculations'] == 0
+            rejected = await client.get('/api/workspace/session?session=mock')
+            assert rejected.status == 422
+            assert await rejected.json() == {'error': 'This bookmark does not identify a genuine received-data session.'}
+
+        assert {path: path.read_bytes() for path in tmp_path.rglob('*') if path.is_file()} == before
+        selected_owner.close.assert_awaited_once()
     asyncio.run(journey())
