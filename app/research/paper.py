@@ -490,8 +490,10 @@ def _replay_games(db, day, at, policy, population):
     frozen_policy = policy or POLICY
     reconciled = population is not None and population["kind"] == "reconciled_occurrences"
     leagues = frozen_policy.get("leagues")
-    begin, end = (stamp(frozen_policy[key]) if frozen_policy.get(key) else None
-                  for key in ("prospective_start_at", "decision_before"))
+    replay_start = frozen_policy.get("retained_replay_start_at")
+    prospective_start = frozen_policy.get("prospective_start_at")
+    begin = stamp(replay_start or prospective_start) if replay_start or prospective_start else None
+    end = stamp(frozen_policy["decision_before"]) if frozen_policy.get("decision_before") else None
     games = list(db.execute("""SELECT g.* FROM public.ev_experiment_game g
         WHERE event->>'league'=ANY(%s) AND
         ((event->>'starts_at')::timestamptz AT TIME ZONE 'America/New_York')::date=%s::date
@@ -543,6 +545,9 @@ def _replay_games(db, day, at, policy, population):
         status = checkpoint["status"]
         entry = dict(game_id=game["id"], title=game["event"]["title"], starts_at=game["event"]["starts_at"],
                      status=status, reason=checkpoint.get("reason"), checkpoint_id=checkpoint.get("id"), tickets=0)
+        if replay_start:
+            entry["decision_mode"] = ("retained_replay" if stamp(checkpoint["target_at"]) < stamp(prospective_start)
+                                      else "prospective")
         if leagues is not None:
             entry["league"] = game["event"]["league"]
         if status in ("pending", "claimed") and stamp(checkpoint["deadline_at"]) < stamp(at):
@@ -567,7 +572,7 @@ def scoped_reports(db, day, policies, *, population=None, as_of=None, evidence=F
     shared = policies[0]
     frozen = shared or POLICY
     binding_fields = ("league", "leagues", "recovered_checkpoints", "defer_results",
-                      "prospective_start_at", "decision_before")
+                      "retained_replay_start_at", "prospective_start_at", "decision_before")
     if any(policy is None or any(policy.get(key) != frozen.get(key) for key in binding_fields)
            for policy in policies[1:]):
         raise ValueError("paper_replay_checkpoint_policy_mismatch")

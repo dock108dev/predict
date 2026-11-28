@@ -131,6 +131,9 @@ def configuration(body):
             if depth_policy == paper_depth.ALL_SPORTS_VERSION:
                 fields.add('prospective_start_at')
                 scope_options['prospective_start_at'] = _cutoff(body.get('prospective_start_at')).isoformat()
+                if 'retained_replay_start_at' in body:
+                    fields.add('retained_replay_start_at')
+                    scope_options['retained_replay_start_at'] = _cutoff(body['retained_replay_start_at']).isoformat()
                 if scope_options.get('alternate_odds_below') != '400' or 'minimum_stake_usd' in sizing:
                     raise workspace.SelectionError('All-sports depth requires alternates below +400 and no minimum stake.')
             else:
@@ -140,6 +143,10 @@ def configuration(body):
     start, end = map(date.fromisoformat, (workspace.game_day(body['start_date']), workspace.game_day(body['end_date'])))
     if end < start:
         raise workspace.SelectionError('End date must be on or after start date.')
+    if retained := scope_options.get('retained_replay_start_at'):
+        prospective = scope_options['prospective_start_at']
+        if not stamp(retained) < stamp(prospective) or _target_day(retained) != start or _target_day(prospective) > end:
+            raise workspace.SelectionError('Choose a retained T−10 cutoff on the first game date and a later prospective cutoff within the game dates.')
     if (end-start).days >= 366:
         raise workspace.SelectionError('Choose an experiment period of up to one year.')
     if not isinstance(body['name'], str) or not 1 <= len(body['name'].strip()) <= 120:
@@ -173,6 +180,21 @@ def _initial_check(day, now):
     return max(now, datetime.combine(day, time.min, EASTERN))
 
 
+def _retained_anchor(db, target_at, leagues):
+    return db.execute('''SELECT 1 FROM public.ev_experiment_depth d
+        JOIN public.ev_experiment_game g ON g.id=d.game_id AND g.schedule_id=d.schedule_id
+        JOIN public.ev_experiment_task t ON t.game_id=g.id AND t.schedule_id=g.schedule_id
+          AND t.target_at=d.target_at AND t.checkpoint='late'
+        JOIN public.ev_experiment_record r ON r.id=t.result_id AND r.id=g.late_id
+        WHERE d.target_at=%s AND d.kind='decision' AND d.known_at<=t.target_at
+          AND g.event->>'league'=ANY(%s) AND g.early_id IS NOT NULL AND g.state<>'cancelled'
+          AND t.state='captured' AND r.kind='checkpoint' AND r.checkpoint='late'
+          AND r.recorded_at BETWEEN t.target_at AND t.deadline_at
+          AND EXISTS (SELECT 1 FROM jsonb_each(d.payload->'observations') ob
+              WHERE ob.value->'complete'='true'::jsonb AND ob.value->>'reason' IS NULL)
+        LIMIT 1''', (stamp(target_at), leagues)).fetchone() is not None
+
+
 def create(db, body, *, discoverable=True):
     if not isinstance(body, dict):
         raise workspace.SelectionError('Provide an experiment configuration.')
@@ -204,6 +226,9 @@ def create(db, body, *, discoverable=True):
         now = db.execute('SELECT clock_timestamp() now').fetchone()['now']
         if config.get('prospective_start_at') and stamp(config['prospective_start_at']) <= now:
             raise workspace.SelectionError('The first eligible T−10 decision cutoff must be in the future.')
+        if (retained := config.get('retained_replay_start_at')) and (
+                stamp(retained) >= now or not _retained_anchor(db, retained, config['leagues'])):
+            raise workspace.SelectionError('Choose a past T−10 cutoff with a timely frozen checkpoint and retained native book.')
         workspace._admit(db, len(encoded(config)))
         db.execute('INSERT INTO public.paper_campaign VALUES (%s,DEFAULT,%s,%s) ON CONFLICT DO NOTHING',
                    (identity, Jsonb(config), len(encoded(config))))
@@ -276,8 +301,7 @@ def _definition(parent, job, population, recovery, fingerprint, mode, *, depth_r
         sizing = f"targeting {paper.money(F(config['target_profit_usd']))} USD net win profit"
     definition['question'] = f'Which {subject} T−10 paper opportunities qualify at {threshold}% minimum EV {sizing}?'
     policy = definition['policy']
-    if 'prospective_start_at' in config:
-        policy['prospective_start_at'] = config['prospective_start_at']
+    policy.update({key: config[key] for key in ('prospective_start_at', 'retained_replay_start_at') if key in config})
     if job.get('decision_before'):
         policy['decision_before'] = job['decision_before']
     if config['version'] == VERSION:
@@ -340,7 +364,8 @@ def tick(db):
                   d.game_date <= (((retirement.cutoff_at + interval '10 minutes' - interval '1 microsecond')
                     AT TIME ZONE 'America/New_York')::date))
               AND (c.payload->>'prospective_start_at' IS NULL OR
-                  d.game_date >= ((((c.payload->>'prospective_start_at')::timestamptz + interval '10 minutes')
+                  d.game_date >= ((((COALESCE(c.payload->>'retained_replay_start_at',
+                    c.payload->>'prospective_start_at'))::timestamptz + interval '10 minutes')
                     AT TIME ZONE 'America/New_York')::date))
             ORDER BY (game_date >= %s) DESC,next_check_at,game_date
             FOR UPDATE OF d SKIP LOCKED LIMIT 1''', (now, now, today, active_ids, today-timedelta(days=2))).fetchone()
@@ -355,7 +380,9 @@ def tick(db):
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
             day = str(job['game_date'])
-            begin = job['config'].get('prospective_start_at')
+            prospective = job['config'].get('prospective_start_at')
+            retained = job['config'].get('retained_replay_start_at')
+            begin = retained or prospective
             cutoff = job['cutoff_at']
             end = cutoff if cutoff and job['game_date'] == _target_day(cutoff - timedelta(microseconds=1)) else None
             job['decision_before'] = end.astimezone(timezone.utc).isoformat() if end else None
@@ -370,7 +397,8 @@ def tick(db):
             if tasks or population is not None or (all_sports and run_id):
                 recovery = mens_d1.daily_recovery(db, day, d1_population) if d1_population is not None else {}
                 if (begin or end) and recovery.get('recovered_checkpoints'):
-                    eligible_ids = {task['id'] for task in tasks}
+                    eligible_ids = {task['id'] for task in tasks
+                                    if not retained or task['target_at'] >= stamp(prospective)}
                     recovery = dict(recovery, recovered_checkpoints={
                         identity: evidence for identity, evidence in recovery['recovered_checkpoints'].items()
                         if identity in eligible_ids})
@@ -380,7 +408,9 @@ def tick(db):
                     # A pending task can expire without a write.
                     today > job['game_date']]
                 if begin or end:
-                    inputs.append(dict(prospective_start_at=begin, decision_before=job['decision_before']))
+                    inputs.append(dict(prospective_start_at=prospective, decision_before=job['decision_before']))
+                if retained:
+                    inputs.append(retained)
                 depth_receipts = None
                 if job['config'].get('depth_policy'):
                     from app.storage import experiment_depth
@@ -720,7 +750,8 @@ def view(db, identity, variant=None, mode=None, *, game_date=None, include_compa
     comparison = Counter()
     selected_tickets, selected_days = [], 0
     depth_games = []
-    first_day = _target_day(config['prospective_start_at']) if config.get('prospective_start_at') else None
+    begin = config.get('retained_replay_start_at') or config.get('prospective_start_at')
+    first_day = _target_day(begin) if begin else None
     last_day = _target_day(row['cutoff_at'] - timedelta(microseconds=1)) if row['cutoff_at'] else None
     for day in day_rows:
         current_day = day['game_date']
@@ -850,7 +881,7 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
         (SELECT jsonb_object_agg(game->>'game_id',jsonb_build_object(
             'title',game->'title','league',game->'league','status',game->'status','depth_comparison',game->'depth_comparison',
             'depth_receipt_id',game->'depth_receipt_id','depth_candidates',game->'depth_candidates',
-            'depth_metrics',game->'depth_metrics'))
+            'depth_metrics',game->'depth_metrics','decision_mode',game->'decision_mode'))
          FROM jsonb_array_elements(r.payload#>'{report,games}') game) games
         FROM public.research_workspace_run r
         LEFT JOIN public.paper_result_job j ON j.run_id=r.id
@@ -865,6 +896,8 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
                 depth_games.append(game)
                 context = dict(game_id=game_id, game_title=game['title'], game_date=str(day['game_date']),
                                run_id=day['id'], depth_receipt_id=game.get('depth_receipt_id'))
+                if game.get('decision_mode'):
+                    context['decision_mode'] = game['decision_mode']
                 if game.get('depth_comparison'):
                     decisions.append(dict(context, **game['depth_comparison']))
                 candidates.extend(dict(candidate, **context) for candidate in (game.get('depth_candidates') or []))
@@ -885,6 +918,8 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
             entry.update({key:publication.get(key) for key in ('stake_usd', 'stake_exact_usd',
                 'expected_profit_usd', 'expected_profit_exact_usd', 'return_usd', 'return_exact_usd',
                 'pnl_usd', 'pnl_exact_usd')})
+            if game.get('decision_mode'):
+                entry['decision_mode'] = game['decision_mode']
             rows.append(dict(entry, grade=dict(state=publication['grade']['state']),
                 game_title=game.get('title') or ticket.get('title'), league=game.get('league') or fallback_league,
                 game_date=str(day['game_date']), run_id=day['id'], result_id=result_id))
@@ -897,8 +932,7 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
         followups = experiment_depth.followups(db, depth_ids)
         value.update(depth_analysis=paper_depth.summarize(depth_games, version=config['depth_policy']), depth_candidates=candidates,
                      depth_decisions=decisions)
-        if config.get('prospective_start_at'):
-            value['prospective_start_at'] = config['prospective_start_at']
+        value.update({key: config[key] for key in ('prospective_start_at', 'retained_replay_start_at') if key in config})
         value['depth_followup_analysis'] = paper_depth.followup_summary(list(followups.values()))
         if export:
             value['depth_receipts'] = experiment_depth.read_ids(db, depth_ids)

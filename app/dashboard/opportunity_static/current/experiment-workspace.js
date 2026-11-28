@@ -339,8 +339,11 @@ function showResults(config, visible, context) {
     config.minimum_stake_usd != null && `Stake ≥${money(config.minimum_stake_usd)}`,
     sizingTitle(config,context.mode).replace(/^Win /,'Win\u00a0'),
   ].filter(Boolean).join(' · '),'workspace-caption'));
+  if (config.retained_replay_start_at) activeRules.append(node('p',
+    'First retained T−10 decision · '+decisionCutoff(config.retained_replay_start_at),'workspace-caption'));
   if (config.prospective_start_at) activeRules.append(node('p',
-    'First eligible T−10 decision · '+decisionCutoff(config.prospective_start_at),'workspace-caption'));
+    (config.retained_replay_start_at ? 'Scheduled capture starts · ' : 'First eligible T−10 decision · ')+
+    decisionCutoff(config.prospective_start_at),'workspace-caption'));
   if (visible && !config.retirement) {
     const edit=link('Edit experiment',url({...context.base,view:'revise'}));
     edit.setAttribute('aria-label','Edit experiment');

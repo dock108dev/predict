@@ -149,7 +149,13 @@ export function ruleSummary(config) {
       : config.depth_policy===allSportsDepthPolicy ? 'NFL, NCAAF, NBA, NCAAB, MLB and NHL'
         : gameScopes[config.scope] || gameScopes['mens-d1'],
     'Game dates':`${config.start_date} through ${config.end_date}, inclusive (Eastern)`,
-    ...(config.prospective_start_at ? {'First eligible T−10 decision':decisionCutoff(config.prospective_start_at)} : {}),
+    ...(config.retained_replay_start_at ? {
+      'First retained T−10 decision':decisionCutoff(config.retained_replay_start_at),
+    } : {}),
+    ...(config.prospective_start_at ? {
+      [config.retained_replay_start_at ? 'Scheduled capture starts' : 'First eligible T−10 decision']:
+        decisionCutoff(config.prospective_start_at),
+    } : {}),
     ...(config.retirement ? {'Retirement cutoff':decisionCutoff(config.retirement.cutoff_at)} : {}),
     ...marketRules,
     'Primary sizing':fixed ? `${sizingTitle(config)} per winning paper trade, using the nearest achievable positive net profit` : kelly,
@@ -181,7 +187,7 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     minimum_ev:'4', minimum_stake_usd:'1.00', sizing_mode:'fixed_profit', target_profit_usd:'10', kelly_comparison:false,
     kelly_multiplier:'2.5', reference_bankroll_usd:'10000', bucket_edges:'4, 8, 15, 25', portfolios:allPortfolios,
     odds_bucket_edges:oddsEdgeList(defaultOddsEdges), portfolio_rule:'', market_scope:'', alternate_odds_below:'',
-    depth_policy:'', prospective_start_at:'',
+    depth_policy:'', prospective_start_at:'', retained_replay_start_at:'',
   };
   if(config)Object.assign(defaults,config,{
     sizing_mode:config.sizing_mode || 'kelly', minimum_ev:percent(config.minimum_ev),
@@ -253,6 +259,13 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   prospectiveHelp.id='campaign-start-cutoff-help';
   prospective.setAttribute('aria-describedby',prospectiveHelp.id);
   prospective.parentElement.append(prospectiveHelp);
+  const replayStart=field(fields,'retained_replay_start_at','Replay retained decisions from (optional)',
+    {required:false,maxLength:36});
+  replayStart.placeholder=prospective.placeholder;
+  const replayHelp=node('small','Use an earlier T−10 cutoff with saved sportsbook and native book evidence. Include the time zone.');
+  replayHelp.id='campaign-replay-start-help';
+  replayStart.setAttribute('aria-describedby',replayHelp.id);
+  replayStart.parentElement.append(replayHelp);
   const fixed=node('fieldset',undefined,'campaign-fields');
   fixed.append(node('legend','Fixed profit settings'));
   field(fixed,'target_profit_usd','Target win profit ($)');
@@ -334,8 +347,9 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
   const scopeLabel=inputs.scope.querySelector('option[value="all-sports"]');
   function updateExecutionScope() {
     scopeLabel.textContent=execution.value===depthPolicy ? 'NCAAB public book pilot' : gameScopes['all-sports'];
-    prospective.hidden=prospective.parentElement.hidden=execution.value!==allSportsDepthPolicy;
-    prospective.required=execution.value===allSportsDepthPolicy;
+    const allSportsDepth=execution.value===allSportsDepthPolicy;
+    prospective.parentElement.hidden=replayStart.parentElement.hidden=!allSportsDepth;
+    prospective.required=allSportsDepth;
   }
   updateExecutionScope();
   execution.onchange=()=>{
@@ -421,10 +435,18 @@ export function campaignForm(root,config=null,revision=null,variant='best_venue'
     }
     if(body.depth_policy===allSportsDepthPolicy) {
       if(!validCutoff(body.prospective_start_at))throw Error('Enter the first eligible T−10 cutoff with a time zone.');
+      if(body.retained_replay_start_at) {
+        if(!validCutoff(body.retained_replay_start_at) || Date.parse(body.retained_replay_start_at)>=Date.parse(body.prospective_start_at)) {
+          throw Error('Enter a retained T−10 cutoff with a time zone before scheduled capture starts.');
+        }
+      } else delete body.retained_replay_start_at;
       if(body.alternate_odds_below!=='400' || body.minimum_stake_usd!=null || number(body.minimum_ev)!==0.04) {
         throw Error('All-sports depth uses 4% minimum EV, no minimum stake, and alternates below +400.');
       }
-    } else delete body.prospective_start_at;
+    } else {
+      delete body.prospective_start_at;
+      delete body.retained_replay_start_at;
+    }
     if(revision && config?.depth_policy===body.depth_policy)body.supersedes=revision;
     return body;
   }

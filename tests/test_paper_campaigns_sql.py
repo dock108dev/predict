@@ -504,6 +504,99 @@ class CampaignSQL(ResearchWorkspaceFixture):
                 assert values['depth_followup_analysis']['cache_reuse_sides'] == 1
                 assert values['depth_followup_analysis'] == by_day['days'][0]['depth_followup_analysis']
 
+    async def test_all_sports_replays_original_books_then_collects_at_the_future_cutoff(self):
+        from app.collection.experiment_depth import targets
+        from app.research import experiment, paper_depth
+        from app.storage import experiment_depth
+        from tests.test_experiment_depth_execution import receipt
+
+        await super().asyncSetUp()
+        now = queue.utc()
+        today = now.astimezone(campaigns.EASTERN).replace(hour=16, minute=0, second=0, microsecond=0)
+        historical, prospective = today - timedelta(days=1), today + timedelta(days=1)
+        planned = {'before': historical-timedelta(minutes=3), 'retained': historical,
+                   'missing': historical+timedelta(minutes=3), 'prospective': prospective}
+        fixtures = {}
+        for name, target in planned.items():
+            game = dict(self.game(name, (target+timedelta(minutes=10)).isoformat()), league='NBA')
+            offer = frozen_priced('+300', venue='novig', line='-5.5')
+            record = offer['record']
+            record['event'].update(scheduled_start=game['starts_at'], competition='NBA')
+            record['market_identity']['rules'] = 'sportsgameodds-unverified-1'
+            record['result_policy'] = 'sportsgameodds-unverified-1:spread'
+            record['quote']['source'].update(native_event_id=name,
+                native_outcome_id='points-home-game-sp-home', native_line='-5.5')
+            snapshot = dict(event=dict(home='home', away='away', competition='NBA',
+                scheduled_start=game['starts_at'], title=game['title']),
+                source_event=dict(event_id=name), offers=[offer], coverage=dict(incomplete=False))
+            fixtures[name] = game, snapshot, offer
+
+        body = fixed_config(name='Win $25 retained and prospective', start_date=str(historical.date()),
+                            end_date=str(prospective.date()), scope=campaigns.ALL_SPORTS,
+                            market_scope=paper.MAIN_SPREADS_TOTALS, alternate_odds_below='400',
+                            target_profit_usd='25', kelly_comparison=False, portfolios=['best_venue'],
+                            portfolio_rule=paper.MAIN_FIRST_ONE_PER_GAME, depth_policy=paper_depth.ALL_SPORTS_VERSION,
+                            retained_replay_start_at=historical.isoformat(), prospective_start_at=prospective.isoformat())
+        for key in ('kelly_multiplier', 'reference_bankroll_usd'):
+            body.pop(key)
+
+        with (self.connect() as db, patch.object(queue, 'utc', side_effect=lambda: self.at),
+              patch.object(queue, '_late_capture_due', return_value=False),
+              patch.object(campaigns.mens_d1, 'daily_population', return_value=None)):
+            db.execute('ALTER TABLE public.ev_experiment_depth ALTER COLUMN recorded_at SET DEFAULT public.workspace_fixture_now()')
+
+            def capture(checkpoint, at, name):
+                self.advance(db, at)
+                task, = experiment.due(db, at=self.at)
+                assert task['checkpoint'] == checkpoint and task['event']['source_event_id'] == name
+                game, snapshot, offer = fixtures[name]
+                captured = experiment.capture(db, task['game_id'], checkpoint, snapshot,
+                    token=task['token'], requested_at=at, received_at=at, known_at=at)
+                assert captured['state'] == 'captured'
+                if checkpoint == 'late' and name != 'missing':
+                    bound = dict(receipt(('0.25', 4000)), received_at=at.isoformat(),
+                        valid_until=(at+timedelta(seconds=5)).isoformat(),
+                        contract=dict(league='NBA', family='spread', period='full_game', starts_at=game['starts_at'],
+                            selected_side='home', signed_line='-5.5', phase='pregame',
+                            settlement=dict(available=True, rule_id='fixture', overtime='included', equality='not_feasible')))
+                    return experiment_depth.save(db, task, known_at=at,
+                        observations={experiment_depth.offer_key(offer['record']): bound})['id']
+                return None
+
+            evidence = {}
+            for name in ('before', 'retained', 'missing'):
+                target = planned[name]
+                self.advance(db, target-timedelta(hours=1))
+                experiment.discover(db, [fixtures[name][0]], at=self.at)
+                capture('early', self.at, name)
+                evidence[name] = capture('late', target, name)
+            self.advance(db, now)
+            with self.assertRaisesRegex(workspace.SelectionError, 'timely frozen checkpoint'):
+                campaigns.create(db, dict(body, retained_replay_start_at=planned['missing'].isoformat()))
+            campaign = campaigns.create(db, body)
+            first_run = campaigns.tick(db)
+            saved = workspace.run_detail(db, first_run, export=True)
+            assert set(saved['depth_receipts']) == {evidence['retained']}
+            assert [(game['title'], game['decision_mode'], game['depth_receipt_id']) for game in saved['report']['games']] == [
+                ('Away at retained', 'retained_replay', evidence['retained']), ('Away at missing', 'retained_replay', None)]
+            assert [ticket['title'] for ticket in saved['report']['portfolios']['best_venue']['tickets']] == ['Away at retained']
+            assert stamp(saved['report']['policy']['retained_replay_start_at']) == historical
+            assert stamp(saved['report']['policy']['prospective_start_at']) == prospective
+
+            self.advance(db, prospective-timedelta(hours=1))
+            experiment.discover(db, [fixtures['prospective'][0]], at=self.at)
+            capture('early', self.at, 'prospective')
+            assert not targets(db, historical-timedelta(seconds=1))
+            assert [task['source_event_id'] for task in targets(db, prospective-timedelta(seconds=1))] == ['prospective']
+            evidence['prospective'] = capture('late', prospective, 'prospective')
+            checked = [campaigns.tick(db) for _ in range(3)]
+            assert sum(run_id is not None for run_id in checked) == 2  # No evidence on the middle game date.
+            ledger = campaigns.trades(db, campaign['id'], export=True)
+            assert {row['game_title']: row['decision_mode'] for row in ledger['trades']} == {
+                'Away at retained': 'retained_replay', 'Away at prospective': 'prospective'}
+            assert set(ledger['depth_receipts']) == {evidence['retained'], evidence['prospective']}
+            assert workspace.run_detail(db, first_run, export=True) == saved
+
     async def test_all_sports_prospective_cutover_clips_decisions_and_finishes_grades(self):
         from app.collection.experiment_depth import targets
         from app.research import experiment, paper_depth
