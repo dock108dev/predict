@@ -69,6 +69,52 @@ def native_book(db, at):
 
 @skipUnless(SOCKET, "Disposable PostgreSQL required")
 class NativeTradingSQL(PregameFixture):
+    async def test_coverage_reports_empty_venues_and_scoped_access_gaps(self):
+        at = stamp(AT)
+        with self.connect() as db:
+            status = dict(background_work=dict(progress=dict(dashboard_depth=dict(
+                access_gaps={"prophetx": "prophetx_market_data_entitlement_denied"},
+                league_access_gaps={"prophetx": {"NBA": "prophetx_tournament_id_unverified"}},
+            ))))
+            with db.transaction(force_rollback=True):
+                db.execute("DELETE FROM data_runtime")
+                db.execute("""INSERT INTO data_runtime
+                    (runtime_id,owner_pid,started_at,heartbeat_at,state,config,source_status,dispatch,
+                     status,fingerprint,paused_sources,global_stopped)
+                    VALUES ('coverage-test',1,%s,%s,'running','{}','{}',true,%s,'fixture','["kalshi"]',false)""",
+                    (at, at, Jsonb(status)))
+                all_venues = native_trading.coverage(db, at=at, sport="NBA")
+                self.assertEqual(len(all_venues["coverage"]), 4)
+                self.assertTrue(all(row["opportunities"] == 0 and row["ev_eligible"] == 0
+                                    for row in all_venues["coverage"]))
+                self.assertEqual(all_venues["access"]["kalshi"]["collection"], "source_paused")
+                self.assertEqual(all_venues["access"]["prophetx"], dict(
+                    reason="prophetx_market_data_entitlement_denied", collection=None,
+                    leagues={"NBA": "prophetx_tournament_id_unverified"},
+                ))
+                selected = native_trading.coverage(db, at=at, sport="NFL", venue="prophetx")
+                self.assertEqual([row["venue"] for row in selected["coverage"]], ["prophetx"])
+                self.assertEqual(selected["access"]["prophetx"]["leagues"], {})
+                self.assertEqual(selected["provider_requests"], 0)
+                self.ingest(db, page())
+                _, book = native_book(db, at)
+                observations = {}
+                for state, changes in {
+                    "stale": dict(valid_until=at.isoformat(), received_at=(at - timedelta(seconds=1)).isoformat()),
+                    "unobserved": dict(levels=[], complete=False, received_at=None, valid_until=None),
+                    "empty": dict(levels=[], complete=True),
+                    "fee": dict(fee={"reason": "fee_schedule_unverified"}),
+                }.items():
+                    marked = deepcopy(book)
+                    marked.update(market_id=state, **changes)
+                    marked["_record"]["quote"]["source"]["native_market_id"] = state
+                    observations[state] = marked
+                self.assertEqual(native_trading.publish(db, observations, at=at)["published"], 4)
+                (live,) = native_trading.coverage(db, at=at, venue="novig")["coverage"]
+                self.assertEqual((live["opportunities"], live["exact_matches"], live["fresh_books"]), (4, 4, 2))
+                for reason in ("stale_book", "book_unobserved", "confirmed_empty", "fee_schedule_unverified"):
+                    self.assertEqual(live["reasons"][reason], 1)
+
     async def test_novig_links_retained_spread_roles_with_matching_kickoff(self):
         from app.collection.native_trading_identity import link
         from app.comparison.sgo_native_binding import capture_catalog
@@ -148,7 +194,9 @@ class NativeTradingSQL(PregameFixture):
             wrong_team = dict(event, home='NCAAB:M:D1:NCAA306')
             wrong_date = dict(event, scheduled_start=(stamp(source['scheduled_start']) + timedelta(minutes=1)).isoformat())
             for contradictory in (swapped, wrong_team, wrong_date):
-                self.assertEqual(link(contradictory, [anchor])['reason'], 'occurrence_unmatched')
+                rejected = link(contradictory, [anchor])
+                self.assertEqual(rejected['reason'], 'occurrence_identity_conflict')
+                self.assertEqual(rejected['evidence']['candidate_rejections'], {source_id: 'team_role_conflict'})
             missing_link = deepcopy(anchor)
             missing_link['event'].pop('shared_provider_ids')
             self.assertEqual(link(event, [missing_link])['reason'], 'occurrence_unmatched')

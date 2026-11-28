@@ -134,11 +134,12 @@ function clock(value){
     hour:'numeric',minute:'2-digit',second:'2-digit'})+' ET';
 }
 
-export function coverageRows(rows,bookName){
+export function coverageRows(rows,bookName,stake){
   const table=node('table',undefined,'liquidity-coverage-table');
   const headings=node('tr');
   const native=rows.some(row=>row.fresh_books!==undefined);
-  const measures=native?['Offers','Exact matches','Fresh books','Fair references','Full size','Sized EV','Gaps']
+  const measures=native?['Discovered offers','Exact matches','Fresh offers','Fair references',
+    stake?'Full size at '+money(stake):'Full size','Sized EV','EV eligible','Gaps']
     :['All','Size checked','Full size','EV checked','Stake covered','Gaps'];
   if(native){
     const caption=node('caption','24-hour slate and next 2 hours');
@@ -160,9 +161,12 @@ export function coverageRows(rows,bookName){
       count(row.opportunities,row.priority_offers),count(row.exact_matches,row.priority_exact_matches),
       count(row.fresh_books,row.priority_fresh_books),count(row.usable_references,row.priority_usable_references),
       count(row.full_size,row.priority_full_size),count(row.ev_assessable,row.priority_ev_assessable),
-      [gaps.join(' · '),priorityGaps.length&&'Next 2h: '+priorityGaps.join(' · ')].filter(Boolean).join(' / ')||'—',
+      count(row.ev_eligible,row.priority_ev_eligible),
+      row.opportunities===0?'No stored offers':
+        [gaps.join(' · '),priorityGaps.length&&'Next 2h: '+priorityGaps.join(' · ')].filter(Boolean).join(' / ')||'—',
     ]:[row.opportunities,row.assessable,row.full_size,row.ev_assessable,share,gaps.join(' · ')||'—'];
-    for(const value of [bookName(row.venue),row.league,row.family,row.line_role==='unknown'?'Unclassified':row.main?'Main':'Alternate',
+    for(const value of [bookName(row.venue),row.league??'—',row.family??'—',
+      row.line_role==null?'—':row.line_role==='unknown'?'Unclassified':row.main?'Main':'Alternate',
       ...values])entry.append(node('td',String(value)));
     body.append(entry);
   }

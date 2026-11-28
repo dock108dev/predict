@@ -63,6 +63,10 @@ def test_wrong_instrument_does_not_move_book_and_ordered_halt_is_authoritative()
     assert adopt(halt, dict(halt, received_at="2026-11-27T23:50:00Z")) is halt
     stale = dict(halt, source_at="2026-11-27T23:49:55Z")
     assert adopt(previous, stale) is previous
+    assert adopt(previous, dict(halt, sequence=9)) is previous
+    # A second transport with no comparable sequence cannot reopen a halted
+    # book using the same venue timestamp.
+    assert adopt(halt, dict(halt, reason=None, sequence=None)) is halt
 
 
 def test_first_exact_book_replaces_unobserved_inventory():
@@ -76,6 +80,62 @@ def test_first_exact_book_replaces_unobserved_inventory():
         sequence=None,
     )
     assert adopt(placeholder, incoming) is incoming
+
+
+def test_polymarket_dashboard_uses_rest_when_stream_image_stops_advancing():
+    from app.collection.native_trading_pmus_stream import DashboardMarketStream
+
+    at = stamp("2026-11-27T23:50:00Z")
+    now = [at]
+    start = at + timedelta(minutes=10)
+    binding = dict(book(), venue="polymarket_us", route="exact-slug", native_side="Long",
+                   scheduled_start=start.isoformat(), terms_valid_until=start.isoformat(), reason=None)
+    plan = {"side": binding}
+    frame = dict(marketSlug="exact-slug", transactTime=at.isoformat(), state="MARKET_STATE_OPEN",
+                 bids=[], offers=[dict(px=dict(value="0.50", currency="USD"), qty="20")])
+    requests = []
+
+    class REST:
+        async def read_native(self, pending, _cutoff, *, batch):
+            if pending:
+                requests.append(set(pending))
+            return {cid: dict(row, source_at=now[0].isoformat(), received_at=now[0].isoformat(),
+                              sequence=None, levels=[dict(price="0.49", quantity="20")],
+                              valid_until=(now[0]+timedelta(seconds=30)).isoformat())
+                    for cid, row in pending.items()}
+
+    async def run():
+        trader = NativeTrading(None, now=lambda: now[0])
+        trader.synchronized = lambda *_: {}
+        stream = DashboardMarketStream(now=lambda: now[0], allowed=lambda: True)
+        stream.task = asyncio.create_task(asyncio.Event().wait())
+        try:
+            stream._image(frame, b"original", at.isoformat())
+            original = (await trader.read_exchanges(REST(), stream, plan, plan, start))["side"]
+            assert original["levels"] == [dict(price="1/2", quantity="20")]
+            assert requests == []
+            now[0] += timedelta(seconds=3)
+            stream._image(frame, b"repeated", now[0].isoformat())
+            updated = (await trader.read_exchanges(REST(), stream, plan, plan, start))["side"]
+            assert requests == [{"side"}]
+            assert adopt(original, updated) is updated
+            assert original["valid_until"] == (at+timedelta(seconds=30)).isoformat()
+            # A new connection is allowed to supply fresh evidence, but the
+            # rolling source high-water mark survives dropping its image.
+            stream.images.clear()
+            stream._image(frame, b"reconnect", now[0].isoformat())
+            assert not stream.images
+            stream._image(dict(frame, state="MARKET_STATE_HALTED"), b"halt", now[0].isoformat())
+            halt = (await stream.read(plan, start, new_only=True))["side"]
+            assert halt["reason"] == "native_market_halted"
+            assert halt["valid_until"] == original["valid_until"]
+            assert adopt(updated, halt) is updated  # REST already saw a later open image.
+            stream._image(frame, b"delayed-open", now[0].isoformat())
+            assert stream.images["exact-slug"]["reason"] == "native_market_halted"
+        finally:
+            await stream.close()
+
+    asyncio.run(run())
 
 
 def test_novig_reads_next_event_while_previous_event_write_waits(monkeypatch):

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from fractions import Fraction as F
 from hashlib import sha256
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import httpx
 
@@ -28,6 +28,8 @@ from .public_fee_refresh import REVIEW_WINDOW
 
 VENUES = ('kalshi', 'polymarket_us')
 DEPTH = 32
+KALSHI_MARKETS = kalshi.REST_URL + '/markets/'
+KALSHI_BATCH_BOOK = KALSHI_MARKETS + 'orderbooks'
 MAX_MARKETS_PER_DECISION = 64
 HEADER_FIELDS = ('date', 'age', 'cache-control', 'etag', 'last-modified',
                  'cf-cache-status', 'x-cache', 'expires', 'retry-after')
@@ -298,7 +300,7 @@ class NativeExperimentDepth:
     def __init__(self, *, client=None, now=None, concurrency=3, timeout=2.0, allowed=None):
         self.client = client
         self.now = now or (lambda: datetime.now(timezone.utc))
-        self.semaphore = asyncio.Semaphore(concurrency)
+        self.semaphores = defaultdict(lambda: asyncio.Semaphore(concurrency))
         self.timeout = timeout
         self.blocked_until = {}
         self.requests = Counter()
@@ -336,7 +338,7 @@ class NativeExperimentDepth:
         return self
 
     async def __aexit__(self, *_):
-        tasks = list(self.inflight.values())
+        tasks = [task for task, _ in self.inflight.values()]
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -355,29 +357,57 @@ class NativeExperimentDepth:
         decision cannot cancel an independent Dashboard consumer or vice versa.
         Completed reads are never re-dated or used to renew their freshness.
         """
-        key = venue, url, repr(params), body_limit
-        task = self.inflight.get(key)
-        if task is None:
-            task = asyncio.create_task(self._read_owned(venue,url,cutoff,params=params,body_limit=body_limit))
-            self.inflight[key] = task
+        if cutoff <= self.now():
+            return None, None, 'cutoff_passed'
+        task = self._reserve_read(venue, url, cutoff, params=params, body_limit=body_limit)
+        return await self._read_result(task, venue, url, cutoff, params=params, body_limit=body_limit)
+
+    @staticmethod
+    def _read_key(venue, url, params, body_limit):
+        pairs = params.items() if isinstance(params, dict) else params or ()
+        return venue, url, tuple(sorted(pairs)), body_limit
+
+    async def _read_result(self, task, venue, url, cutoff, *, params=None, body_limit=512 * 1024):
+        seconds = (cutoff - self.now()).total_seconds()
+        if seconds <= 0:
+            return None, None, 'cutoff_passed'
+        try:
+            async with asyncio.timeout(seconds):
+                body, evidence, reason = await asyncio.shield(task)
+                if reason == 'native_dashboard_source_budget' and DASHBOARD_BUDGET.get() is None:
+                    key = self._read_key(venue, url, params, body_limit)
+                    current = self.inflight.get(key)
+                    if current and current[0] is task:
+                        self.inflight.pop(key)
+                    retry = self._reserve_read(venue, url, cutoff, params=params, body_limit=body_limit)
+                    body, evidence, reason = await asyncio.shield(retry)
+        except TimeoutError:
+            return None, None, 'cutoff_passed'
+        if evidence and stamp(evidence['received_at']) > cutoff:
+            return None, None, 'cutoff_passed'
+        return body, evidence, reason
+
+    def _reserve_read(self, venue, url, cutoff, *, params=None, body_limit=512 * 1024):
+        key = self._read_key(venue, url, params, body_limit)
+        current = self.inflight.get(key)
+        if current is None:
+            latest = [cutoff]
+            task = asyncio.create_task(self._read_owned(venue,url,latest,params=params,body_limit=body_limit))
+            current = self.inflight[key] = task, latest
             def finished(done):
-                if self.inflight.get(key) is done:
+                if self.inflight.get(key) is current:
                     self.inflight.pop(key,None)
             task.add_done_callback(finished)
-        body,evidence,reason = await asyncio.shield(task)
-        if reason == 'native_dashboard_source_budget' and DASHBOARD_BUDGET.get() is None:
-            return await self._read_owned(venue, url, cutoff, params=params, body_limit=body_limit)
-        if evidence and stamp(evidence['received_at']) > cutoff:
-            return None,None,'cutoff_passed'
-        return body,evidence,reason
+        task, latest = current
+        latest[0] = max(latest[0], cutoff)
+        return task
 
-    async def _read_owned(self, venue, url, cutoff, *, params=None, body_limit=512 * 1024):
-        async with self.semaphore:
+    async def _read_owned(self, venue, url, latest, *, params=None, body_limit=512 * 1024):
+        async with self.semaphores[venue]:
             if not self.allowed(venue):
                 return None, None, 'source_paused'
             sent = self.now()
-            seconds = min(self.timeout, (cutoff - sent).total_seconds())
-            if seconds <= 0:
+            if sent >= latest[0]:
                 return None, None, 'cutoff_passed'
             if self.blocked_until.get(venue, sent) > sent:
                 return None, None, 'throttled'
@@ -387,25 +417,23 @@ class NativeExperimentDepth:
             self.requests[venue] += 1
             size = 0
             try:
-                async with asyncio.timeout(seconds):
-                    async with self.client.stream('GET', url, params=params, timeout=seconds) as response:
+                async with asyncio.timeout(self.timeout):
+                    async with self.client.stream('GET', url, params=params, timeout=self.timeout) as response:
                         chunks = []
                         async for chunk in response.aiter_bytes():
                             size += len(chunk)
                             if size > body_limit:
-                                return self._failed_read(response.url, sent, cutoff, 'native_book_capacity')
+                                return self._failed_read(response.url, sent, latest[0], 'native_book_capacity')
                             chunks.append(chunk)
                         body = b''.join(chunks)
                         received = self.now()
-                        if received > cutoff:
-                            return None, None, 'cutoff_passed'
                         status = response.status_code
                         headers = {name: response.headers[name] for name in HEADER_FIELDS if name in response.headers}
                         evidence = dict(requested_at=sent.isoformat(), received_at=received.isoformat(),
                             path=response.url.path, url=str(response.url), status=status, headers=headers,
                             date=headers.get('date'), sha256=sha256(body).hexdigest())
             except (httpx.HTTPError, TimeoutError):
-                return self._failed_read(url, sent, cutoff, 'native_book_unavailable')
+                return self._failed_read(url, sent, latest[0], 'native_book_unavailable')
             finally:
                 if window is not None:
                     window['reserved'] -= body_limit
@@ -449,9 +477,13 @@ class NativeExperimentDepth:
 
     async def _kalshi(self, bindings, cutoff):
         ticker = bindings[0]['market_id']
-        base = kalshi.REST_URL + '/markets/' + quote(ticker, safe='')
-        book, evidence, reason = await self._read('kalshi', base + '/orderbook', cutoff, params={'depth': DEPTH})
-        return await self._kalshi_levels(bindings, cutoff, book, evidence, reason)
+        default = KALSHI_MARKETS + quote(ticker, safe='') + '/orderbook', (('depth', DEPTH),)
+        request = self._pending_kalshi_books().get(ticker, default)
+        task = self._reserve_read('kalshi', request[0], cutoff, params=request[1])
+        books, evidence, reason = await self._kalshi_books(request, task, (ticker,), cutoff)
+        data = books.get(ticker)
+        return await self._kalshi_levels(bindings, cutoff, data, evidence,
+                                         reason or (None if data else 'native_book_unobserved'))
 
     async def _kalshi_levels(self, bindings, cutoff, book, evidence, reason):
         ticker = bindings[0]['market_id']
@@ -541,35 +573,76 @@ class NativeExperimentDepth:
             expiry = min(expiry, stamp(binding['terms_valid_until']))
         return dict(received_at=evidence['received_at'], valid_until=expiry.isoformat())
 
-    async def _kalshi_batch(self, markets, cutoff):
-        payload, evidence, reason = await self._read('kalshi', kalshi.REST_URL+'/markets/orderbooks', cutoff,
-                                                     params=[('tickers', ticker) for ticker, _ in markets])
+    def _pending_kalshi_books(self):
+        requests = {}
+        for (venue, url, params, _), (task, _) in self.inflight.items():
+            if venue != 'kalshi' or task.done():
+                continue
+            if url == KALSHI_BATCH_BOOK:
+                tickers = (value for name, value in params if name == 'tickers')
+            elif url.startswith(KALSHI_MARKETS) and url.endswith('/orderbook'):
+                tickers = (unquote(url.removeprefix(KALSHI_MARKETS).removesuffix('/orderbook')),)
+            else:
+                continue
+            for ticker in tickers:
+                requests[ticker] = url, params
+        return requests
+
+    async def _kalshi_books(self, request, task, tickers, cutoff):
+        url, params = request
+        payload, evidence, reason = await self._read_result(task, 'kalshi', url, cutoff, params=params)
+        if url != KALSHI_BATCH_BOOK:
+            return dict.fromkeys(tickers, payload), evidence, reason
         rows = defaultdict(list)
         for row in (payload or {}).get('orderbooks', []):
             rows[row.get('ticker')].append(row)
-        results = {}
+        return {ticker: rows[ticker][0] for ticker in tickers if len(rows[ticker]) == 1}, evidence, reason
+
+    async def _kalshi_batch(self, markets, cutoff):
+        pending = self._pending_kalshi_books()
+        groups, missing = defaultdict(dict), {}
         for ticker, pairs in markets:
-            keys, bindings = zip(*pairs, strict=True)
-            matched = rows[ticker]
-            data = matched[0] if len(matched) == 1 else None
-            items = await self._kalshi_levels(bindings, cutoff, data, evidence,
-                                             reason or (None if data else 'native_book_unobserved'))
-            results.update(zip(keys, items, strict=True))
-        return results
+            if ticker in pending:
+                groups[pending[ticker]][ticker] = pairs
+            else:
+                missing[ticker] = pairs
+        if missing:
+            params = tuple(('tickers', ticker) for ticker in missing)
+            groups[KALSHI_BATCH_BOOK, params] = missing
+
+        async def resolve(request, task, group):
+            books, evidence, reason = await self._kalshi_books(request, task, group, cutoff)
+            result = {}
+            for ticker, pairs in group.items():
+                keys, bindings = zip(*pairs, strict=True)
+                data = books.get(ticker)
+                items = await self._kalshi_levels(bindings, cutoff, data, evidence,
+                                                 reason or (None if data else 'native_book_unobserved'))
+                result.update(zip(keys, items, strict=True))
+            return result
+
+        # Reserve all groups before yielding so a concurrent subset sees the
+        # existing task, even if the transport responds immediately.
+        reads = [resolve(request, self._reserve_read('kalshi', request[0], cutoff, params=request[1]), group)
+                 for request, group in groups.items()]
+        results = await asyncio.gather(*reads)
+        return {key: item for result in results for key, item in result.items()}
 
     async def read_native(self, bindings, cutoff, *, batch=False):
         """Read each matched market once for all selected sides at this cutoff."""
         cutoff = stamp(cutoff)
         queries = defaultdict(list)
-        results = {}
+        results, markets_by_venue = {}, Counter()
         for key, binding in bindings.items():
             if binding['reason']:
                 results[key] = binding
             else:
                 market = binding['venue'], binding['market_id']
-                if market not in queries and len(queries) >= MAX_MARKETS_PER_DECISION:
+                if market not in queries and markets_by_venue[binding['venue']] >= MAX_MARKETS_PER_DECISION:
                     results[key] = dict(binding, reason='native_book_capacity')
                 else:
+                    if market not in queries:
+                        markets_by_venue[binding['venue']] += 1
                     queries[market].append((key, binding))
 
         async def observation(venue, pairs):

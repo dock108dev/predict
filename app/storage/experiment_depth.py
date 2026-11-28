@@ -11,6 +11,8 @@ from app.storage.store import encoded, exact_time, hashed, stamp
 VERSION = 'experiment-public-depth-1'
 POLICY = 'public-book-win25-1'
 ALL_SPORTS_POLICY = 'public-book-win25-2'
+OFFICIAL_SHADOW_POLICY = 'official-native-book-win25-shadow-1'
+SHADOW_KIND = 'official_shadow'
 # Canonical UTF-8 JSON bytes, shared with collector staging and charged to
 # research retention. Broad inventories carry identities for every side.
 MAX_BYTES = 8 * 1024 * 1024
@@ -102,6 +104,30 @@ def followups(db, original_ids):
         WHERE kind='followup' AND origin_id=ANY(%s)''', (originals,))}
 
 
+def shadow_inputs(db, original_ids):
+    originals = sorted(set(original_ids))
+    if not originals:
+        return {}
+    return {row['original_id']: {field: row[field] for field in ('id', 'checkpoint_id', 'reason')}
+            for row in db.execute('''SELECT original_id,id,checkpoint_id,reason
+                FROM public.ev_experiment_depth_shadow WHERE original_id=ANY(%s)''', (originals,))}
+
+
+def _shadow_bundle(row):
+    return dict(_bundle(row), checkpoint_id=row['checkpoint_id'], recorded_at=clock(row['recorded_at']))
+
+
+def read_shadow_ids(db, identities):
+    identities = sorted(set(identities))
+    if not identities:
+        return {}
+    rows = db.execute('''SELECT id,payload,payload_bytes,checkpoint_id,recorded_at
+        FROM public.ev_experiment_depth_shadow WHERE id=ANY(%s)''', (identities,)).fetchall()
+    if len(rows) != len(identities):
+        raise ValueError('experiment_depth_shadow_missing')
+    return {row['id']: _shadow_bundle(row) for row in rows}
+
+
 def _metrics(http_receipts, identity_receipts, cutoff, observations):
     ages, latency = [], []
     for receipt in http_receipts.values():
@@ -129,9 +155,11 @@ def _evidence_time(value):
 def validate(payload):
     target, known, cutoff = (exact_time(payload[key]) for key in ('target_at', 'known_at', 'cutoff_at'))
     kind, origin_id = payload['kind'], payload['origin_id']
-    if (known > cutoff or kind == 'decision' and (cutoff != target or origin_id is not None)
+    disposition = kind == SHADOW_KIND and payload['reason'] is not None
+    if (known > cutoff and not disposition or kind == 'decision' and (cutoff != target or origin_id is not None)
             or kind == 'followup' and (not origin_id or not target < known <= cutoff)
-            or kind not in ('decision', 'followup')):
+            or kind == SHADOW_KIND and (not origin_id or cutoff != target or payload['observations'])
+            or kind not in ('decision', 'followup', SHADOW_KIND)):
         raise ValueError('experiment_depth_cutoff')
     # Only causally available input is admitted. An HTTP Date or sequence
     # number is not a receipt clock.
@@ -143,7 +171,34 @@ def validate(payload):
         received = _evidence_time(receipt.get('received_at') or receipt['observed_at'])
         if received > known or 'requested_at' in receipt and _evidence_time(receipt['requested_at']) > received:
             raise ValueError('experiment_depth_receipt_clock')
-    for observation in payload['observations'].values():
+    observations = list(payload['observations'].values())
+    shadow = payload.get('official_shadow')
+    if shadow is not None:
+        if (kind not in ('decision', SHADOW_KIND) or shadow['policy'] != OFFICIAL_SHADOW_POLICY
+                or disposition and (shadow['candidates'] or http_receipts or identity_receipts)):
+            raise ValueError('experiment_depth_shadow_policy')
+        for cid, evidence in shadow['candidates'].items():
+            from app.comparison.execution_contract import expected
+
+            observations.append(evidence['book'])
+            record, book, link = evidence['record'], evidence['book'], evidence['game_link']
+            source = record['quote']['source']
+            if (expected(record)['contract_id'] != cid or source['provider'] != book['venue']
+                    or any(source['native_' + field] != book[field]
+                           for field in ('event_id', 'market_id', 'outcome_id'))
+                    or not evidence.get('reason') and (link['status'] != 'matched'
+                        or _evidence_time(link['sgo_start']) != target + 600)):
+                raise ValueError('experiment_depth_shadow_identity')
+            for field in ('catalog_committed_at', 'book_committed_at'):
+                if evidence[field] and _evidence_time(evidence[field]) > known:
+                    raise ValueError('experiment_depth_receipt_clock')
+            reference = evidence.get('reference') or {}
+            for quote in reference.get('required_input_prices') or reference.get('prices', ()):
+                if not _evidence_time(quote['source_at']) <= _evidence_time(quote['received_at']) <= known:
+                    raise ValueError('experiment_depth_receipt_clock')
+            if any(_evidence_time(quote['sgo_received_at']) > known for quote in evidence.get('sgo_comparison', ())):
+                raise ValueError('experiment_depth_receipt_clock')
+    for observation in observations:
         received = observation.get('received_at')
         if received and _evidence_time(received) > known:
             raise ValueError('experiment_depth_receipt_clock')
@@ -153,35 +208,54 @@ def validate(payload):
 
 
 def normalize(task, *, known_at, observations, reason=None, kind='decision', cutoff_at=None,
-              origin_id=None, source_gaps=None, preparation=()):
+              origin_id=None, source_gaps=None, preparation=(), official_shadow=None):
     """Freeze the same evidence for staging and eventual publication."""
     game_id, schedule_id = task['game_id'], task['schedule_id']
     target_at = clock(task['target_at'])
     known_at, cutoff_at = clock(known_at), clock(cutoff_at or target_at)
-    http_receipts, identity_receipts, normalized = {}, {}, {}
+    http_receipts, identity_receipts = {}, {}
     for receipt in preparation:
         if not _evidence_time(receipt['requested_at']) <= _evidence_time(receipt['received_at']) <= exact_time(known_at):
             raise ValueError('experiment_depth_receipt_clock')
         identity_receipts[hashed(receipt)] = receipt
-    for key, observation in observations.items():
+    def normalize_book(observation, *, shadow=False):
         refs, identity_refs = [], []
         for receipt in observation.get('receipts', ()):
             ref = hashed(receipt)
-            http_receipts[ref] = receipt
-            refs.append(ref)
+            if shadow and 'requested_at' not in receipt:
+                identity_receipts[ref] = receipt
+                identity_refs.append(ref)
+            else:
+                http_receipts[ref] = receipt
+                refs.append(ref)
         for receipt in observation.get('identity_receipts', ()):
             ref = hashed(receipt)
             identity_receipts[ref] = receipt
             identity_refs.append(ref)
-        normalized[key] = dict({k: v for k, v in observation.items() if k not in ('receipts', 'identity_receipts')},
-                               receipt_refs=refs, identity_receipt_refs=identity_refs)
+        return dict({k: v for k, v in observation.items() if k not in ('receipts', 'identity_receipts')},
+                    receipt_refs=refs, identity_receipt_refs=identity_refs)
+
     payload = dict(version=VERSION, game_id=game_id, schedule_id=schedule_id,
         target_at=target_at, known_at=known_at, cutoff_at=cutoff_at, kind=kind,
-        observations=normalized, http_receipts=http_receipts, identity_receipts=identity_receipts, reason=reason,
+        observations={key: normalize_book(book) for key, book in observations.items()},
+        http_receipts=http_receipts, identity_receipts=identity_receipts, reason=reason,
         source_gaps=source_gaps or {}, origin_id=origin_id)
-    validate(payload)
     payload['metrics'] = _metrics(http_receipts, identity_receipts, stamp(cutoff_at), observations)
+    if official_shadow is not None:
+        payload['official_shadow'] = dict(official_shadow, policy=OFFICIAL_SHADOW_POLICY,
+            candidates={key: dict(candidate, book=normalize_book(candidate['book'], shadow=True))
+                        for key, candidate in official_shadow['candidates'].items()})
+    validate(payload)
     return payload
+
+
+def normalize_shadow(task, *, origin_id, known_at, evidence=None, reason=None):
+    if reason:
+        evidence = dict(candidates={}, source_gaps={'scope': reason})
+    if evidence is None:
+        raise ValueError('experiment_depth_shadow_evidence_missing')
+    return normalize(task, known_at=known_at, observations={}, kind=SHADOW_KIND, origin_id=origin_id,
+                     reason=reason, official_shadow=evidence)
 
 
 def save(db, task, *, known_at, observations, reason=None, kind='decision', cutoff_at=None,
@@ -232,3 +306,63 @@ def publish(db, payload, *, protect_checkpoint=False):
             (identity, game_id, schedule_id, target, kind, origin_id, cutoff, known, len(body),
              Jsonb(body, dumps=bytes)))
     return dict(payload, id=identity)
+
+
+def publish_shadow(db, payload, *, protect_checkpoint=False):
+    """Admit the optional envelope only after its exact original commits."""
+    from app.research import experiment, records
+
+    if payload['kind'] != SHADOW_KIND:
+        raise ValueError('experiment_depth_shadow_policy')
+    validate(payload)
+    body = encoded(payload)
+    if len(body) > MAX_BYTES:
+        raise ValueError('experiment_depth_shadow_capacity')
+    origin = payload['origin_id']
+    game, schedule, target = payload['game_id'], payload['schedule_id'], stamp(payload['target_at'])
+    with db.transaction():
+        for lock in (records.CURRENT_LOCK, records.LOCK):
+            if not db.execute('SELECT pg_try_advisory_xact_lock(%s) held', (lock,)).fetchone()['held']:
+                raise BlockingIOError('experiment_depth_writer_busy')
+        if protect_checkpoint:
+            from app.collection.mens_d1_jobs import _late_capture_due
+
+            if _late_capture_due(db, experiment._dbclock(db)):
+                raise BlockingIOError('protected_tminus10_capture_due')
+        original = db.execute('''SELECT id FROM public.ev_experiment_depth
+            WHERE (game_id,schedule_id,target_at,kind)=(%s,%s,%s,'decision')''',
+            (game, schedule, target)).fetchone()
+        task = db.execute('''SELECT t.result_id,t.state FROM public.ev_experiment_task t
+            JOIN public.ev_experiment_game g ON g.id=t.game_id AND g.schedule_id=t.schedule_id
+            WHERE (t.game_id,t.schedule_id,t.target_at,t.checkpoint)=(%s,%s,%s,'late') AND g.state<>'cancelled' ''',
+            (game, schedule, target)).fetchone()
+        if original is None:
+            if task:
+                raise BlockingIOError('experiment_depth_shadow_original_pending')
+            return None
+        if original['id'] != origin:
+            return None
+        existing = db.execute('''SELECT id,payload,payload_bytes,checkpoint_id,recorded_at
+            FROM public.ev_experiment_depth_shadow WHERE original_id=%s''', (origin,)).fetchone()
+        if existing:
+            return _shadow_bundle(existing)
+        if task and task['state'] in ('pending', 'claimed'):
+            raise BlockingIOError('experiment_depth_shadow_checkpoint_pending')
+        checkpoint = task['result_id'] if task and task['state'] == 'captured' else None
+        if payload['reason']:
+            if len(body) > records.DISPOSITION_SLOT_BYTES:
+                raise ValueError('experiment_depth_shadow_disposition_capacity')
+            experiment._storage_runway(db, len(body))
+        else:
+            used = db.execute('''SELECT coalesce(sum(payload_bytes),0) n FROM public.ev_experiment_depth_shadow
+                WHERE reason IS NULL''').fetchone()['n']
+            if used + len(body) > records.OBSERVATION_BYTE_CAP:
+                raise ValueError('experiment_depth_shadow_capacity')
+            experiment._admit(db, len(body))
+        identity = sha256(body).hexdigest()
+        row = db.execute('''INSERT INTO public.ev_experiment_depth_shadow
+            (id,original_id,checkpoint_id,game_id,schedule_id,target_at,known_at,payload_bytes,reason,payload)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING recorded_at''',
+            (identity, origin, checkpoint, game, schedule, target,
+             stamp(payload['known_at']), len(body), payload['reason'], Jsonb(body, dumps=bytes))).fetchone()
+    return dict(payload, id=identity, checkpoint_id=checkpoint, recorded_at=clock(row['recorded_at']))

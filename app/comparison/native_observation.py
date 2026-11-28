@@ -36,7 +36,18 @@ WITHDRAWALS = frozenset(
 
 
 def identity(receipt):
-    return tuple(receipt.get(key) for key in IDENTITY)
+    own = tuple(receipt.get(key) for key in IDENTITY)
+    if receipt.get("venue") == "prophetx":
+        # A strike ID must continue to identify the same provider outcome,
+        # side and line across reads and restarts.
+        contract = receipt.get("contract") or {}
+        return (
+            *own,
+            str(receipt.get("native_outcome_id")),
+            contract.get("selected_side"),
+            contract.get("signed_line"),
+        )
+    return own
 
 
 def revision(receipt):
@@ -85,6 +96,12 @@ def adopt(previous, incoming):
         return previous
     before, after = clock(previous), clock(incoming)
     old_sequence, new_sequence = previous.get("sequence"), incoming.get("sequence")
+    if (
+        old_sequence is not None
+        and new_sequence is not None
+        and new_sequence < old_sequence
+    ):
+        return previous
     if incoming.get("reason") in WITHDRAWALS:
         # Exact lifecycle witnesses can revoke the same publication clock; a
         # dated older lifecycle response can never revoke a newer book.
@@ -95,13 +112,11 @@ def adopt(previous, incoming):
         )
     if before is not None and (after is None or after < before):
         return previous
-    if old_sequence is not None and new_sequence is not None:
-        if new_sequence < old_sequence:
-            return previous
-        if new_sequence == old_sequence and revision(previous) != revision(incoming):
-            return previous
-    if before is not None and after == before and old_sequence == new_sequence:
+    if old_sequence is not None and old_sequence == new_sequence:
         return previous
+    if before is not None and after == before:
+        if old_sequence is None or new_sequence is None or old_sequence == new_sequence:
+            return previous
     if stamp(incoming.get("received_at", incoming["valid_until"])) < stamp(
         previous.get("received_at", previous["valid_until"])
     ):

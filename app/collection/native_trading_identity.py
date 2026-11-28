@@ -231,7 +231,7 @@ def link(event, anchors, *, prior=None):
     Typed venue links can explain provider schedule skew, with both original
     clocks retained. The canonical/Paper clock always remains the SGO clock.
     """
-    exact_candidates, strong_candidates = [], []
+    exact_candidates, strong_candidates, conflicts = [], [], {}
     native = event.get("shared_provider_ids") or {}
     native_start = stamp(event["scheduled_start"])
     native_roles, native_aliases = _roles(event, event["provider"])
@@ -255,15 +255,20 @@ def link(event, anchors, *, prior=None):
         common = {
             key for key in shared.keys() & native.keys() if shared[key] and native[key]
         }
+        same_time = stamp(source["scheduled_start"]) == native_start
+        retained = source["id"] == previous_sgo
+        same_typed_id = bool(venue_id and str(venue_id) in venue_ids) or any(
+            str(shared[key]) == str(native[key]) for key in common
+        )
         if (
             venue_id
             and str(venue_id) not in venue_ids
             or any(str(shared[key]) != str(native[key]) for key in common)
         ):
+            if retained or same_typed_id or same_time and _roles(source, "sportsgameodds")[0] == native_roles:
+                conflicts[source["id"]] = "typed_event_id_conflict"
             continue
         typed = bool(venue_id or common)
-        same_time = stamp(source["scheduled_start"]) == native_start
-        retained = source["id"] == previous_sgo
         if not (typed or same_time or retained):
             continue
         # Baseball needs an occurrence number or a shared event ID. A time
@@ -279,6 +284,8 @@ def link(event, anchors, *, prior=None):
                 or not (typed or retained)
                 and not all((event.get("game_number"), source.get("game_number")))
             ):
+                if typed or retained:
+                    conflicts[source["id"]] = "doubleheader_occurrence_conflict"
                 continue
         source_roles, source_aliases = _roles(source, "sportsgameodds")
         if len(set(source_roles.values())) != 2 or not all(source_roles.values()):
@@ -287,6 +294,8 @@ def link(event, anchors, *, prior=None):
         if source_roles != native_roles:
             novig_roles = _novig_role_proof(event, anchor, source_roles, native_roles)
             if not novig_roles:
+                if typed or retained or set(source_roles.values()) == set(native_roles.values()):
+                    conflicts[source["id"]] = "team_role_conflict"
                 continue
         method = (
             "typed_source_event_and_retained_subject_roles"
@@ -300,7 +309,7 @@ def link(event, anchors, *, prior=None):
         (strong_candidates if typed or retained else exact_candidates).append(
             (anchor, source_aliases, method, novig_roles)
         )
-    if previous_sgo and not previous_present and not strong_candidates:
+    if previous_sgo and not previous_present and not strong_candidates and not conflicts:
         # A current source row can close or age out before a later venue clock.
         # Keep the accepted occurrence for passive closure guards. It cannot
         # supply a reference while it is absent from the current anchor slate.
@@ -315,13 +324,17 @@ def link(event, anchors, *, prior=None):
         )
     candidates = strong_candidates or exact_candidates
     if len(candidates) != 1:
-        return dict(
+        unresolved = dict(
             canonical_game_id="source:" + event["provider"] + ":" + occurrence,
             sgo_event_id=None,
             status="unresolved",
-            reason="ambiguous_occurrence" if candidates else "occurrence_unmatched",
+            reason=("ambiguous_occurrence" if candidates else
+                    "occurrence_identity_conflict" if conflicts else "occurrence_unmatched"),
             native_start=event["scheduled_start"],
         )
+        if conflicts:
+            unresolved["evidence"] = {"candidate_rejections": conflicts}
+        return unresolved
     anchor, source_aliases, method, novig_roles = candidates[0]
     source = anchor["event"]
     schedule = source.get("schedule_metadata") or {}

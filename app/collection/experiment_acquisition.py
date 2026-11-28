@@ -544,7 +544,9 @@ class ExperimentAcquisition:
                 finished = worker.now()
                 snapshot['times'].update(inputs_cutoff=acquired['known_at'].isoformat(),
                     calculation_finished_at=finished.isoformat(), known_at=finished.isoformat(), captured_at=finished.isoformat())
-                from app.storage.acquisition_snapshot import finish, prepare_publication, publish, record_timing
+                from app.storage.acquisition_snapshot import (
+                    finish, observe_checkpoint_commit, prepare_publication, publish, record_timing,
+                )
                 acquired['acquisition'].setdefault('timings', {})['calculation_finished_at'] = finished.isoformat()
                 snapshot['acquisition'] = deepcopy(acquired['acquisition'])
                 prepared = prepare_publication(page, snapshot, details=acquired['acquisition'])
@@ -557,6 +559,9 @@ class ExperimentAcquisition:
                         defer_comparison='batch' in acquired['acquisition'])
                     if saved['state'] == 'captured':
                         acquired['acquisition']['timings']['checkpoint_recorded_at'] = saved['recorded_at']
+                        if task['checkpoint'] == 'late':
+                            acquired['acquisition']['checkpoint_identity'] = dict(
+                                id=saved['id'], schedule_id=task['schedule_id'])
                         publish(db, page, snapshot, details=acquired['acquisition'], prepared=prepared)
                         record_timing(db, page.pull_id, 'persistence_checked_at')
                         persisted = experiment._dbclock(db)
@@ -566,7 +571,13 @@ class ExperimentAcquisition:
                                 dispatched=True, details=acquired['acquisition'])
                     else:
                         finish(db, page.pull_id, 'failed', details=dict(acquired['acquisition'], **saved))
-                    return saved
+                if task['checkpoint'] == 'late' and saved['state'] == 'captured':
+                    try:
+                        observe_checkpoint_commit(db, page.pull_id, checkpoint_id=saved['id'],
+                            **{key: task[key] for key in ('game_id', 'schedule_id', 'target_at', 'deadline_at')})
+                    except Exception as exc:
+                        report_failure(__name__, 'checkpoint_commit_observation', exc)
+                return saved
 
     async def _failed_turn(self, worker, task, exc, acquired=None):
         reason = str(exc)[:160] or type(exc).__name__

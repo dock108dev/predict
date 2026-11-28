@@ -655,8 +655,8 @@ def _evaluate_pilot(offer, receipt, *, at, game_key, target, minimum):
     return result, calculation
 
 
-def _prophetx_fixed(offer, receipt, result, *, at, game_key, target, minimum):
-    limit, levels, eligible, complete = _book(receipt, F(result['quoted_price']), bands=())
+def _prophetx_depth(result, receipt, quote_price, *, target, minimum, probability):
+    limit, levels, eligible, complete = _book(receipt, quote_price, bands=())
     _availability(result, eligible, payout=F(1), complete=complete, stake_units=True)
     result.update(quantity_unit='usd_stake', limit_price=wire(limit),
                   best_price=wire(levels[0][0]) if levels else None)
@@ -700,17 +700,65 @@ def _prophetx_fixed(offer, receipt, result, *, at, game_key, target, minimum):
     next_win = highest_win + path.step * (1 / limit - 1) * (1 - rate) - 2 * rounding
     full = highest_win >= target or next_win - target >= rank[0]
     _size_value(result, ticks, gross, fill, path)
-    reference = offer['calculation_payload']['reference']
-    p = F(reference['probability'])
+    p = probability
     _, ev, _ = _execution_values(dict(win=p, loss=1-p), {}, fill, gross)
     result['modeled_net_ev'] = wire(ev)
     if not full and not complete:
         return _unknown(result, 'truncated')
     result.update(status='full_size' if full else 'partial_size', eligible=full and ev >= minimum,
                   reason='net_ev_below_minimum' if full and ev < minimum else None)
-    grade = _priced_calculation(offer, receipt, result, fill, at=at, game_key=game_key,
-        target=target, version=FIXED_PROFIT_VERSION, ordinary_win=gross) if result['eligible'] else None
-    return result, grade
+    return result, (fill, gross) if result['eligible'] else None
+
+
+def _prophetx_fixed(offer, receipt, result, *, at, game_key, target, minimum):
+    probability = F(offer['calculation_payload']['reference']['probability'])
+    result, priced = _prophetx_depth(result, receipt, F(result['quoted_price']),
+                                    target=target, minimum=minimum, probability=probability)
+    if priced is None:
+        return result, None
+    fill, gross = priced
+    calculation = _priced_calculation(offer, receipt, result, fill, at=at, game_key=game_key,
+        target=target, version=FIXED_PROFIT_VERSION, ordinary_win=gross)
+    return result, calculation
+
+
+def evaluate_official(receipt, *, at, reference, target, minimum):
+    """Replay a fixed-profit shadow candidate at its original native ask."""
+    book = receipt['book']
+    target, minimum = F(target), F(minimum)
+    result = dict(target_profit_usd=wire(target), actual_fills=None)
+    _result_fields(result, book)
+    levels = book.get('levels') or []
+    result['best_price'] = levels[0]['price'] if levels else None
+    result['displayed_native_quantity'] = wire(sum((F(level['quantity']) for level in levels), F(0)))
+    result['quantity_unit'] = book.get('quantity_unit', 'native_contracts')
+    if receipt.get('reason') or book.get('reason'):
+        return _unknown(result, receipt.get('reason') or book['reason'])[0]
+    try:
+        contract = execution_contract.validate_receipt(book, at, execution_contract.expected(receipt['record']))
+        if not levels:
+            return dict(result, status='confirmed_empty', eligible=False, reason=None) if book['complete'] else (
+                _unknown(result, 'truncated')[0])
+        quote_price = F(levels[0]['price'])
+        limit, _, eligible, complete = _book(book, quote_price, bands=_bands(book))
+        payout = F(book['payout_usd'])
+        _availability(result, eligible, payout=payout, complete=complete, stake_units=book['venue']=='prophetx')
+        result.update(limit_price=wire(limit), quoted_price=wire(quote_price), settlement=contract['settlement'])
+        if not reference:
+            return _unknown(result, receipt.get('reference_reason') or 'reference_exact_pair_unavailable')[0]
+        if book['fee'].get('reason'):
+            return _unknown(result, book['fee']['reason'])[0]
+        probability = F(reference['probability'])
+        partition, _ = execution_contract.settled_partition(contract, probability)
+        if partition.keys() != {'win', 'loss'}:
+            raise ValueError('depth_grading_partition_unverified')
+        execution = {'novig': _novig_depth, 'prophetx': _prophetx_depth}.get(book['venue'], _native_depth)
+        result, _ = execution(result, book, quote_price, target=target, minimum=minimum, probability=probability)
+    except _BOOK_ERRORS as exc:
+        return _unknown(result, str(exc) if isinstance(exc, ValueError) else 'depth_inputs_invalid')[0]
+    if result.get('reason') == 'net_ev_below_minimum':
+        result['status'] = 'below_ev_floor'
+    return result
 
 
 def _fixed_execution(offer, receipt, *, at, game_key, target, minimum):

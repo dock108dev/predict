@@ -310,7 +310,8 @@ async def read(client, league, events, *, at, cutoff, products, discover_window=
                 continue
             roles, ids, teams = _role_binding(winner, league, slug)
             occurrence = stamp(winner['startTime']), roles['home'], roles['away']
-            if occurrence in keys or discover_window is not None and start_window <= occurrence[0] < end_window:
+            in_window = start_window <= occurrence[0] < end_window or start_window == end_window == occurrence[0]
+            if occurrence in keys or discover_window is not None and in_window:
                 occurrences[occurrence].append((eid, winner, witness, expires, roles, ids, teams))
         except ERRORS:
             continue
@@ -367,13 +368,13 @@ async def read(client, league, events, *, at, cutoff, products, discover_window=
                                     native_market_id=str(main_market_id), source_sha256=evidence['sha256'],
                                     source_url=evidence['url'])
                             expectation = exact(discovered)
-                            selections = [(expectation['contract_id'], expectation)]
+                            selections = [*selections, (expectation['contract_id'], expectation)]
                         for cid, expected in selections:
                             binding = _binding(market, eid=eid, cid=cid, expected=expected,
                                 is_long=is_long, predicate=predicate, rule=rule, fee=fee,
                                 role_proof=dict(witness, participants=roles, native_team_ids=ids),
                                 family_proof=evidence, expiry=min(expires, listing_expiry, fee_until, occurrence[0]))
-                            if discovered is not None:
+                            if discovered is not None and cid == expectation['contract_id']:
                                 binding['_record'] = discovered
                             matches[cid].append(binding)
                 except ERRORS:

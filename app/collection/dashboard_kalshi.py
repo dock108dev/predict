@@ -186,7 +186,8 @@ class Catalog:
             if starts != sorted(starts) or starts and previous and starts[0] < previous:
                 return {}
             prospects.extend((row, evidence) for row, kickoff in zip(rows, starts, strict=True)
-                if (start <= kickoff < end if discover_window else kickoff in times) and row.get('category') == 'Sports' and row.get('type') == TYPES[league]
+                if (start <= kickoff < end or start == end == kickoff if discover_window else kickoff in times)
+                and row.get('category') == 'Sports' and row.get('type') == TYPES[league]
                 and row.get('details', {}).get('league') == NATIVE_LEAGUES.get(league, league)
                 and row['details'].get('status') == 'scheduled')
             cursor = body['cursor']
@@ -272,7 +273,7 @@ class Catalog:
                                     dict(signed_line=None if line is None else str(line)))['settlement'],
                                 main=True if ticker == role_witness['event_id'] else None)
                             expectation = exact(row)
-                            selections = [(expectation['contract_id'], dict(expectation, _record=row))]
+                            selections = [*selections, (expectation['contract_id'], dict(expectation, _record=row))]
                         for cid, expected in selections:
                             matches[cid].append((expected, raw, cell, native_side, listing, witness, identity_rows))
             return matches

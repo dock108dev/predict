@@ -558,11 +558,46 @@ def run_detail(db, run_id, *, export=False):
             from app.storage import experiment_depth
 
             result["depth_receipts"] = experiment_depth.read_ids(db, set(report["policy"]["depth_receipts"].values()))
+        if definition.get("official_shadow_attachment"):
+            result["official_shadow_export"] = official_shadow_url(run_id, "{game_id}")
         claims = list(db.execute("""SELECT * FROM public.research_workspace_catalog
             WHERE version=ANY(%s) ORDER BY version""", (definition["claim_versions"],)))
         result["claims"] = [_record(claim) for claim in claims]
         result["manifest"] = dict(bundle_sha256=hashed(result),
             exact_sources="/api/research/workspace/runs/" + run_id + "/evidence/{game_id}?export=1")
+    return result
+
+
+def official_shadow_url(run_id, game_id):
+    return f"/api/research/workspace/runs/{run_id}/official-shadow/{game_id}"
+
+
+def official_shadow_export(db, run_id, game_id):
+    """Return the optional evidence pinned to this saved run and game."""
+    from app.storage import experiment_depth
+    from . import paper_depth
+
+    row = _run(db, run_id)
+    report = row["payload"]["report"]
+    game = next((entry for entry in report["games"] if entry["game_id"] == game_id), None)
+    if game is None:
+        raise UnknownSelection("Unknown game in this saved run.")
+    if legacy := report.get("official_shadow_replay"):
+        decision = next((item for item in legacy["decisions"] if item["game_id"] == game_id), None)
+        if decision:
+            return dict(run_id=run_id, decision=decision, policy=legacy["policy"],
+                        provider_requests=0, orders_submitted=0)
+    refs = paper_depth.saved_shadows(db, run_id)
+    ref = (refs or {}).get(game_id)
+    if not ref:
+        status = "shadow_attachment_unavailable" if refs is None else "shadow_evidence_unavailable"
+        if not game.get("depth_receipt_id"):
+            status = "original_decision_receipt_unavailable"
+        return dict(run_id=run_id, game_id=game_id, status=status, provider_requests=0, orders_submitted=0)
+    original = experiment_depth.read_ids(db, [ref["depth_receipt_id"]])[ref["depth_receipt_id"]]
+    result = dict(paper_depth.official_shadow(db, game, original, ref), run_id=run_id,
+                  provider_requests=0, orders_submitted=0)
+    result["evidence_sha256"] = hashed(result)
     return result
 
 

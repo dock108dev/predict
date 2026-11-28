@@ -1,6 +1,7 @@
-"""Forward committed Novig revisions to visible, scoped Dashboard tabs."""
+"""Forward committed native revisions to visible, scoped Dashboard tabs."""
 
 import asyncio
+from datetime import datetime, timezone
 import json
 from threading import Event
 
@@ -9,6 +10,7 @@ from aiohttp import web
 
 from app.collection.current_aggregate_policy import MARKET_FAMILIES
 from app.collection.current_policy import SPORTS
+from app.comparison.snapshot_fee_outcome import VENUES
 from app.diagnostics import failure
 from app.owned_work import joined_thread
 from app.storage.native_trading import DASHBOARD_UPDATES_CHANNEL
@@ -35,7 +37,7 @@ class DashboardUpdates:
             db.execute(f"LISTEN {DASHBOARD_UPDATES_CHANNEL}")
             loop.call_soon_threadsafe(self.connected)
             while not self.stopping.is_set():
-                notices = [entry.payload for entry in db.notifies(timeout=0.5, stop_after=1)]
+                notices = [entry.payload for entry in db.notifies(timeout=0.5, stop_after=24)]
                 if notices:
                     loop.call_soon_threadsafe(self.publish, notices)
 
@@ -56,19 +58,22 @@ class DashboardUpdates:
         if self.stopping.is_set():
             return
         pending = {}
+        # NOTIFY reaches the listener after commit. Timestamp the observation
+        # separately from the calculation, request and source clocks.
+        observed = datetime.now(timezone.utc).isoformat()
         for payload in notices:
             try:
                 notice = json.loads(payload)
             except ValueError:
                 continue
-            if (not isinstance(notice, dict) or set(notice) != {"sport", "family", "revision"}
+            if (not isinstance(notice, dict) or set(notice) != {"sport", "family", "venue", "revision"}
                     or notice["sport"] not in SPORTS
-                    or notice.get("family") not in MARKET_FAMILIES.values()
+                    or notice["family"] not in MARKET_FAMILIES.values() or notice["venue"] not in VENUES
                     or not isinstance(notice["revision"], str) or len(notice["revision"]) != 64):
                 continue
             for queue, (_, filters) in self.clients.items():
                 if all(notice[key] == value for key, value in filters.items()):
-                    pending[queue] = b"data: " + json.dumps(notice).encode() + b"\n\n"
+                    pending[queue] = b"data: " + json.dumps(dict(notice, commit_observed_at=observed)).encode() + b"\n\n"
         for queue, event in pending.items():
             self.offer(queue, event)
 
@@ -85,8 +90,9 @@ class DashboardUpdates:
 
     async def stream(self, request):
         filters = dict(request.query)
-        if (set(filters) - {"sport", "family"} or filters.get("sport") not in (None, *SPORTS)
-                or filters.get("family") not in (None, *MARKET_FAMILIES.values())):
+        if (set(filters) - {"sport", "family", "venue"} or filters.get("sport") not in (None, *SPORTS)
+                or filters.get("family") not in (None, *MARKET_FAMILIES.values())
+                or filters.get("venue") not in (None, *VENUES)):
             raise PublicRequestError("Unknown Dashboard update filter.")
         if request.method == "HEAD":
             return web.Response(headers=STREAM_HEADERS)

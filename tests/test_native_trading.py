@@ -233,7 +233,9 @@ def test_five_minute_difference_needs_both_roles_and_exact_event_link_and_keeps_
     assert link(event, [saved])["status"] == "unresolved"
     saved = anchor(event)
     saved["event"].update(home="NBA:MIA", away="NBA:NYK")
-    assert link(event, [saved])["status"] == "unresolved"
+    rejected = link(event, [saved])
+    assert rejected["reason"] == "occurrence_identity_conflict"
+    assert rejected["evidence"]["candidate_rejections"] == {"sgo-game": "team_role_conflict"}
 
 
 def test_separate_meetings_and_doubleheaders_cannot_merge_by_team_labels():
@@ -251,7 +253,8 @@ def test_exact_clock_does_not_override_a_contradictory_typed_venue_link():
     event = native()
     saved = anchor(event)
     saved["event"]["shared_provider_ids"]["novig_event"] = "other-venue-game"
-    assert link(event, [saved])["status"] == "unresolved"
+    rejected = link(event, [saved])
+    assert rejected["evidence"]["candidate_rejections"] == {"sgo-game": "typed_event_id_conflict"}
 
 
 def test_typed_link_preserves_canonical_id_through_reschedule_and_beats_clock_only_match():
@@ -519,6 +522,17 @@ def test_native_price_disagreement_retains_both_prices_and_observation_skew():
     )
     observation["facts"]["line"] = "-4.5"
     assert native_trading.audit(row, book, [observation]) == []
+    # A typed same-instrument link contradicting the selected line is an
+    # identity issue even when the observation clocks agree exactly.
+    outcome = "4767e8ef-998f-4f9c-9a78-5103f13998be"
+    book["outcome_id"] = outcome
+    observation["facts"]["bookmaker_market_link"] = {
+        "host": "novig.com", "path": f"/events/{outcome}/sportsgameodds",
+    }
+    (conflict,) = native_trading.audit(row, book, [observation])
+    assert conflict["comparison"] == "identity_conflict"
+    assert conflict["price_difference"] is None
+    assert conflict["sgo_source_at"] == conflict["native_source_at"]
 
 
 def test_overlapping_book_consumers_share_one_receipt_without_redating_it():

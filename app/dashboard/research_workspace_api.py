@@ -119,6 +119,14 @@ def mount(app, *, campaigns_only=False):
         value = await work(workspace.run_detail, identity, export=bool(query))
         return _response(value, filename=f'predict-research-{value["run"]["date"]}-{identity[:12]}.json' if query else None)
 
+    async def official_shadow(request):
+        if request.query:
+            raise PublicRequestError("Invalid official shadow export.")
+        run_id = _identity(request.match_info["run_id"])
+        game_id = _identity(request.match_info["game_id"])
+        value = await work(workspace.official_shadow_export, run_id, game_id)
+        return _response(value, filename=f"predict-shadow-{run_id[:12]}-{game_id[:12]}.json")
+
     async def results(request):
         query = request.query
         variant = query.get("variant", "best_venue")
@@ -272,6 +280,7 @@ def mount(app, *, campaigns_only=False):
     app.router.add_get(BASE + '/campaigns/{campaign_id}/trades', campaign_trades)
     app.router.add_get(BASE + "/result-evidence/{result_id}", result_evidence)
     app.router.add_get(BASE + "/runs/{run_id}", run)
+    app.router.add_get(BASE + "/runs/{run_id}/official-shadow/{game_id}", official_shadow)
     app.router.add_get(BASE + "/runs/{run_id}/results", results)
     app.router.add_get(BASE + "/runs/{run_id}/offers", offers)
     app.router.add_get(BASE + "/runs/{run_id}/tickets/{ticket_id}", ticket)

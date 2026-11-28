@@ -204,6 +204,7 @@ export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal
       revision:frozen.revision,amount:requestedAmount} : {kind,snapshot:frozen,amount:requestedAmount};
     const requestSignal = signal ? AbortSignal.any([signal,requestController.signal]) : requestController.signal;
     try {
+      const requestStarted = performance.now();
       const response = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:requestSignal});
       const data = await response.json();
       if (token !== revision || signal?.aborted) return;
@@ -213,7 +214,7 @@ export function amountResearch(kind,snapshot,renderResult,{dataType='all',signal
         result = {...data.result, liquidity_evidence: data.result.liquidity_evidence || result.liquidity_evidence};
         if (result.liquidity?.modeled_stake_usd != null) lastModeled = result.liquidity;
         controller = null;
-        clock?.observe(data.read_at);
+        clock?.observe(data.read_at, requestStarted);
         refreshDashboard({force: true});
       } else {
         draw(data.result);

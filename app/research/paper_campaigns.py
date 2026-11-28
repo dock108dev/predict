@@ -316,6 +316,7 @@ def _definition(parent, job, population, recovery, fingerprint, mode, *, depth_r
     if config.get('portfolio_rule') == paper.MAIN_FIRST_ONE_PER_GAME:
         policy['duplicates'] = 'One trade per game; retain the best qualifying venue for the ranked bet.'
     if config.get('depth_policy'):
+        definition['official_shadow_attachment'] = True
         policy.update(depth_policy=config['depth_policy'], depth_receipts=depth_receipts or {},
                       execution='paper_only; full target within the frozen limit using public displayed capacity')
         if config['depth_policy'] == paper_depth.ALL_SPORTS_VERSION:
@@ -376,6 +377,7 @@ def tick(db):
                    (lease_until, *key))
     state, error, run_id, fingerprint = 'waiting_for_evidence', None, job['run_id'], job['fingerprint']
     replays = []
+    shadow_refs, attached_runs = None, []
     try:
         with db.transaction():
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
@@ -418,6 +420,14 @@ def tick(db):
                     depth_receipts = experiment_depth.input_ids(db, (
                         (task['id'], task['schedule_id'], task['target_at']) for task in tasks if task['late_id']))
                     inputs.append(depth_receipts)
+                    try:
+                        with db.transaction():
+                            shadow_refs = paper_depth.shadow_inputs(db, tasks, depth_receipts)
+                    except Exception as exc:
+                        from app.diagnostics import failure
+                        failure(__name__, 'paper_campaign_shadow_lookup_failed', exc)
+                    if shadow_refs:
+                        inputs.append(shadow_refs)
                     if job['config']['depth_policy'] == paper_depth.ALL_SPORTS_VERSION:
                         inputs.append(paper_depth.FIXED_PROFIT_VERSION)
                 fingerprint = hashed(inputs)
@@ -448,12 +458,29 @@ def tick(db):
                 run_ids = [workspace._publish(db, day, parent, definition, report, details=False)
                            for definition, report in replays]
                 run_id = run_ids[0]
+                attached_runs = run_ids
+            elif state == 'published' and run_id:
+                attached_runs = [run_id]
             _finish(db, job, lease_until, state, run_id, fingerprint, error)
     except Exception as exc:
         from app.diagnostics import failure
         failure(__name__, 'paper_campaign_day_failed', exc)
         _finish(db, job, lease_until, 'failed', job['run_id'], job['fingerprint'], REPLAY_FAILED)
         return None
+    # An optional attachment has its own transaction and capacity admission.
+    # The campaign's original report and day pointer are already committed.
+    if shadow_refs:
+        for identity in attached_runs:
+            try:
+                with db.transaction():
+                    if queue._late_capture_due(db, queue.utc()) or not db.execute(
+                        'SELECT pg_try_advisory_xact_lock(%s) acquired', (records.LOCK,)
+                    ).fetchone()['acquired']:
+                        break
+                    paper_depth.save_shadows(db, identity, shadow_refs)
+            except Exception as exc:
+                from app.diagnostics import failure
+                failure(__name__, 'paper_campaign_shadow_attachment_failed', exc)
     return run_id
 
 
@@ -875,22 +902,32 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
                                                           day['run_id'], primary).get(mode))]
 
     rows, depth_games, candidates, decisions = [], [], [], []
+    official_shadow, shadow_exports = None, {}
     selected = db.execute('''SELECT r.id,r.game_date,published.id result_id,
         r.payload#>ARRAY['report','portfolios',%s,'tickets'] frozen,
         published.payload#>ARRAY['portfolios',%s,'tickets'] graded,
+        CASE WHEN %s THEN r.payload#>'{report,official_shadow_replay}' END official_shadow,
+        d.payload->>'official_shadow_attachment'='true' AS shadow_attachment,
         (SELECT jsonb_object_agg(game->>'game_id',jsonb_build_object(
             'title',game->'title','league',game->'league','status',game->'status','depth_comparison',game->'depth_comparison',
             'depth_receipt_id',game->'depth_receipt_id','depth_candidates',game->'depth_candidates',
             'depth_metrics',game->'depth_metrics','decision_mode',game->'decision_mode'))
          FROM jsonb_array_elements(r.payload#>'{report,games}') game) games
         FROM public.research_workspace_run r
+        JOIN public.research_workspace_definition d ON d.version=r.definition_version
         LEFT JOIN public.paper_result_job j ON j.run_id=r.id
         LEFT JOIN public.paper_result_report published ON published.run_id=r.id AND published.id=j.current_result_id
-        WHERE r.id=ANY(%s) ORDER BY r.game_date DESC,r.id''', (variant, variant, run_ids))
+        WHERE r.id=ANY(%s) ORDER BY r.game_date DESC,r.id''', (variant, variant, export, run_ids))
     fallback_league = 'NCAAB' if config.get('scope', mens_d1.SCOPE) == mens_d1.SCOPE else None
     for day in selected:
         graded = {ticket['id']:ticket for ticket in day['graded'] or ()}
         games = day['games'] or {}
+        if export and day['shadow_attachment']:
+            shadow_exports[day['id']] = workspace.official_shadow_url(day['id'], '{game_id}')
+        if shadow := day['official_shadow']:
+            if official_shadow is None:
+                official_shadow = dict(shadow, decisions=[])
+            official_shadow['decisions'].extend(dict(decision, run_id=day['id']) for decision in shadow['decisions'])
         if config.get('depth_policy'):
             for game_id, game in sorted(games.items(), key=lambda pair: pair[1]['title'] or pair[0]):
                 depth_games.append(game)
@@ -937,6 +974,10 @@ def trades(db, identity, variant=None, mode=None, *, export=False):
         if export:
             value['depth_receipts'] = experiment_depth.read_ids(db, depth_ids)
             value['depth_followups'] = followups
+            if official_shadow:
+                value['official_shadow_replay'] = official_shadow
+            if shadow_exports:
+                value['official_shadow_exports'] = shadow_exports
             value['evidence_sha256'] = hashed(value)
     return value
 

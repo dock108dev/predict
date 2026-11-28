@@ -15,6 +15,7 @@ from app.comparison.experiment_depth_execution import evaluate_at_stake
 from app.comparison.native_observation import WITHDRAWALS, adopt, clock, revision
 from app.comparison.pregame_valuation import american, decimal_display
 from app.comparison.sgo_native_binding import pregame_subject_roles
+from app.comparison.snapshot_fee_outcome import VENUES
 from . import sgo_native_catalog
 from .current_pregame_depth import _present, unknown
 from .current_rows import contract_id
@@ -24,7 +25,7 @@ from .store import encoded, hashed, stamp
 
 VERSION = "native-trading-offers-1"
 PUBLICATION_LOCK = 901128
-DASHBOARD_UPDATES_CHANNEL = "predict_novig_dashboard"
+DASHBOARD_UPDATES_CHANNEL = "predict_native_dashboard"
 HORIZON = timedelta(hours=24)
 REFERENCE_AGE = timedelta(seconds=900)
 MAX_SNAPSHOT_BYTES = 512 * 1024
@@ -33,6 +34,8 @@ SUPERSEDED_EVIDENCE_AGE = timedelta(minutes=5)
 SUPERSEDED_PRESSURE_AGE = timedelta(minutes=2)
 PAST_OFFER_AGE = timedelta(hours=2)
 PRIORITY_WINDOW = timedelta(hours=2)
+BOOK_OBSERVED = """(o.book->'levels' NOT IN ('[]'::jsonb,'null'::jsonb)
+    OR o.book->'complete'='true'::jsonb) IS TRUE"""
 
 
 # The same negative authority applies to the board, the detail/amount route,
@@ -186,19 +189,18 @@ def audit(record, book, observations):
         q = row["facts"]
         line = q.get("line")
         venue = DISPLAY_NAMES.get(q.get("venue"), q.get("venue"))
-        if (
-            venue != book["venue"]
-            or q.get("market") != contract["family"]
-            or q.get("period") != "game"
-            or q.get("side") != contract["selected_side"]
-            or (None if line is None else F(line))
-            != (None if contract["signed_line"] is None else F(contract["signed_line"]))
-        ):
+        if venue != book["venue"]:
             continue
         counterpart = q.get("bookmaker_market_link")
         exact_outcome = outcome_link_id(counterpart) if venue == "novig" else None
-        if exact_outcome and exact_outcome != book["outcome_id"]:
+        linked = exact_outcome is not None and exact_outcome == book.get("outcome_id")
+        signature = (q.get("market") == contract["family"] and q.get("period") == "game"
+            and q.get("side") == contract["selected_side"]
+            and (None if line is None else F(line))
+            == (None if contract["signed_line"] is None else F(contract["signed_line"])))
+        if not signature and not linked:
             continue
+        conflict = exact_outcome is not None and signature != linked
         source_at = q.get("source_at")
         from .store import exact_time
 
@@ -210,7 +212,7 @@ def audit(record, book, observations):
         original = q.get("price_american")
         diff = (
             None
-            if not levels or original is None
+            if conflict or not levels or original is None
             else F(levels[0]["price"]) - F(american_probability(original))
         )
         output.append(
@@ -219,8 +221,8 @@ def audit(record, book, observations):
                 sgo_revision=row["revision"],
                 sgo_bookmaker=q.get("venue"),
                 sgo_link=counterpart,
-                instrument_match="exact_outcome_link"
-                if exact_outcome
+                instrument_match="identity_conflict" if conflict else "exact_outcome_link"
+                if linked
                 else "selection_signature",
                 sgo_price_american=original,
                 native_price=None if not levels else levels[0]["price"],
@@ -233,7 +235,7 @@ def audit(record, book, observations):
                 sgo_received_at=q.get("received_at"),
                 time_skew_seconds=None if skew is None else str(skew),
                 price_difference=wire(diff) if diff is not None else None,
-                comparison="venue_equivalence_unverified"
+                comparison="identity_conflict" if conflict else "venue_equivalence_unverified"
                 if q.get("venue") == "polymarket"
                 else "clock_unavailable"
                 if skew is None
@@ -483,6 +485,8 @@ def publish(db, observations, *, at, prune=False):
         registered = {game["event"]["id"] for game in games if game["registered"]}
         count = 0
         refs = {}
+        notices = {}
+        deferred_reason = None
         for incoming in observations.values():
             record = incoming.get("_record")
             if not record or not incoming.get("contract"):
@@ -575,12 +579,8 @@ def publish(db, observations, *, at, prune=False):
             if size > MAX_SNAPSHOT_BYTES:
                 continue
             if size > available:
-                return dict(
-                    state="deferred",
-                    reason="native_snapshot_capacity",
-                    published=count,
-                    references=refs,
-                )
+                deferred_reason = "native_snapshot_capacity"
+                break
             if game_link["status"] == "matched" and eid not in registered:
                 db.execute(
                     """INSERT INTO public.native_trading_sgo_game(sgo_event_id,canonical_game_id)
@@ -635,12 +635,17 @@ def publish(db, observations, *, at, prune=False):
             )
             count += 1
             refs[cid] = reference_until
-            if receipt["venue"] == "novig":
-                notice = dict(sport=event_league(record), family=value["family"], revision=snapshot)
-                db.execute(
-                    "SELECT pg_notify(%s,%s)",
-                    (DASHBOARD_UPDATES_CHANNEL, encoded(notice).decode()),
-                )
+            notices[receipt["venue"], event_league(record), value["family"]] = snapshot
+        if notices:
+            # One committed invalidation per filter scope is enough to re-read the board.
+            payloads = [encoded(dict(venue=venue, sport=sport, family=family, revision=snapshot)).decode()
+                        for (venue, sport, family), snapshot in notices.items()]
+            db.execute(
+                "SELECT pg_notify(%s, payload) FROM unnest(%s::text[]) payload",
+                (DASHBOARD_UPDATES_CHANNEL, payloads),
+            )
+        if deferred_reason:
+            return dict(state="deferred", reason=deferred_reason, published=count, references=refs)
         return dict(state="ready", published=count, references=refs)
 
 
@@ -666,15 +671,14 @@ def dashboard(
 
     mode = read_fee_mode(db)
     rows = db.execute(
-        """SELECT o.reference_valid_until,o.book_valid_until,o.active,
+        f"""SELECT o.reference_valid_until,o.book_valid_until,o.active,
         CASE WHEN o.active AND (%(show_all)s OR o.book_valid_until>%(at)s)
             THEN s.payload->'row' END dashboard_row,
         CASE WHEN o.active AND o.book_valid_until>%(at)s THEN s.payload->'fee_mode' END fee_mode,
         CASE WHEN %(show_all)s AND COALESCE(o.book_valid_until<=%(at)s,true)
             THEN o.book->>'reason' END book_reason,
         CASE WHEN %(show_all)s AND COALESCE(o.book_valid_until<=%(at)s,true)
-            THEN o.book->'levels' NOT IN ('[]'::jsonb,'null'::jsonb)
-                OR o.book->'complete'='true'::jsonb END book_observed,
+            THEN {BOOK_OBSERVED} END book_observed,
         CASE WHEN o.active AND o.book_valid_until>%(at)s AND o.reference_valid_until IS NOT NULL THEN
         """
         + _reference_current("o.game_link")
@@ -907,18 +911,41 @@ def detail(db, query, *, at, stake="100", frozen=False):
     return dict(output, liquidity=preview)
 
 
+def _coverage_access(db, *, sport):
+    # Read the bounded collector status already committed for Settings.
+    row = db.execute("""SELECT status#>'{background_work,progress,dashboard_depth,access_gaps}' access,
+        status#>'{background_work,progress,dashboard_depth,league_access_gaps}' leagues,
+        paused_sources,global_stopped FROM public.data_runtime WHERE singleton""").fetchone() or {}
+    scoped = {
+        venue: {league: reason for league, reason in leagues.items() if not sport or sport == league}
+        for venue, leagues in (row.get("leagues") or {}).items()
+    }
+    return {
+        venue: dict(
+            reason=(row.get("access") or {}).get(venue),
+            leagues=scoped.get(venue, {}),
+            collection="collection_stopped" if row.get("global_stopped") else
+            "source_paused" if venue in (row.get("paused_sources") or ()) else None,
+        )
+        for venue in VENUES
+    }
+
+
 def coverage(db, *, at, sport=None, family=None, venue=None):
     from app.comparison.fee_mode import read as read_fee_mode
 
     mode = read_fee_mode(db)
     rows = db.execute(
-        """SELECT o.venue,o.league,o.family,o.line_role,o.native_event_id,o.native_market_id,
+        f"""SELECT o.venue,o.league,o.family,o.line_role,o.native_event_id,o.native_market_id,
         o.starts_at,o.active,o.book_valid_until,o.reference_valid_until,
         o.game_link->>'status' match_status,o.game_link->>'reason' match_reason,
         o.book->>'reason' book_reason,
+        o.book#>>'{{fee,reason}}' fee_reason,
+        o.book#>>'{{contract,settlement,reason}}' settlement_reason,
+        {BOOK_OBSERVED} book_observed,
         s.payload->>'reference_reason' reference_reason,
         CASE WHEN o.active AND o.book_valid_until>%(at)s
-             THEN s.payload#>'{row,liquidity}' ELSE '{}'::jsonb END liquidity,
+             THEN s.payload#>'{{row,liquidity}}' ELSE '{{}}'::jsonb END liquidity,
         CASE WHEN o.active AND o.book_valid_until>%(at)s THEN s.payload->'fee_mode' END fee_mode,
         CASE WHEN o.reference_valid_until IS NOT NULL THEN
         """
@@ -986,6 +1013,7 @@ def coverage(db, *, at, sport=None, family=None, venue=None):
                 and row["fee_mode"] == mode
                 and value.get("modeled_net_ev") is not None
             ),
+            ev_eligible=int(fresh and usable and row["fee_mode"] == mode and bool(value.get("eligible"))),
         )
         group.update(counts)
         if priority:
@@ -1004,12 +1032,16 @@ def coverage(db, *, at, sport=None, family=None, venue=None):
         elif not row["active"]:
             states.add(row["book_reason"] or "withdrawn")
         elif not fresh:
-            states.add(row["book_reason"] or "stale_book")
+            states.add("stale_book" if row["book_observed"] else "book_unobserved")
+            if row["book_reason"]:
+                states.add(row["book_reason"])
         else:
-            if size in ("confirmed_empty", "below_floor"):
+            if size in ("confirmed_empty", "above_limit"):
                 states.add(size)
-            if value.get("reason"):
-                states.add(value["reason"])
+            if row["fee_mode"] != mode:
+                states.add("fee_mode_changed")
+            states.update(reason for reason in (value.get("reason"), row["fee_reason"],
+                                                  row["settlement_reason"]) if reason)
         reasons.update(states)
         if priority:
             priority_reasons.update(states)
@@ -1041,8 +1073,22 @@ def coverage(db, *, at, sport=None, family=None, venue=None):
                 **group,
             )
         )
+    inventory = {row["venue"] for row in output}
+    access = _coverage_access(db, sport=sport)
+    for source in (venue,) if venue else VENUES:
+        if source not in inventory:
+            output.append(dict(venue=source, league=sport, family=family, line_role=None,
+                opportunities=0, offers=0, exact_matches=0, fresh_books=0, usable_references=0,
+                assessable=0, full_size=0, ev_assessable=0, ev_eligible=0, unique_books=0,
+                fresh_books_with_usable_reference=0,
+                unique_fresh_books=0, priority_unique_fresh_books=0,
+                priority_offers=0, priority_exact_matches=0, priority_fresh_books=0,
+                priority_usable_references=0, priority_fresh_books_with_usable_reference=0,
+                priority_assessable=0, priority_full_size=0, priority_ev_assessable=0,
+                priority_ev_eligible=0, reasons={}, priority_reasons={}))
     return dict(
         coverage=output,
+        access={source: value for source, value in access.items() if not venue or source == venue},
         total=len(rows),
         provider_requests=0,
         scheduled_calculations=0,

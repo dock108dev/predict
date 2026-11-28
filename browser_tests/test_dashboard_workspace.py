@@ -3,18 +3,337 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
+from unittest import skipUnless
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 
 from browser_tests.test_pregame_current import offer
+from tests.latest_board_fixture import LatestBoardFixture, SOCKET
 
 ASSETS = (
     Path(__file__).resolve().parents[1] / "app/dashboard/opportunity_static/current"
 )
 
 
-def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
+@skipUnless(SOCKET, "Disposable PostgreSQL required")
+class DashboardCommittedBooks(LatestBoardFixture):
+    async def test_all_venues_receive_committed_books_and_clear_on_original_expiry(
+        self,
+    ):
+        with self.connect() as db:
+            db.execute("TRUNCATE native_trading_offer,native_trading_snapshot")
+        await self.verify_commits()
+
+    async def test_each_venue_filter_receives_updates_and_preserves_expiry(self):
+        for venue in ("novig", "kalshi", "polymarket_us", "prophetx"):
+            with self.subTest(venue=venue):
+                with self.connect() as db:
+                    db.execute("TRUNCATE native_trading_offer,native_trading_snapshot")
+                await self.verify_commits(venue)
+
+    async def verify_commits(self, selected_venue=""):
+        from aiohttp.test_utils import TestServer
+        from playwright.async_api import async_playwright, expect
+
+        from app.collection.native_trading_identity import (
+            native_event,
+            record,
+            expected,
+        )
+        from app.dashboard.workspace_app import create_app
+        from app.storage import native_trading
+        from tests.current_fixture import InjectedTestProvider
+        from tests.test_current_state import owner
+        from tests.test_liquidity_execution import admitted
+
+        url = "/?board_sport=NBA&board_family=spread&board_view=all"
+        labels = {
+            "novig": "Novig",
+            "kalshi": "Kalshi",
+            "polymarket_us": "Polymarket US",
+            "prophetx": "ProphetX",
+        }
+        venues = [selected_venue] if selected_venue else list(labels)
+        if selected_venue:
+            url += f"&board_venue={selected_venue}"
+        provider = InjectedTestProvider()
+        provider.status = lambda: {}
+        with patch("app.dashboard.research_api.connect", self.connect):
+            app = create_app(provider, owner())
+        async with TestServer(app) as server, async_playwright() as playwright:
+            browser = await playwright.chromium.launch()
+            page = await browser.new_page()
+            at = datetime.now(timezone.utc)
+            expiry = at + timedelta(seconds=60)
+            starts = (at + timedelta(hours=1)).isoformat()
+            await page.clock.install(time=at)
+            await page.add_init_script("""(() => {
+              window.dashboardNotices = [];
+              window.EventSource = class extends EventSource {
+                constructor(...args) {
+                  super(...args);
+                  this.addEventListener('message', event => dashboardNotices.push(JSON.parse(event.data)));
+                }
+              };
+            })()""")
+            external, reads = [], []
+            origin = str(server.make_url("/"))
+
+            def record_read(request):
+                if not request.url.startswith(origin):
+                    external.append(urlparse(request.url).netloc)
+                if urlparse(request.url).path == "/api/research/dashboard":
+                    reads.append(parse_qs(urlparse(request.url).query))
+
+            page.on("request", record_read)
+            try:
+                await page.goto(str(server.make_url(url)))
+                await page.wait_for_function(
+                    "() => dashboardNotices.some(notice => notice.ready)"
+                )
+                await expect(page.locator("#dashboard-rows > tr")).to_have_count(0)
+                coverage = page.locator("#dashboard-liquidity-coverage")
+                control = coverage.get_by_text("Liquidity coverage", exact=True)
+                await control.click()
+                await expect(
+                    coverage.get_by_text("No stored offers", exact=True)
+                ).to_have_count(len(venues))
+                await control.click()
+                table = page.get_by_role("table", name="All venue offers")
+                for venue in venues:
+                    event = native_event(
+                        venue,
+                        f"{venue}-fixture-event",
+                        "NBA",
+                        starts,
+                        {"home": "NBA:ORL", "away": "NBA:MIL"},
+                        {"home": "Orlando Magic", "away": "Milwaukee Bucks"},
+                        proof={"fixture": "exact team roles"},
+                    )
+                    selection = record(
+                        venue,
+                        event,
+                        f"{venue}-market",
+                        "home-side",
+                        "buy",
+                        "spread",
+                        "home",
+                        "-1.5",
+                        settlement={},
+                    )
+                    book = admitted((".25", 200000), league="NBA", line="-1.5")
+                    book["contract"].update(expected(selection))
+                    book.update(
+                        venue=venue,
+                        event_id=event["id"],
+                        market_id=f"{venue}-market",
+                        outcome_id="home-side",
+                        opposite_outcome_id="away-side",
+                        native_side="buy",
+                        source_at=at.isoformat(),
+                        received_at=at.isoformat(),
+                        valid_until=expiry.isoformat(),
+                        legal_prices=[".25"],
+                        sequence=0,
+                        _record=selection,
+                    )
+                    with self.connect() as db:
+                        result = native_trading.publish(db, {venue: book}, at=at)
+                    assert result["published"] == 1
+                    await page.wait_for_function(
+                        """([venue, published]) => dashboardNotices.some(notice =>
+                            notice.venue === venue && Date.parse(notice.commit_observed_at) >= Date.parse(published))""",
+                        arg=[venue, at.isoformat()],
+                    )
+                    row = table.get_by_role("row").filter(has_text=labels[venue])
+                    await expect(
+                        row.get_by_text("Fresh book", exact=False)
+                    ).to_be_visible()
+                    await expect(
+                        row.get_by_text("EV unavailable", exact=True)
+                    ).to_be_visible()
+                    await expect(
+                        row.locator('[data-label="Posted odds"]')
+                    ).not_to_have_text("Unavailable")
+                # Different durable revisions may arrive in one listener batch or
+                # several browser messages. Only the last displayed price matters.
+                before_burst = len(reads)
+                with self.connect() as db:
+                    for sequence in range(1, 7):
+                        observed_at = datetime.now(timezone.utc)
+                        price = ".30" if sequence == 6 else ".25"
+                        update = dict(
+                            book,
+                            sequence=sequence,
+                            source_at=observed_at.isoformat(),
+                            received_at=observed_at.isoformat(),
+                            legal_prices=[price],
+                            levels=[dict(price=price, quantity="200000")],
+                        )
+                        result = native_trading.publish(
+                            db, {venue: update}, at=observed_at
+                        )
+                        assert result["published"] == 1
+                await expect(row.locator('[data-label="Posted odds"]')).to_contain_text(
+                    "+233"
+                )
+                assert 1 <= len(reads) - before_burst <= 2
+                assert page.url == str(server.make_url(url))
+                await expect(page.locator("#dashboard-rows > tr")).to_have_count(
+                    len(venues)
+                )
+                await page.evaluate("""() => {
+                  for (const hidden of [true, false]) {
+                    Object.defineProperty(document, 'hidden', {configurable: true, value: hidden});
+                    document.dispatchEvent(new Event('visibilitychange'));
+                  }
+                }""")
+                await page.wait_for_function(
+                    "() => dashboardNotices.filter(notice => notice.ready).length === 2"
+                )
+                assert page.url == str(server.make_url(url))
+                await expect(page.get_by_role("combobox", name="Sport")).to_have_value(
+                    "NBA"
+                )
+                await expect(
+                    page.get_by_role("combobox", name="Bet type")
+                ).to_have_value("spread")
+                await expect(page.get_by_role("combobox", name="Venue")).to_have_value(
+                    selected_venue
+                )
+                assert all(
+                    scope.get("venue", [""]) == [selected_venue] for scope in reads
+                )
+                # Advance the tab only. A repeat response from the unchanged
+                # database must not move the tab's original evidence deadline.
+                await page.clock.pause_at(expiry - timedelta(milliseconds=500))
+                await expect(
+                    table.get_by_text("Fresh book", exact=False)
+                ).to_have_count(len(venues))
+                await page.clock.run_for(1000)
+                await expect(
+                    table.get_by_text("Book expired", exact=False)
+                ).to_have_count(len(venues))
+                await expect(
+                    table.locator('[data-label="Posted odds"]').get_by_text(
+                        "Unavailable", exact=True
+                    )
+                ).to_have_count(len(venues))
+                await expect(table.get_by_text("supported", exact=False)).to_have_count(
+                    0
+                )
+                response = await page.request.get(
+                    str(server.make_url("/api/research/dashboard-coverage"))
+                )
+                assert (await response.json())["provider_requests"] == 0
+                assert not external
+            finally:
+                await browser.close()
+
+
+def test_dashboard_rejects_a_late_first_body_and_batches_update_notices():
+    import asyncio
+
+    from aiohttp import web
+    from aiohttp.test_utils import TestServer
+    from playwright.async_api import async_playwright, expect
+
+    async def journey():
+        now = datetime.now(timezone.utc)
+        local = now - timedelta(hours=4)
+        opened, release, finish, reread = [asyncio.Event() for _ in range(4)]
+        reads = []
+
+        async def board(_request):
+            at = now + timedelta(seconds=1 if reads else 0)
+            row = dict(
+                offer(),
+                venue="novig",
+                native_source={"provider": "novig"},
+                book_status="fresh",
+                eligible_until=(
+                    at + timedelta(milliseconds=500 if not reads else 5000)
+                ).isoformat(),
+                posted={"native_price_probability": ".25"},
+                display={"posted_odds": "+300"},
+                calculation={"status": "unavailable", "net_ev_ratio": None},
+                liquidity={"status": "full_size", "modeled_stake_usd": "100"},
+            )
+            reads.append(at)
+            if len(reads) == 1:
+                opened.set()
+                await release.wait()
+            else:
+                reread.set()
+            return web.json_response(
+                dict(rows=[row], total=1, offset=0, read_at=at.isoformat())
+            )
+
+        async def stream(request):
+            response = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
+            await response.prepare(request)
+            await response.write(b": connected\n\n")
+            await finish.wait()
+            return response
+
+        async def page_response(_request):
+            return web.FileResponse(ASSETS / "dashboard.html")
+
+        app = web.Application()
+        app.router.add_get("/", page_response)
+        app.router.add_get("/api/research/dashboard", board)
+        app.router.add_get("/api/research/dashboard-updates", stream)
+        app.router.add_static("/view/current", ASSETS)
+        async with TestServer(app) as server, async_playwright() as playwright:
+            browser = await playwright.chromium.launch()
+            page = await browser.new_page()
+            await page.clock.install(time=local)
+            await page.add_init_script("""window.EventSource = class extends EventSource {
+              constructor(...args) { super(...args); window.dashboardStream = this; }
+            };""")
+            try:
+                await page.goto(str(server.make_url("/?board_view=all")))
+                await asyncio.wait_for(opened.wait(), 5)
+                await page.wait_for_function(
+                    "() => dashboardStream.readyState === EventSource.OPEN"
+                )
+                await page.clock.pause_at(local + timedelta(seconds=1))
+                release.set()
+                table = page.get_by_role("table", name="All venue offers")
+                await expect(
+                    table.get_by_text("Book expired", exact=False)
+                ).to_be_visible()
+                price = table.locator('[data-label="Posted odds"]')
+                await expect(price).to_have_text("Unavailable")
+                await expect(table.get_by_text("supported", exact=False)).to_have_count(
+                    0
+                )
+
+                for _ in range(6):
+                    await page.evaluate(
+                        "dashboardStream.dispatchEvent(new MessageEvent('message'))"
+                    )
+                    await page.clock.run_for(25)
+                assert len(reads) == 1
+                await page.clock.run_for(100)
+                await asyncio.wait_for(reread.wait(), 2)
+                await expect(price).to_have_text("25% (+300)")
+                await expect(
+                    table.get_by_text("Fresh book", exact=False)
+                ).to_be_visible()
+                assert len(reads) == 2
+            finally:
+                release.set()
+                finish.set()
+                await browser.close()
+
+    asyncio.run(journey())
+
+
+@pytest.mark.parametrize("venue", ["novig", "kalshi", "polymarket_us", "prophetx", ""])
+def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up(venue):
     import asyncio
 
     from aiohttp import web
@@ -32,7 +351,7 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
         failed_reads = []
         row = dict(
             offer(),
-            venue="novig",
+            venue=venue or "novig",
             pull_id="committed-pull",
             id="committed-offer",
             line="-1.5",
@@ -98,8 +417,11 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
             )
             try:
                 url = server.make_url(
-                    "/?board_view=all&board_venue=novig&board_sport=NCAAB&board_family=total"
+                    f"/?board_view=all&board_venue={venue}&board_sport=NCAAB&board_family=total"
                 )
+                expected_scope = dict(sport="NCAAB", family="total")
+                if venue:
+                    expected_scope["venue"] = venue
                 await page.goto(str(url))
                 await page.wait_for_function(
                     "() => streams[0]?.readyState === EventSource.CLOSED"
@@ -124,9 +446,9 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
                     page.get_by_role("button", name="Reload saved prices")
                 ).to_be_enabled()
                 assert len(board_scopes) == 3 and not failed_reads
-                assert stream_scopes == [dict(sport="NCAAB", family="total")] * 2
+                assert stream_scopes == [expected_scope] * 2
                 assert all(
-                    scope["sport"] == "NCAAB" and scope["venue"] == "novig"
+                    scope["sport"] == "NCAAB" and scope.get("venue", "") == venue
                     for scope in board_scopes
                 )
 
@@ -155,13 +477,21 @@ def test_dashboard_reconnects_and_coalesces_fallback_while_catching_up():
                 assert await page.evaluate(
                     "streams[2].readyState === EventSource.CLOSED"
                 )
-                assert stream_scopes[-1] == dict(sport="NBA", family="total")
-                await page.get_by_role("combobox", name="Venue").select_option("")
+                assert stream_scopes[-1] == dict(expected_scope, sport="NBA")
+                other_venue = "" if venue else "novig"
+                await page.get_by_role("combobox", name="Venue").select_option(
+                    other_venue
+                )
+                await page.wait_for_function(
+                    "() => streams[4]?.readyState === EventSource.OPEN"
+                )
                 assert await page.evaluate(
                     "streams[3].readyState === EventSource.CLOSED"
                 )
-                await page.clock.fast_forward(30000)
-                assert len(stream_scopes) == 4
+                expected_scope = dict(sport="NBA", family="total")
+                if other_venue:
+                    expected_scope["venue"] = other_venue
+                assert stream_scopes[-1] == expected_scope
             finally:
                 release.set()
                 finish.set()

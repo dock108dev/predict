@@ -227,7 +227,11 @@ class ExperimentAcquisitionSQL(PregameFixture):
                 'calculation_finished_at', 'projection_ready_at', 'checkpoint_recorded_at')]
             self.assertEqual(ordered, sorted(ordered))
             self.assertLessEqual(at - timedelta(seconds=2), ordered[0])
-            self.assertLessEqual(datetime.fromisoformat(clocks['persistence_checked_at']), at + timedelta(seconds=58))
+            checked = datetime.fromisoformat(clocks['persistence_checked_at'])
+            observed = datetime.fromisoformat(clocks['commit_observed_at'])
+            self.assertLessEqual(ordered[-1], checked)
+            self.assertLessEqual(checked, observed)
+            self.assertLessEqual(observed, at + timedelta(seconds=58))
 
         with self.connect() as db:
             before = list(db.execute('SELECT late_id,comparison_id FROM ev_experiment_game ORDER BY id'))
@@ -371,6 +375,7 @@ class ExperimentAcquisitionSQL(PregameFixture):
     async def test_batch_rechecks_stop_after_account_read_and_spends_nothing(self):
         _, bodies = self.late_pair()
         service, worker, requests = self.worker(next(iter(bodies.values())))
+        paused = True
         stopped = False
         original_usage = worker.collector.account_usage
 
@@ -380,10 +385,14 @@ class ExperimentAcquisitionSQL(PregameFixture):
             stopped = True
             return usage
 
-        worker.controls = lambda:dict(stopped=stopped, source_paused=False)
+        worker.controls = lambda:dict(stopped=stopped, source_paused=paused)
         worker.collector.account_usage = stop_after_usage
         scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
         with patch.object(acquisition, 'connect', self.connect):
+            self.assertFalse(await scheduler.tick())
+            self.assertEqual(scheduler.progress['state'], 'source_stopped_or_paused')
+            self.assertFalse(stopped)
+            paused = False
             self.assertTrue(await scheduler.tick())
             self.assertTrue(stopped)
             await scheduler.tick()
@@ -391,6 +400,38 @@ class ExperimentAcquisitionSQL(PregameFixture):
         status = worker.ledger.status(worker.window_id)
         self.assertEqual((status['charged'], status['held'], status['interrupted']), (0, 0, 0))
         self.assertEqual(scheduler.progress['state'], 'source_stopped_or_paused')
+
+    async def test_post_commit_audit_failure_leaves_paid_checkpoint_committed(self):
+        from app.storage import acquisition_snapshot
+
+        _, bodies = self.late_pair()
+        service, worker, requests = self.worker(next(iter(bodies.values())))
+        scheduler = acquisition.ExperimentAcquisition(service, connector=self.connect)
+
+        def unavailable(_db, pull_id, **identity):
+            with self.connect() as observer:
+                row = observer.execute("""SELECT t.state,p.details FROM market_pull p
+                    JOIN ev_experiment_game g ON g.source_event_id=p.request_scope->>'eventIDs'
+                    JOIN ev_experiment_task t ON t.game_id=g.id AND t.checkpoint='late'
+                    WHERE p.pull_id=%s""", (pull_id,)).fetchone()
+            self.assertEqual(row['state'], 'captured')
+            self.assertNotIn('commit_observed_at', row['details']['timings'])
+            self.assertEqual(row['details']['checkpoint_identity']['id'], identity['checkpoint_id'])
+            raise OSError('fixture observation failed')
+
+        with (patch.object(acquisition, 'connect', self.connect),
+              patch.object(acquisition_snapshot, 'observe_checkpoint_commit', side_effect=unavailable),
+              patch.object(acquisition, 'report_failure') as reported):
+            self.assertTrue(await scheduler.tick())
+            self.assertFalse(await scheduler.tick())
+        self.assertEqual(scheduler.progress['state'], 'ready')
+        self.assertEqual([scope['limit'] for scope in requests], [2])
+        self.assertEqual(worker.ledger.status(worker.window_id)['charged'], 1)
+        with self.connect() as db:
+            self.assertEqual(db.execute('SELECT count(*) n FROM ev_experiment_checkpoint_commit').fetchone()['n'], 0)
+        reported.assert_called_once()
+        self.assertEqual(reported.call_args.args[1], 'checkpoint_commit_observation')
+        self.assertIsInstance(reported.call_args.args[2], OSError)
 
     async def test_storage_pressure_refuses_unreserved_member_without_starving_reserved_game(self):
         from app.research import records
@@ -650,10 +691,14 @@ class ExperimentAcquisitionSQL(PregameFixture):
             commit_function = db.execute("SELECT current_setting('track_commit_timestamp') enabled").fetchone()['enabled']
             clock = 'pg_xact_commit_timestamp(r.xmin)' if commit_function == 'on' else 'clock_timestamp()'
             results = {row['source_event_id']: row for row in db.execute(f'''
-                SELECT g.source_event_id,t.state,t.result_id,t.last_reason,t.attempts,r.recorded_at,
+                SELECT g.source_event_id,t.schedule_id,t.target_at,t.state,t.result_id,t.last_reason,t.attempts,r.recorded_at,
+                (p.details#>>'{{timings,commit_observed_at}}')::timestamptz AS commit_observed_at,
                 {clock} AS commit_at,g.late_reserved_bytes FROM ev_experiment_task t
                 JOIN ev_experiment_game g ON t.game_id=g.id
-                LEFT JOIN ev_experiment_record r ON t.result_id=r.id WHERE t.checkpoint='late' ''')}
+                LEFT JOIN ev_experiment_record r ON t.result_id=r.id
+                LEFT JOIN market_pull p ON p.request_scope->>'eventIDs'=g.source_event_id
+                  AND (p.details#>>'{{timings,checkpoint_recorded_at}}')::timestamptz=r.recorded_at
+                WHERE t.checkpoint='late' ''')}
             frame_clock = 'pg_xact_commit_timestamp(xmin)' if commit_function == 'on' else 'NULL'
             frame = db.execute(f'''SELECT {frame_clock} AS commit_at,facts->>'receipt_sha256' AS receipt
                 FROM sgo_event_evidence WHERE kind='frame' AND event_id=%s''', (ordinary_id,)).fetchone()
@@ -686,6 +731,9 @@ class ExperimentAcquisitionSQL(PregameFixture):
         self.assertEqual(set(late_storage), set(checkpoints))
         for event_id, result in results.items():
             self.assertEqual(result['state'], 'captured', result)
+            self.assertEqual(result['target_at'], target)
+            self.assertLessEqual(result['recorded_at'], result['commit_observed_at'])
+            self.assertLessEqual(result['commit_observed_at'], deadline)
             self.assertLessEqual(result['commit_at'], deadline)
             self.assertEqual((result['late_reserved_bytes'], result['attempts']), (0, 1))
             self.assertGreater(late_storage[event_id]['late_reserved_bytes'], 0)

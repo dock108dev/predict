@@ -4,6 +4,7 @@ import asyncio
 from collections import Counter, defaultdict
 from datetime import timedelta
 
+from app.comparison.native_observation import adopt
 from app.research.experiment import utc
 from app.storage.store import connect, stamp
 
@@ -32,10 +33,12 @@ class NativeTrading:
         self.references = {}
         self.last_pruned = None
         self.prophetx = None
+        self.stream = None
         self.progress = dict(
             state="starting",
             source_authority="official_venue_apis",
             access_gaps={"prophetx": "production_market_data_key_required"},
+            league_access_gaps={"prophetx": {}},
         )
 
     def enabled(self, venue=None):
@@ -200,9 +203,13 @@ class NativeTrading:
                     result, reason = await self.prophetx.discover(
                         league, start, end, cutoff
                     )
-                    if reason:
+                    league_gaps = self.progress["league_access_gaps"]["prophetx"]
+                    if reason and reason.startswith("prophetx_tournament_"):
+                        league_gaps[league] = reason
+                    elif reason and reason != "deferred":
                         self.progress["access_gaps"]["prophetx"] = reason
-                    else:
+                    elif not reason:
+                        league_gaps.pop(league, None)
                         self.progress["access_gaps"].pop("prophetx", None)
                     return result
                 return await pmus(
@@ -426,7 +433,8 @@ class NativeTrading:
             else {}
         )
         if stream is not None:
-            results.update(await stream.read(hot_pmus, cutoff))
+            for cid, book in (await stream.read(hot_pmus, cutoff, new_only=True)).items():
+                results[cid] = adopt(results.get(cid), book)
         pending = {cid: b for cid, b in bindings.items() if cid not in results}
         results.update(await native.read_native(pending, cutoff, batch=True))
         return results
@@ -436,8 +444,10 @@ class NativeTrading:
             return {}
         events = {b["event_id"] for b in plan.values() if b["venue"] == "prophetx"}
         found, reason = await self.prophetx.refresh(events, cutoff)
-        if reason:
+        if reason and reason != "deferred":
             self.progress["access_gaps"]["prophetx"] = reason
+        elif found:
+            self.progress["access_gaps"].pop("prophetx", None)
         return {cid: book for cid, book in found.items() if cid in self.bindings}
 
     async def read_novig(self, novig, plan, cutoff):
@@ -630,7 +640,7 @@ class NativeTrading:
         from .native_trading_prophetx import MarketData, credentials
         from .native_trading_pmus_stream import DashboardMarketStream
 
-        stream = DashboardMarketStream(
+        self.stream = stream = DashboardMarketStream(
             now=self.now,
             allowed=lambda: self.enabled("polymarket_us") and not self.protected(),
         )
@@ -658,11 +668,7 @@ class NativeTrading:
                     requests=self.owner.service.config["requests_per_source"],
                     bytes_limit=self.owner.service.config["source_bytes"],
                 )
-                _, _, reason = await self.prophetx.get(
-                    "/affiliate/get_tournaments", {}, self.now() + timedelta(seconds=3)
-                )
-                if reason:
-                    self.progress["access_gaps"]["prophetx"] = reason
+                self.progress["access_gaps"].pop("prophetx", None)
             except ValueError as error:
                 self.progress["access_gaps"]["prophetx"] = str(error)
 
@@ -688,6 +694,7 @@ class NativeTrading:
             try:
                 await stream.close()
             finally:
+                self.stream = None
                 if self.prophetx is not None:
                     client, self.prophetx = self.prophetx, None
                     await client.close()

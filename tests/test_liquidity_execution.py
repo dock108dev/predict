@@ -4,7 +4,8 @@ from fractions import Fraction as F
 import pytest
 
 from app.comparison import execution_contract
-from app.comparison.experiment_depth_execution import FIXED_PROFIT_VERSION, evaluate, evaluate_at_stake
+from app.collection.native_trading_identity import native_event, record
+from app.comparison.experiment_depth_execution import FIXED_PROFIT_VERSION, evaluate, evaluate_at_stake, evaluate_official
 from tests.test_experiment_depth_execution import receipt
 from tests.test_paper_experiments import frozen_priced
 
@@ -169,3 +170,38 @@ def test_fixed_profit_v2_prophetx_sizes_net_of_settlement_commission():
     assert F(grade['fee']['cashflows']['win']['net_receipt_usd']) == F('42.01')
     old, _ = evaluate(offer, book, at=AT, game_key='g', target=25, minimum='.04')
     assert old['status'] == 'unknown'
+
+
+@pytest.mark.parametrize('venue,ask,capacity,expected_quantity,expected_profit', [
+    ('novig', '.25', '5000', '3359', '25.00355'),
+    ('kalshi', '.48', '100', '50', '25.125'),
+    ('polymarket_us', '.25', '100', '34.15', '25.0025'),
+    ('prophetx', '.40', '100', '17.01', '25'),
+])
+def test_official_shadow_sizes_25_net_of_venue_fees(venue, ask, capacity, expected_quantity, expected_profit):
+    from app.comparison.scanner_kalshi import resolve
+    from tests.test_scanner_kalshi import AT as kalshi_at, inputs
+
+    contract_policies = {
+        'kalshi': dict(payout_usd='1', price_bands=[['.01', '.99', '.01']],
+            fee=dict(model='kalshi_direct_taker_bound', terms=resolve(*inputs(), at=kalshi_at)['fee'])),
+        'polymarket_us': dict(payout_usd='1', quantity_increment='.01', price_bands=[['.01', '.99', '.01']],
+            fee=dict(model='polymarket_us_standard_taker_bound', coefficient='.095')),
+        'prophetx': dict(payout_usd='1', quantity_unit='usd_stake', quantity_increment='.01', quantity_minimum='1',
+            legal_prices=[ask], fee=dict(model='prophetx_market_commission', rate='.02',
+                rounding='nearest_cent_profit_then_commission', schedule_revision='fixture')),
+    }
+    book = admitted((ask, capacity, capacity) if venue == 'novig' else (ask, capacity), coefficient='.03')
+    book.update(venue=venue, **contract_policies.get(venue, {}))
+    event = native_event(venue, book['event_id'], 'NCAAB', START,
+        dict(home='home', away='away'), dict(home='Home', away='Away'), proof={'source': 'fixture'})
+    exact = record(venue, event, book['market_id'], book['outcome_id'], 'buy',
+        'spread', 'home', '-10.5', settlement=book['contract']['settlement'])
+    decision = dict(book=book, record=exact)
+    result = evaluate_official(decision, at=AT, reference={'probability': '.65'}, target='25', minimum='1/25')
+    assert result['status'] == 'full_size' and result['eligible']
+    assert result['modeled_native_quantity'] == expected_quantity
+    assert result['modeled_win_profit_usd'] == expected_profit
+    assert F(result['modeled_fee_usd']) > 0
+    lower = evaluate_official(decision, at=AT, reference={'probability': ask}, target='25', minimum='1/25')
+    assert lower['status'] == 'below_ev_floor' and not lower['eligible']

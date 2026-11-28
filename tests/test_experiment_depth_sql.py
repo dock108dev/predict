@@ -120,6 +120,10 @@ def run_depth_collector(database, stage_path, task, mode, events):
         def _bindings(self, _task, _at):
             return {'fixture-offer': ({}, None)}, None, [], None, {}, {}, (), {}
 
+        async def _capture(self, *args):
+            self.dashboard = None  # This probe exercises only the frozen lane.
+            await super()._capture(*args)
+
         async def _observe(self, *_args, **_kwargs):
             if mode != 'stage':
                 events.send(('unexpected_venue_request', None))
@@ -443,6 +447,303 @@ class ExperimentDepthRecoverySQL(LatestBoardFixture):
             self.assertEqual(ticket['depth']['status'], 'full_size')
             selected = expected['observations'][depth.offer_key(replay_offer(task)['record'])]
             self.assertEqual(ticket['depth']['market_id'], selected['market_id'])
+
+    async def test_official_shadow_replays_from_the_original_receipt_and_saved_checkpoint(self):
+        from app.collection.native_trading_identity import native_event, record, expected
+        from app.comparison.scanner_kalshi import resolve
+        from app.research import paper_campaigns, paper_depth, records, workspace
+        from app.storage.acquisition_snapshot import observe_checkpoint_commit
+        from tests.test_scanner_kalshi import AT as kalshi_at, inputs
+
+        with self.connect() as db:
+            task, event = self.fixture_game(db, with_replay=True)
+            known = task['target_at'] - timedelta(seconds=1)
+            legacy_record = replay_offer(task)['record']
+            book = wide_novig_book(known, task)[depth.offer_key(legacy_record)]
+            official_event = native_event('novig', book['event_id'], 'NCAAB', event['starts_at'],
+                dict(home=event['home'], away=event['away']), dict(home='Home', away='Away'), proof={})
+            official_record = record('novig', official_event, book['market_id'], book['outcome_id'],
+                'buy', 'spread', 'home', '10.5', settlement=book['contract']['settlement'])
+            cid = expected(official_record)['contract_id']
+            candidate = dict(record=official_record, book=book,
+                game_link=dict(status='matched', sgo_start=event['starts_at'], canonical_game_id='canonical:fixture'),
+                reference=dict(probability='3/5', prices=[dict(source_at=depth.clock(known), received_at=depth.clock(known))]),
+                reference_reason=None, catalog_committed_at=None, book_committed_at=None)
+            policies = {
+                'kalshi': dict(price_bands=[['.01', '.99', '.01']],
+                    fee=dict(model='kalshi_direct_taker_bound', terms=resolve(*inputs(), at=kalshi_at)['fee'])),
+                'polymarket_us': dict(quantity_increment='.01', price_bands=[['.01', '.99', '.01']],
+                    fee=dict(model='polymarket_us_standard_taker_bound', coefficient='.095')),
+                'prophetx': dict(quantity_unit='usd_stake', quantity_increment='.01', quantity_minimum='1',
+                    legal_prices=['.4'], fee=dict(model='prophetx_market_commission', rate='.02',
+                        rounding='nearest_cent_profit_then_commission', schedule_revision='fixture')),
+            }
+            official_books = {cid: candidate}
+            for venue, policy in policies.items():
+                evidence = dict(requested_at=depth.clock(known-timedelta(milliseconds=50)),
+                    received_at=depth.clock(known), sha256=hashed(['native-book', venue]))
+                exchange = native_event(venue, venue+'-event', 'NCAAB', event['starts_at'],
+                    dict(home=event['home'], away=event['away']), dict(home='Home', away='Away'), proof=evidence)
+                quote = record(venue, exchange, venue+'-market', 'home-outcome', 'buy',
+                    'spread', 'home', '10.5', settlement=book['contract']['settlement'])
+                exact = expected(quote)
+                exchange_book = dict(venue=venue, event_id=exchange['id'], market_id=venue+'-market',
+                    outcome_id='home-outcome', opposite_outcome_id='away-outcome', native_side='buy',
+                    valid_until=depth.clock(task['target_at']+timedelta(seconds=1)),
+                    received_at=depth.clock(known), source_at=depth.clock(known), receipts=[evidence],
+                    contract=dict(exact, phase='pregame', settlement=book['contract']['settlement']), reason=None,
+                    levels=[dict(price='.4', quantity='100')], payout_usd='1', complete=True,
+                    **dict(dict(quantity_increment='1'), **policy))
+                official_books[exact['contract_id']] = dict(candidate, record=quote, book=exchange_book)
+            shadow = dict(candidates=official_books, source_gaps={})
+            with self.assertRaisesRegex(ValueError, 'experiment_depth_receipt_clock'):
+                late_reference = dict(candidate, reference=dict(prices=[dict(
+                    source_at=depth.clock(known), received_at=depth.clock(task['target_at']+timedelta(seconds=1)))]))
+                depth.normalize(task, known_at=known, observations={}, official_shadow=dict(shadow, candidates={cid: late_reference}))
+            payload = depth.normalize(task, known_at=known, observations={})
+            stage = DepthStage(self.stage_path)
+            stage.initialize()
+            receipt_id = stage.put(payload, task['deadline_at'], known)
+            claim, = experiment.due(db, late_only=True)
+            checkpoint = self.write_checkpoint(db, claim, experiment.utc(), offers=[replay_offer(task)])
+            pull_id = hashed(['official-shadow', checkpoint['id']])
+            attempt_id, body_hash = hashed('attempt'), hashed('original-sgo-sportsbook-price')
+            db.execute('''INSERT INTO market_pull (pull_id, requested_at, request_scope,state,details)
+                    VALUES (%s,%s,%s,'complete',%s)''', (pull_id, task['target_at'],
+                    Jsonb(dict(eventIDs=event['source_event_id'])), Jsonb(dict(
+                        attempt_id=attempt_id, receipt_sha256=body_hash,
+                        checkpoint_identity=dict(id=checkpoint['id'], schedule_id=task['schedule_id']),
+                        timings=dict(checkpoint_recorded_at=checkpoint['recorded_at'])))))
+            db.execute('''INSERT INTO market_pull_scope (pull_id,event_id,family,coverage,state)
+                    VALUES (%s,%s,'spread','{}','complete')''', (pull_id, event['source_event_id']))
+            db.execute('''INSERT INTO market_pull_receipt (pull_id,attempt_id,receipt_sha256,received_at,membership)
+                    VALUES (%s,%s,%s,%s,%s)''', (pull_id, attempt_id, body_hash, task['target_at'],
+                    Jsonb(dict(event_ids=[event['source_event_id']]))))
+            staged, = stage.entries()
+            restarted = DepthStage(self.stage_path)
+            restarted.initialize()
+            saved = depth.publish(db, restarted.load(staged))
+            self.assertEqual(depth.publish(db, restarted.load(staged)), saved)
+            restarted.finish(staged, 'published', receipt_id)
+            self.assertEqual(restarted.entries(), [])
+            self.assertEqual(saved['id'], receipt_id)
+            shadow_payload = depth.normalize_shadow(task, origin_id=receipt_id, known_at=known, evidence=shadow)
+            shadow_bundle = depth.publish_shadow(db, shadow_payload)
+            game_id = task['game_id']
+            from app.comparison import experiment_depth_execution as execution
+
+            def tick():
+                db.execute('UPDATE paper_campaign_day SET next_check_at=%s', (task['target_at'],))
+                with (patch.object(paper_campaigns.queue, 'utc', return_value=task['target_at']+timedelta(minutes=10)),
+                      patch.object(paper_campaigns.mens_d1, 'daily_population', return_value=None)):
+                    return paper_campaigns.tick(db)
+
+            actual_evaluator = execution.evaluate_official
+
+            def wide_evaluation(evidence, **options):
+                evaluated = actual_evaluator(evidence, **options)
+                if evidence['book']['venue'] == 'novig':
+                    evaluated['execution_audit'] = 'x' * records.EVALUATION_RECORD_BYTE_CAP
+                return evaluated
+
+            save_attachment = paper_depth.save_shadows
+
+            def exhausted_headroom(conn, identity, refs):
+                used = records.retention_usage(conn)
+                with patch.object(records, 'TOTAL_BYTE_CAP', used['total'] + used['reserved']):
+                    save_attachment(conn, identity, refs)
+
+            with patch.object(execution, 'evaluate_official', side_effect=wide_evaluation) as wide:
+                with patch.object(paper_depth, 'save_shadows', side_effect=exhausted_headroom):
+                    unverified_run = tick()
+                self.assertIsNotNone(unverified_run)
+                wide.assert_not_called()
+                unverified_export = workspace.run_detail(db, unverified_run, export=True)
+                unavailable = workspace.official_shadow_export(db, unverified_run, game_id)
+                self.assertEqual(unavailable['status'], 'shadow_attachment_unavailable')
+                self.assertEqual(tick(), unverified_run)
+                self.assertEqual(workspace.run_detail(db, unverified_run, export=True), unverified_export)
+                shadow_export = workspace.official_shadow_export(db, unverified_run, game_id)
+                self.assertGreater(len(encoded(shadow_export)), records.EVALUATION_RECORD_BYTE_CAP)
+                size = db.execute('SELECT payload_bytes FROM research_workspace_run WHERE id=%s',
+                                  (unverified_run,)).fetchone()['payload_bytes']
+                self.assertLess(size, records.EVALUATION_RECORD_BYTE_CAP)
+            unverified_shadow = workspace.official_shadow_export(db, unverified_run, game_id)
+            self.assertEqual(unverified_shadow['decision']['sgo_checkpoint']['status'], 'checkpoint_commit_unverified')
+            self.assertFalse(any(item['qualified'] for item in unverified_shadow['decision']['candidates']))
+            identity = dict(checkpoint_id=checkpoint['id'],
+                            **{key: task[key] for key in ('game_id', 'schedule_id', 'target_at', 'deadline_at')})
+            self.assertTrue(observe_checkpoint_commit(db, pull_id, **identity))
+            self.assertFalse(observe_checkpoint_commit(db, pull_id, **identity))
+            run_id = tick()
+            self.assertNotEqual(run_id, unverified_run)
+            self.assertEqual(workspace.run_detail(db, unverified_run, export=True), unverified_export)
+            self.assertEqual(workspace.official_shadow_export(db, unverified_run, game_id), unverified_shadow)
+            export = workspace.run_detail(db, run_id, export=True)
+            self.assertEqual(export['depth_receipts'][receipt_id], dict(payload, id=receipt_id))
+            self.assertEqual(export['report']['portfolios']['best_venue']['count'], 0)
+            self.assertNotIn('official_shadow_replay', export['report'])
+            verified_shadow = workspace.official_shadow_export(db, run_id, game_id)
+            replay = verified_shadow['decision']
+            self.assertEqual(replay['depth_receipt_id'], receipt_id)
+            self.assertEqual(verified_shadow['shadow_receipt']['id'], shadow_bundle['id'])
+            self.assertEqual(replay['sgo_checkpoint']['status'], 'checkpoint_committed_by_deadline')
+            self.assertEqual(replay['sgo_checkpoint']['receipt_sha256'], body_hash)
+            executions = {execution['venue']: execution for execution in replay['candidates']}
+            self.assertEqual(set(executions), {'novig', 'kalshi', 'polymarket_us', 'prophetx'})
+            self.assertTrue(all(execution['qualified'] for execution in executions.values()), executions)
+            self.assertEqual(executions['novig']['contract_id'], cid)
+            campaign_id = export['definition']['campaign_id']
+            campaign_export = paper_campaigns.trades(db, campaign_id, export=True)
+            self.assertEqual(campaign_export['official_shadow_exports'], {run_id: export['official_shadow_export']})
+            legacy_version, legacy_id = hashed('legacy-shadow-definition'), hashed('legacy-shadow-report')
+            db.execute('''INSERT INTO research_workspace_definition (version,id,supersedes,payload_bytes,payload)
+                SELECT %s,id,supersedes,payload_bytes,payload-'official_shadow_attachment'
+                FROM research_workspace_definition WHERE version=%s''', (legacy_version, export['definition']['version']))
+            legacy_shadow = dict(policy=depth.OFFICIAL_SHADOW_POLICY, decisions=[replay])
+            db.execute('''INSERT INTO research_workspace_run
+                (id,definition_version,game_date,report_revision,observed_at,summary,payload_bytes,payload)
+                SELECT %s,%s,game_date,report_revision,observed_at,summary,payload_bytes,
+                jsonb_set(payload,'{report,official_shadow_replay}',%s)
+                FROM research_workspace_run WHERE id=%s''', (legacy_id, legacy_version, Jsonb(legacy_shadow), run_id))
+            legacy_export = workspace.run_detail(db, legacy_id, export=True)
+            self.assertEqual(legacy_export['report']['official_shadow_replay'], legacy_shadow)
+            self.assertNotIn('official_shadow_export', legacy_export)
+            db.execute('TRUNCATE public.market_pull CASCADE')  # Disposable cluster: simulate acquisition retention.
+            self.assertEqual(workspace.run_detail(db, run_id, export=True), export)
+            self.assertEqual(paper_campaigns.trades(db, campaign_id, export=True), campaign_export)
+            self.assertEqual(workspace.official_shadow_export(db, run_id, game_id), verified_shadow)
+            self.assertEqual(workspace.run_detail(db, legacy_id, export=True), legacy_export)
+            another = dict(event, source_event_id='fixture-new-scheduled-game', event_id=hashed('fixture-new-scheduled-game'))
+            experiment.discover(db, [another], at=task['target_at']-timedelta(minutes=1))
+            later_run = tick()
+            self.assertNotEqual(later_run, run_id)
+            self.assertEqual(workspace.official_shadow_export(db, later_run, game_id)['decision'], replay)
+
+    async def test_slow_shadow_cannot_spend_the_original_completion_clock(self):
+        with self.connect() as db:
+            task, event = self.fixture_game(db, with_replay=True)
+        task = dict(task, event=event, source_event_id=event['source_event_id'], all_sports=True)
+        known = task['target_at']-timedelta(milliseconds=100)
+        now = [known]
+        started, release = asyncio.Event(), asyncio.Event()
+
+        class CaptureProbe(collector.ExperimentDepth):
+            def _bindings(self, *_):
+                return {'empty': ({}, None)}, None, [], None, {}, {}, (), {}
+
+            async def _prospective_native(self, *_):
+                return {}
+
+            def _still_targeted(self, _):
+                return True
+
+            async def _observe(self, *_args, **_kwargs):
+                await started.wait()
+                return {}, {}
+
+            async def _observe_shadow(self, *_):
+                started.set()
+                await release.wait()
+                now[0] = known+timedelta(milliseconds=150)
+                return dict(candidates={}, source_gaps={})
+
+        worker = SimpleNamespace(controls=lambda: {})
+        service = SimpleNamespace(dispatch=True, globally_stopped=False, paused_sources=set(),
+                                  workers={'sportsgameodds': worker})
+        owner = CaptureProbe(service, connector=self.connect, stage_path=self.stage_path, now=lambda: now[0])
+        owner.dashboard = object()
+        owner.stage.initialize()
+        await owner._capture((None, None), task)
+        staged = owner.stage.entries()[0]
+        original = owner.stage.load(staged)
+        self.assertEqual(original, depth.normalize(task, known_at=known, observations={}))
+        original_id = staged['receipt_id']
+        self.assertFalse(owner.shadow_stage.path.exists())
+        release.set()
+        await asyncio.gather(*owner.shadow_jobs)
+        shadow_entry, = owner.shadow_stage.entries()
+        shadow = owner.shadow_stage.load(shadow_entry)
+        self.assertEqual(shadow['origin_id'], original_id)
+        self.assertEqual(shadow['reason'], 'experiment_depth_shadow_cutoff')
+        self.assertEqual(shadow['official_shadow']['candidates'], {})
+
+        # A new collector can reopen the original and shadow spool independently.
+        restarted = CaptureProbe(service, connector=self.connect, stage_path=self.stage_path, now=lambda: now[0])
+        with self.connect() as db:
+            with self.assertRaisesRegex(BlockingIOError, 'experiment_depth_shadow_original_pending'):
+                depth.publish_shadow(db, shadow)
+            claim, = experiment.due(db, late_only=True)
+            checkpoint = self.write_checkpoint(db, claim, experiment.utc(), offers=[replay_offer(task)])
+        self.assertEqual(restarted._publish_staged(staged), ('published', original_id))
+        disposition, saved_shadow = restarted._publish_shadow_staged(shadow_entry)
+        self.assertEqual(disposition, 'experiment_depth_shadow_cutoff')
+        self.assertEqual(saved_shadow, shadow_entry['receipt_id'])
+        with self.connect() as db:
+            saved = depth.read_ids(db, [original_id])[original_id]
+            self.assertEqual(saved, dict(original, id=original_id))
+            self.assertEqual(depth.publish_shadow(db, shadow)['id'], saved_shadow)
+            self.assertEqual(depth.shadow_inputs(db, [original_id])[original_id], dict(id=saved_shadow,
+                checkpoint_id=checkpoint['id'], reason='experiment_depth_shadow_cutoff'))
+        self.assertEqual(restarted.stage.entries(), [])
+        self.assertEqual(restarted.shadow_stage.entries(), [])
+
+    async def test_sql_headroom_admits_pilot_then_records_shadow_refusal(self):
+        from app.research import records
+
+        with self.connect() as db:
+            task, _ = self.fixture_game(db, with_replay=True)
+            claim, = experiment.due(db, late_only=True)
+            checkpoint = self.write_checkpoint(db, claim, experiment.utc(), offers=[replay_offer(task)])
+            usage = records.retention_usage(db)
+        known = task['target_at']-timedelta(milliseconds=100)
+        owner = collector.ExperimentDepth(SimpleNamespace(), connector=self.connect, stage_path=self.stage_path)
+        owner.stage.initialize()
+        original_id = owner._stage(task, known_at=known, observations=captured_book(known))
+        staged, = owner.stage.entries()
+        body = dict(candidates={}, source_gaps={'fixture': 'x' * (128 * 1024)})
+        owner._stage_shadow(task, original_id, known, body, None)
+        shadow_entry, = owner.shadow_stage.entries()
+        # Set the real logical guard between the two actual measured admissions.
+        capacity = usage['total'] + usage['reserved'] + staged['payload_bytes'] + shadow_entry['payload_bytes']//2
+        with patch.object(records, 'TOTAL_BYTE_CAP', capacity):
+            self.assertEqual(owner._publish_staged(staged), ('published', original_id))
+            reason, shadow_id = owner._publish_shadow_staged(shadow_entry)
+        self.assertEqual(reason, 'research_retention_capacity')
+        self.assertNotEqual(shadow_id, shadow_entry['receipt_id'])
+        with self.connect() as db:
+            original = depth.read_ids(db, [original_id])[original_id]
+            self.assertNotIn('official_shadow', original)
+            self.assertEqual(original['known_at'], depth.clock(known))
+            status = depth.read_shadow_ids(db, [shadow_id])[shadow_id]
+            self.assertEqual(status['origin_id'], original_id)
+            self.assertEqual(status['checkpoint_id'], checkpoint['id'])
+            self.assertEqual(status['official_shadow']['source_gaps'], {'scope': reason})
+
+    async def test_invalid_and_oversized_shadow_leave_the_original_receipt_untouched(self):
+        cases = {
+            'experiment_depth_shadow_evidence_invalid': dict(candidates={'malformed': {}}, source_gaps={}),
+            'experiment_depth_shadow_capacity': dict(candidates={}, source_gaps={'large': 'x' * depth.MAX_BYTES}),
+        }
+        owner = collector.ExperimentDepth(SimpleNamespace(), connector=self.connect, stage_path=self.stage_path)
+        owner.stage.initialize()
+        with self.connect() as db:
+            for reason, evidence in cases.items():
+                with self.subTest(reason=reason):
+                    task, _ = self.fixture_game(db, event_id=reason, with_replay=True)
+                    known = task['target_at']-timedelta(milliseconds=100)
+                    original_id = owner._stage(task, known_at=known, observations={})
+                    original, = owner.stage.entries()
+                    original_payload = owner.stage.load(original)
+                    shadow_id = owner._stage_shadow(task, original_id, known, evidence, None)
+                    shadow, = owner.shadow_stage.entries()
+                    self.assertEqual(shadow['receipt_id'], shadow_id)
+                    self.assertEqual(owner.shadow_stage.load(shadow)['reason'], reason)
+                    self.assertEqual(owner.stage.load(original), original_payload)
+                    claim, = experiment.due(db, late_only=True)
+                    self.write_checkpoint(db, claim, experiment.utc(), offers=[replay_offer(task)])
+                    self.assertEqual(owner._publish_staged(original), ('published', original_id))
+                    self.assertEqual(owner._publish_shadow_staged(shadow), (reason, shadow_id))
 
     async def test_storage_deferral_keeps_decision_and_separate_followup(self):
         with self.connect() as db:

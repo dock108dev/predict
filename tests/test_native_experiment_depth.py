@@ -89,6 +89,52 @@ def test_public_kalshi_batch_does_not_treat_a_missing_ticker_as_empty():
     assert books['two']['reason'] == 'native_book_unobserved'
 
 
+@pytest.mark.parametrize('batch_first', [True, False])
+def test_overlapping_kalshi_requests_share_the_intersecting_ticker(batch_first):
+    async def run():
+        started = asyncio.Event()
+        second_started = asyncio.Event()
+        release = asyncio.Event()
+        requests = []
+        depth = {'yes_dollars': [['0.47', '250']], 'no_dollars': [['0.50', '300']]}
+
+        async def serve(request):
+            tickers = request.url.params.get_list('tickers')
+            if tickers:
+                body = {'orderbooks': [dict(ticker=ticker, orderbook_fp=depth) for ticker in tickers]}
+            else:
+                tickers = [request.url.path.split('/')[-2]]
+                body = {'orderbook_fp': depth}
+            requests.append(tickers)
+            if 'shared' in tickers:
+                started.set()
+                await release.wait()
+            else:
+                second_started.set()
+            return httpx.Response(200, headers={'Date': format_datetime(AT)}, json=body)
+
+        async with NativeExperimentDepth(client=httpx.AsyncClient(transport=httpx.MockTransport(serve)), now=lambda: AT) as venue:
+            first = {'yes': binding('kalshi', 'shared', 'yes', 'no')}
+            if batch_first:
+                first['other'] = binding('kalshi', 'first-only', 'yes', 'no')
+            dashboard = asyncio.create_task(venue.read_native(first, AT+timedelta(seconds=3), batch=batch_first))
+            await started.wait()
+            protected = asyncio.create_task(venue.read_native({
+                'no': binding('kalshi', 'shared', 'no', 'yes'),
+                'other': binding('kalshi', 'second-only', 'yes', 'no'),
+            }, AT+timedelta(seconds=2), batch=True))
+            await second_started.wait()
+            release.set()
+            older, newer = await asyncio.gather(dashboard, protected)
+            assert requests == [['shared', 'first-only'] if batch_first else ['shared'], ['second-only']]
+            assert older['yes']['receipts'] == newer['no']['receipts']
+            assert newer['other']['receipts'] != newer['no']['receipts']
+            assert older['yes']['levels'] == [dict(price='1/2', quantity='300')]
+            assert newer['no']['levels'] == [dict(price='53/100', quantity='250')]
+
+    asyncio.run(run())
+
+
 def test_polymarket_short_sizes_come_from_long_bids_and_clock_is_source_bound():
     def serve(request):
         data = dict(marketSlug='slug', state='MARKET_STATE_OPEN', transactTime=AT.isoformat(),
@@ -130,6 +176,36 @@ def test_throttle_and_cutoff_prevent_a_second_native_request():
 
     asyncio.run(read())
     assert len(calls) == 1
+
+
+def test_overlapping_read_keeps_one_physical_response_for_the_later_cutoff():
+    from datetime import datetime, timezone
+
+    calls = []
+
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+
+        async def serve(request):
+            calls.append(request.url.path)
+            started.set()
+            await release.wait()
+            return httpx.Response(200, json={'orderbook_fp': {}})
+
+        async with NativeExperimentDepth(client=httpx.AsyncClient(transport=httpx.MockTransport(serve))) as client:
+            url = 'https://example.test/markets/fixture/orderbook'
+            now = datetime.now(timezone.utc)
+            short = asyncio.create_task(client._read('kalshi', url, now+timedelta(milliseconds=50)))
+            await started.wait()
+            wide = asyncio.create_task(client._read('kalshi', url, now+timedelta(seconds=1)))
+            assert await short == (None, None, 'cutoff_passed')
+            release.set()
+            body, receipt, reason = await wide
+            assert body == {'orderbook_fp': {}} and reason is None
+            assert stamp(receipt['requested_at']) <= now + timedelta(milliseconds=50) < stamp(receipt['received_at'])
+
+    asyncio.run(run())
+    assert calls == ['/markets/fixture/orderbook']
 
 
 def test_dashboard_hourly_allowance_defers_optional_read_without_blocking_checkpoint():

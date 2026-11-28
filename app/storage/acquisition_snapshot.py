@@ -210,6 +210,44 @@ def record_timing(db, pull_id, stage):
         WHERE pull_id=%s''', (stage, pull_id))
 
 
+def observe_checkpoint_commit(db, pull_id, *, checkpoint_id, game_id, schedule_id, target_at, deadline_at):
+    """Pin a post-commit bound to the exact accepted SGO receipt and checkpoint."""
+    row = db.execute('''WITH accepted AS (
+        SELECT p.pull_id, r.attempt_id, r.receipt_sha256, r.received_at,
+               checkpoint.recorded_at
+        FROM public.market_pull p
+        JOIN public.market_pull_receipt r USING (pull_id)
+        JOIN public.ev_experiment_record checkpoint ON checkpoint.id=%(checkpoint_id)s
+        JOIN public.ev_experiment_game g ON g.id=checkpoint.game_id
+        WHERE p.pull_id=%(pull_id)s AND p.state IN ('complete','partial')
+          AND p.request_scope->>'eventIDs'=g.source_event_id
+          AND r.membership->'event_ids'=jsonb_build_array(g.source_event_id)
+          AND p.details->>'attempt_id'=r.attempt_id
+          AND p.details->>'receipt_sha256'=r.receipt_sha256
+          AND g.id=%(game_id)s AND checkpoint.kind='checkpoint' AND checkpoint.checkpoint='late'
+          AND p.details#>>'{checkpoint_identity,id}'=checkpoint.id
+          AND p.details#>>'{checkpoint_identity,schedule_id}'=%(schedule_id)s
+          AND (checkpoint.payload#>>'{summary,target_at}')::timestamptz=%(target_at)s
+          AND (checkpoint.payload#>>'{summary,deadline_at}')::timestamptz=%(deadline_at)s
+          AND (p.details#>>'{timings,checkpoint_recorded_at}')::timestamptz=checkpoint.recorded_at
+    ), pinned AS (
+        INSERT INTO public.ev_experiment_checkpoint_commit
+            (checkpoint_id,game_id,schedule_id,target_at,deadline_at,checkpoint_recorded_at,
+             pull_id,attempt_id,receipt_sha256,received_at,commit_observed_at)
+        SELECT %(checkpoint_id)s,%(game_id)s,%(schedule_id)s,%(target_at)s,%(deadline_at)s,
+               recorded_at,pull_id,attempt_id,receipt_sha256,received_at,statement_timestamp()
+        FROM accepted
+        ON CONFLICT (checkpoint_id) DO NOTHING
+        RETURNING pull_id,commit_observed_at
+    )
+    UPDATE public.market_pull p
+    SET details=jsonb_set(details, '{timings,commit_observed_at}', to_jsonb(pinned.commit_observed_at))
+    FROM pinned WHERE p.pull_id=pinned.pull_id RETURNING p.pull_id''',
+        dict(pull_id=pull_id, checkpoint_id=checkpoint_id, game_id=game_id, schedule_id=schedule_id,
+             target_at=stamp(target_at), deadline_at=stamp(deadline_at))).fetchone()
+    return row is not None
+
+
 def compact_snapshot(snapshot, pull_id, family=None):
     """SQL ranking facts, with full evidence stored once in compressed form."""
     result = {key:value for key,value in snapshot.items()

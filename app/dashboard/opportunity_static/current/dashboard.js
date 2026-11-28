@@ -23,6 +23,7 @@ const filterNames = ['sport', 'family', 'venue', 'view'];
 const defaultPageSize = '50';
 const initialUpdatesDelay = 2000;
 const maxUpdatesDelay = 15000;
+const updateBatchDelay = 200;
 const field = name => filters.elements.namedItem(name);
 const pageSize = () => Number(field('rows').value);
 let offset = 0;
@@ -31,6 +32,7 @@ let read;
 let refreshTimer;
 let updates;
 let updatesRetryTimer;
+let updateBatchTimer;
 let updatesDelay = initialUpdatesDelay;
 let refreshAfterRead = false;
 let closed = false;
@@ -38,14 +40,24 @@ let selectedQuote;
 let evidenceRead;
 let coverageRead;
 let serverOffset;
+let earliestServerOffset = -Infinity;
+let latestRead = -Infinity;
 const dashboardClock = Object.assign(new EventTarget(), {
   now() {
     return serverOffset === undefined ? Date.now() : serverOffset + performance.now();
   },
-  observe(readAt) {
-    // Older or delayed reads must not give an expired quote more time.
-    const offset = Date.parse(readAt) - performance.now();
-    if (!Number.isFinite(offset) || (serverOffset !== undefined && offset <= serverOffset)) return false;
+  observe(readAt, requestStarted) {
+    const observed = Date.parse(readAt);
+    if (!Number.isFinite(observed) || !Number.isFinite(requestStarted) || observed <= latestRead) return false;
+    latestRead = observed;
+    // The SQL read happened between sending the request and receiving its body.
+    // Use the earliest possible read instant to account for time spent in transit.
+    const upper = observed - requestStarted;
+    const lower = observed - performance.now();
+    if (upper < earliestServerOffset) return false;
+    earliestServerOffset = Math.max(earliestServerOffset, lower);
+    const offset = serverOffset === undefined || lower > serverOffset ? upper : Math.min(upper, serverOffset);
+    if (offset === serverOffset) return false;
     serverOffset = offset;
     this.dispatchEvent(new Event('change'));
     return true;
@@ -128,8 +140,7 @@ function visibleQuote(row) {
   if (fresh && !refExpired) return row;
   if (!view) return null;
   const liquidity = fresh ? {...row.liquidity, modeled_net_ev: null, reason: 'reference_stale'}
-    : unknownLiquidity(row.liquidity, row.liquidity?.status === 'unknown' && !row.liquidity?.modeled_stake_usd
-      ? row.liquidity.reason : 'stale_book');
+    : unknownLiquidity(row.liquidity, row.book_status === 'unobserved' ? row.liquidity?.reason : 'stale_book');
   const posted = fresh ? row.posted : {...row.posted, value: null, native_price_probability: null};
   const display = {posted_odds: fresh ? row.display.posted_odds : null, fair_odds: null, net_ev: null};
   return {...row, posted, display, liquidity,
@@ -162,7 +173,7 @@ function dashboardBadge(row) {
     liquidity = {...liquidity, modeled_net_ev: null};
   }
   const badge = liquidityBadge({liquidity});
-  if (!badge || !row.native_source || row.venue !== 'novig') return badge;
+  if (!badge || !row.native_source) return badge;
   const expiresAt = row.liquidity?.valid_until || row.eligible_until;
   const expired = row.book_status === 'stale' ||
     (row.book_status !== 'unobserved' && liquidity.reason === 'stale_book');
@@ -177,7 +188,7 @@ function dashboardBadge(row) {
     if (supported > 0 && liquidity.reason !== 'fee_mode_changed' &&
         ['full_size', 'partial_size'].includes(liquidity.size_status || liquidity.status)) {
       badge.append(node('span', `Fresh book · ${cash.format(supported)} supported`));
-    } else if (['empty', 'confirmed_empty'].includes(liquidity.status)) {
+    } else if (row.book_status === 'fresh' || ['empty', 'confirmed_empty'].includes(liquidity.status)) {
       badge.append(node('span', 'Fresh book'));
     }
   }
@@ -363,9 +374,10 @@ async function inspect(row) {
   try {
     const params = new URLSearchParams(query);
     params.set('liquidity', '1');
+    const requestStarted = performance.now();
     const evidence = await get('/api/research/market', params, signal);
     if (evidenceRead === controller && inspector.open) {
-      dashboardClock.observe(evidence.read_at);
+      dashboardClock.observe(evidence.read_at, requestStarted);
       renderEvidence(row, evidence, query, controller.signal);
     }
   } catch {
@@ -445,7 +457,7 @@ function schedule() {
   const deadline = Math.min(...(snapshot?.rows || []).flatMap(row => [row, ...(row.other_quotes || [])])
     .flatMap(row => [row.eligible_until, row.liquidity?.valid_until, row.liquidity?.reference_valid_until])
     .map(Date.parse).filter(at => at > now));
-  const delay = deadline > now ? Math.min(30000, deadline - now) : 30000;
+  const delay = Math.min(30000, Math.ceil(deadline - now));
   refreshTimer = setTimeout(() => {
     if (deadline <= dashboardClock.now() && snapshot) render(snapshot);
     requestRefresh();
@@ -458,8 +470,14 @@ function requestRefresh() {
   else refresh();
 }
 
+function cancelUpdateBatch() {
+  clearTimeout(updateBatchTimer);
+  updateBatchTimer = undefined;
+}
+
 function stopUpdates() {
   clearTimeout(updatesRetryTimer);
+  cancelUpdateBatch();
   updatesDelay = initialUpdatesDelay;
   updates?.close();
   updates = undefined;
@@ -472,16 +490,16 @@ function watchUpdates() {
 }
 
 function connectUpdates() {
-  if (closed || document.hidden || field('venue').value !== 'novig' || typeof EventSource === 'undefined') return;
+  if (closed || document.hidden || typeof EventSource === 'undefined') return;
   const query = new URLSearchParams();
-  for (const name of ['sport', 'family']) if (field(name).value) query.set(name, field(name).value);
+  for (const name of ['sport', 'family', 'venue']) if (field(name).value) query.set(name, field(name).value);
   const stream = new EventSource('/api/research/dashboard-updates?' + query);
   updates = stream;
   stream.onmessage = () => {
     if (updates !== stream) return;
     updatesDelay = initialUpdatesDelay;
-    // The listener's ready event and revision notices both read from committed data.
-    requestRefresh();
+    // Start a fixed window so sustained notices cannot postpone the next read.
+    if (updateBatchTimer === undefined) updateBatchTimer = setTimeout(requestRefresh, updateBatchDelay);
   };
   stream.onerror = () => {
     if (updates !== stream) return;
@@ -510,7 +528,14 @@ async function refreshCoverage() {
   try {
     const packet = await get('/api/research/dashboard-coverage', query, AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]));
     if (coverageRead !== controller || !coverage.open) return;
-    coverageContent.replaceChildren(packet.coverage?.length ? coverageRows(packet.coverage, bookName)
+    const gaps = Object.entries(packet.access || {}).flatMap(([venue, state]) => {
+      const name = bookName(venue);
+      return [state.collection, state.reason].filter(Boolean).map(reason => `${name} · ${readable(reason)}`)
+        .concat(Object.entries(state.leagues || {}).map(([league, reason]) => `${name} · ${league} · ${readable(reason)}`));
+    });
+    const issues = gaps.map(gap => node('p', gap));
+    coverageContent.replaceChildren(...issues, packet.coverage?.length
+      ? coverageRows(packet.coverage, bookName, packet.liquidity_stake_usd)
       : node('p', 'No stored pregame offers for these filters.'));
   } catch {
     if (coverageRead === controller && coverage.open) coverageContent.replaceChildren(node('p', 'Coverage could not be read. Refresh coverage to retry.'));
@@ -518,6 +543,7 @@ async function refreshCoverage() {
 }
 
 async function refresh() {
+  cancelUpdateBatch();
   read?.abort();
   const controller = new AbortController();
   read = controller;
@@ -528,16 +554,18 @@ async function refresh() {
   try {
     const params = {limit: pageSize(), offset};
     for (const name of filterNames) if (field(name).value) params[name] = field(name).value;
+    let requestStarted = performance.now();
     let packet = await get('/api/research/dashboard', params, signal);
     if (read !== controller || closed) return;
     if (offset && offset >= packet.total) {
       offset = 0;
       writeLocation(true);
+      requestStarted = performance.now();
       packet = await get('/api/research/dashboard', {...params, offset}, signal);
     }
     if (read !== controller || closed) return;
     snapshot = packet;
-    if (!dashboardClock.observe(packet.read_at)) render(packet);
+    if (!dashboardClock.observe(packet.read_at, requestStarted)) render(packet);
   } catch {
     if (read !== controller || closed) return;
     snapshot = undefined;

@@ -4,7 +4,9 @@ from collections import Counter
 from fractions import Fraction as F
 
 from app.comparison.experiment_depth_execution import FIXED_PROFIT_VERSION as FIXED_PROFIT_VERSION
-from app.storage.experiment_depth import ALL_SPORTS_POLICY as ALL_SPORTS_VERSION, POLICY as VERSION
+from app.storage.experiment_depth import (
+    ALL_SPORTS_POLICY as ALL_SPORTS_VERSION, OFFICIAL_SHADOW_POLICY, POLICY as VERSION,
+)
 from app.storage.store import stamp
 
 LEAGUES = ("NCAAB",)
@@ -13,6 +15,119 @@ SCENARIOS = ("quoted", "novig_band", "no_novig_alternates", "depth")
 
 def receipt_ids(games):
     return {game["depth_receipt_id"] for game in games if game.get("depth_receipt_id")}
+
+
+def shadow_inputs(db, tasks, originals):
+    """Freeze small identifiers only. The report publisher never loads optional books."""
+    from app.storage import experiment_depth
+
+    if not originals:
+        return {}
+    states = experiment_depth.shadow_inputs(db, originals.values())
+    legacy = {row['id'] for row in db.execute('''SELECT id FROM public.ev_experiment_depth
+        WHERE id=ANY(%s) AND payload ? 'official_shadow' ''',
+        ([identity for identity in originals.values() if identity not in states],))}
+    commits = {row['checkpoint_id'] for row in db.execute('''SELECT checkpoint_id
+        FROM public.ev_experiment_checkpoint_commit WHERE checkpoint_id=ANY(%s)''',
+        ([task['late_id'] for task in tasks if task['id'] in originals],))}
+    refs = {}
+    for task in tasks:
+        original = originals.get(task['id'])
+        if not original:
+            continue
+        identity = task['late_id']
+        state = states.get(original)
+        if state and state['checkpoint_id'] not in (None, identity):
+            status = 'shadow_checkpoint_mismatch'
+        elif state:
+            status = state['reason'] or 'shadow_available'
+        elif original in legacy:
+            status = 'legacy_shadow_available'
+        else:
+            status = 'shadow_evidence_unavailable'
+        refs[task['id']] = dict(depth_receipt_id=original, checkpoint_id=identity,
+            shadow_id=state['id'] if state and status != 'shadow_checkpoint_mismatch' else None,
+            witness_id=identity if identity in commits else None, status=status)
+    return refs
+
+
+def saved_shadows(db, run_id):
+    row = db.execute('SELECT payload FROM public.research_run_official_shadow WHERE run_id=%s', (run_id,)).fetchone()
+    return row['payload'] if row else None
+
+
+def save_shadows(db, run_id, refs):
+    from psycopg.types.json import Jsonb
+    from app.storage.store import encoded
+    from .workspace import _admit
+
+    if not refs or saved_shadows(db, run_id) is not None:
+        return
+    size = len(encoded(refs))
+    _admit(db, size)
+    db.execute('''INSERT INTO public.research_run_official_shadow (run_id,payload,payload_bytes)
+        VALUES (%s,%s,%s) ON CONFLICT (run_id) DO NOTHING''', (run_id, Jsonb(refs), size))
+
+
+def _shadow_checkpoint(db, game, bundle, witness_id):
+    from app.research import experiment
+
+    checkpoint = dict(id=game['checkpoint_id'], target_at=game['target_at'], deadline_at=game['deadline_at'],
+                      recorded_at=game['persisted_at'], status='checkpoint_commit_unverified')
+    if not (game['status'] == 'captured' and game['schedule_id'] == bundle['schedule_id']
+            and stamp(game['target_at']) == stamp(bundle['target_at'])):
+        return dict(checkpoint, status='checkpoint_schedule_mismatch')
+    if not witness_id or witness_id != game['checkpoint_id']:
+        return checkpoint
+    row = db.execute('''SELECT pull_id,attempt_id,receipt_sha256,received_at,commit_observed_at
+        FROM public.ev_experiment_checkpoint_commit WHERE checkpoint_id=%s AND game_id=%s AND schedule_id=%s
+          AND target_at=%s AND deadline_at=%s AND checkpoint_recorded_at=%s''',
+        (witness_id, game['game_id'], bundle['schedule_id'], stamp(game['target_at']),
+         stamp(game['deadline_at']), stamp(game['persisted_at']))).fetchone()
+    if row is None:
+        return checkpoint
+    status = ('checkpoint_committed_by_deadline' if row['commit_observed_at'] <= stamp(game['deadline_at'])
+              else 'checkpoint_commit_observed_after_deadline')
+    return dict(checkpoint, pull_id=row['pull_id'], attempt_id=row['attempt_id'], receipt_sha256=row['receipt_sha256'],
+                received_at=experiment.clock(row['received_at']),
+                commit_observed_at=experiment.clock(row['commit_observed_at']), status=status)
+
+
+def official_shadow(db, game, bundle, ref):
+    from app.comparison.experiment_depth_execution import evaluate_official
+    from app.storage import experiment_depth
+    from app.storage.store import hashed
+
+    checkpoint = _shadow_checkpoint(db, game, bundle, ref['witness_id'])
+    shadow_receipt = experiment_depth.read_shadow_ids(db, [ref['shadow_id']]).get(ref['shadow_id']) if ref['shadow_id'] else None
+    source = shadow_receipt or (bundle if ref['status'] == 'legacy_shadow_available' else {})
+    shadow = source.get('official_shadow')
+    identity_valid = (not shadow_receipt or (
+        shadow_receipt['origin_id'] == bundle['id'] and shadow_receipt['game_id'] == bundle['game_id']
+        and shadow_receipt['schedule_id'] == bundle['schedule_id']
+        and stamp(shadow_receipt['target_at']) == stamp(bundle['target_at'])))
+    checkpoint_bound = not shadow_receipt or shadow_receipt['checkpoint_id'] == game['checkpoint_id']
+    candidates = []
+    if shadow and shadow['policy'] == OFFICIAL_SHADOW_POLICY and identity_valid and checkpoint_bound:
+        for cid, evidence in sorted(shadow['candidates'].items()):
+            decision = evaluate_official(evidence, at=bundle['target_at'], reference=evidence['reference'],
+                                         target='25', minimum='1/25')
+            candidates.append(dict(contract_id=cid, canonical_game_id=evidence['game_link']['canonical_game_id'],
+                family=evidence['record']['market_identity']['family'],
+                side=evidence['book']['contract']['selected_side'], line=evidence['book']['contract']['signed_line'],
+                qualified=decision['eligible'] and checkpoint['status'] == 'checkpoint_committed_by_deadline',
+                book_committed_at=evidence['book_committed_at'], **{key: value for key, value in decision.items()
+                                                                   if key != 'contract_id'}))
+    status = ref['status'] if identity_valid else 'shadow_checkpoint_mismatch'
+    if identity_valid and not checkpoint_bound and status == 'shadow_available':
+        status = 'shadow_checkpoint_unavailable'
+    decision = dict(id=hashed([OFFICIAL_SHADOW_POLICY, game['checkpoint_id'], bundle['id'], ref]),
+        game_id=bundle['game_id'], schedule_id=bundle['schedule_id'], target_at=bundle['target_at'],
+        known_at=source.get('known_at', bundle['known_at']), depth_receipt_id=bundle['id'],
+        sgo_checkpoint=checkpoint, source_gaps=shadow['source_gaps'] if shadow else {}, candidates=candidates,
+        status=status)
+    return dict(policy=OFFICIAL_SHADOW_POLICY, target_profit_usd='25', minimum_ev='1/25',
+                decision=decision, shadow_receipt=shadow_receipt)
 
 
 def _request_metrics(readings):

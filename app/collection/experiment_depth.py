@@ -11,7 +11,7 @@ from app.comparison.sgo_native_binding import (
 from app.diagnostics import failure
 from app.research import experiment
 from app.storage import experiment_depth as storage, sgo_native_catalog
-from app.storage.store import ROOT, connect, hashed, stamp
+from app.storage.store import ROOT, connect, encoded, hashed, stamp
 
 from .bulk_checkpoint import owned_thread
 from .experiment_depth_stage import DepthStage, InvalidStagedReceipt, KEY, MAX_PENDING_BUNDLES
@@ -193,6 +193,14 @@ def _reuse(before, after):
                for r in after.get('receipts', ()))
 
 
+def _stage_deadline(entry):
+    try:
+        expected = stamp(entry['target_at']) + timedelta(seconds=experiment.LATE_TOLERANCE_SECONDS)
+        return expected if stamp(entry['deadline_at']) == expected else None
+    except (ValueError, OverflowError):
+        return None
+
+
 class ExperimentDepth:
     def __init__(self, service, *, connector=connect, client_factory=None, now=experiment.utc, stage_path=None):
         from .dashboard_kalshi import Catalog
@@ -205,8 +213,12 @@ class ExperimentDepth:
         self.running = {}
         directory = getattr(service, 'directory', ROOT / '.local/predict-current')
         self.stage = DepthStage(Path(stage_path or directory / 'experiment-depth-stage.sqlite3'))
+        self.shadow_stage = DepthStage(self.stage.path.with_name(self.stage.path.stem + '-shadow.sqlite3'))
+        self.shadow_jobs = set()
+        self.shadow_publisher = None
         self.stage_ready = False
         self.kalshi_catalog = Catalog()
+        self.dashboard = None
         self.progress = dict(state='starting', version=storage.VERSION)
 
     def enabled(self):
@@ -247,20 +259,23 @@ class ExperimentDepth:
             return any((row['game_id'], row['schedule_id'], row['target_at']) == identity and not row['observed']
                        for row in targets(db, at))
 
-    async def _prospective_native(self, client, task, offers, cutoff, products):
+    async def _prospective_native(self, client, task, offers, cutoff, products, *, official=False):
         """Bind the frozen strategy's quote to an independently listed instrument."""
         from .dashboard_pmus import read as pmus
 
         league = task['event']['league']
+        start = stamp(task['event']['starts_at'])
+        window = (start, start) if official else None
         records = {task['source_event_id']: [(storage.offer_key(r), None, r) for r in
             (offer.get('record', offer) for offer in offers)
             if r['market_identity']['family'] in ('spread', 'total')
             and r['market_identity']['period'] == 'full_game']}
         reads = []
         if self.venue_enabled('kalshi'):
-            reads.append(self.kalshi_catalog.read(client, league, records, cutoff=cutoff, products=products))
+            catalog = self.dashboard.catalog if self.dashboard is not None else self.kalshi_catalog
+            reads.append(catalog.read(client, league, records, cutoff=cutoff, products=products, discover_window=window))
         if self.venue_enabled('polymarket_us'):
-            reads.append(pmus(client, league, records, at=self.now(), cutoff=cutoff, products=products))
+            reads.append(pmus(client, league, records, at=self.now(), cutoff=cutoff, products=products, discover_window=window))
         result = {}
         for group in await asyncio.gather(*reads, return_exceptions=True):
             if isinstance(group, Exception):
@@ -299,7 +314,8 @@ class ExperimentDepth:
             deeper = defaultdict(list)
             for key, binding, quote_price in entries:
                 observation = catalog_depth(binding, catalog, cutoff)
-                observation['identity_receipts'] = [binding['event_receipt'], binding['market_receipt']]
+                observation['identity_receipts'] = (binding['identity_receipts'] if 'identity_receipts' in binding
+                    else [binding['event_receipt'], binding['market_receipt']])
                 observation['binding_revision'] = binding['revision']
                 observation['binding_method'] = binding.get('binding_method', 'aggregate_outcome_link')
                 if binding.get('explicit_link_required'):
@@ -327,25 +343,40 @@ class ExperimentDepth:
         return observations
 
     async def _capture(self, client, task):
+        bindings = await asyncio.to_thread(self._bindings, task, self.now())
+        slate = (task['event']['league'], task['event']['starts_at']) if task.get('all_sports') else None
+        origin = asyncio.get_running_loop().create_future()
+        try:
+            if slate and self.dashboard and len(self.shadow_jobs) < MAX_GAMES_IN_FLIGHT:
+                _, witness, _, _, _, _, _, products = bindings
+                shadow = asyncio.create_task(self._capture_shadow(client, task, slate, witness, products, origin),
+                                             name='predict-experiment-shadow-capture')
+                self.shadow_jobs.add(shadow)
+                shadow.add_done_callback(self._shadow_finished)
+            await self._capture_original(client, task, slate, bindings, origin)
+        finally:
+            if not origin.done():
+                origin.set_result(None)
+
+    async def _capture_original(self, client, task, slate, bindings, origin):
         cutoff = task['target_at']
         novig, native_client = client
-        plan, witness, unresolved, event, prices, native, offers, products = await asyncio.to_thread(
-            self._bindings, task, self.now())
-        slate = (task['event']['league'], task['event']['starts_at']) if task.get('all_sports') else None
+        plan, witness, unresolved, event, prices, native, offers, products = bindings
         preparation_cutoff = cutoff-READ_AHEAD
         preparation, source_gaps = (), {}
 
         async def prepare_novig():
-            if not (witness and (event or unresolved) and self.venue_enabled('novig')
-                    and self.now() < preparation_cutoff):
+            if (not self.venue_enabled('novig') or self.now() >= preparation_cutoff
+                    or not (witness and (event or unresolved))):
                 return None
             if slate:
                 return await novig.read_checkpoint_slate(*slate, preparation_cutoff)
             return await novig.read_event(witness['event']['eventId'], preparation_cutoff)
 
         if slate:
-            inventory, extra = await asyncio.gather(prepare_novig(), self._prospective_native(
-                native_client, task, offers, preparation_cutoff, products))
+            inventory, extra = await asyncio.gather(
+                prepare_novig(), self._prospective_native(native_client, task, offers, preparation_cutoff, products),
+            )
             native.update(extra)
         else:
             inventory = await prepare_novig()
@@ -353,8 +384,9 @@ class ExperimentDepth:
             preparation = inventory.receipts
             if inventory.reason:
                 source_gaps['novig'] = inventory.reason
-            plan = await asyncio.to_thread(_reconcile, plan, witness, unresolved, inventory, self.now(),
-                                           event=event, prices=prices)
+            if witness:
+                plan = await asyncio.to_thread(_reconcile, plan, witness, unresolved, inventory, self.now(),
+                                               event=event, prices=prices)
         elif not self.venue_enabled('novig'):
             source_gaps['novig'] = 'source_paused'
         elif not plan:
@@ -365,14 +397,14 @@ class ExperimentDepth:
             return
         observation_options = dict(slate=slate) if slate else {}
         decision, failures = await self._observe(novig, native_client, plan, native, cutoff, **observation_options)
-        source_gaps.update(failures)
         known = self.now()
         if known > cutoff:
             await owned_thread(self.stage.reject, task, 'decision', cutoff, known, 'experiment_depth_cutoff')
             return
         origin_id = await owned_thread(self._stage, task, known_at=known, observations=decision,
             reason=None if plan or native else 'unmatched_no_pregame_offer_witness',
-            source_gaps=source_gaps, preparation=preparation)
+            source_gaps=dict(source_gaps, **failures), preparation=preparation)
+        origin.set_result(origin_id)
         # Stable prospective sampling keeps a follow-up independent of the
         # market result, and keeps its later evidence out of the decision.
         if not decision or int(hashed(task['game_id'])[:8], 16) % 5:
@@ -391,6 +423,152 @@ class ExperimentDepth:
                     observation.update(reason='followup_cache_reuse', complete=False)
             await owned_thread(self._stage, task, kind='followup', origin_id=origin_id,
                 known_at=known, observations=followup, cutoff_at=later, source_gaps=failures)
+
+    def _shadow_finished(self, job):
+        self.shadow_jobs.discard(job)
+        if not job.cancelled() and (error := job.exception()):
+            failure(__name__, 'experiment_shadow_collect', error)
+            self.progress['shadow_reason'] = type(error).__name__
+
+    async def _capture_shadow(self, client, task, slate, witness, products, origin):
+        cutoff = task['target_at']
+        evidence, reason = None, None
+        try:
+            async with asyncio.timeout(max(0, (cutoff-self.now()).total_seconds())):
+                evidence = await self._observe_shadow(client, task, slate, witness, products)
+        except TimeoutError:
+            reason = 'experiment_depth_shadow_cutoff'
+        except asyncio.CancelledError:
+            if origin.done() and (original := origin.result()):
+                await owned_thread(self._stage_shadow, task, original, self.now(), None,
+                                   'experiment_depth_shadow_interrupted')
+            raise
+        except Exception as exc:
+            failure(__name__, 'experiment_official_freeze', exc)
+            reason = 'experiment_depth_shadow_evidence_invalid'
+        known = self.now()
+        if not reason and known > cutoff:
+            reason = 'experiment_depth_shadow_cutoff'
+        if (original := await asyncio.shield(origin)) is not None:
+            await owned_thread(self._stage_shadow, task, original, known, evidence, reason)
+
+    async def _observe_shadow(self, client, task, slate, witness, products):
+        from . import official_experiment_depth as official
+
+        cutoff = task['target_at']
+        prep = cutoff-READ_AHEAD
+        novig, native = client
+
+        async def catalog_novig():
+            if self.venue_enabled('novig') and self.now() < prep:
+                return await novig.read_checkpoint_slate(*slate, prep)
+            return None
+
+        inventory, discovered, scope, (prophetx, reason), metadata = await asyncio.gather(
+            catalog_novig(), self._prospective_native(native, task, (), prep, products, official=True),
+            self._prepare_official(task, prep, witness), self._discover_prophetx(task, prep),
+            self._novig_metadata(novig, slate, prep))
+        rows, anchors, quotes, gaps = scope
+        discovered.update(prophetx)
+        if reason:
+            gaps['prophetx'] = reason
+
+        def plan():
+            from .native_trading_novig import bindings as novig_catalog_bindings
+
+            if inventory and not inventory.reason:
+                for meta, receipt in metadata.values():
+                    try:
+                        discovered.update(novig_catalog_bindings(meta, inventory.markets, receipt, at=self.now()))
+                    except (ArithmeticError, KeyError, TypeError, ValueError):
+                        continue
+            candidates = official.match(rows, discovered, anchors, quotes, task, self.now())
+            return candidates, official.prepare(candidates, cutoff=cutoff, enabled=self.venue_enabled)
+
+        candidates, (novig_plan, exchanges, events) = await asyncio.to_thread(plan)
+        await asyncio.sleep(max(0, (cutoff-READ_AHEAD-self.now()).total_seconds()))
+        if not self.enabled():
+            raise ValueError('experiment_depth_shadow_paused')
+        (books, failures), prophetx_books = await asyncio.gather(
+            self._observe(novig, native, novig_plan, exchanges, cutoff, slate=slate),
+            self._observe_prophetx(events, cutoff-BOOK_AHEAD, gaps) if events else asyncio.sleep(0, result={}))
+        books.update(prophetx_books)
+        gaps.update(failures)
+        return await asyncio.to_thread(official.freeze, candidates, books, quotes, cutoff=cutoff, gaps=gaps,
+                                       enabled=self.venue_enabled)
+
+    def _official_plan(self, task, novig_event):
+        from . import official_experiment_depth as official
+
+        with self.connector() as db, db.transaction():
+            db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+            rows, anchors, quotes = official.plan(db, task, self.now(), novig_event=novig_event)
+        return rows, anchors, quotes, dict(self.dashboard.progress.get('access_gaps') or {})
+
+    async def _prepare_official(self, task, cutoff, witness):
+        if self.dashboard is None:
+            return None
+        try:
+            async with asyncio.timeout(max(0, (cutoff-self.now()).total_seconds())):
+                return await asyncio.to_thread(self._official_plan, task, witness['event']['eventId'] if witness else None)
+        except TimeoutError:
+            return (), (), (), {'scope': 'official_catalog_read_deferred'}
+        except Exception as exc:
+            failure(__name__, 'experiment_official_catalog', exc)
+            return (), (), (), {'scope': 'official_catalog_unavailable'}
+
+    async def _novig_metadata(self, client, slate, cutoff):
+        if self.dashboard is None or not self.venue_enabled('novig'):
+            return {}
+        league, start = slate
+        start = stamp(start)
+        try:
+            async with asyncio.timeout(max(0, (cutoff-self.now()).total_seconds())):
+                rows, _ = await client.read_slate_metadata(league, after=start,
+                    before=start+timedelta(milliseconds=1), cutoff=cutoff)
+                return rows
+        except TimeoutError:
+            return {}
+        except Exception as exc:
+            failure(__name__, 'experiment_novig_catalog', exc)
+            return {}
+
+    async def _discover_prophetx(self, task, cutoff):
+        if self.dashboard is None or not self.venue_enabled('prophetx'):
+            return {}, None
+        client = self.dashboard.prophetx
+        if client is None:
+            return {}, self.dashboard.progress.get('access_gaps', {}).get('prophetx',
+                'prophetx_production_affiliate_key_and_tournament_ids_required')
+        event = task['event']
+        start = stamp(event['starts_at'])
+        try:
+            async with asyncio.timeout(max(0, (cutoff-self.now()).total_seconds())):
+                return await client.discover(event['league'], start, start+timedelta(microseconds=1), cutoff)
+        except TimeoutError:
+            return {}, 'cutoff_passed'
+        except Exception as exc:
+            failure(__name__, 'experiment_prophetx_catalog', exc)
+            return {}, 'prophetx_unavailable'
+
+    async def _observe_prophetx(self, events, cutoff, gaps):
+        from .official_experiment_depth import PREFIX
+
+        client = self.dashboard.prophetx
+        if client is None:
+            gaps.setdefault('prophetx', 'prophetx_production_affiliate_key_and_tournament_ids_required')
+            return {}
+        try:
+            async with asyncio.timeout(max(0, (cutoff-self.now()).total_seconds())):
+                books, reason = await client.refresh(events, cutoff)
+        except TimeoutError:
+            reason, books = 'cutoff_passed', {}
+        except Exception as exc:
+            failure(__name__, 'experiment_prophetx_book', exc)
+            reason, books = 'prophetx_unavailable', {}
+        if reason:
+            gaps['prophetx'] = reason
+        return {PREFIX+key: book for key, book in books.items()}
 
     async def _observe(self, novig, native_client, plan, native, cutoff, *, slate=None):
         from .native_experiment_depth import VENUES
@@ -421,6 +599,19 @@ class ExperimentDepth:
             raise
         return self.stage.put(payload, task['deadline_at'], self.now())
 
+    def _stage_shadow(self, task, origin, known, evidence, reason):
+        self.shadow_stage.initialize()
+        try:
+            payload = storage.normalize_shadow(task, origin_id=origin, known_at=known, evidence=evidence, reason=reason)
+            if len(encoded(payload)) > storage.MAX_BYTES:
+                reason = 'experiment_depth_shadow_capacity'
+        except (ArithmeticError, KeyError, RecursionError, TypeError, ValueError) as exc:
+            failure(__name__, 'experiment_official_shadow_stage', exc)
+            reason = 'experiment_depth_shadow_evidence_invalid'
+        if reason:
+            payload = storage.normalize_shadow(task, origin_id=origin, known_at=known, reason=reason)
+        return self.shadow_stage.put(payload, task['deadline_at'], self.now())
+
     def _persist(self, payload):
         with self.connector() as db:
             return storage.publish(db, payload, protect_checkpoint=True)
@@ -445,6 +636,54 @@ class ExperimentDepth:
         self.stage.finish(entry, reason, saved_id)
         return reason, saved_id
 
+    def _publish_shadow_staged(self, entry):
+        saved = None
+        try:
+            payload = self.shadow_stage.load(entry)
+        except InvalidStagedReceipt as exc:
+            reason = str(exc)
+        else:
+            with self.connector() as db:
+                try:
+                    saved = storage.publish_shadow(db, payload, protect_checkpoint=True)
+                except (ValueError, BudgetStop) as exc:
+                    reason = str(exc)
+                    if reason not in ('experiment_depth_shadow_capacity', 'research_retention_capacity',
+                                      'research_sql_runway', 'current_observation_disk_free_floor'):
+                        raise
+                    disposition = storage.normalize_shadow(payload, origin_id=payload['origin_id'],
+                                                           known_at=self.now(), reason=reason)
+                    saved = storage.publish_shadow(db, disposition, protect_checkpoint=True)
+            if saved is None:
+                reason = 'experiment_depth_shadow_original_unavailable'
+            else:
+                reason = saved['reason'] or ('published' if saved['id'] == entry['receipt_id'] else 'existing_receipt')
+        saved_id = saved['id'] if saved is not None else None
+        self.shadow_stage.finish(entry, reason, saved_id)
+        return reason, saved_id
+
+    async def _drain_shadow(self, at):
+        if not self.shadow_stage.path.exists() or not self.enabled() or self._near_checkpoint():
+            return
+        await owned_thread(self.shadow_stage.initialize)
+        entries = await asyncio.to_thread(self.shadow_stage.entries)
+        for entry in entries:
+            deadline = _stage_deadline(entry)
+            if deadline is None:
+                await owned_thread(self.shadow_stage.finish, entry, 'experiment_depth_stage_deadline')
+                return
+            if deadline <= at:
+                try:
+                    reason, saved_id = await owned_thread(self._publish_shadow_staged, entry)
+                except BlockingIOError as exc:
+                    self.progress['shadow_reason'] = str(exc)
+                except Exception as exc:
+                    failure(__name__, 'experiment_shadow_persist', exc)
+                    self.progress['shadow_reason'] = str(exc)
+                else:
+                    self.progress.update(shadow_disposition=reason, shadow_saved_id=saved_id, shadow_reason=None)
+                return
+
     async def _drain_staged(self, staged, at):
         from app.research.records import _retention_failure
 
@@ -453,13 +692,9 @@ class ExperimentDepth:
         for entry in staged:
             if entry['kind'] == 'followup' and tuple(entry[key] for key in KEY[:3]) in decisions:
                 continue
-            try:
-                deadline = stamp(entry['target_at']) + timedelta(seconds=experiment.LATE_TOLERANCE_SECONDS)
-                valid_deadline = stamp(entry['deadline_at']) == deadline
-            except (ValueError, OverflowError):
-                valid_deadline = False
-            if not valid_deadline or deadline <= at:
-                ready.append((entry, valid_deadline))
+            deadline = _stage_deadline(entry)
+            if deadline is None or deadline <= at:
+                ready.append((entry, deadline is not None))
         if not ready:
             return
 
@@ -511,7 +746,7 @@ class ExperimentDepth:
             self.stage_ready = True
         staged = await asyncio.to_thread(self.stage.entries)
         if not self.enabled():
-            for job in self.running.values():
+            for job in (*self.running.values(), *self.shadow_jobs):
                 job.cancel()
             self.progress = dict(self.progress, state='paused', active=len(self.running), pending=len(staged))
             return
@@ -524,6 +759,10 @@ class ExperimentDepth:
             for task in upcoming[:capacity]:
                 key = (task['game_id'], task['schedule_id'])
                 self.running[key] = asyncio.create_task(self._capture(client, task))
+        original_due = any((deadline := _stage_deadline(row)) is None or deadline <= at for row in staged)
+        if not original_due and (self.shadow_publisher is None or self.shadow_publisher.done()):
+            self.shadow_publisher = asyncio.create_task(self._drain_shadow(at), name='predict-experiment-shadow-publish')
+            self.shadow_publisher.add_done_callback(self._shadow_finished)
         self.progress = dict(self.progress, active=len(self.running), pending=len(staged))
 
     async def run(self):
@@ -537,6 +776,7 @@ class ExperimentDepth:
                             self.service.dispatch and not self.service.globally_stopped
                             and venue not in self.service.paused_sources) as native):
                 dashboard = NativeTrading(self, connector=self.connector, now=self.now)
+                self.dashboard = dashboard
                 self.dashboard_progress = dashboard.progress
                 # Keep the same optional HTTP budget across worker restarts.
                 async def supervise_dashboard():
@@ -569,9 +809,12 @@ class ExperimentDepth:
                     task.cancel()
                     await asyncio.gather(task, return_exceptions=True)
         finally:
-            for job in self.running.values():
+            jobs = [*self.running.values(), *self.shadow_jobs]
+            if self.shadow_publisher is not None:
+                jobs.append(self.shadow_publisher)
+            for job in jobs:
                 job.cancel()
-            await asyncio.gather(*self.running.values(), return_exceptions=True)
+            await asyncio.gather(*jobs, return_exceptions=True)
 
     async def start(self):
         self.task = asyncio.create_task(self.run(), name='predict-experiment-public-depth')

@@ -28,6 +28,8 @@ class DashboardMarketStream:
             credential.signer, allow_connection=True)())
         self.wanted = frozenset()
         self.images = {}
+        self.high_water = {}
+        self.offered = {}
         self.incoming = asyncio.Event()
         self.task = None
         self.backoff_until = 0
@@ -41,13 +43,16 @@ class DashboardMarketStream:
             with suppress(asyncio.CancelledError):
                 await task
 
-    async def read(self, bindings, cutoff):
+    async def read(self, bindings, cutoff, *, new_only=False):
         bindings = {cid: binding for cid, binding in bindings.items()
                     if binding['venue'] == 'polymarket_us' and not binding['reason']}
         slugs = frozenset(sorted({binding['route'] for binding in bindings.values()})[:MAX_SLUGS])
         if not slugs or not self.allowed():
             await self.close()
             return {}
+        floor = exact_time((self.now() - BOOK_AGE).isoformat())
+        self.high_water = {slug: order for slug, order in self.high_water.items() if order[0] > floor}
+        self.offered = {cid: order for cid, order in self.offered.items() if cid in bindings and order[0] > floor}
         self.wanted = slugs
         now = asyncio.get_running_loop().time
         if self.task is None or self.task.done():
@@ -69,6 +74,10 @@ class DashboardMarketStream:
             image = self.images.get(binding['route'])
             if image is None or binding['route'] not in slugs:
                 continue
+            if new_only and self.offered.get(cid) == image['source_order']:
+                # An unchanged image may still be valid, but it must not
+                # mask an update through the REST fallback on this turn.
+                continue
             source = stamp(image['source_at'])
             expires = min(source + BOOK_AGE, stamp(binding['scheduled_start']),
                           stamp(binding['terms_valid_until']))
@@ -78,6 +87,8 @@ class DashboardMarketStream:
                 levels=image['levels'][binding['native_side']], native_book=image['native_book'],
                 source_at=image['source_at'], received_at=image['received_at'],
                 valid_until=expires.isoformat(), receipts=[image['receipt']])
+            if new_only:
+                self.offered[cid] = image['source_order']
         return result
 
     async def _run(self):
@@ -159,11 +170,13 @@ class DashboardMarketStream:
         received = self.now().isoformat()
         try:
             source = book['transactTime']
-            order = exact_time(source)
-            prior = self.images.get(slug)
-            if order > exact_time(received) or (prior and order <= prior['source_order']):
-                return
             state = pmus.state(book['state']).value
+            order = exact_time(source), state in ('suspended', 'closed')
+            prior = self.high_water.get(slug)
+            # A lifecycle update may share the last open image's clock. Only
+            # the closed state can advance the watermark at that timestamp.
+            if order[0] > exact_time(received) or (prior is not None and order <= prior):
+                return
             if state == 'active':
                 levels, original = polymarket_ladders(book)
                 reason = None
@@ -174,6 +187,7 @@ class DashboardMarketStream:
                 return
         except ERRORS:
             return
+        self.high_water[slug] = order
         self.images[slug] = dict(source_order=order, source_at=source, received_at=received,
             reason=reason, levels=levels, native_book=dict(marketSlug=slug, state=book['state'],
                 transactTime=source, **original), receipt=dict(source_url=WS_URL, market_slug=slug,

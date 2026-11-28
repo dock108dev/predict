@@ -107,6 +107,11 @@ def _grant_policy(db):
         grant(db, privileges, 'public', names, COLLECTOR)
     if db.execute("SELECT to_regclass('public.ev_experiment_depth') IS NOT NULL AS present").fetchone()['present']:
         grant(db, 'INSERT', 'public', ('ev_experiment_depth',), COLLECTOR)
+    if db.execute("SELECT to_regclass('public.ev_experiment_checkpoint_commit') IS NOT NULL AS present").fetchone()['present']:
+        grant(db, 'INSERT', 'public', ('ev_experiment_checkpoint_commit',), COLLECTOR)
+        grant(db, 'INSERT', 'public', ('research_run_official_shadow',), WEB)
+    if db.execute("SELECT to_regclass('public.ev_experiment_depth_shadow') IS NOT NULL AS present").fetchone()['present']:
+        grant(db, 'INSERT', 'public', ('ev_experiment_depth_shadow',), COLLECTOR)
     if db.execute("SELECT to_regclass('public.current_pregame_depth') IS NOT NULL AS present").fetchone()['present']:
         grant(db, 'INSERT, UPDATE, DELETE', 'public', ('current_pregame_depth',), COLLECTOR)
     if db.execute("SELECT to_regclass('public.native_trading_offer') IS NOT NULL AS present").fetchone()['present']:
